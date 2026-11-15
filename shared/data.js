@@ -4436,7 +4436,7 @@ WANDERER_LINES_AREA.rainward = ['It has not stopped dripping since I got here.',
 // Rewards item level 86-87, one per slot. The level cap goes 60 -> 65 with this part (shared/classes.js).
 // (the stand: the haulier's centre and heading (ry PI: its front to -z, up the Sound side towards the hills), the waggoner
 // beside it, where a ride down sets you down)
-export const HAUL_ROAD = { stand: { x: 559, z: -2600, ry: Math.PI }, keeper: { x: 556, z: -2596.5, ry: Math.PI / 2 }, landing: { x: 555, z: -2594.5 } };
+export const HAUL_ROAD = { stand: { x: 557, z: -2600, ry: Math.PI }, keeper: { x: 553.5, z: -2596.5, ry: Math.PI / 2 }, landing: { x: 552.5, z: -2594.5 } };
 NPCS.push(
   { id: 'n_tw_fawzi', name: 'Waggoner Fawzi', title: 'The Haul Road', look: 'villager', v: 8, x: HAUL_ROAD.keeper.x, z: HAUL_ROAD.keeper.z, ry: HAUL_ROAD.keeper.ry, quests: [],
     greet: 'My grandfather’s father drove that haulier up the gorge every spring. I oil its tracks. Somebody ought to.' },
@@ -4485,7 +4485,8 @@ SAIL.to.tidemills = { x: HAUL_ROAD.landing.x, z: HAUL_ROAD.landing.z, name: 'the
     { id: 'o_rgshelf3', kind: 'rgshelf', x: 417.9, z: -2930.82, ry: 0 },
   );
   // the seed trays, out over the slope west and north-east of the camp (off the terraces, the tracks and the camp square)
-  NODES.push(...[[396, -3018], [398, -3004], [400, -2992], [402, -3024], [406, -2988], [434, -3026], [438, -3016], [396, -2982]].map(([x, z], i) => ({ id: 'rgtray' + i, item: 'c45_tray', x, z, questOnly: true })));
+  // (rgtray5-6 moved west of the camp in P14 integration: they lay inside the seed drill packs south-east of it)
+  NODES.push(...[[396, -3018], [398, -3004], [400, -2992], [402, -3024], [406, -2988], [402, -3012], [400, -3032], [396, -2982]].map(([x, z], i) => ({ id: 'rgtray' + i, item: 'c45_tray', x, z, questOnly: true })));
 }
 // the Main Story ran (applyStory) before the Sound's waggoner and the Seedwrights were placed: give them their story quests
 for (const [id, Q] of Object.entries(QUESTS)) if (Q.msq) { const g = NPCS.find((n) => n.id === Q.giver); if (g && !(g.quests ||= []).includes(id)) g.quests.push(id); }
@@ -4549,7 +4550,7 @@ SPAWNS.push(
   { mob: 'slopewarden', x: 619, z: -2962, r: 3, n: 3 }, { mob: 'slopewarden', x: 623, z: -3014, r: 3, n: 3 },
   { mob: 'slopewarden', x: 600, z: -3012, r: 3, n: 3 }, { mob: 'slopewarden', x: 603, z: -3048, r: 3, n: 3 },
   { mob: 'oldslopewarden', x: 601, z: -3033, r: 3, n: 2 }, { mob: 'oldslopewarden', x: 648, z: -2960, r: 3, n: 3 },
-  { mob: 'mossgrowncutter', x: 602, z: -3063, r: 3, n: 1 },
+  { mob: 'mossgrowncutter', x: 602, z: -3060, r: 1, n: 1 },
   // the Hill Leveller: along the head of the Slip when it is dry, down the east mud lane while it pours
   { mob: 'hillleveller', path: [[648, -3058], [650, -3047], [650, -3036]], rainPath: [[634, -3060], [633.5, -3048], [633, -3036]], r: 2, n: 1, world: true },
 );

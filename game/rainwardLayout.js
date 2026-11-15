@@ -446,7 +446,7 @@ export function buildRainward(W, S) {
     // the shelf over the river: beds along it, edged with a stone kerb along the river side
     {
       const Sh = R.shelf, b = new Builder(1630);
-      for (let v = Sh.v1 - 1.2 - 0.64; v > Sh.v0 + 1.5; v -= 2.3) for (let x = Sh.x0 + 2.4; x + 7 <= Sh.x1 - 2; x += 7.6) S.place('rgbed' + (rng() < 0.8 ? 0 : 1), x + 3.5, Sh.top - 0.02, zOfV(x + 3.5, v), 0, 1);
+      for (let v = Sh.v1 - 1.2 - 0.64; v > Sh.v0 + 1.5; v -= 2.3) for (let x = Sh.x0 + 2.4; x + 7 <= Sh.x1 - 2; x += 7.6) { const k = rng() < 0.8 ? 0 : 1, z = zOfV(x + 3.5, v); if (!people.some((e) => Math.hypot(e.x - x - 3.5, e.z - z) < 2)) S.place('rgbed' + k, x + 3.5, Sh.top - 0.02, z, 0, 1); } // (a bed the Chapter 45 quest buries under mud stands in its own slot)
       for (let x = Sh.x0 + 0.5; x < Sh.x1 - 0.4; x += 4) { const z = zOfV(x + 2, Sh.v1 + 0.2); b.add(box(4.02, 0.9, 0.5), 'stone', { p: [x + 2, Sh.top - 0.25, z], c: '#7c7e76', us: 0.55, uv: 'box' }); }
       placeAbs({ builder: b });
       put('rgbutt', Sh.x0 + 1.5, zOfV(Sh.x0 + 1.5, Sh.v0 + 2), 0.2); put('sacks', Sh.x1 - 1.8, zOfV(Sh.x1 - 1.8, Sh.v0 + 2.2), 0.4);

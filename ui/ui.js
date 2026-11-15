@@ -346,7 +346,7 @@ export class UI {
       $('.g-out', w)?.classList.toggle('hidden', !acct);
       if (acct && $('.acct-who b', w)) $('.acct-who b', w).textContent = acct.name;
       w.querySelectorAll('.srv-seg button').forEach((b) => b.classList.toggle('on', b.dataset.s === srv));
-      $('.srv-in', w)?.classList.toggle('hidden', srv !== 'online');
+      $('.srv-in', w)?.classList.toggle('hidden', srv !== 'online' || IS_WEB); // the web build always uses the published address
       $('.off-btn', w)?.classList.toggle('hidden', srv !== 'online');
       $('.enter-btn', w).textContent = srv === 'online' ? 'Enter World Online' : 'Enter World';
     };

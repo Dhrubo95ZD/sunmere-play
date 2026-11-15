@@ -1176,8 +1176,8 @@ export async function startGame() {
   // there hides while the train is the picture). The server has already moved you; you ride the wagon, so you are hidden.
   const HAUL = { inA: 0.5, inB: 1.3, out: 5.6, back: 6.4, end: 7.2 };
   const HAUL_SHOT = {
-    rainward: { from: [380.5, -2959.5], to: [398, -2962.2], cam: [410, 8.5, -2975.5], say: 'The haulier pulls the empty wagon north out of the Tide Mills and up the river into the hills. Rain closes in, the walls of a deep green gorge rise on either side, and at dusk the road ends at a stand under dripping rock.' },
-    tidemills: { from: [559, -2590], to: [559, -2600], cam: [548, 9.5, -2588], say: 'The haulier lets the wagon down the haul road out of the gorge, the brake hissing on every steep stretch, out of the rain and along the river to its stand between the Tide Mills.' },
+    rainward: { from: [385, -2960.2], to: [398, -2962.2], cam: [383, 7.5, -2968],  say: 'The haulier pulls the empty wagon north out of the Tide Mills and up the river into the hills. Rain closes in, the walls of a deep green gorge rise on either side, and at dusk the road ends at a stand under dripping rock.' },
+    tidemills: { from: [557, -2590], to: [557, -2600], cam: [546, 9.5, -2588], say: 'The haulier lets the wagon down the haul road out of the gorge, the brake hissing on every steep stretch, out of the rain and along the river to its stand between the Tide Mills.' },
   };
   let haulTrain = null;
   function startHaul(to) {

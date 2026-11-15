@@ -62,7 +62,7 @@ export const RAINWARD = {
   shelf: { x0: 412, x1: 446, v0: -19, v1: -6.4, top: 5.0 },
   // the haul road's head at the west end: the stand where the rewound log haulier and its wagon come in (pad), where a
   // ride up sets you down (landing), the roadman who sends you back down to the Sound (keeper)
-  road: { pad: { x: 404, z: -2963.5, s: 6 }, landing: { x: 407, z: -2966.5 }, keeper: { x: 402.5, z: -2969.6, ry: 2.6 } },
+  road: { pad: { x: 404, z: -2963.5, s: 6 }, landing: { x: 407, z: -2966.5 }, keeper: { x: 402.5, z: -2966.4, ry: 2.6 } }, // (keeper: beside the loading stage, not under its deck)
   // the Seedwrights' camp on a level shelf (square, half size s), its graveyard and caravan stop at its edges, the head grower
   camp: { x: 425, z: -2990, s: 15 },
   grave: { x: 406.5, z: -3005 },

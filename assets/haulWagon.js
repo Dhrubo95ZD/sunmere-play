@@ -60,6 +60,12 @@ export function buildHaulTrain({ wound = true, load = 0, seed = 1700 } = {}) {
     g.add(c.build());
   }
   const M = h.userData.machine;
+  // the firebox vent on the engine house's back is shuttered with a plain iron plate and its glow put out, so the one gauge
+  // strip on the flank never sits beside a lit grille (nothing face-like from any side)
+  for (const d of M.dynamics || []) if (d.userData?.slot) d.visible = false;
+  const sh = new Builder(seed + 6);
+  sh.add(box(0.8, 0.52, 0.05), 'wIron', { p: [-0.12, 1.8, -1.42], c: '#3a3c3e' });
+  g.add(sh.build());
   g.userData.haulier = h;
   g.userData.update = (dt, t, speed = 0) => { if (wound) M.update(dt, speed); };
   return g;

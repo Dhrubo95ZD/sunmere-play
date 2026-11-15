@@ -304,9 +304,10 @@ export function yarnHankNode() {
 // straight rows of single leaf cards in dark earth, a smear of red mud, a soft glint to spot it by
 export function seedTrayNode() {
   const b = new Builder(84);
-  for (const sz of [-1, 1]) b.add(box(0.9, 0.14, 0.05), 'woodLight', { p: [0, 0.07, sz * 0.3], r: [0, 0.3, 0], c: '#8a6e52' });
+  for (const sz of [-1, 1]) b.add(box(0.9, 0.14, 0.05), 'woodLight', { p: [-Math.sin(0.3) * sz * 0.3, 0.07, Math.cos(0.3) * sz * 0.3], r: [0, 0.3, 0], c: '#8a6e52' });
+  for (const sx of [-1, 1]) b.add(box(0.05, 0.14, 0.62), 'woodLight', { p: [Math.cos(0.3) * sx * 0.45, 0.07, -Math.sin(0.3) * sx * 0.45], r: [0, 0.3, 0], c: '#8a6e52' }); // square, end boards too
   b.add(box(0.86, 0.08, 0.58), 'dirtPlain', { p: [0, 0.06, 0], r: [0, 0.3, 0], uv: 'box', c: '#3e3024' });
-  for (const o of [-0.13, 0.13]) for (let x = -0.35; x <= 0.36; x += 0.14) b.add(box(0.02, 0.16, 0.1), 'cloth', { p: [Math.cos(0.3) * x + Math.sin(0.3) * o, 0.16, -Math.sin(0.3) * x + Math.cos(0.3) * o], r: [0, 0.3, 0], c: '#6a9a52' });
+  for (const o of [-0.13, 0.13]) for (let x = -0.35; x <= 0.36; x += 0.14) b.add(box(0.02, 0.16, 0.1), 'cloth', { p: [Math.cos(0.3) * x + Math.sin(0.3) * o, 0.16, -Math.sin(0.3) * x + Math.cos(0.3) * o], r: [0, 0.3, 0], c: '#8ac460' });
   b.add(box(0.7, 0.02, 0.5), 'dirtPlain', { p: [-0.3, 0.01, 0.4], r: [0, 0.3, 0], uv: 'box', c: '#6e4232' });
   const g = b.build();
   const gl = glowSprite(0xfff0c8, 1.5, 0.45); gl.position.y = 0.8; g.add(gl);
