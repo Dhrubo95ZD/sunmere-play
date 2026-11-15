@@ -1,0 +1,260 @@
+/* Sunmere: windows as full-screen sheets on phones (and touch-sized controls on tablets).
+   Loaded after hud.css (client/index.html, or ui/ui.js on touch devices). Every rule hangs off html.phone (a short or
+   narrow touch screen, set by ui/touch.js) or html.touch (any phone, tablet or the Android app): the desktop never gets
+   either class, so nothing here reaches it. */
+
+/* ======================================================================= the sheet frame (every window on a phone) */
+html.phone .window {
+  left: env(safe-area-inset-left, 0px) !important; right: env(safe-area-inset-right, 0px) !important;
+  top: env(safe-area-inset-top, 0px) !important; bottom: env(safe-area-inset-bottom, 0px) !important;
+  width: auto !important; min-width: 0 !important; max-width: none !important; height: auto !important; max-height: none !important;
+  transform: none !important; display: flex !important; flex-direction: column; z-index: 20; border-radius: 0; font-size: 14px;
+}
+html.phone .window > .wh { flex: 0 0 48px; height: 48px; min-height: 48px; padding: 0 0 0 16px; box-sizing: border-box; }
+html.phone .window > .wh span { font-size: 18px; line-height: 48px; }
+html.phone .window .wx { flex: 0 0 56px; width: 56px !important; height: 48px !important; min-height: 48px; font-size: 26px !important; display: flex; align-items: center; justify-content: center; }
+html.phone .window > .wb { flex: 1 1 auto; min-height: 0; max-height: none !important; overflow-x: hidden !important; overflow-y: auto !important; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; padding: 10px 14px 14px; }
+html.phone .window > .wb, html.phone .window > .wb.parch { width: auto !important; }
+/* the loot window stays a small card in the middle (hud.css), not a sheet */
+
+/* ---- hit targets: 44 px and up, text 14 px (small text 12 px) */
+html.phone .window .wb button, html.phone .window .cw-tabs button, html.phone .window .bag-head button { min-height: 44px; font-size: 14px; padding: 6px 14px; }
+html.phone .window .post-tabs, html.phone .window .o-tabs { display: flex; gap: 6px; flex: 0 0 auto; }
+html.phone .window .post-tabs button, html.phone .window .cw-tabs button { min-height: 44px; font-size: 14px !important; letter-spacing: .02em; }
+html.phone .window > .o-tabs { margin: 8px 14px 0; }
+html.phone .window input[type=text], html.phone .window input:not([type]), html.phone .window select { min-height: 44px; font-size: 16px; box-sizing: border-box; }
+html.phone .window .bag-hint, html.phone .window .o-note, html.phone .window small, html.phone .window em { font-size: 12px; }
+html.phone .window .bag-hint { display: block; }
+/* checkboxes become 44 px toggle rows */
+html.touch .window .opt.chk { min-height: 48px; padding: 4px 0; margin: 2px 0; font-size: 14px; line-height: 1.3; gap: 12px; border-bottom: 1px solid #ffffff0d; }
+html.touch .window .opt.chk input[type=checkbox] { -webkit-appearance: none; appearance: none; flex: 0 0 46px; width: 46px !important; height: 28px !important; margin: 0; border-radius: 14px; position: relative; cursor: pointer;
+  background: #26323a; border: 1px solid #4a5c62; box-shadow: inset 0 2px 4px #0008; transition: background .15s; }
+html.touch .window .opt.chk input[type=checkbox]::after { content: ''; position: absolute; left: 2px; top: 2px; width: 22px; height: 22px; border-radius: 50%; background: #9aa8ac; box-shadow: 0 1px 3px #000a; transition: transform .15s, background .15s; }
+html.touch .window .opt.chk input[type=checkbox]:checked { background: #6a5020; border-color: #c8902a; }
+html.touch .window .opt.chk input[type=checkbox]:checked::after { transform: translateX(18px); background: #ffe08a; }
+/* sliders: a 28 px track and a 32 px thumb */
+html.touch .window input[type=range] { -webkit-appearance: none; appearance: none; height: 32px; background: transparent; min-width: 120px; }
+html.touch .window input[type=range]::-webkit-slider-runnable-track { height: 10px; border-radius: 5px; background: linear-gradient(180deg, #0b131a, #26323a); border: 1px solid #4a5c62; }
+html.touch .window input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 32px; height: 32px; margin-top: -12px; border-radius: 50%; background: radial-gradient(circle at 40% 35%, #fff2c8, #e8c26a 45%, #8a6a30); border: 2px solid #3a2a12; box-shadow: 0 2px 6px #000a; }
+html.phone .window .opt { min-height: 44px; }
+
+/* ---- a sticky footer for the main actions of a sheet */
+html.phone .window .dbtns { position: sticky; bottom: 0; z-index: 3; margin: 12px -14px -14px; padding: 8px 14px calc(8px + env(safe-area-inset-bottom, 0px) * 0); gap: 10px; flex-wrap: wrap;
+  background: linear-gradient(180deg, #101920f0, #0b131af8); border-top: 1px solid #2e3a3d; box-shadow: 0 -8px 14px #0008; }
+html.phone .window .dbtns button { min-height: 48px; min-width: 110px; font-size: 15px; }
+
+/* ======================================================================= Bags */
+html.phone .window.w-bags { --bs: 56px; }
+html.phone .w-bags > .bag-head { flex: 0 0 auto; display: grid; grid-template-columns: minmax(150px, 220px) minmax(0, 1fr); column-gap: 12px; align-items: center; padding: 6px 12px 0; }
+html.phone .w-bags .bag-head .bag-search input { min-height: 44px; }
+html.phone .w-bags .bag-head .bag-search button { min-width: 48px; min-height: 44px; }
+html.phone .window.w-bags .bag-cats button, html.phone .window .w-bags .bag-cats button { min-height: 44px; font-size: 14px; }
+html.phone .window.w-bags .bag-grid { grid-template-columns: repeat(6, var(--bs)); justify-content: center; gap: 8px; padding: 10px; }
+html.phone .window.w-bags > .wb { padding-bottom: 76px !important; } /* room under the last row for the docked Use / Equip / Sell bar */
+html.phone .window.w-bags .bag-hint { display: block; text-align: center; }
+/* bags beside the storehouse, a letter or a companion's kit: half the screen each (hud.css), so a smaller grid */
+html.phone #ui:has(> .window:is(.w-dialog, .w-outfit)) > .window.w-bags .bag-grid { grid-template-columns: repeat(auto-fill, var(--bs)); }
+
+/* the touch action bar (Use / Equip / Sell / Unequip) sits docked on the bottom edge, over the sheet */
+html.phone .tc-act { bottom: calc(env(safe-area-inset-bottom, 0px) + 8px); }
+html.phone .tc-act button { min-height: 48px; }
+
+/* ======================================================================= Merchant (one sheet: Wares / Sell / Buyback) */
+html.phone .window.w-vendor-tabs > .wb { display: flex; flex-direction: column; overflow: hidden !important; padding: 8px 14px 0; }
+html.phone .w-vendor-tabs .vt-tabs { flex: 0 0 auto; margin: 0 0 8px; }
+html.phone .w-vendor-tabs .vt-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; padding-bottom: 72px; }
+html.phone .w-vendor-tabs .vt-hint { margin: 0 0 8px; text-align: left; }
+html.phone .w-vendor-tabs .vgrid { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 8px; max-height: none; overflow: visible; }
+html.phone .w-vendor-tabs .vcard { min-height: 60px; padding: 6px 10px; }
+html.phone .w-vendor-tabs .vcard .li-ic, html.phone .w-vendor-tabs .vcard .li-ic img { width: 46px; height: 46px; }
+html.phone .w-vendor-tabs .vcard .li-tx > b { font-size: 14px; }
+html.phone .w-vendor-tabs .vcard .li-tx em, html.phone .w-vendor-tabs .vcard .vprice { font-size: 12.5px; }
+html.phone .w-vendor-tabs .vt-sell { --bs: 64px; grid-template-columns: repeat(auto-fill, var(--bs)); justify-content: start; gap: 10px 8px; padding: 10px; }
+html.phone .w-vendor-tabs .vt-sell .bslot { margin-bottom: 14px; }
+html.phone .w-vendor-tabs .vt-price { position: absolute; left: 50%; top: 100%; transform: translateX(-50%); margin-top: 2px; white-space: nowrap; font-size: 11px; color: #e8dcc0; pointer-events: none; }
+html.phone .w-vendor-tabs .vt-price b { font-weight: 700; }
+html.phone .w-vendor-tabs .vt-foot { flex: 0 0 auto; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 0 -14px; padding: 8px 14px; background: linear-gradient(180deg, #101920f0, #0b131a); border-top: 1px solid #2e3a3d; }
+html.phone .w-vendor-tabs .vt-foot button { min-height: 48px; font-size: 14px; }
+html.phone .w-vendor-tabs .vt-gold { display: inline-flex; align-items: center; gap: 6px; margin-right: auto; font-size: 14px; }
+html.phone .w-vendor-tabs .repair-ok { font-size: 13px; opacity: .8; }
+
+/* ======================================================================= Character */
+html.phone .window.w-char > .cw-tabs { flex: 0 0 auto; padding: 6px 10px 0; gap: 6px; overflow-x: auto; scrollbar-width: none; }
+html.phone .window .cw-tabs button { flex: 1 0 auto; min-height: 44px; padding: 6px 12px !important; }
+html.phone .window.w-char > .wb { padding: 8px 12px !important; overflow: hidden !important; }
+/* Equipment: the doll on the left (drag to turn), every gear slot as a 48 px row on the right */
+html.phone .cw-gear.cw-gphone { display: grid; grid-template-columns: minmax(170px, 34%) minmax(0, 1fr); gap: 12px; height: 100%; }
+html.phone .cw-gphone .cw-mid { min-height: 0; }
+html.phone .cw-gphone .cw-stage { height: 100%; }
+html.phone .cw-gphone .cw-ledger { overflow-y: auto !important; overscroll-behavior: contain; padding-right: 4px; padding-bottom: 70px; }
+html.phone .cw-gphone .cw-pwho { display: flex; align-items: baseline; gap: 10px; padding: 2px 4px 8px; font-size: 14px; }
+html.phone .cw-gphone .cw-pwho b { font: 700 16px var(--font-head); }
+html.phone .cw-gphone .cw-pwho span { color: var(--metal-muted, #a3b6bc); font-size: 13px; }
+html.phone .cw-gphone .cw-pil { margin-left: auto; display: inline-flex; align-items: center; gap: 4px; }
+html.phone .cw-gphone .cw-pil .cw-gem { width: 16px; height: 16px; }
+html.phone .w-char .cw-gr.cw-gp { grid-template-columns: 40px minmax(0, 1fr) 40px; min-height: 52px; gap: 12px; padding: 4px 10px; margin-bottom: 4px; }
+html.phone .w-char .cw-gr .cw-gi, html.phone .w-char .cw-gr .cw-gi img, html.phone .w-char .cw-gr .cw-gi svg { width: 40px; height: 40px; }
+html.phone .w-char .cw-gr .cw-gt b { font-size: 14px; }
+html.phone .w-char .cw-gr .cw-gt small { font-size: 12px; }
+html.phone .w-char .cw-gr .cw-gl { font-size: 14px; text-align: right; }
+html.phone .w-char .cw-note { font-size: 12px; }
+/* Stats: the level card and the stats column side by side, each scrolling */
+html.phone .cw-attr.cw-sphone { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+html.phone .cw-sphone .cw-left, html.phone .cw-sphone .cw-right { overflow-y: auto !important; overscroll-behavior: contain; }
+html.phone .w-char .cw-row { font-size: 14px; padding-top: 4px; padding-bottom: 4px; }
+html.phone .w-char .cw-row span, html.phone .w-char .cw-row b { font-size: 14px; }
+/* Attributes: the gear ledger rows are 48 px too */
+html.phone .w-char .cw-gr { min-height: 48px; }
+html.phone .w-char .cw-set { min-height: 48px; }
+html.phone .w-char .cw-pet, html.phone .w-char .petb { min-height: 56px; }
+html.phone .cw-look .look-row select { min-height: 44px; font-size: 15px; }
+
+/* ======================================================================= Skills and Talents */
+html.phone .w-skills .sk, html.touch .w-skills .sk-touch .sk { min-height: 56px; align-items: center; padding: 6px 8px; box-sizing: border-box; }
+html.phone .w-skills .sk img { width: 44px; height: 44px; }
+html.phone .w-skills .sk b { font-size: 15px; }
+html.phone .w-skills .sk-d { font-size: 14px; }
+html.phone .w-skills .sk-m { font-size: 12px; }
+html.touch .sk-touch .sk { cursor: pointer; }
+html.touch .sk-touch .sk.open { background: rgba(232,194,106,.08); border-left: 3px solid #e8c26a; align-items: flex-start; }
+html.touch .sk-touch .sk-b { flex: 1; min-width: 0; }
+html.touch .sk-touch .sk-on { margin-left: 8px; padding: 1px 7px; border-radius: 9px; font-size: 12px; color: #2a1a06; background: #e8c26a; }
+html.touch .sk-touch .sk-acts { display: flex; gap: 10px; margin: 8px 0 2px; flex-wrap: wrap; }
+html.touch .sk-touch .sk-acts button { min-height: 48px; min-width: 120px; font-size: 15px; }
+html.touch .sk-touch .sk-lk { font-size: 13px; color: #c8a878; }
+/* the small copy of the skill wheel at the top of the sheet */
+html.touch .w-skills .skw { display: flex; align-items: center; gap: 16px; padding: 6px 4px 12px; margin-bottom: 8px; border-bottom: 1px solid #3a2a18; }
+html.touch .w-skills .skw-arc { position: relative; flex: 0 0 232px; width: 232px; height: 172px; border-radius: 10px; background: radial-gradient(ellipse at 75% 80%, #1c2a33, #0b131a 75%); border: 1px solid #26323a; }
+html.touch .w-skills .skw-s { position: absolute; width: 44px; height: 44px; min-height: 0 !important; padding: 0 !important; transform: translate(-50%, -50%); border-radius: 50%; overflow: hidden;
+  background: #120c08 !important; border: 2px solid #c8a050 !important; box-shadow: 0 0 0 2px #000a; filter: none !important; }
+html.touch .w-skills .skw-s.main { width: 72px; height: 72px; border: 3px solid #ffe08a !important; }
+html.touch .w-skills .skw-s img { width: 100%; height: 100%; display: block; border-radius: 50%; pointer-events: none; }
+html.touch .w-skills .skw-s.empty { opacity: .45; border-style: dashed !important; }
+html.touch .w-skills .skw-s.empty span { color: #c8a878; font: 700 14px var(--font-head); }
+html.touch .w-skills .skw-s.cur { box-shadow: 0 0 0 2px #000a, 0 0 14px #ffe08a; }
+html.touch .w-skills .skw-tx { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+html.touch .w-skills .skw-tx b { font: 700 16px var(--font-head); color: var(--gold, #e8c26a); }
+html.touch .w-skills .skw-tx span { font-size: 13px; color: #c8bca0; }
+html.touch .w-skills .skw-btns { display: flex; gap: 10px; margin-top: 6px; flex-wrap: wrap; }
+html.touch .w-skills .skw-btns button { min-height: 44px; }
+html.phone .w-talents .tl { min-width: 44px; min-height: 44px; }
+html.phone .w-talents .tl-r, html.phone .w-talents .tl-req, html.phone .w-talents .tl-pd { font-size: 12px; }
+html.phone .window .bag-grid .bslot .cnt, html.phone .window .bag-grid .bslot .bil { font-size: 12px; }
+html.phone .w-dialog .msq-tag { font-size: 12px; }
+html.phone .w-talents .tl-set, html.phone .w-talents .tl-reset { min-height: 44px; }
+
+/* ======================================================================= Quest log (master / detail) */
+html.phone .window.w-quests > .wb { display: flex; flex-direction: column; overflow: hidden !important; }
+html.phone .w-quests .ql-tabs { flex: 0 0 auto; }
+html.phone .w-quests .ql-body { flex: 1 1 auto; min-height: 0; display: flex; gap: 12px; }
+html.phone .w-quests .ql-list { flex: 0 0 40%; width: auto; max-height: none; overflow-y: auto; overscroll-behavior: contain; padding-right: 8px; }
+html.phone .w-quests .ql-detail { flex: 1 1 auto; min-width: 0; max-height: none; overflow-y: auto; overscroll-behavior: contain; position: relative; padding-bottom: 0; }
+html.phone .w-quests .ql, html.phone .w-quests .sl-ch { min-height: 44px; display: flex; align-items: center; gap: 6px; font-size: 14px; padding: 6px 8px; box-sizing: border-box; }
+html.phone .w-quests .ql-grp { font-size: 12px; }
+html.phone .w-quests .ql-detail p, html.phone .w-quests .sl-detail p { font-size: 14px; }
+html.phone .w-quests .ql-track { min-height: 48px; }
+html.phone .w-quests .ql-detail .dbtns { bottom: 0; margin: 12px 0 0; padding: 8px 0; }
+html.phone .w-quests .ql-detail .dbtns button { min-height: 48px; }
+html.phone .w-quests .ql .crest { width: 16px; height: 20px; }
+
+/* ======================================================================= NPC dialog and quest detail */
+html.phone .w-dialog .wb.parch { max-height: none !important; }
+html.phone .w-dialog .qp-head { max-height: 0 !important; min-height: 0 !important; height: 0 !important; padding: 0 !important; margin: 0 !important; overflow: hidden; border: 0 !important; }
+html.phone .w-dialog .dopt { min-height: 48px; display: flex; align-items: center; gap: 6px; font-size: 15px; padding: 6px 12px; box-sizing: border-box; }
+html.phone .w-dialog .qp-greet, html.phone .w-dialog .qp-text { font-size: 15px; }
+html.phone .w-dialog .qp-cards { display: flex; flex-wrap: wrap; gap: 8px; }
+html.phone .w-dialog .qp-cards .rcard { flex: 1 1 260px; min-height: 56px; max-width: none; }
+html.phone .w-dialog .dbtns .acc { min-width: 160px; }
+
+/* ======================================================================= World map: full screen, pinch, pan, centre on me */
+html.phone .window.w-map > .wb { display: flex; flex-direction: column; overflow: hidden !important; padding: 6px 8px 8px; }
+html.phone .w-map .map-hint { flex: 0 0 auto; margin: 0 0 6px; font-size: 13px; }
+html.touch .w-map .map-vp { position: relative; }
+html.phone .w-map .map-vp { flex: 1 1 auto; min-height: 0; overflow: hidden; border-radius: 4px; }
+html.phone .w-map .map-vp canvas { position: absolute; inset: 0; width: 100% !important; height: 100% !important; max-width: none !important; max-height: none !important; }
+html.touch .w-map .map-tools { position: absolute; right: 8px; top: 8px; display: flex; gap: 8px; z-index: 2; }
+html.touch .w-map .map-tools button { min-height: 44px; min-width: 44px; padding: 0 12px; font-size: 15px; box-shadow: 0 2px 8px #000a; }
+html.touch .w-map .map-tools .map-zin, html.touch .w-map .map-tools .map-zout { width: 44px; padding: 0; font-size: 22px; }
+
+/* ======================================================================= Options (General / Touch / Keys) */
+html.touch .w-opts .o-hide { display: none !important; }
+html.touch .w-opts > .o-tabs { margin: 8px 12px 0; }
+html.touch .w-opts > .o-tabs button { flex: 1; }
+html.phone .w-opts .wb { width: auto; }
+html.phone .w-opts h4 { font-size: 16px; margin: 14px 0 4px; }
+html.phone .w-opts .opt > span { width: 140px; font-size: 14px; }
+html.phone .w-opts .o-q, html.phone .w-opts .o-s { display: flex; gap: 6px; flex-wrap: wrap; }
+html.phone .w-opts .o-q button, html.phone .w-opts .o-s button { min-height: 44px; padding: 6px 14px; font-size: 14px; }
+html.phone .w-opts .o-kb .kb { min-height: 44px; display: flex; align-items: center; justify-content: space-between; }
+html.phone .w-opts .o-kb button { min-height: 44px; min-width: 72px; }
+html.phone .w-opts .o-note a { display: inline-block; min-height: 44px; line-height: 44px; padding: 0 6px; }
+html.touch .w-opts .o-trow { flex-wrap: wrap; }
+html.touch .w-opts .o-seg { display: flex; gap: 6px; flex: 1; flex-wrap: wrap; }
+html.touch .w-opts .o-seg button { flex: 1 1 auto; min-height: 44px; padding: 6px 12px; font-size: 14px; filter: grayscale(.7) brightness(.75); }
+html.touch .w-opts .o-seg button.on { filter: none; }
+html.touch .w-opts .o-sl { flex: 1; }
+html.touch .w-opts .o-slv { min-width: 48px; text-align: right; font-size: 14px; }
+html.touch .w-opts .o-foot { margin: 14px 0 6px; }
+html.touch .w-opts .o-foot button { min-height: 48px; }
+
+/* ======================================================================= the other sheets: bigger rows */
+html.phone .w-ach .ach-cat, html.phone .w-journal button, html.phone .w-help button { min-height: 44px; }
+html.phone .window .litem { min-height: 52px; }
+html.phone .w-meter button { min-height: 44px; min-width: 44px; }
+
+/* tablets keep the desktop windows: their 22 px close button gets a 44 px reach to the finger (same look) */
+html.touch:not(.phone) .window .wx { position: relative; }
+html.touch:not(.phone) .window .wx::after { content: ''; position: absolute; inset: -11px; }
+
+/* ======================================================================= tablets (touch, not a phone): desktop-sized
+   windows, finger-sized controls. Tabs, buttons, fields, option, quest and story rows reach 44 px; the toggle rows and
+   slider thumbs above (html.touch) apply here too. */
+html.touch:not(.phone) .window .wb button, html.touch:not(.phone) .window .cw-tabs button, html.touch:not(.phone) .window .bag-head button,
+html.touch:not(.phone) .window .post-tabs button, html.touch:not(.phone) .window .o-tabs button { min-height: 44px; padding-top: 6px; padding-bottom: 6px; }
+html.touch:not(.phone) .window input[type=text], html.touch:not(.phone) .window input:not([type]), html.touch:not(.phone) .window select { min-height: 44px; font-size: 15px; box-sizing: border-box; }
+html.touch:not(.phone) .window .opt { min-height: 44px; }
+html.touch:not(.phone) .window .opt.chk { min-height: 48px; padding: 4px 0; margin: 2px 0; gap: 12px; border-bottom: 1px solid #ffffff0d; }
+html.touch:not(.phone) .w-quests .ql, html.touch:not(.phone) .w-quests .sl-ch { min-height: 44px; display: flex; align-items: center; gap: 6px; padding: 6px 8px; box-sizing: border-box; }
+html.touch:not(.phone) .w-quests .ql-track { min-height: 44px; }
+html.touch:not(.phone) .w-ach .ach-cat, html.touch:not(.phone) .w-ach .ach-trk { min-height: 44px; min-width: 64px; }
+html.touch:not(.phone) .w-char .cw-rb { width: 44px; height: 44px; }
+html.touch:not(.phone) .w-talents .tl-set, html.touch:not(.phone) .w-talents .tl-reset { min-height: 44px; }
+html.touch:not(.phone) .w-meter .wb button { min-height: 44px; min-width: 44px; }
+html.touch:not(.phone) .window .bag-head .bag-search button { min-width: 44px; }
+html.touch:not(.phone) .w-opts .o-note a { display: inline-block; min-height: 44px; line-height: 44px; padding: 0 6px; }
+html.touch:not(.phone) .window .dbtns button { min-height: 44px; }
+html.touch:not(.phone) .w-dialog .dopt { min-height: 44px; display: flex; align-items: center; gap: 6px; box-sizing: border-box; }
+
+/* the header's two brass rivets sit 45 px from the right edge for the 22 px close button; on a phone the close button
+   is 56 px wide and they showed as a stray "• •" on its edge */
+html.phone .window > .wh::after { right: 70px; }
+
+/* ======================================================= the Upgrade window and rarity extras on touch screens */
+html.phone .w-dialog .wb:has(.ug-wrap) { width: auto !important; }
+html.phone .ug-wrap { gap: 12px; }
+html.phone .ug-list { flex: 0 0 min(42%, 340px); max-height: none; gap: 6px; }
+html.phone .ug-row { min-height: 58px; padding: 6px 8px; gap: 10px; }
+html.phone .ug-row img { width: 44px; height: 44px; }
+html.phone .ug-rt b { font-size: 15px; }
+html.phone .ug-rt span { font-size: 12px; }
+html.phone .ug-rt .up-pips i { width: 12px; height: 7px; }
+html.phone .ug-head img { width: 60px; height: 60px; }
+html.phone .ug-head b { font-size: 18px; }
+html.phone .ug-pip i { height: 20px; }
+html.phone .ug-pip span { font-size: 12px; }
+html.phone .ug-note, html.phone .ug-st { font-size: 14px; }
+html.phone .ug-st { grid-template-columns: 1fr 52px 66px 34px; }
+html.phone .ug-m, html.phone .ug-g { font-size: 13px; min-height: 40px; }
+html.phone .ug-m img { width: 30px; height: 30px; }
+html.phone .window .wb button.ug-b { min-height: 58px; font-size: 18px !important; }
+@media (max-width: 640px) { html.phone .ug-wrap { flex-direction: column; } html.phone .ug-list { flex: none; max-height: 40vh; overflow-y: auto; } }
+html.phone .ar-temper { padding: 8px 12px; }
+html.phone .at-row { font-size: 14px; grid-template-columns: 90px 1fr; }
+html.phone .at-row em { font-size: 12.5px; }
+html.phone .at-bar { height: 12px; border-radius: 6px; }
+/* phones: the price and the Upgrade button come before the stat list, so the button is on screen without scrolling */
+html.phone .ug-head { order: 0; } html.phone .ug-track { order: 1; } html.phone .ug-note { order: 2; } html.phone .ug-cost { order: 3; }
+html.phone .ug-b { order: 4; } html.phone .ug-stats { order: 5; } html.phone .ug-tot { order: 6; }
+/* the Upgrade window's list is long: its Back bar sits after the content instead of floating over the last rows (the
+   header's close button is always on screen) */
+html.phone .window .wb:has(.ug-wrap) .dbtns { position: static; box-shadow: none; }

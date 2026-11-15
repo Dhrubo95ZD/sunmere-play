@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Sunmere Online</title>
+  <meta name="description" content="Sunmere Online: a free fantasy MMORPG of steam engines and machine raids, in your browser.">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#120d08">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="format-detection" content="telephone=no">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;800&family=Alegreya+Sans:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/sunmere-play/style.css">
+  <link rel="stylesheet" href="/sunmere-play/hud.css">
+  <!-- phones and tablets only: every rule is under html.mobile (the desktop matches none of them) -->
+  <link rel="stylesheet" href="/sunmere-play/mobile-hud.css">
+  <link rel="stylesheet" href="/sunmere-play/mobile-panels.css">
+  <script>window.SUNMERE_WEB = 1;</script>
+  <script type="importmap">
+  { "imports": { "three": "/sunmere-play/vendor/three/build/three.module.js", "three/addons/": "/sunmere-play/vendor/three/examples/jsm/" } }
+  </script>
+</head>
+<body>
+  <canvas id="view"></canvas>
+  <div id="ui"></div>
+  <div id="loading"><div class="title">Sunmere</div><div class="bar"><i></i></div><div class="msg">Painting the world…</div></div>
+  <script type="module" src="/sunmere-play/main.js"></script>
+</body>
+</html>

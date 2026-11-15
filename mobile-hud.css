@@ -1,0 +1,265 @@
+/* Sunmere: the phone and tablet HUD and touch controls (ui/touch.js). Everything here hangs off html.mobile.touch, so the
+   desktop never matches a rule. touch.js sets on .hud: --u (control unit: 1 on a 412-tall screen, times the button-size
+   option), --hu (HUD unit, times the interface-size option) and the safe-area insets --sl --sr --st --sb in px.
+   The controls (.tc-*) are placed by touch.js layout() with transforms; this file sizes and paints them and places the
+   HUD frames. hud.css is not edited: these rules win by specificity (two classes on <html>) and order. */
+
+html.mobile.touch .hud { --u: 1; --hu: 1; --sl: 0px; --sr: 0px; --st: 0px; --sb: 0px; }
+
+/* ---------------------------------------------------------------- the stick */
+html.mobile.touch .tc .tc-home { position: absolute; left: 0; top: 0; width: 0; height: 0; pointer-events: none; }
+html.mobile.touch .tc .tc-home::before { content: ''; position: absolute; width: calc(var(--u) * 112px); height: calc(var(--u) * 112px); left: calc(var(--u) * -56px); top: calc(var(--u) * -56px);
+  border-radius: 50%; border: 2px solid rgba(246,223,159,.9); opacity: .18; box-sizing: border-box; }
+html.mobile.touch .tc .tc-stick { opacity: 0; transition: opacity .12s; }
+html.mobile.touch .tc .tc-stick.on { opacity: 1; transition: none; }
+html.mobile.touch .tc .tc-stick.on ~ .tc-home, html.mobile.touch .tc .tc-home:has(+ .tc-stick.on) { opacity: 0; }
+html.mobile.touch .tc .tc-base { width: calc(var(--u) * 112px); height: calc(var(--u) * 112px); left: calc(var(--u) * -56px); top: calc(var(--u) * -56px); opacity: .3;
+  background: radial-gradient(circle, rgba(16,24,30,.6), rgba(16,24,30,.25) 70%); border: 2px solid #f6df9f; box-sizing: border-box; box-shadow: none; }
+html.mobile.touch .tc .tc-knob { width: calc(var(--u) * 48px); height: calc(var(--u) * 48px); left: calc(var(--u) * -24px); top: calc(var(--u) * -24px);
+  background: radial-gradient(circle at 50% 35%, #f6df9f, #b8923e); border: 2px solid #3a2a10; box-sizing: border-box; box-shadow: 0 2px 8px rgba(0,0,0,.6); opacity: .9; }
+html.mobile.touch .tc .tc-stick.run .tc-base { opacity: .55; border-color: #ffe08a; box-shadow: 0 0 14px rgba(255,214,120,.55); }
+
+/* ---------------------------------------------------------------- the skill arc */
+html.mobile.touch .tc-sk { border-width: 2px; border-color: #a48b50; box-shadow: 0 0 0 1.5px rgba(0,0,0,.7), 0 3px 8px rgba(0,0,0,.55); }
+html.mobile.touch .tc-sk.main { border: 3px solid #ffe08a; }
+html.mobile.touch .tc-sk.hidden { display: none; }
+html.mobile.touch .tc-sk.tc-empty { background: transparent; border: 2px solid rgba(246,223,159,.9); opacity: .3; box-shadow: none; pointer-events: none; }
+html.mobile.touch .tc-sk .tc-cdt { font-size: calc(var(--u) * 18px); }
+html.mobile.touch .tc-sk.main .tc-cdt { font-size: calc(var(--u) * 26px); }
+/* out of resource: a red tint, not grey */
+html.mobile.touch .tc-sk.nores { border-color: #c8402a; }
+html.mobile.touch .tc-sk.nores img { filter: saturate(.55) brightness(.6) sepia(.5) hue-rotate(-30deg); }
+html.mobile.touch .tc-sk.nores::after { content: ''; position: absolute; inset: 0; border-radius: 50%; background: rgba(200,40,20,.28); pointer-events: none; }
+/* off cooldown: a 2u gold ring flashes */
+html.mobile.touch .tc-sk .tc-ring { position: absolute; inset: 0; border-radius: 50%; pointer-events: none; box-shadow: inset 0 0 0 calc(var(--u) * 2px) #ffd860; opacity: 0; }
+html.mobile.touch .tc-sk.ready .tc-ring { animation: tcready .55s ease-out; }
+@keyframes tcready { 0% { opacity: 1; box-shadow: inset 0 0 0 calc(var(--u) * 3px) #fff0b0, 0 0 12px #ffd860; } 100% { opacity: 0; } }
+html.mobile.touch .tc-sk.tc-page b { font-size: calc(var(--u) * 10px); }
+html.mobile.touch .tc-b { border-width: 2px; border-color: #a48b50; background: radial-gradient(circle at 50% 35%, rgba(54,70,80,.94), rgba(16,25,32,.94)); color: #f6df9f; box-shadow: 0 0 0 1.5px rgba(0,0,0,.6), 0 3px 8px rgba(0,0,0,.5); }
+html.mobile.touch .tc-b.on { border-color: #ffe08a; color: #fff; box-shadow: 0 0 0 1.5px rgba(0,0,0,.55), 0 0 14px rgba(255,214,120,.65); }
+html.mobile.touch .tc-b.tc-jump svg { width: 50%; height: 50%; }
+html.mobile.touch .tc-b.tc-tgt svg { width: 58%; height: 58%; }
+
+/* ---------------------------------------------------------------- Interact (stands in for the "F" pill) */
+html.mobile.touch .hud .prompt { display: none !important; }
+html.mobile.touch .tc-b.tc-int { overflow: hidden; border: 3px solid #ffe08a; background: radial-gradient(circle at 50% 35%, #6a5426, #241a0c); box-shadow: 0 0 0 2px rgba(0,0,0,.6), 0 0 16px rgba(255,214,120,.45); }
+html.mobile.touch .tc-b.tc-int img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
+html.mobile.touch .tc-b.tc-int .tc-intg { display: flex; align-items: center; justify-content: center; width: 54%; height: 54%; pointer-events: none; }
+html.mobile.touch .tc-b.tc-int .tc-intg svg { width: 100%; height: 100%; fill: currentColor; stroke: currentColor; }
+html.mobile.touch .tc-b.tc-int.hidden, html.mobile.touch .tc-intl.hidden { display: none; }
+html.mobile.touch .tc-b.tc-int.pop { animation: tcpop .15s ease-out; }
+@keyframes tcpop { from { scale: .4; opacity: .2; } to { scale: 1; opacity: 1; } }
+html.mobile.touch .tc .tc-intl { position: absolute; left: 0; top: 0; pointer-events: none; max-width: 38vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font: 700 13px var(--font-body); color: #fff2d0; padding: 2px 9px; border-radius: 10px; background: rgba(10,16,22,.82); border: 1px solid #917849; text-shadow: 0 1px 2px #000; }
+
+/* ---------------------------------------------------------------- quick bar (tonic, food, ride, auto-run) */
+html.mobile.touch .tc .tc-qb { position: absolute; display: flex; pointer-events: none; }
+html.mobile.touch .tc .tc-qb > .tc-b { position: relative; transform: none !important; pointer-events: auto; }
+html.mobile.touch .tc-q .tc-n { font-size: 11px; right: 1px; bottom: -1px; }
+html.mobile.touch .tc-b.tc-run.on { animation: tcglow 1.4s ease-in-out infinite; }
+@keyframes tcglow { 50% { box-shadow: 0 0 0 1.5px rgba(0,0,0,.55), 0 0 22px rgba(255,214,120,.95); } }
+
+/* ---------------------------------------------------------------- camera distance (under the minimap) */
+html.mobile.touch .tc-b.tc-cam { flex-direction: column; gap: 0; border-radius: 8px; }
+html.mobile.touch .tc-b.tc-cam svg { width: 52%; height: 44%; }
+html.mobile.touch .tc-b.tc-cam b { font: 800 10px/1 var(--font-body); letter-spacing: .02em; }
+
+/* ---------------------------------------------------------------- Menu and Bag (left of the minimap), chat icon */
+html.mobile.touch .tc .tc-top { top: calc(var(--st) + 8px); right: calc(var(--sr) + 8px + var(--hu) * 104px + 10px); gap: calc(var(--hu) * 8px); }
+html.mobile.touch .tc-t { width: calc(var(--hu) * 44px); height: calc(var(--hu) * 44px); min-width: 44px; min-height: 44px; border-radius: 6px; border: 1px solid #917849;
+  background: linear-gradient(180deg, #34444c, #17232b); color: #f6df9f; box-shadow: inset 0 1px 0 #dceff030, 0 3px 8px rgba(0,0,0,.5); }
+html.mobile.touch .tc-t svg { width: 56%; height: 56%; }
+html.mobile.touch .tc-t.tc-chat { position: absolute; left: calc(var(--sl) + 8px); top: calc(var(--st) + var(--hu) * 102px); width: calc(var(--hu) * 40px); height: calc(var(--hu) * 40px); min-width: 0; min-height: 0; }
+html.mobile.touch .hud.has-buffs .tc-t.tc-chat { top: calc(var(--st) + var(--hu) * 126px); }
+html.mobile.touch .tc-dot { top: -5px; right: -6px; width: auto; height: auto; min-width: 16px; padding: 0 4px; box-sizing: border-box; border-radius: 9px;
+  font: 800 10px/16px var(--font-body); color: #fff; text-align: center; background: #d8321e; box-shadow: 0 0 0 1.5px #1a0a06; }
+html.mobile.touch .tc-toasts { position: absolute; left: calc(var(--sl) + 8px + var(--hu) * 48px); top: calc(var(--st) + var(--hu) * 104px); max-width: min(42vw, 360px); display: flex; flex-direction: column; gap: 3px; pointer-events: none; }
+html.mobile.touch .hud.has-buffs .tc-toasts { top: calc(var(--st) + var(--hu) * 128px); }
+html.mobile.touch .tc-toast { font: 600 12px/16px var(--font-body); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 1px 8px; border-radius: 3px;
+  background: rgba(10,16,22,.62); text-shadow: 0 1px 2px #000; transition: opacity .4s; }
+html.mobile.touch .tc-toast.out { opacity: 0; }
+html.mobile.touch .tc-toast b { font-weight: 700; }
+
+/* ---------------------------------------------------------------- unit frame (top-left) */
+html.mobile.touch .hud .player-frame { zoom: 1; left: calc(var(--sl) + 8px); top: calc(var(--st) + 6px); width: calc(var(--hu) * 210px); height: calc(var(--hu) * 48px); box-sizing: border-box;
+  padding: 0 calc(var(--hu) * 8px) 0 calc(var(--hu) * 4px); gap: calc(var(--hu) * 7px); border-width: 1px; border-radius: 3px; }
+html.mobile.touch .hud .unit .portrait { width: calc(var(--hu) * 40px); height: calc(var(--hu) * 40px); border-width: 1px; }
+html.mobile.touch .hud .unit .portrait .lvl { font-size: 10px; line-height: 13px; padding: 0 4px; bottom: -4px; border-radius: 3px; }
+html.mobile.touch .hud .unit .bars { width: auto; flex: 1; min-width: 0; }
+html.mobile.touch .hud .unit .nm { font-size: 13px; line-height: 15px; margin: 0 0 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+html.mobile.touch .hud .unit .bar { margin: 2px 0 0; }
+html.mobile.touch .hud .player-frame .bar.hp { height: calc(var(--hu) * 11px); }
+html.mobile.touch .hud .player-frame .bar.hp span { font-size: 10px; line-height: calc(var(--hu) * 11px); }
+html.mobile.touch .hud .player-frame .bar.res { height: calc(var(--hu) * 6px); }
+html.mobile.touch .hud .player-frame .bar.res span { display: none; }
+html.mobile.touch .hud .player-frame .buffs { position: absolute; left: 0; top: calc(100% + 3px); margin: 0; gap: 3px; align-items: center; }
+html.mobile.touch .hud .player-frame .buff { width: calc(var(--hu) * 20px); height: calc(var(--hu) * 20px); }
+html.mobile.touch .hud .player-frame .buff:nth-child(n+7) { display: none; }
+html.mobile.touch .hud .player-frame .buffs::after { content: attr(data-more); font: 700 11px var(--font-body); color: #fff; text-shadow: 0 1px 2px #000; }
+
+/* ---------------------------------------------------------------- target frame (top-centre) */
+html.mobile.touch .hud .target-frame { zoom: 1; left: calc(50% - var(--hu) * 115px); top: calc(var(--st) + 6px); width: calc(var(--hu) * 230px); height: calc(var(--hu) * 44px); box-sizing: border-box;
+  padding: 0 calc(var(--hu) * 8px) 0 calc(var(--hu) * 4px); gap: calc(var(--hu) * 7px); border-width: 1px; border-radius: 3px; cursor: pointer; pointer-events: auto; }
+html.mobile.touch .hud .target-frame .portrait { width: calc(var(--hu) * 34px); height: calc(var(--hu) * 34px); }
+html.mobile.touch .hud .target-frame .bar.hp { height: calc(var(--hu) * 12px); }
+html.mobile.touch .hud .target-frame .bar.hp > span { display: none; }
+html.mobile.touch .hud .target-frame .tc-tfp { position: absolute; inset: 0; text-align: center; font: 700 10px var(--font-body); line-height: calc(var(--hu) * 12px); color: #fff; text-shadow: 0 1px 1px #000; }
+html.mobile.touch .hud .target-frame .sub, html.mobile.touch .hud .target-frame .buffs { display: none; }
+html.mobile.touch .hud .target-frame.elite { border-color: #ffc040; box-shadow: inset 0 0 0 1px #ffc04088, 0 0 10px rgba(255,190,60,.4); }
+html.mobile.touch .hud .target-frame .tf-cast { left: calc(var(--hu) * 45px); right: calc(var(--hu) * 8px); top: auto; bottom: calc(var(--hu) * 2px); height: calc(var(--hu) * 4px); border: 0; border-radius: 1px; }
+html.mobile.touch .hud .target-frame .tf-cast span { display: none; }
+html.mobile.touch .hud .target-frame .tf-auras { left: 0; margin-top: 3px; gap: 2px; }
+html.mobile.touch .hud .target-frame .tf-auras .aura { width: calc(var(--hu) * 18px); height: calc(var(--hu) * 18px); }
+html.mobile.touch .hud .tf-actions { zoom: .8; left: calc((50% - var(--hu) * 115px) / .8); top: calc((var(--st) + 6px + var(--hu) * 72px) / .8); }
+html.mobile.touch .hud .party-frames { zoom: .72; left: calc((var(--sl) + 8px) / .72); top: calc((var(--st) + var(--hu) * 150px) / .72); }
+
+/* ---------------------------------------------------------------- minimap (top-right), zone name above it */
+html.mobile.touch .hud .minimap { zoom: 1; top: calc(var(--st) + var(--hu) * 22px); right: calc(var(--sr) + 8px); width: calc(var(--hu) * 104px); }
+html.mobile.touch .hud .minimap::before { display: none; }
+html.mobile.touch .hud .minimap canvas { display: block; width: calc(var(--hu) * 104px); height: calc(var(--hu) * 104px); box-sizing: border-box; border-width: 3px; border-color: #a48b50;
+  box-shadow: 0 0 0 1.5px #0b131a, 0 4px 12px rgba(0,0,0,.55); }
+html.mobile.touch .hud .minimap .zone-name { position: absolute; bottom: calc(100% + 3px); left: 50%; transform: translateX(-50%); width: max-content; max-width: calc(var(--hu) * 104px + 12px); box-sizing: border-box; margin: 0; padding: 1px 5px;
+  font: 700 11px/15px var(--font-head); text-transform: uppercase; letter-spacing: .02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; background: rgba(16,24,30,.75); box-shadow: none; border-radius: 2px; }
+html.mobile.touch .hud .minimap .mm-zoom, html.mobile.touch .hud .minimap .coords { display: none !important; }
+html.mobile.touch .hud .minimap .post-note, html.mobile.touch .hud .minimap .dura:not(.hidden) { position: absolute; left: auto; right: calc(100% - 14px); margin: 0; padding: 2px 5px; font-size: 12px; line-height: 16px; }
+html.mobile.touch .hud .minimap .post-note { top: auto; bottom: 2px; }
+html.mobile.touch .hud .minimap .post-note .pn-env { width: 16px; height: 12px; border-width: 1.5px; }
+html.mobile.touch .hud .minimap .post-note .pn-env::after { left: 2px; top: -4px; width: 7px; height: 7px; border-width: 0 1.5px 1.5px 0; }
+html.mobile.touch .hud .minimap .dura:not(.hidden) { top: auto; bottom: calc(var(--hu) * 104px - 26px); right: calc(100% + 2px); font-size: 0; }
+html.mobile.touch .hud .minimap .dura img { width: 18px; height: 18px; }
+
+/* ---------------------------------------------------------------- quest pill and the open tracker */
+html.mobile.touch .tc .tc-pill { position: absolute; left: calc(var(--sl) + 8px); top: calc(var(--st) + var(--hu) * 60px); height: calc(var(--hu) * 34px); max-width: calc(var(--hu) * 250px);
+  display: flex; align-items: center; gap: 6px; padding: 0 8px 0 4px; box-sizing: border-box; border-radius: 3px; border: 1px solid #917849; border-left: 3px solid #e2552a;
+  background: linear-gradient(90deg, rgba(40,24,16,.9), rgba(18,26,32,.86)); color: #f4ece0; font: 600 12px/1.2 var(--font-body); text-align: left; cursor: pointer; }
+html.mobile.touch .tc .tc-pill.hidden { display: none; }
+html.mobile.touch .tc .tc-pill:not(.story) { border-left-color: #e8c26a; }
+html.mobile.touch .hud.has-buffs .tc .tc-pill { top: calc(var(--st) + var(--hu) * 84px); }
+html.mobile.touch .tc-pill .tc-pi { flex: none; display: flex; align-items: center; justify-content: center; width: calc(var(--hu) * 22px); height: calc(var(--hu) * 22px); border-radius: 3px;
+  font: 800 14px var(--font-head); font-style: normal; color: #2a1a06; background: linear-gradient(180deg, #ffd060, #c8902a); }
+html.mobile.touch .tc-pill.done .tc-pi { background: linear-gradient(180deg, #9aff8a, #3a9a3a); }
+html.mobile.touch .tc-pill.done .tc-pi { font-size: 0; }
+html.mobile.touch .tc-pill.done .tc-pi::before { content: '?'; font-size: 14px; }
+html.mobile.touch .tc-pill .tc-pt { flex: 1 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+html.mobile.touch .tc-pill .tc-pn { flex: none; font: 700 12px var(--font-body); color: #ffe08a; }
+html.mobile.touch .tc-pill.done .tc-pn { color: #9aff8a; }
+html.mobile.touch .tc-pill .tc-pc { flex: none; width: 0; height: 0; border: 5px solid transparent; border-top: 6px solid #f6df9f; border-bottom: 0; transition: transform .15s; }
+html.mobile.touch .tc-pill.on .tc-pc { transform: rotate(180deg); }
+/* the tracker itself: hidden while the pill is folded; opened under the pill, scrolls, three quests at most */
+html.mobile.touch .hud .quest-tracker, html.mobile.touch .hud .quest-tracker.squeezed { display: none !important; }
+html.mobile.touch .hud.qt-open .quest-tracker { display: block !important; zoom: 1; z-index: 6; left: calc(var(--sl) + 8px); right: auto; top: calc(var(--st) + var(--hu) * 98px) !important;
+  width: min(calc(var(--hu) * 300px), 46vw); max-height: 45vh !important; overflow-y: auto; overscroll-behavior: contain; padding: 6px 8px; box-sizing: border-box;
+  background: rgba(12,18,24,.88); border: 1px solid #917849; border-radius: 3px; font-size: 13px; pointer-events: auto; }
+html.mobile.touch .hud.qt-open.has-buffs .quest-tracker { top: calc(var(--st) + var(--hu) * 122px) !important; }
+html.mobile.touch .hud.qt-open .quest-tracker .tc-over { display: none; }
+html.mobile.touch .hud.qt-open .quest-tracker .qt, html.mobile.touch .hud.qt-open .quest-tracker .msq-box { min-height: 44px; box-sizing: border-box; margin-bottom: 4px; }
+html.mobile.touch .hud.qt-open .quest-tracker .qt-more { display: none; }
+
+/* ---------------------------------------------------------------- chat: a left sheet */
+html.mobile.touch .hud.chat-open .chat { position: fixed; zoom: 1; left: 0; top: 0; bottom: 0; width: 50vw; z-index: 30; display: flex; flex-direction: column; box-sizing: border-box;
+  padding: calc(var(--st) + 52px) 8px calc(var(--sb) + 8px) calc(var(--sl) + 8px); background: rgba(10,16,22,.94); border-right: 1px solid #917849; box-shadow: 4px 0 18px rgba(0,0,0,.6); }
+html.mobile.touch .hud.chat-open .chat .chat-log { flex: 1 1 auto; height: auto; max-height: none; min-height: 0; font-size: 14px; background: transparent; }
+html.mobile.touch .hud.chat-open .chat .chat-in { min-height: 44px; width: calc(100% - 80px); margin-top: 6px; font-size: 16px; box-sizing: border-box; }
+html.mobile.touch .hud.chat-open .chat .chat-send { right: 8px; bottom: calc(var(--sb) + 8px); width: 72px; height: 44px; }
+html.mobile.touch .hud .chat .chat-x { display: none; }
+html.mobile.touch .hud.chat-open .chat .chat-x { display: flex; position: absolute; top: calc(var(--st) + 2px); right: 4px; width: 48px; height: 48px; align-items: center; justify-content: center;
+  border: 0; background: none; color: #f6df9f; }
+html.mobile.touch .hud.chat-open .chat .chat-x svg { width: 26px; height: 26px; }
+html.mobile.touch .hud.chat-open .chat::before { content: 'Chat'; position: absolute; left: calc(var(--sl) + 14px); top: calc(var(--st) + 14px); font: 700 18px var(--font-head); color: #f6df9f; }
+html.mobile.touch .hud.chat-open .tc-chat { visibility: hidden; }
+
+/* ---------------------------------------------------------------- the menu drawer (right side) */
+html.mobile.touch .tc-menu { display: block; padding: 0; background: rgba(6,8,10,.45); -webkit-backdrop-filter: none; backdrop-filter: none; }
+html.mobile.touch .tcm-drawer { position: absolute; top: 0; bottom: 0; right: 0; width: min(calc(var(--u, 1) * 300px), 62vw); display: flex; flex-direction: column; box-sizing: border-box;
+  padding: calc(env(safe-area-inset-top, 0px) + 4px) calc(env(safe-area-inset-right, 0px) + 10px) calc(env(safe-area-inset-bottom, 0px) + 10px) 10px;
+  background: var(--grain), linear-gradient(115deg, #354650f8, #15212bf8 50%, #101920f5); border-left: 1px solid #917849; box-shadow: -6px 0 22px rgba(0,0,0,.6);
+  transform: translateX(100%); transition: transform .18s ease-out; }
+html.mobile.touch .tc-menu.lefty .tcm-drawer { right: auto; left: 0; border-left: 0; border-right: 1px solid #917849; transform: translateX(-100%); }
+html.mobile.touch .tc-menu.on .tcm-drawer { transform: none; }
+html.mobile.touch .tcm-h { flex: none; display: flex; align-items: center; justify-content: space-between; height: 48px; padding-left: 4px; }
+html.mobile.touch .tcm-h span { font: 700 18px var(--font-head); color: #f6df9f; letter-spacing: .04em; }
+html.mobile.touch .tcm-h .tcm-x { min-width: 0; width: 48px; height: 48px; padding: 0; display: flex; align-items: center; justify-content: center; border-radius: 6px; background: none; border: 0; color: #f6df9f; transform: scaleX(-1); }
+html.mobile.touch .tc-menu.lefty .tcm-h .tcm-x { transform: none; }
+html.mobile.touch .tcm-h .tcm-x svg { width: 26px; height: 26px; }
+html.mobile.touch .tcm-grid { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; width: auto; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; align-content: start; padding: 2px; }
+html.mobile.touch .tcm-grid button { position: relative; height: max(72px, calc(var(--u, 1) * 72px)); gap: 3px; border-radius: 4px; padding: 4px 2px; background: linear-gradient(180deg, #2a3a44, #142028); border: 1px solid #4a6066; }
+html.mobile.touch .tcm-grid button img { width: 34px; height: 34px; border-radius: 3px; pointer-events: none; }
+html.mobile.touch .tcm-grid button .tcm-g { display: flex; width: 30px; height: 30px; color: #f6df9f; pointer-events: none; }
+html.mobile.touch .tcm-grid button .tcm-g svg { width: 100%; height: 100%; fill: currentColor; stroke: currentColor; }
+html.mobile.touch .tcm-grid button span { font: 700 12px/1.1 var(--font-head); text-align: center; color: #e1e9e8; pointer-events: none; }
+html.mobile.touch .tcm-grid button.cooling img { filter: grayscale(.8) brightness(.6); }
+html.mobile.touch .tcm-grid button .tcm-cd { position: absolute; top: 4px; right: 4px; font: 700 10px var(--font-body); font-style: normal; color: #ffe08a; text-shadow: 0 1px 2px #000; }
+
+/* ---------------------------------------------------------------- offline chip: top-centre, then a dot by the minimap */
+html.mobile.touch .hud .offline-tag { zoom: 1; top: calc(var(--st) + var(--hu) * 54px); bottom: auto; left: 50%; transform: translateX(-50%); font-size: 10px; line-height: 14px; padding: 1px 8px; white-space: nowrap; pointer-events: auto; transition: none; }
+html.mobile.touch .hud .offline-tag.tc-dotted { left: auto; transform: none; right: calc(var(--sr) + 8px + var(--hu) * 104px + 4px); top: calc(var(--st) + var(--hu) * 60px);
+  width: calc(var(--hu) * 10px); height: calc(var(--hu) * 10px); padding: 0; border-radius: 50%; font-size: 0; background: #8a9498; box-shadow: 0 0 0 1.5px #0b131a; }
+html.mobile.touch .hud .offline-tag.tc-dotted::after { content: ''; position: absolute; inset: -14px; } /* a bigger tap target: tap shows the chip again */
+
+/* ---------------------------------------------------------------- bars, banners, the hit pulse */
+html.mobile.touch .hud .xpbar { height: calc(var(--hu) * 3px); bottom: var(--sb); border-top: 0; }
+html.mobile.touch .hud .xpbar span { display: none; }
+html.mobile.touch .hud .castbar { zoom: 1; width: calc(var(--hu) * 180px); height: calc(var(--hu) * 10px); bottom: calc(var(--sb) + var(--u) * 64px); border-width: 1px; }
+html.mobile.touch .hud .castbar span { font-size: 10px; line-height: calc(var(--hu) * 10px - 2px); }
+html.mobile.touch .hud .err-text { top: calc(var(--st) + var(--hu) * 64px); font-size: 14px; }
+html.mobile.touch .hud .gold-box { display: none; }
+html.mobile.touch .tc .tc-vig { position: fixed; inset: 0; pointer-events: none; opacity: 0; box-shadow: inset 0 0 70px 18px rgba(200,20,10,.75); }
+html.mobile.touch .tc .tc-vig.on { animation: tcvig .6s ease-out; }
+@keyframes tcvig { 0% { opacity: 1; } 100% { opacity: 0; } }
+
+/* ---------------------------------------------------------------- nameplates (spec section 4): 15px name, 12px title,
+   a 2px dark outline, a 64x7 bar. ui.js measures each plate after its text changes, so the declutter uses these sizes. */
+html.mobile.touch .plate .pn { font-size: 15px; line-height: 18px; -webkit-text-stroke: 2px #05090d; paint-order: stroke fill; }
+html.mobile.touch .plate.targeted .pn { font-size: 15px; }
+html.mobile.touch .plate .pt, html.mobile.touch .plate .pg { font-size: 12px; line-height: 14px; -webkit-text-stroke: 2px #05090d; paint-order: stroke fill; }
+html.mobile.touch .plate .pl { font-size: 11px; line-height: 14px; -webkit-text-stroke: 0; }
+html.mobile.touch .plate .ph { width: 64px; height: 7px; }
+
+/* ---------------------------------------------------------------- a full-screen sheet is open: the HUD steps aside */
+html.mobile.touch .hud.tc-sheet > :is(.unit, .minimap, .quest-tracker, .party-frames, .tf-actions, .castbar, .offline-tag),
+html.mobile.touch .tc.has-win > :is(.tc-wheel, .tc-b, .tc-qb, .tc-top, .tc-chat, .tc-pill, .tc-toasts, .tc-intl, .tc-home, .tc-stick) { visibility: hidden; }
+
+/* the small round controls (camera 36u, chat 40u) reach 44 px and more to the finger */
+html.mobile.touch .tc-b.tc-cam::after, html.mobile.touch .tc-t.tc-chat::after { content: ''; position: absolute; inset: -8px; }
+
+/* loot and achievement toasts: top-centre under the target frame, clear of the arc and the Interact button */
+html.mobile.touch .toasts { left: 50% !important; right: auto !important; top: calc((env(safe-area-inset-top, 0px) + 66px) / .85) !important; bottom: auto !important; transform: translateX(-50%) !important; align-items: center !important; zoom: .85; }
+html.mobile.touch .hud .ach-toasts { zoom: .72; top: calc((var(--st) + var(--hu) * 58px) / .72); bottom: auto; }
+
+/* the story / region banner is art only: style.css's "#ui > * { pointer-events: auto }" made its 720 x 236 box catch
+   taps for 7 s over the middle of the screen (the Interact button and the arc's upper skills) */
+html.mobile.touch #ui > .story-card { pointer-events: none; }
+
+/* the menu drawer on a short phone (412 px and less): five rows of tiles fit without scrolling (at 72 px the last row,
+   How to Play / What's New / Chat, sat half under the bottom edge at 892x412) */
+@media (max-height: 440px) {
+  html.mobile.touch .tcm-grid { gap: 6px; }
+  html.mobile.touch .tcm-grid button { height: max(52px, calc((100vh - 90px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)) / 5)); gap: 2px; padding: 3px 2px; }
+  html.mobile.touch .tcm-grid button img { width: 30px; height: 30px; }
+  html.mobile.touch .tcm-grid button .tcm-g { width: 26px; height: 26px; }
+  html.mobile.touch .tcm-grid button span { line-height: 1.05; }
+}
+
+/* the open quest tracker hangs over the chat icon and its toasts: they step aside until it folds again */
+html.mobile.touch .hud.qt-open .tc > :is(.tc-chat, .tc-toasts) { visibility: hidden; }
+
+/* the menu drawer is open: the arc, the quick bar and the Interact chip step aside like they do for a sheet (their
+   edges showed through the dimmed backdrop) */
+html.mobile.touch:has(.tc-menu.on) .tc > :is(.tc-wheel, .tc-b, .tc-qb, .tc-intl, .tc-home, .tc-stick, .tc-toasts) { visibility: hidden; }
+
+/* the loot card: top-left over the frames, clear of the arc and the Interact button (centred, it covered both) */
+html.mobile.touch .window.w-loot { left: calc(env(safe-area-inset-left, 0px) + 8px) !important; right: auto !important; transform: none !important;
+  width: min(400px, calc(50vw - 16px)) !important; top: calc(env(safe-area-inset-top, 0px) + 8px) !important; bottom: auto !important; max-height: calc(100vh - 24px) !important; }
+html.mobile.touch.lefty .window.w-loot { left: auto !important; right: calc(env(safe-area-inset-right, 0px) + 8px) !important; }
+
+/* long zone names ("Sunmere Meadows"): a touch smaller and tighter before the ellipsis */
+html.mobile.touch .hud .minimap .zone-name { font-size: 10px; letter-spacing: 0; padding: 1px 4px; max-width: calc(var(--hu) * 104px + 20px); }
+
+/* v109 the quest walk: "Travelling to" pinned beside the quest pill, in the free band before the top-right buttons (the
+   tracker itself is folded away on phones; the toasts and chat sit under the pill) */
+html.mobile.touch .hud .qw-pin { display: flex; position: absolute; z-index: 4; align-items: center; gap: 8px; left: calc(var(--sl) + 16px + var(--hu) * 250px); top: calc(var(--st) + var(--hu) * 60px); height: calc(var(--hu) * 34px); box-sizing: border-box; max-width: calc(var(--hu) * 300px);
+  padding: 4px 4px 4px 8px; font-size: 12px; color: #d8c690; background: #0b131acc; border-left: 2px solid #b8a46a; border-radius: 4px; pointer-events: auto; text-shadow: 0 1px 2px #000; }
+html.mobile.touch .hud.has-buffs .qw-pin { top: calc(var(--st) + var(--hu) * 84px); }
+html.mobile.touch .hud .qw-pin span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+html.mobile.touch .hud .qw-pin .qw-stop { height: calc(var(--hu) * 28px); min-height: 26px; padding: 0 12px; font-size: 12px; }
+html.mobile.touch .hud.qt-open .qw-pin { display: none; }
