@@ -1,6 +1,17 @@
 // What's new: shown once after an update (newest first). Bump `v` on the first entry whenever something is added.
 export const CHANGELOG = [
   {
+    v: 120, date: '16 November 2026', title: 'The Rainward Gorge',
+    items: [
+      ['Part Fourteen begins', 'Chapter 45: three young poles are all the Sound has. The Tidewrights’ yard book says the Makers’ poles came up the Rainward Gorge by the haul road each spring, so the valley winds an old log haulier to work and rides the wagon up. The level cap rises to 65.'],
+      ['The Rainward Gorge', 'A deep wet gorge of waterfalls and terraced seed beds in three parts: the Gorge Foot, the Seed Terraces and the Slip. Rain comes and goes for everyone at once, and in a downpour mud slips run down the lanes.'],
+      ['New machines', 'Stump pullers, terrace cutters, drain borers, slip ploughs and slope wardens, two rare machines and the world boss the Hill Leveller.'],
+      ['A real fight', 'Combat is rebalanced: normal enemies take a few seconds longer and hit harder, heavy armour protects clearly more than leather or cloth, tanks last much longer, the Chemist no longer does twice everyone else’s damage, and dungeon bosses last long enough to see their attacks.'],
+      ['Better volunteers', 'Volunteer tanks hold the boss and taunt early, volunteer healers heal properly, and ranged volunteers keep out of slams, so dungeons and raids with volunteers can be won again.'],
+      ['New paintings', 'Portraits for every Tidewater boss, loading pictures for the Mill Races and the Sea Gate, and new chapter and zone pictures for Part Thirteen.'],
+    ],
+  },
+  {
     v: 119, date: '15 November 2026', title: 'For Whoever Comes After',
     items: [
       ['Part Thirteen complete', 'Chapter 44: break the jammed Sea Gate open at low water and stop the engine that has held it half shut for a lifetime. The first new rope goes up the lift, and the valley plants a row of its own, for whoever comes after. Title: of the Tidewater Yards.'],

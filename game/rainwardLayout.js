@@ -23,7 +23,7 @@ import { addRock, addTuft } from '../assets/trees.js';
 import { createChannels, createWaterfall } from '../engine/water.js';
 import { G } from '../engine/globals.js';
 import { RAINWARD, rainwardHeight, rainwardGap, rainwardPathDist, rainwardGround, riverZ, zOfV, vOf, riverLevel, riverHW, northFoot, terraceAt, terraceLevelAt, slipLane, rainLevel } from '/sunmere-play/shared/rainward.js';
-import { NPCS, NODES, OBJECTS } from '/sunmere-play/shared/data.js';
+import { NPCS, NODES, OBJECTS, SPAWNS, MOBS } from '/sunmere-play/shared/data.js';
 import { mulberry32 } from '/sunmere-play/shared/noise.js';
 import { DUNGEONS } from '/sunmere-play/shared/dungeons.js';
 import { markDynamic } from './freeze.js';
@@ -575,14 +575,18 @@ export function buildRainward(W, S) {
   // ---------------------------------------------------------------- the planted timber, the slopes, the ferns
   {
     // the Makers' planted rows: straight rows along x, staggered; gaps (stumps, a felled pole lying down the slope) where a slip
-    // lane runs through
+    // lane runs through. The world boss's beats (the Hill Leveller's path and rainPath, P14.3) are cut clear (stumps): a 13 m
+    // machine would otherwise grind through the rows' trunks
+    const segD = (x, z, [ax, az], [bx, bz]) => { const dx = bx - ax, dz = bz - az, L2 = dx * dx + dz * dz || 1, t = Math.max(0, Math.min(1, ((x - ax) * dx + (z - az) * dz) / L2)); return Math.hypot(x - ax - t * dx, z - az - t * dz); };
+    const beats = SPAWNS.filter((S) => S.world && MOBS[S.mob]).flatMap((S) => [S.path, S.rainPath].filter((pa) => pa && pa.length > 1 && pa.some(([x, z]) => x > R.minX && x < R.maxX && z > R.minZ && z < R.maxZ)).map((pa) => ({ pa, r: (MOBS[S.mob].radius || 3) + (S.r || 0) + 2.5 })));
+    const onBeat = (x, z) => beats.some(({ pa, r }) => pa.some((a, i) => i > 0 && segD(x, z, pa[i - 1], a) < r));
     R.timber.forEach((P2, pi) => {
       let ri = 0;
       for (let v = P2.v0; v <= P2.v1; v += P2.dv, ri++) for (let x = P2.x0 + (ri % 2) * P2.dx / 2; x <= P2.x1; x += P2.dx) {
         const z = zOfV(x, v);
         if (rainwardGap(x, z) > -1.5 || !keepClear(x, z, 0.5)) continue;
         const L = slipLane(x, z);
-        if (L.i >= 0 && L.d < R.slips[L.i].hw + 1.5) { if (rng() < 0.35) put('rgstump', x, z, rng() * 6, 1, 0.05); continue; }
+        if ((L.i >= 0 && L.d < R.slips[L.i].hw + 1.5) || onBeat(x, z)) { if (rng() < 0.35) put('rgstump', x, z, rng() * 6, 1, 0.05); continue; }
         put('rgtree' + Math.floor(rng() * 4), x, z, rng() * 6, 0.9 + rng() * 0.2, 0.15);
       }
     });

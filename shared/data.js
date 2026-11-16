@@ -34,7 +34,7 @@ export const MOBS = {
   banditArcher: { name: 'Briar Bowman', model: 'raider', variant: 4, lvl: [4, 5], hp: 80, dmg: [4, 8], speed: 4.6, aggro: 17, range: 17, swing: 2.4, xp: 78, loot: 'bandit', radius: 0.5, humanoid: true, ranged: 'arrow' },
   banditBoss: { name: 'Garrick Briar', model: 'raider', variant: 5, lvl: [5, 5], hp: 760, dmg: [9, 15], speed: 5.2, aggro: 14, range: 2.8, swing: 1.9, xp: 520, loot: 'banditBoss', radius: 0.6, humanoid: true, elite: true , abilities: [{ kind: 'nova', every: 14, r: 5, delay: 1.7, dmg: 1.4, text: 'Garrick swings his axe in a wide circle!' }] },
   hollis: { name: 'Hollis the Fence', model: 'raider', variant: 12, lvl: [5, 5], hp: 680, dmg: [8, 13], speed: 5.2, aggro: 13, range: 2.6, swing: 1.8, xp: 420, loot: 'warrensElite', radius: 0.6, humanoid: true, elite: true, abilities: [{ kind: 'circles', every: 12, n: 2, r: 2.8, delay: 1.7, dmg: 1.3, text: 'Hollis throws a pot of lamp oil!' }] },
-  thresher: { name: 'The Iron Thresher', model: 'thresher', lvl: [6, 6], hp: 2000, dmg: [11, 17], speed: 3.2, aggro: 15, range: 4.2, swing: 2.5, xp: 1100, loot: 'thresher', radius: 2.2, elite: true, boss: true, abilities: [{ kind: 'circles', every: 10, n: 3, r: 3.0, delay: 1.9, dmg: 1.4, text: 'The Thresher spits out chaff and stones!' }, { kind: 'nova', every: 16, r: 6, delay: 2.2, dmg: 1.8, text: 'The Thresher spins its drum. Get clear!' }, { kind: 'enrage', at: 0.3, text: 'The Thresher\'s boiler shrieks!' }] },
+  thresher: { name: 'The Iron Thresher', model: 'thresher', lvl: [6, 6], hp: 12000, dmg: [11, 17], speed: 3.2, aggro: 15, range: 4.2, swing: 2.5, xp: 1100, loot: 'thresher', radius: 2.2, elite: true, boss: true, abilities: [{ kind: 'circles', every: 10, n: 3, r: 3.0, delay: 1.9, dmg: 1.4, text: 'The Thresher spits out chaff and stones!' }, { kind: 'nova', every: 16, r: 6, delay: 2.2, dmg: 1.8, text: 'The Thresher spins its drum. Get clear!' }, { kind: 'enrage', at: 0.3, text: 'The Thresher\'s boiler shrieks!' }] },
   // ---- 5-10: Glimmer Glade, Westfold, Ironcliff Quarry, the Deepmine
   harvester: { name: 'Rusted Harvester', model: 'harvester', lvl: [6, 8], hp: 170, dmg: [8, 13], speed: 3.6, aggro: 11, range: 2.9, swing: 2.2, xp: 100, loot: 'harvester', radius: 1.2 },
   rustguard: { name: 'Rusted Warden-Engine', model: 'sentinel', variant: 1, lvl: [5, 7], hp: 150, dmg: [7, 12], speed: 3.4, aggro: 12, range: 2.8, swing: 2.4, xp: 95, loot: 'foundry', radius: 0.9 },
@@ -45,7 +45,7 @@ export const MOBS = {
   sapper: { name: 'Deepmine Sapper', model: 'raider', variant: 7, lvl: [8, 9], hp: 220, dmg: [9, 15], speed: 4.8, aggro: 12, range: 2.4, swing: 1.9, xp: 130, loot: 'deepmine', radius: 0.5, humanoid: true },
   borer: { name: 'Tunnel Borer', model: 'borer', lvl: [9, 9], hp: 1100, dmg: [14, 22], speed: 3.0, aggro: 13, range: 3.2, swing: 2.2, xp: 600, loot: 'deepElite', radius: 1.4, elite: true , abilities: [{ kind: 'nova', every: 12, r: 4.5, delay: 1.7, dmg: 1.5 }] },
   dregg: { name: 'Overseer Dregg', model: 'raider', variant: 11, lvl: [9, 9], hp: 1200, dmg: [13, 21], speed: 5.0, aggro: 13, range: 2.8, swing: 1.9, xp: 650, loot: 'deepElite', radius: 0.6, humanoid: true, elite: true , abilities: [{ kind: 'circles', every: 12, n: 2, r: 3.0, delay: 1.8, dmg: 1.4, text: 'Dregg lights a blasting charge!' }] },
-  grandbore: { name: 'The Grand Bore', model: 'grandbore', lvl: [10, 10], hp: 4200, dmg: [22, 34], speed: 2.6, aggro: 16, range: 5.0, swing: 2.8, xp: 2600, loot: 'grandbore', radius: 2.8, elite: true, boss: true , abilities: [{ kind: 'circles', every: 10, n: 4, r: 3.4, delay: 1.9, dmg: 1.5, text: 'Rock falls from the cavern roof!' }, { kind: 'nova', every: 17, r: 7, delay: 2.3, dmg: 2.0, text: 'The Grand Bore drives its drill into the floor. Get clear!' }, { kind: 'enrage', at: 0.35, text: 'The Grand Bore overheats!' }] },
+  grandbore: { name: 'The Grand Bore', model: 'grandbore', lvl: [10, 10], hp: 21000, dmg: [22, 34], speed: 2.6, aggro: 16, range: 5.0, swing: 2.8, xp: 2600, loot: 'grandbore', radius: 2.8, elite: true, boss: true , abilities: [{ kind: 'circles', every: 10, n: 4, r: 3.4, delay: 1.9, dmg: 1.5, text: 'Rock falls from the cavern roof!' }, { kind: 'nova', every: 17, r: 7, delay: 2.3, dmg: 2.0, text: 'The Grand Bore drives its drill into the floor. Get clear!' }, { kind: 'enrage', at: 0.35, text: 'The Grand Bore overheats!' }] },
   // ---- 10-15: the Sunscar, Brasswind Dig, Dustcloak Camp, the Sandsunk Vault
   crawler: { name: 'Sand Crawler', model: 'crawler', lvl: [10, 12], hp: 260, dmg: [9, 15], speed: 3.8, aggro: 11, range: 2.8, swing: 2.1, xp: 150, loot: 'desert', radius: 1.1 },
   raider: { name: 'Dustcloak Raider', model: 'raider', variant: 0, lvl: [11, 13], hp: 280, dmg: [9, 16], speed: 5.0, aggro: 13, range: 2.4, swing: 1.7, xp: 160, loot: 'raider', radius: 0.5, humanoid: true },
@@ -56,7 +56,7 @@ export const MOBS = {
   looter: { name: 'Dustcloak Looter', model: 'raider', variant: 8, lvl: [13, 14], hp: 330, dmg: [10, 17], speed: 5.0, aggro: 13, range: 2.4, swing: 1.7, xp: 180, loot: 'vault', radius: 0.5, humanoid: true },
   rask: { name: 'Rask the Looter-King', model: 'raider', variant: 10, lvl: [14, 14], hp: 2200, dmg: [17, 27], speed: 5.4, aggro: 14, range: 2.8, swing: 1.8, xp: 900, loot: 'vaultElite', radius: 0.6, humanoid: true, elite: true , abilities: [{ kind: 'circles', every: 11, n: 3, r: 2.8, delay: 1.6, dmg: 1.4, text: 'Rask hurls a spray of knives!' }] },
   keeper: { name: 'Vault Keeper Engine', model: 'keeper', lvl: [14, 14], hp: 2400, dmg: [17, 27], speed: 3.2, aggro: 13, range: 3.4, swing: 2.4, xp: 950, loot: 'vaultElite', radius: 1.3, elite: true , abilities: [{ kind: 'nova', every: 12, r: 5, delay: 1.9, dmg: 1.6, text: 'The Keeper Engine charges its pistons!' }] },
-  colossus: { name: 'The Vault Colossus', model: 'colossus', lvl: [15, 15], hp: 6000, dmg: [26, 40], speed: 2.8, aggro: 16, range: 5.0, swing: 2.9, xp: 3600, loot: 'colossus', radius: 2.4, elite: true, boss: true , abilities: [{ kind: 'nova', every: 14, r: 8, delay: 2.4, dmg: 2.2, text: 'The Colossus raises its fists. Get clear!' }, { kind: 'circles', every: 9, n: 4, r: 3.0, delay: 1.8, dmg: 1.4, text: 'Sand pours from the vault ceiling!' }, { kind: 'enrage', at: 0.3, text: 'The Colossus grinds into overdrive!' }] },
+  colossus: { name: 'The Vault Colossus', model: 'colossus', lvl: [15, 15], hp: 31000, dmg: [26, 40], speed: 2.8, aggro: 16, range: 5.0, swing: 2.9, xp: 3600, loot: 'colossus', radius: 2.4, elite: true, boss: true , abilities: [{ kind: 'nova', every: 14, r: 8, delay: 2.4, dmg: 2.2, text: 'The Colossus raises its fists. Get clear!' }, { kind: 'circles', every: 9, n: 4, r: 3.0, delay: 1.8, dmg: 1.4, text: 'Sand pours from the vault ceiling!' }, { kind: 'enrage', at: 0.3, text: 'The Colossus grinds into overdrive!' }] },
   // ---- 15-20: Rustwood, the Old Sawmill, Northwatch Keep, the Old Foundry, the Foundry Depths
   nwarden: { name: 'Northwatch Warden-Engine', model: 'nwarden', lvl: [19, 19], hp: 3200, dmg: [22, 34], speed: 3.0, aggro: 14, range: 3.6, swing: 2.5, xp: 1400, loot: 'depthsElite', radius: 1.4, elite: true, abilities: [{ kind: 'nova', every: 12, r: 5.5, delay: 1.8, dmg: 1.6, text: 'The Warden-Engine braces and stamps!' }, { kind: 'enrage', at: 0.35, text: 'The Warden-Engine\'s gears grind red-hot!' }] },
   sawyer: { name: 'Rustwood Sawyer', model: 'sawyer', lvl: [15, 17], hp: 380, dmg: [12, 20], speed: 3.6, aggro: 12, range: 2.9, swing: 2.2, xp: 200, loot: 'rustwood', radius: 1.1 },
@@ -65,7 +65,7 @@ export const MOBS = {
   furnace: { name: 'Furnace Engine', model: 'furnace', lvl: [17, 19], hp: 470, dmg: [14, 23], speed: 3.2, aggro: 12, range: 3.0, swing: 2.4, xp: 230, loot: 'foundry', radius: 1.0 },
   foreman: { name: 'The Foreman', model: 'foreman', lvl: [19, 19], hp: 6000, dmg: [28, 42], speed: 3.2, aggro: 18, range: 4.2, swing: 2.6, xp: 3600, loot: 'foreman', radius: 2.2, elite: true, boss: true , abilities: [{ kind: 'circles', every: 10, n: 3, r: 3.5, delay: 1.8, dmg: 1.5, text: 'The Foreman hammers the ground, scattering slag!' }, { kind: 'enrage', at: 0.4, text: 'The Foreman\'s boiler roars!' }] },
   overseer: { name: 'Depths Overseer', model: 'overseer', lvl: [19, 19], hp: 3000, dmg: [22, 34], speed: 3.0, aggro: 14, range: 3.4, swing: 2.4, xp: 1400, loot: 'depthsElite', radius: 1.4, elite: true , abilities: [{ kind: 'circles', every: 10, n: 3, r: 3.2, delay: 1.8, dmg: 1.5, text: 'The Overseer opens the slag gates!' }] },
-  forgemaster: { name: 'The Forgemaster', model: 'forgemaster', lvl: [20, 20], hp: 9000, dmg: [32, 48], speed: 3.0, aggro: 18, range: 5.2, swing: 2.8, xp: 6000, loot: 'forgemaster', radius: 2.8, elite: true, boss: true , abilities: [{ kind: 'circles', every: 8, n: 5, r: 3.4, delay: 1.8, dmg: 1.6, text: 'Molten metal spills across the floor!' }, { kind: 'nova', every: 16, r: 8.5, delay: 2.4, dmg: 2.4, text: 'The Forgemaster vents its furnace. Get clear!' }, { kind: 'enrage', at: 0.3, text: 'The Forgemaster burns white-hot!' }] },
+  forgemaster: { name: 'The Forgemaster', model: 'forgemaster', lvl: [20, 20], hp: 40000, dmg: [32, 48], speed: 3.0, aggro: 18, range: 5.2, swing: 2.8, xp: 6000, loot: 'forgemaster', radius: 2.8, elite: true, boss: true , abilities: [{ kind: 'circles', every: 8, n: 5, r: 3.4, delay: 1.8, dmg: 1.6, text: 'Molten metal spills across the floor!' }, { kind: 'nova', every: 16, r: 8.5, delay: 2.4, dmg: 2.4, text: 'The Forgemaster vents its furnace. Get clear!' }, { kind: 'enrage', at: 0.3, text: 'The Forgemaster burns white-hot!' }] },
 };
 
 // dungeon spawn helper: local dungeon coordinates -> world
@@ -346,7 +346,7 @@ export const GEAR_BUDGET = {
   slot: { head: 1, shoulders: 0.92, chest: 1.08, hands: 0.88, legs: 1.04, feet: 0.88, back: 0.88, weapon: 1, offhand: 1, trinket: 1 },
   // stat split per point of budget, by kind (items.js rollGear without affixes)
   coef: { weapon: { power: 0.8, hp: 0.25 }, offhand: { power: 0.5, hp: 0.4 }, shield: { armor: 2.2, hp: 0.6 }, trinket: { power: 0.5, hp: 0.3 }, back: { armor: 1.6, hp: 0.6 },
-    plate: { armor: 3.2, hp: 0.9 }, mail: { armor: 2.4, hp: 0.7, power: 0.2 }, cloth: { armor: 1.4, hp: 0.6, power: 0.4 } },
+    plate: { armor: 3.2, hp: 0.9 }, mail: { armor: 2.4, hp: 0.7, power: 0.2 }, cloth: { armor: 1.6, hp: 0.7, power: 0.3 } },
   // what a point of each stat is worth (the client's gearScore, client/ui/ui.js)
   worth: { power: 1.6, armor: 0.3, hp: 0.9, haste: 1.2, crit: 1.5, dodge: 1.3, leech: 2.5 },
   haste: 0.15,
@@ -798,7 +798,7 @@ Object.assign(MOBS, {
     abilities: [{ kind: 'circles', every: 8, n: 4, r: 3.2, delay: 1.7, dmg: 1.4, text: 'The Capacitor Warden discharges!' }, { kind: 'enrage', at: 0.3, text: 'The Warden\u2019s coils overload!' }] },
   voss: { name: 'Chief Engineer Voss', model: 'raider', variant: 17, lvl: [25, 25], hp: 8200, dmg: [26, 40], speed: 5.2, aggro: 14, range: 2.8, swing: 1.8, xp: 3600, loot: 'swBoss', radius: 0.6, humanoid: true, elite: true,
     abilities: [{ kind: 'nova', every: 12, r: 6, delay: 1.6, dmg: 1.6, text: 'Voss throws the breaker!' }, { kind: 'circles', every: 9, n: 3, r: 3, delay: 1.6, dmg: 1.3, text: 'Voss calls the lightning down on you!' }] },
-  thunderhead: { name: 'The Thunderhead', model: 'thunderhead', lvl: [26, 26], hp: 22000, dmg: [36, 54], speed: 2.6, aggro: 20, range: 5.5, swing: 2.8, xp: 9000, loot: 'thunderhead', radius: 3.4, elite: true, boss: true,
+  thunderhead: { name: 'The Thunderhead', model: 'thunderhead', lvl: [26, 26], hp: 74000, dmg: [36, 54], speed: 2.6, aggro: 20, range: 5.5, swing: 2.8, xp: 9000, loot: 'thunderhead', radius: 3.4, elite: true, boss: true,
     abilities: [{ kind: 'circles', every: 8, n: 5, r: 3.5, delay: 1.8, dmg: 1.5, text: 'The Thunderhead hurls arcs across the chamber!' },
       { kind: 'nova', every: 14, r: 9, delay: 2.4, dmg: 1.9, text: 'The Thunderhead gathers a storm in its towers!' }, { kind: 'enrage', at: 0.3, text: 'Both towers blaze white!' }] },
 });
@@ -1216,7 +1216,7 @@ Object.assign(MOBS, {
     abilities: [{ kind: 'nova', every: 13, r: 5, delay: 1.6, dmg: 1.4, text: 'Foreman Kasim slams his pick into the floor!' }] },
   sandauger: { name: 'The Sand Auger', model: 'borer', lvl: [12, 12], hp: 1600, dmg: [16, 25], speed: 3.0, aggro: 13, range: 3.2, swing: 2.2, xp: 800, loot: 'shaftElite', radius: 1.4, elite: true,
     abilities: [{ kind: 'circles', every: 12, n: 2, r: 3, delay: 1.7, dmg: 1.4, text: 'The Sand Auger sprays grit across the gallery!' }] },
-  buried: { name: 'The Buried Engine', model: 'buried', lvl: [13, 13], hp: 5600, dmg: [24, 36], speed: 2.6, aggro: 16, range: 5.0, swing: 2.8, xp: 3200, loot: 'buried', radius: 2.7, elite: true, boss: true,
+  buried: { name: 'The Buried Engine', model: 'buried', lvl: [13, 13], hp: 27000, dmg: [24, 36], speed: 2.6, aggro: 16, range: 5.0, swing: 2.8, xp: 3200, loot: 'buried', radius: 2.7, elite: true, boss: true,
     abilities: [{ kind: 'circles', every: 10, n: 3, r: 3.2, delay: 1.8, dmg: 1.4, text: 'The Buried Engine vents scalding steam through the floor!' },
       { kind: 'nova', every: 16, r: 7, delay: 2.2, dmg: 1.6, text: 'The Buried Engine shudders and throws out a wave of grit!' },
       { kind: 'adds', at: 0.5, mob: 'shaftcrawler', n: 3, text: 'Tunnel crawlers pour out of the engine\u2019s pipes!' },
@@ -1932,7 +1932,7 @@ Object.assign(MOBS, {
     abilities: [{ kind: 'circles', every: 11, n: 3, r: 3, delay: 1.7, dmg: 1.4, text: 'The Weighbridge drops its counterweights!' }] },
   sealmaster: { name: 'Sealmaster Orrin', model: 'raider', variant: 21, lvl: [26, 26], hp: 7400, dmg: [27, 40], speed: 5.2, aggro: 14, range: 2.8, swing: 1.8, xp: 3000, loot: 'u_sealmaster', radius: 0.6, humanoid: true, elite: true,
     abilities: [{ kind: 'nova', every: 12, r: 5, delay: 1.6, dmg: 1.4, text: 'Sealmaster Orrin brings his seal-hammer down!' }, { kind: 'adds', at: 0.5, mob: 'marksman', n: 2, text: 'Orrin calls his marksmen down from the galleries!' }] },
-  appraiser: { name: 'The Appraiser', model: 'appraiser', lvl: [27, 27], hp: 23000, dmg: [36, 54], speed: 2.6, aggro: 18, range: 5.0, swing: 2.7, xp: 9500, loot: 'u_appraiser', radius: 2.7, elite: true, boss: true,
+  appraiser: { name: 'The Appraiser', model: 'appraiser', lvl: [27, 27], hp: 75000, dmg: [36, 54], speed: 2.6, aggro: 18, range: 5.0, swing: 2.7, xp: 9500, loot: 'u_appraiser', radius: 2.7, elite: true, boss: true,
     abilities: [{ kind: 'circles', every: 10, n: 4, r: 3.2, delay: 1.8, dmg: 1.45, text: 'The Appraiser stamps the floor with its pricing-press!' },
       { kind: 'nova', every: 16, r: 7, delay: 2.2, dmg: 1.6, text: 'The Appraiser vents its furnace across the vault!' },
       { kind: 'adds', at: 0.5, mob: 'assessor', n: 3, text: 'Assessors march out of the counting-cells!' },
@@ -1981,7 +1981,7 @@ Object.assign(MOBS, {
   hallguard: { name: 'Council Hall Guard', model: 'raider', variant: 18, lvl: [28, 28], hp: 1500, dmg: [24, 34], speed: 5.0, aggro: 13, range: 2.4, swing: 1.8, xp: 700, loot: 'councilRaid', radius: 0.55, humanoid: true, elite: true },
   hallbow: { name: 'Council Hall Crossbowman', model: 'raider', variant: 19, lvl: [28, 28], hp: 1200, dmg: [20, 30], speed: 4.6, aggro: 18, range: 18, swing: 2.3, xp: 700, loot: 'councilRaid', radius: 0.5, humanoid: true, ranged: 'arrow', elite: true },
   hallsentry: { name: 'Council Sentry-Engine', model: 'sentinel', variant: 4, lvl: [28, 28], hp: 1900, dmg: [26, 36], speed: 3.4, aggro: 12, range: 2.8, swing: 2.2, xp: 760, loot: 'councilRaid', radius: 1.0, elite: true },
-  exchequer: { name: 'The Exchequer', model: 'exchequer', lvl: [30, 30], hp: 62000, dmg: [40, 58], speed: 2.4, aggro: 18, range: 5.4, swing: 2.8, xp: 16000, loot: 'u_exchequer', radius: 2.9, elite: true, boss: true, raid: true,
+  exchequer: { name: 'The Exchequer', model: 'exchequer', lvl: [30, 30], hp: 135000, dmg: [40, 58], speed: 2.4, aggro: 18, range: 5.4, swing: 2.8, xp: 16000, loot: 'u_exchequer', radius: 2.9, elite: true, boss: true, raid: true,
     abilities: [
       { kind: 'circles', every: 10, n: 5, r: 3.2, delay: 1.8, dmg: 1.4, text: 'The Exchequer stamps its seals across the floor!' },
       { kind: 'nova', every: 15, r: 7, delay: 2.2, dmg: 1.5, above: 0.6, text: 'The Exchequer vents its boilers!' },
@@ -1990,7 +1990,7 @@ Object.assign(MOBS, {
       { kind: 'adds', at: 0.6, mob: 'hallsentry', n: 2, text: 'Sentry-engines march out of the Exchequer\u2019s housing!' },
       { kind: 'adds', at: 0.3, mob: 'hallsentry', n: 2, text: 'More sentry-engines unfold from the walls!' },
       { kind: 'enrage', at: 0.15, text: 'The Exchequer\u2019s furnace burns white!' }] },
-  provost: { name: 'The Provost', model: 'raider', variant: 22, lvl: [30, 30], hp: 48000, dmg: [44, 62], speed: 5.4, aggro: 18, range: 2.8, swing: 1.6, xp: 18000, loot: 'u_provost', radius: 0.7, humanoid: true, elite: true, boss: true, raid: true,
+  provost: { name: 'The Provost', model: 'raider', variant: 22, lvl: [30, 30], hp: 180000, dmg: [44, 62], speed: 5.4, aggro: 18, range: 2.8, swing: 1.6, xp: 18000, loot: 'u_provost', radius: 0.7, humanoid: true, elite: true, boss: true, raid: true,
     abilities: [
       { kind: 'nova', every: 12, r: 6, delay: 1.7, dmg: 1.5, text: 'The Provost calls the house to order!' },
       { kind: 'circles', every: 14, n: 4, r: 3.4, delay: 1.9, dmg: 1.4, above: 0.66, text: 'The Provost signs your warrants!' },
@@ -2037,7 +2037,7 @@ Object.assign(MOBS, {
   dockguard: { name: 'Dry Dock Riveter', model: 'raider', variant: 23, lvl: [30, 30], hp: 1700, dmg: [26, 36], speed: 5.0, aggro: 13, range: 2.4, swing: 1.8, xp: 760, loot: 'dockRaid', radius: 0.55, humanoid: true, elite: true },
   dockbow: { name: 'Dry Dock Harpooneer', model: 'raider', variant: 24, lvl: [30, 30], hp: 1350, dmg: [22, 32], speed: 4.6, aggro: 18, range: 18, swing: 2.3, xp: 760, loot: 'dockRaid', radius: 0.5, humanoid: true, ranged: 'arrow', elite: true },
   dockengine: { name: 'Slipway Rivet-Engine', model: 'sentinel', variant: 2, lvl: [30, 30], hp: 2100, dmg: [28, 38], speed: 3.4, aggro: 12, range: 2.8, swing: 2.2, xp: 800, loot: 'dockRaid', radius: 1.0, elite: true },
-  launchengine: { name: 'The Launching Engine', model: 'launchengine', lvl: [30, 30], hp: 68000, dmg: [42, 60], speed: 2.2, aggro: 18, range: 5.8, swing: 2.9, xp: 17000, loot: 'u_launchengine', radius: 3.1, elite: true, boss: true, raid: true,
+  launchengine: { name: 'The Launching Engine', model: 'launchengine', lvl: [30, 30], hp: 135000, dmg: [42, 60], speed: 2.2, aggro: 18, range: 5.8, swing: 2.9, xp: 17000, loot: 'u_launchengine', radius: 3.1, elite: true, boss: true, raid: true,
     abilities: [
       { kind: 'circles', every: 10, n: 5, r: 3.4, delay: 1.8, dmg: 1.4, text: 'The Launching Engine drops its chocks across the dock!' },
       { kind: 'beam', every: 13, len: 24, r: 2.4, delay: 1.7, dmg: 1.5, above: 0.5, text: 'The Launching Engine lurches down its slipway!' },
@@ -2046,7 +2046,7 @@ Object.assign(MOBS, {
       { kind: 'adds', at: 0.5, mob: 'dockengine', n: 2, text: 'Rivet-engines climb out of the dock walls!' },
       { kind: 'adds', at: 0.25, mob: 'dockguard', n: 3, text: 'Riveters run down the gantries!' },
       { kind: 'enrage', at: 0.12, text: 'The Launching Engine strains at its last chains!' }] },
-  guildmaster: { name: 'The Guildmaster', model: 'raider', variant: 26, lvl: [30, 30], hp: 52000, dmg: [46, 64], speed: 5.4, aggro: 18, range: 2.8, swing: 1.6, xp: 19000, loot: 'u_guildmaster', radius: 0.7, humanoid: true, elite: true, boss: true, raid: true,
+  guildmaster: { name: 'The Guildmaster', model: 'raider', variant: 26, lvl: [30, 30], hp: 180000, dmg: [46, 64], speed: 5.4, aggro: 18, range: 2.8, swing: 1.6, xp: 19000, loot: 'u_guildmaster', radius: 0.7, humanoid: true, elite: true, boss: true, raid: true,
     abilities: [
       { kind: 'nova', every: 12, r: 6, delay: 1.7, dmg: 1.5, text: 'The Guildmaster strikes the anvil-bell!' },
       { kind: 'circles', every: 13, n: 4, r: 3.4, delay: 1.9, dmg: 1.45, above: 0.66, text: 'The Guildmaster marks the floor for rivets!' },
@@ -2092,7 +2092,7 @@ Object.assign(MOBS, {
   heartguard: { name: 'Kiln Heart Kilnhand', model: 'raider', variant: 27, lvl: [35, 35], hp: 1900, dmg: [30, 40], speed: 5.0, aggro: 13, range: 2.4, swing: 1.8, xp: 820, loot: 'kilnRaid', radius: 0.55, humanoid: true, elite: true },
   heartbow: { name: 'Kiln Heart Sling-Thrower', model: 'raider', variant: 28, lvl: [35, 35], hp: 1500, dmg: [26, 36], speed: 4.6, aggro: 18, range: 18, swing: 2.3, xp: 820, loot: 'kilnRaid', radius: 0.5, humanoid: true, ranged: 'arrow', elite: true },
   heartglass: { name: 'Core-Glass Sentinel', model: 'sentinel', variant: 5, lvl: [35, 35], hp: 2400, dmg: [32, 42], speed: 3.4, aggro: 12, range: 2.8, swing: 2.2, xp: 860, loot: 'kilnRaid', radius: 1.0, elite: true },
-  furnaceengine: { name: 'The Furnace Engine', model: 'furnaceengine', lvl: [35, 35], hp: 74000, dmg: [46, 64], speed: 2.0, aggro: 18, range: 6.2, swing: 2.9, xp: 19000, loot: 'u_furnaceengine', radius: 3.4, elite: true, boss: true, raid: true,
+  furnaceengine: { name: 'The Furnace Engine', model: 'furnaceengine', lvl: [35, 35], hp: 140000, dmg: [46, 64], speed: 2.0, aggro: 18, range: 6.2, swing: 2.9, xp: 19000, loot: 'u_furnaceengine', radius: 3.4, elite: true, boss: true, raid: true,
     abilities: [
       { kind: 'circles', every: 10, n: 5, r: 3.4, delay: 1.8, dmg: 1.45, text: 'The Furnace Engine spills molten glass across the floor!' },
       { kind: 'nova', every: 14, r: 8, delay: 2.1, dmg: 1.5, above: 0.5, text: 'The Furnace Engine opens its doors: a wall of heat!' },
@@ -2101,7 +2101,7 @@ Object.assign(MOBS, {
       { kind: 'adds', at: 0.5, mob: 'heartglass', n: 2, text: 'Core-glass sentinels step out of the furnace!' },
       { kind: 'adds', at: 0.25, mob: 'heartguard', n: 3, text: 'Kilnhands run in to feed the fire!' },
       { kind: 'enrage', at: 0.12, text: 'The Furnace Engine\u2019s cores begin to crack!' }] },
-  glasswright: { name: 'The Glasswright', model: 'raider', variant: 30, lvl: [35, 35], hp: 56000, dmg: [50, 68], speed: 5.4, aggro: 18, range: 2.8, swing: 1.6, xp: 21000, loot: 'u_glasswright', radius: 0.7, humanoid: true, elite: true, boss: true, raid: true,
+  glasswright: { name: 'The Glasswright', model: 'raider', variant: 30, lvl: [35, 35], hp: 190000, dmg: [50, 68], speed: 5.4, aggro: 18, range: 2.8, swing: 1.6, xp: 21000, loot: 'u_glasswright', radius: 0.7, humanoid: true, elite: true, boss: true, raid: true,
     abilities: [
       { kind: 'nova', every: 12, r: 6, delay: 1.7, dmg: 1.5, text: 'The Glasswright shatters a pane of core glass!' },
       { kind: 'circles', every: 13, n: 4, r: 3.4, delay: 1.9, dmg: 1.45, above: 0.66, text: 'The Glasswright scatters glass shards underfoot!' },
@@ -2148,7 +2148,7 @@ Object.assign(MOBS, {
   lineguard: { name: 'Line Sentinel', model: 'sentinel', variant: 1, lvl: [35, 35], hp: 2300, dmg: [32, 42], speed: 3.4, aggro: 12, range: 2.8, swing: 2.2, xp: 860, loot: 'lineRaid', radius: 1.0, elite: true },
   linecrawler: { name: 'Line Crawler', model: 'crawler', lvl: [35, 35], hp: 1900, dmg: [30, 40], speed: 4.2, aggro: 12, range: 2.8, swing: 2.0, xp: 820, loot: 'lineRaid', radius: 1.1, elite: true },
   lineengine: { name: 'Half-Built Borer', model: 'borer', lvl: [35, 35], hp: 2600, dmg: [33, 44], speed: 3.0, aggro: 12, range: 3.2, swing: 2.3, xp: 880, loot: 'lineRaid', radius: 1.4, elite: true },
-  unfinished: { name: 'The Unfinished Engine', model: 'unfinished', lvl: [35, 35], hp: 78000, dmg: [48, 66], speed: 2.0, aggro: 18, range: 6.2, swing: 2.9, xp: 20000, loot: 'u_unfinished', radius: 3.4, elite: true, boss: true, raid: true,
+  unfinished: { name: 'The Unfinished Engine', model: 'unfinished', lvl: [35, 35], hp: 140000, dmg: [48, 66], speed: 2.0, aggro: 18, range: 6.2, swing: 2.9, xp: 20000, loot: 'u_unfinished', radius: 3.4, elite: true, boss: true, raid: true,
     abilities: [
       { kind: 'circles', every: 10, n: 5, r: 3.4, delay: 1.8, dmg: 1.45, text: 'Loose plates fall from the Unfinished Engine!' },
       { kind: 'nova', every: 14, r: 8, delay: 2.1, dmg: 1.5, above: 0.5, text: 'The Unfinished Engine\u2019s open boiler bursts!' },
@@ -2157,7 +2157,7 @@ Object.assign(MOBS, {
       { kind: 'adds', at: 0.5, mob: 'lineguard', n: 2, text: 'Line sentinels step off the conveyor!' },
       { kind: 'adds', at: 0.25, mob: 'linecrawler', n: 3, text: 'Crawlers drop out of the half-built hull!' },
       { kind: 'enrage', at: 0.12, text: 'The Unfinished Engine shakes itself apart, and keeps fighting!' }] },
-  assembler: { name: 'The Assembler', model: 'assembler', lvl: [35, 35], hp: 60000, dmg: [50, 68], speed: 3.2, aggro: 18, range: 4.0, swing: 2.0, xp: 22000, loot: 'u_assembler', radius: 2.4, elite: true, boss: true, raid: true,
+  assembler: { name: 'The Assembler', model: 'assembler', lvl: [35, 35], hp: 190000, dmg: [50, 68], speed: 3.2, aggro: 18, range: 4.0, swing: 2.0, xp: 22000, loot: 'u_assembler', radius: 2.4, elite: true, boss: true, raid: true,
     abilities: [
       { kind: 'nova', every: 12, r: 6, delay: 1.7, dmg: 1.5, text: 'The Assembler slams its press down!' },
       { kind: 'circles', every: 13, n: 4, r: 3.4, delay: 1.9, dmg: 1.45, above: 0.66, text: 'The Assembler marks the floor for welding!' },
@@ -2264,7 +2264,7 @@ Object.assign(MOBS, {
     abilities: [{ kind: 'circles', every: 11, n: 4, r: 3.0, delay: 1.8, dmg: 1.45, text: 'The Hall-Keeper brings its maul-pole down, again and again!' }, { kind: 'adds', at: 0.5, mob: 'bronzewarden', n: 2, text: 'The Hall-Keeper calls the halls\u2019 wardens to it!' }] },
   plumbweight: { name: 'The Plumb Weight', model: 'plumbweight', lvl: [39, 39], hp: 12800, dmg: [40, 58], speed: 2.8, aggro: 13, range: 4.0, swing: 2.6, xp: 4200, loot: 'rare13', radius: 2.0, elite: true, rare: true,
     abilities: [{ kind: 'nova', every: 13, r: 7, delay: 2.0, dmg: 1.5, text: 'The Plumb Weight swings its stone in a full circle!' }, { kind: 'enrage', at: 0.25, text: 'The Plumb Weight\u2019s chain runs out to its full length!' }] },
-  firstengine: { name: 'The First Engine', model: 'firstengine', lvl: [40, 40], hp: 44000, dmg: [46, 66], speed: 2.2, aggro: 12, range: 6, swing: 2.8, xp: 14000, loot: 'firstengine', radius: 4.2, elite: true, boss: true, world: true,
+  firstengine: { name: 'The First Engine', model: 'firstengine', lvl: [40, 40], hp: 105000, dmg: [46, 66], speed: 2.2, aggro: 12, range: 6, swing: 2.8, xp: 14000, loot: 'firstengine', radius: 4.2, elite: true, boss: true, world: true,
     notice: 'is walking in the First Chamber of the Deepway, as it has since before the valley had a name', yell: 'rises on its stilts, and its paddle wheels begin to turn!',
     abilities: [{ kind: 'circles', every: 8, n: 6, r: 3.4, delay: 1.9, dmg: 1.35, text: 'The First Engine swings its weight across the chamber!' },
       { kind: 'nova', every: 16, r: 10, delay: 2.3, dmg: 1.7, text: 'The First Engine opens its sluices!' },
@@ -2328,7 +2328,7 @@ Object.assign(MOBS, {
   hallwarden: { name: 'Hall Warden', model: 'hallwarden', lvl: [40, 40], hp: 2900, dmg: [36, 48], speed: 3.6, aggro: 12, range: 3.2, swing: 2.1, xp: 980, loot: 'makersRaid', radius: 1.0, elite: true },
   hallweight: { name: 'Hall Counterweight', model: 'cweight', lvl: [40, 40], hp: 3300, dmg: [38, 50], speed: 3.0, aggro: 12, range: 3.6, swing: 2.5, xp: 1020, loot: 'makersRaid', radius: 1.4, elite: true },
   hallsweeper: { name: 'Hall Sweeper', model: 'sweeper', lvl: [40, 40], hp: 2400, dmg: [34, 46], speed: 4.4, aggro: 12, range: 2.8, swing: 1.9, xp: 940, loot: 'makersRaid', radius: 0.9, elite: true },
-  draughtsman: { name: 'The Draughtsman', model: 'draughtsman', lvl: [40, 40], hp: 88000, dmg: [52, 70], speed: 3.0, aggro: 18, range: 4.4, swing: 2.2, xp: 26000, loot: 'u_draughtsman', radius: 2.2, elite: true, boss: true, raid: true,
+  draughtsman: { name: 'The Draughtsman', model: 'draughtsman', lvl: [40, 40], hp: 160000, dmg: [52, 70], speed: 3.0, aggro: 18, range: 4.4, swing: 2.2, xp: 26000, loot: 'u_draughtsman', radius: 2.2, elite: true, boss: true, raid: true,
     abilities: [
       { kind: 'circles', every: 10, n: 5, r: 3.2, delay: 1.8, dmg: 1.45, text: 'The Draughtsman marks out the floor!' },
       { kind: 'beam', every: 12, len: 26, r: 2.2, delay: 1.6, dmg: 1.6, text: 'The Draughtsman rules a straight line across the hall!' },
@@ -2337,7 +2337,7 @@ Object.assign(MOBS, {
       { kind: 'nova', every: 14, r: 7, delay: 2.0, dmg: 1.55, below: 0.5, text: 'The Draughtsman sweeps its maul-pole round in a full circle!' },
       { kind: 'adds', at: 0.25, mob: 'hallsweeper', n: 3, text: 'Sweepers roll out from under the drafting tables!' },
       { kind: 'enrage', at: 0.12, text: 'The Draughtsman stops measuring!' }] },
-  masterpattern: { name: 'The Master Pattern', model: 'masterpattern', lvl: [40, 40], hp: 100000, dmg: [54, 74], speed: 2.4, aggro: 18, range: 6.6, swing: 2.9, xp: 30000, loot: 'u_pattern', radius: 3.6, elite: true, boss: true, raid: true,
+  masterpattern: { name: 'The Master Pattern', model: 'masterpattern', lvl: [40, 40], hp: 210000, dmg: [54, 74], speed: 2.4, aggro: 18, range: 6.6, swing: 2.9, xp: 30000, loot: 'u_pattern', radius: 3.6, elite: true, boss: true, raid: true,
     abilities: [
       { kind: 'nova', every: 12, r: 7, delay: 1.8, dmg: 1.55, text: 'The Master Pattern swings its weight in a full circle!' },
       { kind: 'circles', every: 13, n: 5, r: 3.4, delay: 1.9, dmg: 1.45, above: 0.66, text: 'The Master Pattern opens its sluices across the room!' },
@@ -2480,7 +2480,7 @@ Object.assign(MOBS, {
     abilities: [{ kind: 'nova', every: 12, r: 5, delay: 1.6, dmg: 1.45, text: 'Foreman Lorcan swings his casting-hook round!' }, { kind: 'adds', at: 0.5, mob: 'castworker', n: 2, text: 'Lorcan shouts for his hands!' }] },
   miscast: { name: 'The Miscast Weight', model: 'plumbweight', lvl: [40, 40], hp: 15000, dmg: [42, 58], speed: 2.8, aggro: 13, range: 4.0, swing: 2.6, xp: 4400, loot: 'u_miscast', radius: 2.0, elite: true,
     abilities: [{ kind: 'circles', every: 11, n: 3, r: 3.2, delay: 1.7, dmg: 1.45, text: 'The Miscast Weight\u2019s chain slips and its stone crashes down!' }] },
-  benedek: { name: 'Clerk Benedek', model: 'raider', variant: 21, lvl: [41, 41], hp: 42000, dmg: [46, 64], speed: 5.0, aggro: 18, range: 3.0, swing: 1.8, xp: 12000, loot: 'u_benedek', radius: 0.6, humanoid: true, elite: true, boss: true,
+  benedek: { name: 'Clerk Benedek', model: 'raider', variant: 21, lvl: [41, 41], hp: 115000, dmg: [46, 64], speed: 5.0, aggro: 18, range: 3.0, swing: 1.8, xp: 12000, loot: 'u_benedek', radius: 0.6, humanoid: true, elite: true, boss: true,
     abilities: [{ kind: 'circles', every: 10, n: 4, r: 3.2, delay: 1.8, dmg: 1.45, text: 'Benedek pulls a lever, and molten brass pours from the moulds!' },
       { kind: 'nova', every: 16, r: 7, delay: 2.2, dmg: 1.6, text: 'Benedek: Every engine in this valley was paid for! Every one!' },
       { kind: 'adds', at: 0.5, mob: 'brasscopy', n: 3, text: 'Benedek\u2019s brass copies step down from the casting line!' },
@@ -2566,7 +2566,7 @@ NPCS.push(
     greet: 'Mind the tar, mind the ropes, and mind my hull. Everything else on this pier you may tread on.' },
 );
 // Benedek's last copies, wandering the beach north of the pier: passive, not elite, and their fireboxes still full of coal
-Object.assign(MOBS, { copydock: { ...COPY('Dock Copy Engine'), hp: 5200, xp: 1800, elite: false, loot: 'c29DockLoot', abilities: [] } });
+Object.assign(MOBS, { copydock: { ...COPY('Dock Copy Engine'), hp: 2600, xp: 1800, elite: false, loot: 'c29DockLoot', abilities: [] } });
 Object.assign(ITEMS, {
   shipcoal: { name: 'Load of Firebox Coal', slot: 'quest', icon: 'scrap', q: 1, stack: 20, desc: 'Hard, black and dry, raked out of a copy engine’s firebox. Master Haroun wants it for the ship’s bunkers.' },
   r_c29_gloves: gear('Shipwright’s Tarred Gloves', 'hands', 4, 53),
@@ -2763,7 +2763,7 @@ Object.assign(MOBS, {
   glasscrawler: RM('Cinder-Glass Crawler', 'orecrawler', 1, [42, 43], 2000, [38, 52], 1000, { speed: 3.8, range: 2.8, radius: 1.3 }),
   glasssentinel: RM('Cinder-Glass Sentinel', 'ashsentinel', 1, [44, 45], 2900, [44, 60], 1200, { radius: 1.1 }),
   glasshauler: RM('Cinder-Glass Hauler', 'slaghauler', 1, [44, 45], 3100, [44, 62], 1250, { speed: 3.0, range: 3.4, swing: 2.6, radius: 1.5 }),
-  furnacekeeper: RM('Furnace Keeper', 'furnacekeeper', 0, [45, 45], 7200, [50, 68], 2600, { elite: true, range: 3.8, swing: 2.4, radius: 1.3,
+  furnacekeeper: RM('Furnace Keeper', 'furnacekeeper', 0, [45, 45], 10000, [60, 82], 2600, { elite: true, range: 3.8, swing: 2.4, radius: 1.3,
     abilities: [{ kind: 'nova', every: 14, r: 5, delay: 1.7, dmg: 1.3, text: 'The Furnace Keeper rakes its coals across the ground!' }] }),
   unwoundwarden: RM('The Unwound Warden', 'ashsentinel', 1, [44, 44], 15000, [48, 66], 4600, { elite: true, rare: true, loot: 'rareReach1', radius: 1.2,
     abilities: [{ kind: 'nova', every: 12, r: 6, delay: 1.8, dmg: 1.5, text: 'The Unwound Warden brings its slag hammer down!' }] }),
@@ -2817,7 +2817,7 @@ SPAWNS.push(
       abilities: [{ kind: 'beam', every: 12, len: 18, r: 1.7, delay: 1.8, dmg: 1.5, text: 'The Gallery Bore swings its drill round and drives it at the wall!' },
         { kind: 'circles', every: 10, n: 4, r: 2.8, delay: 1.7, dmg: 1.4, text: 'Stone cracks loose from the roof as the Gallery Bore grinds through the rock!' },
         { kind: 'adds', at: 0.5, mob: 'galsentinel', n: 2, text: 'The Gallery Bore breaks into an old gallery, and the sentinels inside step out!' }] }),
-    greatsorter: OG('The Great Sorter', 'greatsorter', 0, [46, 46], 56000, [58, 80], 16000, { loot: 'u_greatsorter', rhIlvl: 60, speed: 2.6, range: 5.0, swing: 2.8, radius: 3.6, elite: true, boss: true,
+    greatsorter: OG('The Great Sorter', 'greatsorter', 0, [46, 46], 160000, [58, 80], 16000, { loot: 'u_greatsorter', rhIlvl: 60, speed: 2.6, range: 5.0, swing: 2.8, radius: 3.6, elite: true, boss: true,
       abilities: [{ kind: 'circles', every: 10, n: 4, r: 3.2, delay: 1.8, dmg: 1.45, text: 'The Great Sorter swings its grab buckets out and drops a load of ore!' },
         { kind: 'nova', every: 16, r: 8, delay: 2.2, dmg: 1.6, text: 'The Great Sorter shakes its grading screens, and the whole floor shakes with them!' },
         { kind: 'adds', at: 0.5, mob: 'galkeeper', n: 3, text: 'Seam keepers come down from the sorting bins to tend the Great Sorter!' }] }),
@@ -2894,28 +2894,28 @@ NPCS.push(
     ffhauler: FF('Ladle Hauler', 'slaghauler', 1, [45, 45], 4400, [48, 68], 1650, { speed: 3.0, range: 3.4, swing: 2.6, radius: 1.5 }),
     ffcrawler: FF('Slag-Pit Crawler', 'orecrawler', 1, [45, 45], 3400, [44, 60], 1500, { speed: 3.8, range: 2.8, radius: 1.3 }),
     // 1. the Bellows Engine: a long blowing engine on treads, two great pleated bellows working on its back
-    bellowsengine: FF('The Bellows Engine', 'bellowsengine', 0, [45, 45], 112000, [56, 76], 30000, { loot: 'u_bellowsengine', rhIlvl: 64, speed: 2.8, aggro: 18, range: 4.8, swing: 2.4, radius: 3.0, boss: true, raid: true,
+    bellowsengine: FF('The Bellows Engine', 'bellowsengine', 0, [45, 45], 205000, [56, 76], 30000, { loot: 'u_bellowsengine', rhIlvl: 64, speed: 2.8, aggro: 18, range: 4.8, swing: 2.4, radius: 3.0, boss: true, raid: true,
       abilities: [
         { kind: 'nova', every: 13, r: 7, delay: 2.0, dmg: 1.55, text: 'The Bellows Engine fills its boards with a long draw of air, and blows the whole floor clear!' },
         { kind: 'beam', every: 11, len: 22, r: 2.0, delay: 1.7, dmg: 1.55, text: 'The Bellows Engine swings its nozzle round and drives a blast of hot air down the hall!' },
         { kind: 'circles', every: 10, n: 5, r: 3.0, delay: 1.8, dmg: 1.45, text: 'Hot cinders blow up out of the floor grates!' },
         { kind: 'adds', at: 0.5, mob: 'ffcrawler', n: 3, text: 'Slag crawlers roll out from under the bellows boards!' }] }),
     // 2. the Crucible Crane: a gantry on rail trucks, a square crucible of molten metal swinging under its trolley
-    cruciblecrane: FF('The Crucible Crane', 'cruciblecrane', 0, [45, 45], 122000, [58, 80], 32000, { loot: 'u_cruciblecrane', rhIlvl: 64, speed: 2.4, aggro: 18, range: 5.4, swing: 2.8, radius: 3.4, boss: true, raid: true,
+    cruciblecrane: FF('The Crucible Crane', 'cruciblecrane', 0, [45, 45], 220000, [58, 80], 32000, { loot: 'u_cruciblecrane', rhIlvl: 64, speed: 2.4, aggro: 18, range: 5.4, swing: 2.8, radius: 3.4, boss: true, raid: true,
       abilities: [
         { kind: 'circles', every: 10, n: 6, r: 3.2, delay: 1.9, dmg: 1.5, text: 'The Crucible Crane tips its crucible, and molten metal splashes across the pits!' },
         { kind: 'beam', every: 13, len: 26, r: 2.2, delay: 1.8, dmg: 1.6, text: 'The Crucible Crane runs the length of its rails!' },
         { kind: 'adds', at: 0.6, mob: 'ffhauler', n: 2, text: 'Ladle haulers come up out of the casting pits!' },
         { kind: 'enrage', at: 0.15, text: 'The Crucible Crane’s brakes give out!' }] }),
     // 3. the Pattern Caster: the moulding press that made the Makers' shapes, a ram over a moulding flask, two pouring ladles
-    patterncaster: FF('The Pattern Caster', 'patterncaster', 0, [45, 45], 128000, [60, 82], 34000, { loot: 'u_patterncaster', rhIlvl: 64, speed: 2.6, aggro: 18, range: 5.0, swing: 2.6, radius: 3.2, boss: true, raid: true,
+    patterncaster: FF('The Pattern Caster', 'patterncaster', 0, [45, 45], 230000, [60, 82], 34000, { loot: 'u_patterncaster', rhIlvl: 64, speed: 2.6, aggro: 18, range: 5.0, swing: 2.6, radius: 3.2, boss: true, raid: true,
       abilities: [
         { kind: 'nova', every: 12, r: 7.5, delay: 1.9, dmg: 1.6, text: 'The Pattern Caster brings its ram down on the flask, and the floor jumps!' },
         { kind: 'circles', every: 11, n: 5, r: 3.4, delay: 1.9, dmg: 1.5, text: 'The Pattern Caster pours both ladles out across the floor!' },
         { kind: 'adds', at: 0.5, mob: 'ffsentinel', n: 3, text: 'Pit sentinels step out of the moulding sand, fresh from the pattern!' },
         { kind: 'enrage', at: 0.12, text: 'The Pattern Caster casts faster than the sand can set!' }] }),
     // 4. THE FIRST FURNACE: the towering square furnace engine at the end of the hall, which hardly moves; three phases
-    firstfurnace: FF('The First Furnace', 'firstfurnace', 0, [46, 46], 168000, [62, 86], 42000, { loot: 'u_firstfurnace', rhIlvl: 64, speed: 0.6, aggro: 20, range: 9.0, swing: 3.0, radius: 5.4, boss: true, raid: true,
+    firstfurnace: FF('The First Furnace', 'firstfurnace', 0, [46, 46], 315000, [62, 86], 42000, { loot: 'u_firstfurnace', rhIlvl: 64, speed: 0.6, aggro: 20, range: 9.0, swing: 3.0, radius: 5.4, boss: true, raid: true,
       abilities: [
         { kind: 'circles', every: 11, n: 6, r: 3.2, delay: 1.9, dmg: 1.5, above: 0.66, text: 'The First Furnace opens its tapping holes, and metal runs down the pouring channels!' },
         { kind: 'nova', every: 14, r: 8, delay: 2.2, dmg: 1.6, text: 'The First Furnace’s grille glows white, and the heat rolls out across the hall!' },
@@ -3045,11 +3045,11 @@ Object.assign(MOBS, {
   wheelhammer: IM('Wheel Hammer', 'wheelhammer', 0, [47, 48], 3800, [50, 68], 1600, { speed: 2.8, range: 3.6, swing: 2.7, radius: 1.6 }),
   bronzewalker: IM('Bronze Flume Walker', 'flumewalker', 1, [47, 48], 3600, [48, 64], 1550, { speed: 3.8, range: 3.4, radius: 1.0 }),
   damsentry: IM('Dam Sentry', 'damsentry', 0, [49, 50], 4300, [54, 72], 1750, { radius: 1.2 }),
-  bronzesentry: IM('Old Bronze Sentry', 'damsentry', 1, [49, 50], 4600, [56, 74], 1800, { radius: 1.2, elite: true,
+  bronzesentry: IM('Old Bronze Sentry', 'damsentry', 1, [49, 50], 12000, [72, 96], 1800, { radius: 1.2, elite: true,
     abilities: [{ kind: 'nova', every: 14, r: 5, delay: 1.7, dmg: 1.3, text: 'The Old Bronze Sentry slams the ice!' }] }),
-  frozenwheel: IM('The Frozen Wheel', 'wheelhammer', 1, [48, 48], 19000, [56, 76], 5200, { elite: true, rare: true, loot: 'rareRime1', speed: 2.8, range: 3.8, radius: 1.7,
+  frozenwheel: IM('The Frozen Wheel', 'wheelhammer', 1, [48, 48], 22000, [68, 92], 5200, { elite: true, rare: true, loot: 'rareRime1', speed: 2.8, range: 3.8, radius: 1.7,
     abilities: [{ kind: 'circles', every: 10, n: 4, r: 2.8, delay: 1.8, dmg: 1.3, text: 'The Frozen Wheel brings its tilt-hammer down!' }] }),
-  sluicewarden: IM('The Last Sluicewarden', 'sluicekeeper', 1, [50, 50], 21000, [58, 78], 5600, { elite: true, rare: true, loot: 'rareRime2', radius: 1.4,
+  sluicewarden: IM('The Last Sluicewarden', 'sluicekeeper', 1, [50, 50], 25000, [70, 94], 5600, { elite: true, rare: true, loot: 'rareRime2', radius: 1.4,
     abilities: [{ kind: 'nova', every: 12, r: 6, delay: 1.8, dmg: 1.5, text: 'The Last Sluicewarden opens its gates!' }] }),
   spillwayengine: { name: 'The Spillway Engine', model: 'spillwayengine', lvl: [50, 50], hp: 88000, dmg: [62, 86], speed: 2.0, aggro: 12, range: 7, swing: 3.0, xp: 19000, loot: 'spillway', radius: 5.0, elite: true, boss: true, world: true,
     notice: 'is grinding across the frozen lake behind the Dam Crown, still trying to open gates that froze shut long ago', yell: 'heaves its spillway gate open!',
@@ -3100,7 +3100,7 @@ SPAWNS.push(
         { kind: 'circles', every: 9, n: 4, r: 2.8, delay: 1.7, dmg: 1.4, text: 'Water bursts up out of the turbine pits!' },
         { kind: 'adds', at: 0.5, mob: 'sgwalker', n: 2, text: 'Flume walkers climb out of the tailrace to feed the Turbine Heart!' }] }),
     // the last boss: three abilities, and the second only once the gate is giving way (below half health): the rising water
-    floodgate: SG('The Floodgate', 'floodgate', 0, [51, 51], 76000, [66, 90], 20000, { ...WET, loot: 'u_floodgate', rhIlvl: 68, speed: 0.6, aggro: 18, range: 7.0, swing: 3.0, radius: 4.6, elite: true, boss: true,
+    floodgate: SG('The Floodgate', 'floodgate', 0, [51, 51], 225000, [66, 90], 20000, { ...WET, loot: 'u_floodgate', rhIlvl: 68, speed: 0.6, aggro: 18, range: 7.0, swing: 3.0, radius: 4.6, elite: true, boss: true,
       abilities: [{ kind: 'circles', every: 10, n: 4, r: 3.2, delay: 1.8, dmg: 1.45, above: 0.5, text: 'The Floodgate cracks its sluices, and water sheets across the floor!' },
         { kind: 'circles', every: 7, n: 8, r: 3.8, delay: 2.0, dmg: 1.5, below: 0.5, text: 'The gate is giving way! Water pours through and floods the hall, and it keeps rising!' },
         { kind: 'nova', every: 16, r: 9, delay: 2.4, dmg: 1.7, text: 'The Floodgate heaves its gate up, and a wave breaks over everything near it!' }] }),
@@ -3235,21 +3235,21 @@ for (const [id, Q] of Object.entries(QUESTS)) if (Q.msq) { const g = NPCS.find((
     gdhammer: GD('Spillway Wheel Hammer', 'wheelhammer', 1, [50, 50], 6000, [60, 82], 1950, { speed: 2.8, range: 3.6, swing: 2.7, radius: 1.7 }),
     gdsentry: GD('Great Dam Sentry', 'damsentry', 1, [50, 50], 5800, [59, 80], 1900, { radius: 1.2 }),
     // 1. the Penstock Engine: a valve engine on treads, riding a length of the great pipe, its valve house on top
-    penstockengine: GD('The Penstock Engine', 'penstockengine', 0, [50, 50], 136000, [64, 86], 34000, { ...WET, loot: 'u_penstockengine', rhIlvl: 70, speed: 2.6, aggro: 18, range: 5.0, swing: 2.5, radius: 3.2, boss: true, raid: true,
+    penstockengine: GD('The Penstock Engine', 'penstockengine', 0, [50, 50], 290000, [64, 86], 34000, { ...WET, loot: 'u_penstockengine', rhIlvl: 70, speed: 2.6, aggro: 18, range: 5.0, swing: 2.5, radius: 3.2, boss: true, raid: true,
       abilities: [
         { kind: 'beam', every: 12, len: 24, r: 2.1, delay: 1.8, dmg: 1.55, text: 'The Penstock Engine opens its valve, and a jet of water drives down the gallery!' },
         { kind: 'circles', every: 10, n: 5, r: 3.0, delay: 1.8, dmg: 1.45, text: 'Water bursts from the flanges of the penstocks overhead!' },
         { kind: 'nova', every: 14, r: 7, delay: 2.0, dmg: 1.55, text: 'The Penstock Engine blows down its pipe, and water floods out across the floor!' },
         { kind: 'adds', at: 0.5, mob: 'gdwalker', n: 3, text: 'Flume walkers climb down out of the penstocks to tend the Penstock Engine!' }] }),
     // 2. the Ice Breaker: a heavy tracked engine with a wedge ram at the bow and a tilt hammer over it
-    icebreaker: GD('The Ice Breaker', 'icebreaker', 0, [50, 50], 146000, [66, 88], 36000, { ...WET, loot: 'u_icebreaker', rhIlvl: 70, speed: 2.4, aggro: 18, range: 5.4, swing: 2.8, radius: 3.4, boss: true, raid: true,
+    icebreaker: GD('The Ice Breaker', 'icebreaker', 0, [50, 50], 310000, [66, 88], 36000, { ...WET, loot: 'u_icebreaker', rhIlvl: 70, speed: 2.4, aggro: 18, range: 5.4, swing: 2.8, radius: 3.4, boss: true, raid: true,
       abilities: [
         { kind: 'nova', every: 13, r: 7.5, delay: 2.0, dmg: 1.6, text: 'The Ice Breaker brings its hammer down, and the ice shatters across the spillway!' },
         { kind: 'circles', every: 11, n: 6, r: 3.2, delay: 1.9, dmg: 1.5, text: 'Slabs of broken ice come crashing down the spillway steps!' },
         { kind: 'beam', every: 13, len: 26, r: 2.2, delay: 1.8, dmg: 1.6, text: 'The Ice Breaker drives its ram down the spillway!' },
         { kind: 'enrage', at: 0.15, text: 'The Ice Breaker’s hammer runs free of its brake!' }] }),
     // 3. the Governor: the turbines' regulator, a square tower on treads with its weights spinning on a tall spindle
-    governor: GD('The Governor', 'governor', 0, [50, 50], 152000, [68, 90], 38000, { ...WET, loot: 'u_governor', rhIlvl: 70, speed: 2.6, aggro: 18, range: 5.0, swing: 2.6, radius: 3.0, boss: true, raid: true,
+    governor: GD('The Governor', 'governor', 0, [50, 50], 325000, [68, 90], 38000, { ...WET, loot: 'u_governor', rhIlvl: 70, speed: 2.6, aggro: 18, range: 5.0, swing: 2.6, radius: 3.0, boss: true, raid: true,
       abilities: [
         { kind: 'circles', every: 10, n: 5, r: 3.2, delay: 1.9, dmg: 1.5, text: 'The Governor throws every turbine gate open at once, and water spouts from the pits!' },
         { kind: 'nova', every: 12, r: 7.5, delay: 1.9, dmg: 1.6, text: 'The Governor’s weights fly out, and a sheet of spray sweeps the hall!' },
@@ -3257,7 +3257,7 @@ for (const [id, Q] of Object.entries(QUESTS)) if (Q.msq) { const g = NPCS.find((
         { kind: 'enrage', at: 0.12, text: 'The Governor runs away with itself, faster than any turbine was built to turn!' }] }),
     // 4. THE GREAT DAM'S HEART: the master gate engine at the north wall of the Dam Heart, which never moves. Three phases:
     // as the gate gives way the water bursts out wider and more often
-    damheart: GD('The Great Dam’s Heart', 'damheart', 0, [51, 51], 205000, [72, 96], 52000, { ...WET, loot: 'u_damheart', rhIlvl: 70, speed: 0, aggro: 22, range: 10.0, swing: 3.0, radius: 6.0, boss: true, raid: true,
+    damheart: GD('The Great Dam’s Heart', 'damheart', 0, [51, 51], 445000, [72, 96], 52000, { ...WET, loot: 'u_damheart', rhIlvl: 70, speed: 0, aggro: 22, range: 10.0, swing: 3.0, radius: 6.0, boss: true, raid: true,
       abilities: [
         { kind: 'circles', every: 11, n: 5, r: 3.0, delay: 1.9, dmg: 1.5, above: 0.66, text: 'The Great Dam’s Heart cracks its relief gates, and water bursts up through the floor!' },
         { kind: 'nova', every: 15, r: 8, delay: 2.2, dmg: 1.6, above: 0.33, text: 'The Great Dam’s Heart heaves against its gate, and a wave rolls out across the hall!' },
@@ -3516,11 +3516,11 @@ Object.assign(MOBS, {
   galewalker: WM('Gale Walker', 'galewalker', 0, [52, 53], 5400, [62, 82], 2150, { speed: 3.8, range: 3.6, radius: 1.0 }),
   bronzegale: WM('Bronze Gale Walker', 'galewalker', 1, [52, 53], 5600, [62, 84], 2200, { speed: 3.8, range: 3.6, radius: 1.0 }),
   towerwarden: WM('Tower Warden', 'towerwarden', 0, [54, 55], 6200, [66, 88], 2400, { range: 3.4, radius: 1.3 }),
-  bronzetower: WM('Old Bronze Tower Warden', 'towerwarden', 1, [54, 55], 6600, [68, 90], 2450, { range: 3.4, radius: 1.3, elite: true,
+  bronzetower: WM('Old Bronze Tower Warden', 'towerwarden', 1, [54, 55], 17000, [88, 116], 2450, { range: 3.4, radius: 1.3, elite: true,
     abilities: [{ kind: 'nova', every: 14, r: 5, delay: 1.7, dmg: 1.3, text: 'The Old Bronze Tower Warden brings its winding bar down on the snow!' }] }),
-  snowplough: WM('The Snowbound Plough', 'iceplough', 1, [53, 53], 25000, [64, 86], 6200, { elite: true, rare: true, loot: 'rareWind1', speed: 3.0, range: 3.8, swing: 2.6, radius: 1.7,
+  snowplough: WM('The Snowbound Plough', 'iceplough', 1, [53, 53], 31000, [80, 108], 6200, { elite: true, rare: true, loot: 'rareWind1', speed: 3.0, range: 3.8, swing: 2.6, radius: 1.7,
     abilities: [{ kind: 'circles', every: 10, n: 4, r: 2.8, delay: 1.8, dmg: 1.3, text: 'The Snowbound Plough throws packed snow off its blade!' }] }),
-  oldsweeper: WM('The Old Rime Sweeper', 'rimesweeper', 1, [55, 55], 27500, [70, 92], 6700, { elite: true, rare: true, loot: 'rareWind2', speed: 3.4, radius: 1.5,
+  oldsweeper: WM('The Old Rime Sweeper', 'rimesweeper', 1, [55, 55], 35000, [88, 116], 6700, { elite: true, rare: true, loot: 'rareWind2', speed: 3.4, radius: 1.5,
     abilities: [{ kind: 'nova', every: 12, r: 6, delay: 1.8, dmg: 1.5, text: 'The Old Rime Sweeper races its brush drum and flings ice all round it!' }] }),
   stormplough: { name: 'The Stormplough', model: 'stormplough', lvl: [55, 55], hp: 121000, dmg: [72, 98], speed: 2.0, aggro: 12, range: 7, swing: 3.0, xp: 24000, loot: 'stormplough', radius: 5.0, elite: true, boss: true, world: true,
     notice: 'is grinding through the snowfield below the Makers’ Rest on the Windward Heights, still clearing a road nobody uses', yell: 'swings its wind engine round into the gale!',
@@ -3577,7 +3577,7 @@ SPAWNS.push(
         { kind: 'circles', every: 9, n: 4, r: 2.8, delay: 1.7, dmg: 1.4, text: 'Meltwater bursts up out of the cisterns under pressure!' },
         { kind: 'adds', at: 0.5, mob: 'pwwalker', n: 2, text: 'Gale walkers climb down out of the air shafts to tend the Cistern Warden!' }] }),
     // the last boss: three abilities, and the second only once the shaft is flooding (below half health): the rising water
-    greatpump: PW('The Great Pump', 'greatpump', 0, [56, 56], 108000, [84, 112], 27000, { ...WET, loot: 'u_greatpump', rhIlvl: 74, speed: 0, aggro: 18, range: 7.0, swing: 3.0, radius: 4.8, elite: true, boss: true,
+    greatpump: PW('The Great Pump', 'greatpump', 0, [56, 56], 310000, [84, 112], 27000, { ...WET, loot: 'u_greatpump', rhIlvl: 74, speed: 0, aggro: 18, range: 7.0, swing: 3.0, radius: 4.8, elite: true, boss: true,
       abilities: [{ kind: 'circles', every: 10, n: 4, r: 3.2, delay: 1.8, dmg: 1.45, above: 0.5, text: 'The Great Pump strokes, and meltwater spouts out of the shaft collars!' },
         { kind: 'circles', every: 7, n: 8, r: 3.8, delay: 2.0, dmg: 1.5, below: 0.5, text: 'The Great Pump loses its stroke! The shaft floods, and water comes up across the floor, and it keeps rising!' },
         { kind: 'nova', every: 16, r: 9, delay: 2.4, dmg: 1.7, text: 'The Great Pump\u2019s cylinder blows off its steam, and a scalding cloud rolls over everything near it!' }] }),
@@ -3718,21 +3718,21 @@ for (const [id, Q] of Object.entries(QUESTS)) if (Q.msq) { const g = NPCS.find((
     mrsweeper: MR('Workshop Rime Sweeper', 'rimesweeper', 1, [55, 55], 7400, [72, 96], 2400, { speed: 3.6, radius: 1.4 }),
     mrplough: MR('Yard Ice Plough', 'iceplough', 1, [55, 55], 7900, [74, 100], 2500, { speed: 3.0, range: 3.4, swing: 2.6, radius: 1.6 }),
     // 1. the Shop Crane: a gantry crane on wheeled bogies, its hoist trolley carrying a crated casting
-    shopcrane: MR('The Shop Crane', 'shopcrane', 0, [55, 55], 176000, [76, 100], 44000, { loot: 'u_shopcrane', rhIlvl: 80, speed: 2.6, aggro: 18, range: 5.2, swing: 2.6, radius: 3.4, boss: true, raid: true,
+    shopcrane: MR('The Shop Crane', 'shopcrane', 0, [55, 55], 415000, [76, 100], 44000, { loot: 'u_shopcrane', rhIlvl: 80, speed: 2.6, aggro: 18, range: 5.2, swing: 2.6, radius: 3.4, boss: true, raid: true,
       abilities: [
         { kind: 'circles', every: 10, n: 5, r: 3.0, delay: 1.8, dmg: 1.45, text: 'The Shop Crane lets go of its load, and castings come crashing down!' },
         { kind: 'beam', every: 12, len: 24, r: 2.1, delay: 1.8, dmg: 1.55, text: 'The Shop Crane runs its trolley out along the bridge, and the spreader bar sweeps the floor!' },
         { kind: 'adds', at: 0.5, mob: 'mrwalker', n: 3, text: 'Gale walkers climb down off the crane rails to rig the Shop Crane’s load!' },
         { kind: 'enrage', at: 0.15, text: 'The Shop Crane’s brake slips, and it runs the length of its rails!' }] }),
     // 2. the Board Plane: a long planing engine on treads, a half-planed sail-board clamped on its bed
-    boardplane: MR('The Board Plane', 'boardplane', 0, [55, 55], 186000, [78, 102], 46000, { loot: 'u_boardplane', rhIlvl: 80, speed: 2.2, aggro: 18, range: 5.6, swing: 2.8, radius: 3.6, boss: true, raid: true,
+    boardplane: MR('The Board Plane', 'boardplane', 0, [55, 55], 440000, [78, 102], 46000, { loot: 'u_boardplane', rhIlvl: 80, speed: 2.2, aggro: 18, range: 5.6, swing: 2.8, radius: 3.6, boss: true, raid: true,
       abilities: [
         { kind: 'beam', every: 11, len: 28, r: 2.2, delay: 1.8, dmg: 1.6, text: 'The Board Plane runs its bed out the length of the loft!' },
         { kind: 'circles', every: 11, n: 6, r: 3.2, delay: 1.9, dmg: 1.5, text: 'Finished sail-boards slide off the racks!' },
         { kind: 'nova', every: 14, r: 7.5, delay: 2.0, dmg: 1.6, text: 'The Board Plane’s cutter block races, and shavings and splinters fly all round it!' },
         { kind: 'enrage', at: 0.15, text: 'The Board Plane runs on with nobody to feed it!' }] }),
     // 3. the Great Lathe: a heavy turning engine on treads, a wind engine's hub clamped to its faceplate
-    greatlathe: MR('The Great Lathe', 'greatlathe', 0, [55, 55], 196000, [80, 104], 48000, { loot: 'u_greatlathe', rhIlvl: 80, speed: 2.4, aggro: 18, range: 5.2, swing: 2.6, radius: 3.4, boss: true, raid: true,
+    greatlathe: MR('The Great Lathe', 'greatlathe', 0, [55, 55], 465000, [80, 104], 48000, { loot: 'u_greatlathe', rhIlvl: 80, speed: 2.4, aggro: 18, range: 5.2, swing: 2.6, radius: 3.4, boss: true, raid: true,
       abilities: [
         { kind: 'nova', every: 13, r: 7.5, delay: 2.0, dmg: 1.6, text: 'The Great Lathe spins up, and hot swarf flies off the work!' },
         { kind: 'circles', every: 10, n: 5, r: 3.2, delay: 1.9, dmg: 1.5, text: 'Chips of hot iron rain off the Great Lathe’s tool!' },
@@ -3742,7 +3742,7 @@ for (const [id, Q] of Object.entries(QUESTS)) if (Q.msq) { const g = NPCS.find((
         { kind: 'enrage', at: 0.12, text: 'The Great Lathe runs flat out!' }] }),
     // 4. THE GREAT GOVERNOR: the timing engine at the north wall of the Governor Room, which never moves. Three phases: as it
     // fights the eleven engines it never set going, its brake rods come down wider, more often and in more places
-    greatgovernor: MR('The Great Governor', 'greatgovernor', 0, [56, 56], 265000, [86, 114], 68000, { loot: 'u_greatgovernor', rhIlvl: 80, speed: 0, aggro: 22, range: 10.0, swing: 3.0, radius: 6.0, boss: true, raid: true,
+    greatgovernor: MR('The Great Governor', 'greatgovernor', 0, [56, 56], 620000, [86, 114], 68000, { loot: 'u_greatgovernor', rhIlvl: 80, speed: 0, aggro: 22, range: 10.0, swing: 3.0, radius: 6.0, boss: true, raid: true,
       abilities: [
         { kind: 'circles', every: 11, n: 5, r: 3.0, delay: 1.9, dmg: 1.5, above: 0.66, text: 'The Great Governor drops a brake rod into its slot, and the floor jumps!' },
         { kind: 'beam', every: 12, len: 26, r: 2.3, delay: 1.8, dmg: 1.6, above: 0.66, text: 'A brake rod drives out of the Great Governor along the floor!' },
@@ -3949,11 +3949,11 @@ Object.assign(ITEMS, {
     siltdredge: TM('Silt Dredge', 'siltdredge', 0, [57, 58], 7700, [74, 100], 2800, { speed: 2.8, range: 3.8, swing: 2.7, radius: 1.7 }),
     bronzedredge: TM('Old Bronze Silt Dredge', 'siltdredge', 1, [57, 58], 7900, [76, 100], 2850, { speed: 2.8, range: 3.8, swing: 2.7, radius: 1.7 }),
     tidewarden: TM('Tide Warden', 'tidewarden', 0, [59, 60], 8400, [80, 106], 3050, { range: 3.4, radius: 1.3 }),
-    oldtidewarden: TM('Old Bronze Tide Warden', 'tidewarden', 1, [59, 60], 8900, [82, 108], 3100, { range: 3.4, radius: 1.3, elite: true,
+    oldtidewarden: TM('Old Bronze Tide Warden', 'tidewarden', 1, [59, 60], 23000, [106, 140], 3100, { range: 3.4, radius: 1.3, elite: true,
       abilities: [{ kind: 'nova', every: 14, r: 5, delay: 1.7, dmg: 1.3, text: 'The Old Bronze Tide Warden drives its gate key down into the ground!' }] }),
-    snaggedhaulier: TM('The Snagged Haulier', 'loghaulier', 1, [58, 58], 33000, [78, 102], 7600, { elite: true, rare: true, loot: 'rareTide1', speed: 3.0, range: 3.8, swing: 2.6, radius: 1.8,
+    snaggedhaulier: TM('The Snagged Haulier', 'loghaulier', 1, [58, 58], 38000, [98, 128], 7600, { elite: true, rare: true, loot: 'rareTide1', speed: 3.0, range: 3.8, swing: 2.6, radius: 1.8,
       abilities: [{ kind: 'circles', every: 10, n: 4, r: 2.8, delay: 1.8, dmg: 1.3, text: 'The Snagged Haulier swings its waterlogged log round on the chain!' }] }),
-    mudboundsaw: TM('The Mudbound Saw', 'sawcarriage', 1, [60, 60], 36000, [84, 110], 8200, { elite: true, rare: true, loot: 'rareTide2', speed: 3.0, range: 3.6, radius: 1.6,
+    mudboundsaw: TM('The Mudbound Saw', 'sawcarriage', 1, [60, 60], 41000, [106, 138], 8200, { elite: true, rare: true, loot: 'rareTide2', speed: 3.0, range: 3.6, radius: 1.6,
       abilities: [{ kind: 'nova', every: 12, r: 6, delay: 1.8, dmg: 1.5, text: 'The Mudbound Saw races its blades and flings silt and sawdust all round it!' }] }),
     greatdredge: { name: 'The Great Dredge', model: 'greatdredge', lvl: [60, 60], hp: 158000, dmg: [86, 116], speed: 1.8, aggro: 12, range: 8, swing: 3.0, xp: 30000, loot: 'greatdredge', radius: 5.5, elite: true, boss: true, world: true,
       notice: 'is striding out across the mud flats below the Tide Mills on Tidewater Sound, still dredging channels the silt filled long ago', yell: 'drops its bucket ladder into the mud!',
@@ -4071,7 +4071,7 @@ for (const [id, Q] of Object.entries(QUESTS)) if (Q.msq) { const g = NPCS.find((
         { kind: 'circles', tide: 'ebb', every: 9, n: 4, r: 2.8, delay: 1.7, dmg: 1.4, text: 'The Frame Saw races its blades, and splinters and wet sawdust fly across the pit!' },
         { kind: 'adds', at: 0.5, mob: 'mldredge', n: 2, text: 'Silt dredges crawl up out of the tail race to clear the Frame Saw’s pit!' }] }),
     // the last boss: the same tide, a churning sweep round its wheel on the ebb, and below half health the race overflows
-    greatundershot: ML('The Great Undershot', 'greatundershot', 0, [61, 61], 132000, [96, 126], 31000, { ...WET, loot: 'u_greatundershot', rhIlvl: 86, speed: 0, aggro: 18, range: 7.0, swing: 3.0, radius: 4.8, elite: true, boss: true,
+    greatundershot: ML('The Great Undershot', 'greatundershot', 0, [61, 61], 395000, [96, 126], 31000, { ...WET, loot: 'u_greatundershot', rhIlvl: 86, speed: 0, aggro: 18, range: 7.0, swing: 3.0, radius: 4.8, elite: true, boss: true,
       abilities: [TIDE('The flood tide drives up the Wheel Race, the Great Undershot takes the water, and the tail pits fill!', 'The ebb turns the Great Undershot back, and the tail pits drain.'),
         { kind: 'pits', tide: 'flood', every: 6, delay: 2.0, dmg: 1.6, text: 'The tail pits flood to the kerb!' },
         { kind: 'nova', tide: 'ebb', every: 12, r: 9, delay: 2.4, dmg: 1.7, text: 'The Great Undershot churns in its race, and silt and spray sweep out all round it!' },
@@ -4202,7 +4202,7 @@ for (const [id, Q] of Object.entries(QUESTS)) if (Q.msq) { const g = NPCS.find((
     sgdredge: SG('Barrage Silt Dredge', 'siltdredge', 1, [60, 60], 10200, [86, 114], 3250, { speed: 2.8, range: 3.8, swing: 2.7, radius: 1.7 }),
     sgcarriage: SG('Barrage Saw Carriage', 'sawcarriage', 1, [60, 60], 9800, [86, 112], 3200, { speed: 3.2, range: 3.4, radius: 1.5 }),
     // 1. the Gate Winch: a tracked winch house with a solid chain drum and a square counterweight on a straight chain
-    gatewinch: SG('The Gate Winch', 'gatewinch', 0, [60, 60], 210000, [92, 120], 52000, { ...WET, loot: 'u_gatewinch', rhIlvl: 88, speed: 2.4, aggro: 18, range: 5.2, swing: 2.6, radius: 3.4, boss: true, raid: true,
+    gatewinch: SG('The Gate Winch', 'gatewinch', 0, [60, 60], 540000, [92, 120], 52000, { ...WET, loot: 'u_gatewinch', rhIlvl: 88, speed: 2.4, aggro: 18, range: 5.2, swing: 2.6, radius: 3.4, boss: true, raid: true,
       abilities: [TIDE('The flood comes in through the jammed bay, and the chain wells fill!', 'The ebb drains the chain wells, and the Gate Winch takes up its slack.'),
         { kind: 'pits', tide: 'flood', every: 7, delay: 2.0, dmg: 1.5, text: 'The Gate Winch pays out its chain, and the sea boils up the chain wells!' },
         { kind: 'beam', tide: 'ebb', every: 11, len: 24, r: 2.1, delay: 1.8, dmg: 1.55, text: 'The Gate Winch snatches its chain tight, and it whips along the dry floor!' },
@@ -4210,7 +4210,7 @@ for (const [id, Q] of Object.entries(QUESTS)) if (Q.msq) { const g = NPCS.find((
         { kind: 'adds', at: 0.5, mob: 'sgwarden', n: 3, text: 'Tide wardens climb up out of the chain wells to wind the Gate Winch!' },
         { kind: 'enrage', at: 0.15, text: 'The Gate Winch’s pawl slips, and the drum runs free!' }] }),
     // 2. the Silt Ram: a long tracked culvert scraper with a flat square ram head and a square silt hopper
-    siltram: SG('The Silt Ram', 'siltram', 0, [60, 60], 222000, [94, 122], 54000, { ...WET, loot: 'u_siltram', rhIlvl: 88, speed: 2.6, aggro: 18, range: 5.6, swing: 2.8, radius: 3.6, boss: true, raid: true,
+    siltram: SG('The Silt Ram', 'siltram', 0, [60, 60], 570000, [94, 122], 54000, { ...WET, loot: 'u_siltram', rhIlvl: 88, speed: 2.6, aggro: 18, range: 5.6, swing: 2.8, radius: 3.6, boss: true, raid: true,
       abilities: [TIDE('The flood fills the silt sumps, and the Silt Ram backs into its culvert!', 'The ebb drains the sumps, and the Silt Ram comes out to clear the silt.'),
         { kind: 'pits', tide: 'flood', every: 6, delay: 2.0, dmg: 1.5, text: 'Silt and salt water surge up out of the flooded sumps!' },
         { kind: 'beam', tide: 'ebb', every: 10, len: 26, r: 2.2, delay: 1.8, dmg: 1.6, text: 'The Silt Ram drives its ram head the length of the culvert!' },
@@ -4218,7 +4218,7 @@ for (const [id, Q] of Object.entries(QUESTS)) if (Q.msq) { const g = NPCS.find((
         { kind: 'adds', at: 0.5, mob: 'sgdredge', n: 3, text: 'Silt dredges crawl out of the culverts to fill the Silt Ram’s hopper!' },
         { kind: 'enrage', at: 0.15, text: 'The Silt Ram rams on and on into the silt!' }] }),
     // 3. the Sluice Carriage: a timber gate leaf hung in a square frame on a tracked carriage, that ran along the sluices
-    sluicecarriage: SG('The Sluice Carriage', 'sluicecarriage', 0, [60, 60], 234000, [96, 124], 56000, { ...WET, loot: 'u_sluicecarriage', rhIlvl: 88, speed: 2.2, aggro: 18, range: 5.2, swing: 2.6, radius: 3.4, boss: true, raid: true,
+    sluicecarriage: SG('The Sluice Carriage', 'sluicecarriage', 0, [60, 60], 600000, [96, 124], 56000, { ...WET, loot: 'u_sluicecarriage', rhIlvl: 88, speed: 2.2, aggro: 18, range: 5.2, swing: 2.6, radius: 3.4, boss: true, raid: true,
       abilities: [TIDE('The flood comes up the Sluice Gallery, and the Sluice Carriage drops its leaf to hold it!', 'The ebb runs out under the leaf, and the sluice wells drain.'),
         { kind: 'pits', tide: 'flood', every: 6, delay: 2.0, dmg: 1.55, text: 'The Sluice Carriage drops its leaf, and the sea spouts up every sluice well!' },
         { kind: 'circles', tide: 'ebb', every: 9, n: 6, r: 3.2, delay: 1.9, dmg: 1.5, text: 'The Sluice Carriage lifts its leaf, and the water held behind it sheets across the floor!' },
@@ -4228,7 +4228,7 @@ for (const [id, Q] of Object.entries(QUESTS)) if (Q.msq) { const g = NPCS.find((
     // 4. THE TIDE ENGINE: the engine that has held the Sea Gate half open for a lifetime, at the north wall of the Engine Hall;
     // it never moves. Three phases: as it fights the tide harder, its strikes come wider, more often and in more places, and
     // in the last it runs the gate both ways at once, so the wells flood on the ebb too
-    tideengine: SG('The Tide Engine', 'tideengine', 0, [61, 61], 330000, [100, 132], 80000, { ...WET, loot: 'u_tideengine', rhIlvl: 88, speed: 0, aggro: 22, range: 10.0, swing: 3.0, radius: 6.5, boss: true, raid: true,
+    tideengine: SG('The Tide Engine', 'tideengine', 0, [61, 61], 790000, [100, 132], 80000, { ...WET, loot: 'u_tideengine', rhIlvl: 88, speed: 0, aggro: 22, range: 10.0, swing: 3.0, radius: 6.5, boss: true, raid: true,
       abilities: [TIDE('The flood drives in under the Sea Gate, and the Tide Engine heaves the gate against it! The tide wells fill.', 'The ebb runs out under the gate, and the Tide Engine lets it down. The tide wells drain.'),
         { kind: 'pits', tide: 'flood', every: 7, delay: 2.0, dmg: 1.5, above: 0.66, text: 'The tide wells flood to the kerb!' },
         { kind: 'circles', tide: 'ebb', every: 11, n: 5, r: 3.0, delay: 1.9, dmg: 1.5, above: 0.66, text: 'The Tide Engine’s rack drops a tooth, and the floor jumps!' },

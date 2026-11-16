@@ -1053,7 +1053,7 @@ export class UI {
       ${bar('hp', 'Health', y.hp, y.maxHp)}${bar('res', C.resource, y.res ?? y.maxRes, y.maxRes, C.resColor)}
       ${sec('Attributes', ATTR, [row('Power', y.power.toLocaleString(), 'Raises the damage and healing of every skill'), row('Stamina', (st.hp || 0).toLocaleString(), 'From gear: each point is 4 health'), row('Armour', (st.armor || 0).toLocaleString(), 'From gear: lowers the damage you take'), row('Max health', y.maxHp.toLocaleString())])}
       ${sec('Offensive', SLOT_GLYPH.weapon, [row('Critical strike', pct(y.crit)), row('Critical damage', `${Math.round((1.6 + (M.critDmg || 0)) * 100)}%`, 'Damage of a critical strike'), row('Haste', pct(y.hastePct ?? (st.haste || 0) / 100)), M.dmg ? row('Damage bonus', '+' + pct(M.dmg)) : '', M.heal ? row('Healing bonus', '+' + pct(M.heal)) : '', M.cdr ? row('Cooldowns', '-' + pct(M.cdr)) : ''])}
-      ${sec('Defensive', SLOT_GLYPH.offhand, [row('Damage reduction', pct(y.armorPct), 'From armour, class and talents (up to 75%)'), row('Dodge', pct(y.dodge)), row('Recovery', pct(M.leech), 'Share of damage dealt that heals you'), M.thorns ? row('Thorns', pct(M.thorns)) : '', M.absorb ? row('Shield strength', '+' + pct(M.absorb)) : ''])}</aside>`;
+      ${sec('Defensive', SLOT_GLYPH.offhand, [row('Damage reduction', pct(y.armorPct), 'From armour, class and talents (up to 75%, more with armour talents)'), row('Dodge', pct(y.dodge)), row('Recovery', pct(M.leech), 'Share of damage dealt that heals you'), M.thorns ? row('Thorns', pct(M.thorns)) : '', M.absorb ? row('Shield strength', '+' + pct(M.absorb)) : ''])}</aside>`;
   }
   charAttrHtml(y, C) {
     const B = this.charBits(y), st = y.stats || {}, M = y.mods || {};

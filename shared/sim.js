@@ -21,6 +21,35 @@ const RI = (a, b) => Math.floor(R(a, b + 1));
 const dist2 = (a, b) => (a.x - b.x) ** 2 + (a.z - b.z) ** 2;
 const dist = (a, b) => Math.sqrt(dist2(a, b));
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+// v120 level curves (docs/ai/balance_v120.md). Hero damage outgrew the authored mob numbers unevenly (a normal mob died in
+// about 1.5 s at levels 1-35 and 4.5 s at 45-65, and hit 2% of a hero's health at level 3 but 19% at 60), so every mob's
+// health and damage is multiplied by a smooth factor of its level: [level, factor] points, straight lines between them.
+const lerpT = (T, L) => { if (L <= T[0][0]) return T[0][1]; for (let i = 1; i < T.length; i++) if (L <= T[i][0]) { const [a, x] = T[i - 1], [b, y] = T[i]; return x + (y - x) * (L - a) / (b - a); } return T[T.length - 1][1]; };
+export const MOB_HP_T = [[1, 2.2], [6, 3.0], [20, 3.1], [30, 3.3], [35, 2.8], [40, 2.1], [45, 1.4], [50, 1.25], [60, 1.25], [65, 1.15]];
+export const MOB_DMG_T = [[1, 2.0], [6, 2.3], [18, 2.3], [25, 2.1], [30, 1.8], [33, 1.3], [35, 1.15], [41, 0.85], [45, 0.8], [50, 0.72], [55, 0.62], [60, 0.6], [65, 0.55]];
+export const WORLD_BOSS_HP = 5; // open-world bosses: a gathering fight for a group
+// health factor for a mob def at a level: dungeon and raid bosses are authored at their final health (no factor);
+// raid trash is fought by a bigger group, so it has half again the health of five-player dungeon trash
+// open-world elites and rares (and the old story bosses Stonegrinder, Foreman and Stormengine) are solo quest targets: their
+// health factor stops at ELITE_HP_CAP and their swings at 1, so a newcomer can still beat them alone (v120 review)
+export const ELITE_HP_CAP = 1.6; // (the three story bosses stop at 0.8 of it)
+const soloElite = (def, sp) => (def.elite || def.rare) && !def.world && !sp?.dungeon;
+export const mobHpMul = (def, lvl, sp) => def.dummy ? 1 : sp?.dungeon && def.boss ? 1 : def.world ? WORLD_BOSS_HP : soloElite(def, sp) ? Math.min(def.boss ? ELITE_HP_CAP * 0.8 : ELITE_HP_CAP, lerpT(MOB_HP_T, lvl)) : lerpT(MOB_HP_T, lvl) * (sp?.dungeon && DUNGEON_BY_ID[sp.dungeon]?.raid ? 1.5 : 1);
+// the swing factor of a mob: dungeon and raid bosses BOSS_SWING on the ability curve, open-world elites at most 1, the rest the curve
+export const mobSwingMul = (def, lvl, sp, inDungeon) => def.boss && inDungeon ? BOSS_SWING * mobAbilityMul(lvl) : soloElite(def, sp) ? Math.min(1, mobDmgMul(lvl)) : mobDmgMul(lvl);
+export const mobDmgMul = (lvl) => lerpT(MOB_DMG_T, lvl);
+// boss and elite mechanics (telegraphed circles, beams, novas) keep at least 0.85 of their authored damage, so they stay worth
+// stepping out of at high levels where the plain swing curve falls lower
+// a bot tank (volunteer or companion Knight or Warden) draws this much more threat from its damage, so a geared hero
+// dealing several times its damage does not pull the boss off it unless they really overdo it (v120 review follow-up)
+export const BOT_TANK_THREAT = 6;
+export const BOT_TANK_HP = 5; // and wears this much more health on its two armour pieces (botGear)
+const TANK_CLS = new Set(['knight', 'warden']);
+export const BOT_SIDESTEP = 0.7; // share of telegraphed hits a bot is taken to step out of
+export const BOSS_SWING = 1.25; // a dungeon or raid boss swings this much harder at its target (the tank) than its level curve
+// a boss shrunk for a smaller group (raidScale, raidK below 1) also hits softer: by the square root of its share
+export const groupDmg = (m) => (m.raidK && m.raidK < 1 ? Math.sqrt(m.raidK) : 1);
+export const mobAbilityMul = (lvl) => Math.max(0.85, Math.min(1, mobDmgMul(lvl)));
 const SPAWN_POINT = { x: 2, z: 10 };
 const GCD = 1.0;
 const VIEW = 110;
@@ -78,7 +107,10 @@ export class World {
     // Veteran (level 38+): the old five-player dungeons raised to the level 40 cap
     const lr = vet ? (def.boss ? [41, 41] : def.elite ? [40, 40] : [39, 40]) : tempest ? (def.boss ? [27, 27] : def.elite ? [26, 26] : [25, 26]) : heroic ? (def.boss ? [26, 26] : def.elite ? [25, 25] : [24, 25]) : sp.lvl || def.lvl;
     const lvl = RI(lr[0], lr[1]);
-    const hp = Math.round(def.hp * (1 + 0.22 * (lvl - def.lvl[0])) * (tempest ? TEMPEST.hp * (tempestMods().includes('plated') ? 1.2 : 1) : 1) * (rh ? 1.6 : 1));
+    // Heroic bosses are never weaker than Normal (a boss above the Heroic level would shrink); Veteran bosses grow in proportion
+    // to the level jump, as hero damage does, so every old dungeon at level 41 lasts about as long
+    const lf = 1 + 0.22 * (lvl - def.lvl[0]), lvlF = def.boss && vet ? 1.3 * lvl / def.lvl[0] : def.boss && heroic ? Math.max(lf, 1.3) : lf;
+    const hp = Math.round(def.hp * lvlF * mobHpMul(def, lvl, sp) * (tempest ? TEMPEST.hp * (tempestMods().includes('plated') ? 1.2 : 1) : 1) * (rh ? 1.6 : 1));
     const m = existing || { id: newId('m'), type: 'mob' };
     Object.assign(m, {
       kind: sp.mob, def, sp, name: def.name, level: lvl, hp, maxHp: hp, x, z, y: walkHeight(x, z), ry: R(0, 6.28),
@@ -225,7 +257,9 @@ export class World {
     p.hp = Math.max(1, Math.round(p.maxHp * ratio));
     p.maxRes = c.res;
     p.power = powerAt(p.level) + st.power;
-    p.armorPct = clamp(c.armor + st.armor / (st.armor + 300) + tal.armor, 0, 0.75);
+    // the armour that halves a hit grows with level (200 + 50 per level), so cloth, mail and plate stay apart at every level;
+    // 75% at most, and armour talents also raise that cap by a quarter of what they give
+    p.armorPct = clamp(c.armor + st.armor / (st.armor + 200 + 50 * p.level) + (tal.armor || 0), 0, 0.75 + (tal.armor || 0) / 4);
     p.hastePct = st.haste / 100 + tal.haste;
   }
 
@@ -1575,7 +1609,11 @@ export class World {
   botGear(b) {
     const L = b.level, budget = 3 + L * 1.6;
     const given = this.players.get(b.owner)?.compGear?.[b.cls] || {};
-    b.equip = { weapon: { stats: { power: Math.round(budget * 0.9) } }, chest: { stats: { armor: Math.round(budget * 3), hp: Math.round(budget * 0.8) } }, legs: { stats: { armor: Math.round(budget * 3), hp: Math.round(budget * 0.8) } } };
+    // v120: armour 7.5 per budget point (was 3), so a bot in its two armour pieces keeps about the damage reduction of a hero in a full set under the level-scaled armour formula
+    // a bot tank (Knight or Warden) gets BOT_TANK_HP times the health on them, about a geared hero tank's health (v120 review
+    // follow-up: a volunteer Warden had a third of a hero Knight's health and died under every raid boss)
+    const hpk = TANK_CLS.has(b.cls) ? BOT_TANK_HP : 1;
+    b.equip = { weapon: { stats: { power: Math.round(budget * 0.9) } }, chest: { stats: { armor: Math.round(budget * 7.5), hp: Math.round(budget * 0.8 * hpk) } }, legs: { stats: { armor: Math.round(budget * 7.5), hp: Math.round(budget * 0.8 * hpk) } } };
     for (const [slot, g] of Object.entries(given)) b.equip[slot] = g;
     this.recalc(b);
   }
@@ -1720,7 +1758,10 @@ export class World {
     b.speed = 0;
     { const w = this.houseWay(b, goal); if (w !== goal) { goal = w; stopAt = 0.25; } }
     if (!b.cast && !this.hasCC(b, 'stun') && !this.hasCC(b, 'root')) {
-      const d = Math.hypot(goal.x - b.x, goal.z - b.z);
+      let d = Math.hypot(goal.x - b.x, goal.z - b.z);
+      // a ranged bot that ended up close to its foe (it followed a melee owner in) backs off to its range, out of the slams
+      // and blasts round the foe's feet (v120 review: they stood in every boss slam)
+      if (ranged && goal === tgt && d < stopAt - 3 && d > 0.05) { goal = { x: tgt.x + (b.x - tgt.x) / d * stopAt, z: tgt.z + (b.z - tgt.z) / d * stopAt }; stopAt = 0.4; d = Math.hypot(goal.x - b.x, goal.z - b.z); }
       if (d > stopAt) {
         const sp = CLASSES[b.cls].speed * (dO > 10 && !H ? 1.3 : 1) * (b.mounted ? mountSpeed(b) : 1);
         const step = Math.min(d - stopAt, sp * dt);
@@ -1757,6 +1798,27 @@ export class World {
     // healing: anyone in the party who is hurt
     const team = this.partyMembers(o).filter((q) => !q.dead && dist(q, b) < 24);
     const hurt = team.sort((a, c) => a.hp / a.maxHp - c.hp / c.maxHp)[0];
+    // a bot healer (v120 review follow-up: it spent its resource on darts and let the tank die): a group heal when three are
+    // hurt, a heal over time kept on whoever the foe is hitting, the cheapest good heal from 80%, the biggest below 50%,
+    // and it keeps half its resource for healing
+    if (healer) {
+      const hv = (s) => s.fx.reduce((t, f) => t + (f[0] === 'heal' ? f[1] : f[0] === 'hot' ? f[1] * 0.7 : f[0] === 'absorb' ? f[1] * 0.8 : 0), 0);
+      const isHeal = (s) => has(s, 'heal') || has(s, 'hot') || has(s, 'absorb');
+      for (const s of usable.filter((s) => s.target === 'self' && s.hit.kind === 'self' && s.hit.r && isHeal(s)).sort((a, c) => hv(c) - hv(a))) {
+        if (team.filter((q) => dist(q, b) <= s.hit.r && q.hp / q.maxHp < 0.7).length >= 3) return { skill: s.id };
+      }
+      const ally = usable.filter((s) => s.target === 'ally' && isHeal(s));
+      const tankQ = tgt?.target ? team.find((q) => q.id === tgt.target) : null;
+      if (tankQ && tankQ.hp / tankQ.maxHp < 0.95) { const hot = ally.find((s) => has(s, 'hot') && !tankQ.buffs.some((x) => x.name === s.name)); if (hot) return { skill: hot.id, target: tankQ.id }; }
+      const r = hurt ? hurt.hp / hurt.maxHp : 1;
+      if (hurt && r < 0.8) {
+        const shield = r < 0.6 && !(hurt.absorb > 0) && ally.find((s) => has(s, 'absorb'));
+        if (shield) return { skill: shield.id, target: hurt.id };
+        const direct = ally.filter((s) => has(s, 'heal')).sort((a, c) => (r < 0.5 ? hv(c) - hv(a) : hv(c) / skillCost(c, tal) - hv(a) / skillCost(a, tal)));
+        if (direct[0]) return { skill: direct[0].id, target: hurt.id };
+      }
+      if (tgt && b.res < b.maxRes * 0.5 && team.some((q) => q.hp / q.maxHp < 0.9 || tgt.def?.boss)) return null;
+    }
     if (hurt && hurt.hp / hurt.maxHp < 0.72) {
       const heals = usable.filter((s) => (s.target === 'ally' || (s.target === 'self' && hurt === b)) && (has(s, 'heal') || has(s, 'hot') || has(s, 'absorb')));
       const r = hurt.hp / hurt.maxHp;
@@ -1766,9 +1828,18 @@ export class World {
     if (!tgt) return null;
     const dT = dist(b, tgt);
     // tanks pull enemies off the others
-    if ((b.cls === 'knight' || b.cls === 'warden') && tgt.type === 'mob' && tgt.target && tgt.target !== b.id) {
+    // (and taunt before losing it: when someone else's threat on a boss comes within a tenth of the tank's own; and a taunt
+    // round the tank also takes back the boss's adds that went for the others, the healer most of all)
+    if (TANK_CLS.has(b.cls) && tgt.type === 'mob') {
+      const lost = tgt.target && (tgt.target !== b.id || (tgt.def.boss && Math.max(0, ...[...tgt.threat].filter(([id]) => id !== b.id).map(([, v]) => v)) > 0.9 * (tgt.threat.get(b.id) || 0)));
       const taunt = usable.find((s) => has(s, 'taunt') && dT < (s.hit.r || 6) + 2);
-      if (taunt) return { skill: taunt.id, target: tgt.id };
+      if (taunt && lost) return { skill: taunt.id, target: tgt.id };
+      const round = usable.find((s) => has(s, 'taunt') && s.hit.kind === 'aoe' && s.target === 'self');
+      if (round && tgt.def.boss) {
+        const ids = new Set(team.map((q) => q.id));
+        const loose = [...this.mobs.values()].filter((x) => !x.dead && x !== tgt && x.target && x.target !== b.id && ids.has(x.target) && dist(x, b) < (round.hit.r || 6)).length;
+        if (loose >= 2 || (loose && team.some((q) => q.cls === 'herbalist' && q !== b && [...this.mobs.values()].some((x) => !x.dead && x.target === q.id && dist(x, b) < (round.hit.r || 6))))) return { skill: round.id };
+      }
     }
     // a reload when the resource runs low (the Deadeye's Quick Reload: a skill that gives resource back)
     if (b.res < 30) { const rl = usable.find((s) => has(s, 'res')); if (rl) return { skill: rl.id }; }
@@ -2146,7 +2217,8 @@ export class World {
         case 'knock': for (const m of enemies) { if (m.type !== 'mob' || m.def.boss) continue; const d = dist(p, m) || 1; const kx = m.x, kz = m.z; m.x += ((m.x - p.x) / d) * a; m.z += ((m.z - p.z) / d) * a; if (m.x >= DUNGEON_MIN_X) [m.x, m.z] = dungeonPush(m.x, m.z, Math.min(1.2, m.def.radius)); else { [m.x, m.z] = clampWorld(m.x, m.z, kx, kz, 0); if (houseCrosses(kx, kz, m.x, m.z)) { m.x = kx; m.z = kz; } else [m.x, m.z] = housePush(m.x, m.z, Math.min(1.2, m.def.radius)); } m.y = walkHeight(m.x, m.z); this.broadcast({ k: 'knock', id: m.id }); } break; // (never knocked through a house wall)
         case 'buff': for (const q of allies) this.addBuff(q, { name: sk.name, stat: a, pct: b, t: cc, dur: cc, icon: sk.icon }); break;
         case 'debuff': for (const m of enemies) this.addBuff(m, { name: sk.name, stat: a, pct: b, t: cc, dur: cc, debuff: true, icon: sk.icon }); break;
-        case 'taunt': for (const m of enemies) { if (m.type !== 'mob') continue; this.addThreat(m, p, 5000); m.target = p.id; m.state = 'chase'; } break;
+        // a taunt lifts the taunter above the top of the threat list (v120: long boss fights let a damage dealer outrun a flat +5000)
+        case 'taunt': for (const m of enemies) { if (m.type !== 'mob') continue; const top = Math.max(0, ...m.threat.values()); m.threat.set(p.id, Math.max(m.threat.get(p.id) || 0, top * 1.1) + 5000); m.target = p.id; m.state = 'chase'; } break;
         case 'absorb': for (const q of allies) { q.absorb = (q.absorb || 0) + healPow * a * (1 + tal.absorb); this.addBuff(q, { name: sk.name, stat: 'absorb', t: b, dur: b, icon: sk.icon }); } break;
         case 'cleanse': for (const q of allies) q.buffs = q.buffs.filter((bf) => !bf.debuff); break;
         case 'res': p.res = Math.min(p.maxRes, p.res + a); break; // the caster's own resource back (the Deadeye's Quick Reload)
@@ -2168,12 +2240,12 @@ export class World {
     if (crit) amt *= 1.6 + (tal?.critDmg || 0);
     if (tal) { const f = m.hp / m.maxHp; if (f < 0.35) amt *= 1 + tal.execute; else if (f > 0.9) amt *= 1 + tal.opener; }
     amt *= 1 + this.buffVal(m, 'vuln');
-    if (m.type === 'mob') amt *= 1 + this.buffVal(m, 'armor'); // sundered armour
+    if (m.type === 'mob') amt *= 1 + Math.min(0.6, this.buffVal(m, 'armor')); // sundered armour (every caster's breaks add up, to +60% at most)
     amt = Math.max(1, Math.round(amt));
     m.hp -= amt;
     this.broadcast({ k: 'dmg', src: src.id, tgt: m.id, amt, crit, skill });
     if (tal?.leech && !src.dead) src.hp = Math.min(src.maxHp, src.hp + amt * tal.leech);
-    if (m.type === 'mob') this.provoke(m, src, amt * (1 + (tal?.threat || 0)));
+    if (m.type === 'mob') this.provoke(m, src, amt * (1 + (tal?.threat || 0)) * (src.bot && TANK_CLS.has(src.cls) ? BOT_TANK_THREAT : 1));
     if (m.def?.dummy) { m.hitT = this.time; if (m.hp < m.maxHp * 0.02) m.hp = m.maxHp; return; }
     if (m.hp <= 0) this.kill(m, src);
   }
@@ -2210,7 +2282,8 @@ export class World {
 
   addBuff(e, b) {
     const ex = e.buffs.find((x) => x.name === b.name && x.src === b.src);
-    if (ex) Object.assign(ex, b); else e.buffs.push(b);
+    // a refreshed damage or healing over time keeps its running tick, so a quick recast never skips a tick
+    if (ex) { const tk = ex.tick; Object.assign(ex, b); if ((b.dot || b.hot) && tk != null) ex.tick = tk; } else e.buffs.push(b);
     if (e.type === 'player') this.pushSelf(e);
     this.broadcast({ k: 'buff', id: e.id, name: b.name, icon: b.icon, cc: b.cc, dur: b.dur, debuff: !!b.debuff });
   }
@@ -2220,7 +2293,7 @@ export class World {
     this.broadcast({ k: 'die', id: m.id });
     if (m.type !== 'mob') return;
     if (this.tmod(m, 'boilers') && !m.def.humanoid && !m.sp.temp) {
-      const spots = [{ x: +m.x.toFixed(2), z: +m.z.toFixed(2), r: 2.4 + (m.def.radius || 1) }], dmg = R(m.def.dmg[0], m.def.dmg[1]) * (1 + 0.18 * (m.level - 1)) * 0.9 * (m.rh ? 1.25 : 1);
+      const spots = [{ x: +m.x.toFixed(2), z: +m.z.toFixed(2), r: 2.4 + (m.def.radius || 1) }], dmg = R(m.def.dmg[0], m.def.dmg[1]) * (1 + 0.18 * (m.level - 1)) * mobAbilityMul(m.level) * 0.9 * (m.rh ? 1.25 : 1); // a telegraphed mechanic: on the ability curve (0.85-1), not the swing curve (up to 2.3)
       this.aoes.push({ t: this.time + 1.5, spots, dmg, src: m.id, kind: 'nova' });
       this.broadcast({ k: 'tele', id: m.id, kind: 'nova', spots, t: 1.5, name: 'Boiler burst' });
     }
@@ -3032,7 +3105,7 @@ export class World {
     if (p.dead) return;
     const n = this.npcs.get(m.npc), c = CARAVANS.find((x) => x.id === m.to);
     if (!n?.caravan || !c || dist(p, n) > 7) return;
-    if (this.stopArea(c) !== this.stopArea(n)) return this.err(p, 'No caravan crosses the sea. Take the ship.');
+    if (this.stopArea(c) !== this.stopArea(n)) return this.err(p, [this.stopArea(c), this.stopArea(n)].includes('rainward') ? 'No caravan runs up the haul road. Ride the wagon.' : 'No caravan crosses the sea. Take the ship.');
     if (!p.visited[c.id]) return this.err(p, 'You have not found that caravan stop yet.');
     if (this.time - p.combatT < 5) return this.err(p, 'You cannot travel while in combat.');
     const cost = this.fare(n, c);
@@ -3049,7 +3122,7 @@ export class World {
     const z = zoneAt(p.x, p.z).id;
     const zk = 'z:' + z;
     if (!p.visited[zk] && z !== 'meadows') { p.visited[zk] = true; this.achSet(p, 'zone:' + z, 1); const zn = zoneAt(p.x, p.z); if (p.level > 1 || z !== 'village') { const xp = Math.round(40 + p.level * 28); this.msg(p, `Discovered: ${zn.name}`, '#e8d8a0'); p.session.send({ t: 'ev', list: [{ k: 'discover', zone: z }] }); this.giveXp(p, xp); } }
-    for (const c of CARAVANS) if (c.zone === z && !p.visited[c.id]) { p.visited[c.id] = true; this.msg(p, this.stopArea(c) === 'valley' ? `Caravan stop found: ${c.name}. Caravan Masters can now take you here.` : `Caravan stop found: ${c.name}. No caravan crosses the sea, but its Caravan Master can point your Homeward Compass here.`, '#e8c26a'); }
+    for (const c of CARAVANS) if (c.zone === z && !p.visited[c.id]) { p.visited[c.id] = true; this.msg(p, this.stopArea(c) === 'valley' ? `Caravan stop found: ${c.name}. Caravan Masters can now take you here.` : `Caravan stop found: ${c.name}. No caravan ${this.stopArea(c) === 'rainward' ? 'runs up the haul road' : 'crosses the sea'}, but its Caravan Master can point your Homeward Compass here.`, '#e8c26a'); }
     for (const [qid, q] of Object.entries(p.quests)) {
       const Q = QUESTS[qid];
       if (Q.goal.reach && Q.goal.reach === z && q.n < 1) { q.n = 1; this.msg(p, `${Q.name}: destination reached.`, '#ffd060'); this.pushSelf(p); }
@@ -3071,7 +3144,9 @@ export class World {
       this.aoes.splice(i, 1);
       const src = this.mobs.get(a.src);
       if (!src || src.dead) continue;
-      for (const p of this.players.values()) if (!p.dead && a.spots.some((sp) => Math.hypot(p.x - sp.x, p.z - sp.z) < sp.r)) this.playerDamaged(p, src, a.dmg);
+      // bots (volunteers, companions) cannot read the telegraph, so they are taken to step out of most of it (v120: boss fights
+      // now last long enough for many telegraphs to land, and a muster party of bots must still win the early dungeons)
+      for (const p of this.players.values()) if (!p.dead && a.spots.some((sp) => Math.hypot(p.x - sp.x, p.z - sp.z) < sp.r) && !(p.bot && rand() < BOT_SIDESTEP)) this.playerDamaged(p, src, a.dmg);
       this.broadcast({ k: 'boom', id: a.src, kind: a.kind, spots: a.spots });
     }
     for (const n of this.nodes.values()) if (!n.ready && this.time > n.t) { n.ready = true; this.broadcast({ k: 'node', id: n.id, ready: true }); }
@@ -3256,7 +3331,7 @@ export class World {
     const def = m.def;
     if (def.dummy) { m.speed = 0; m.state = 'idle'; m.target = null; if (this.time - (m.hitT ?? -99) > 8 && (m.hp < m.maxHp || m.threat.size)) { m.hp = m.maxHp; m.threat.clear(); m.buffs = []; } return; }
     const inDungeon = m.x >= DUNGEON_MIN_X;
-    if (def.raid && !m.threat.size && m.hp >= m.maxHp) this.raidScale(m);
+    if ((def.raid || (def.boss && m.sp?.dungeon)) && !m.threat.size && m.hp >= m.maxHp) this.raidScale(m);
     if (def.rare && m.state === 'wander') m.stateT = Math.max(m.stateT, 3); // rares keep moving
     const stunned = this.hasCC(m, 'stun');
     const rooted = this.hasCC(m, 'root');
@@ -3305,9 +3380,12 @@ export class World {
           m.swingT = def.swing * (m.enraged ? 0.7 : 1) * (this.tmod(m, 'overclocked') ? 0.88 : 1);
           const hitDelay = def.ranged ? 0.5 + d / 30 : 0.35;
           this.broadcast({ k: 'mobAtk', id: m.id, tgt: target.id, ranged: def.ranged || null, special: def.boss && rand() < 0.3 ? 'slam' : null });
-          const dmg = R(def.dmg[0], def.dmg[1]) * (1 + 0.18 * (m.level - 1)) * (this.tmod(m, 'heavy') ? 1.15 : 1) * (m.rh ? 1.25 : 1);
+          // a dungeon or raid boss swings BOSS_SWING harder at its target (on the ability curve), so its tank needs a healer
+          const dmg = R(def.dmg[0], def.dmg[1]) * (1 + 0.18 * (m.level - 1)) * mobSwingMul(def, m.level, m.sp, inDungeon) * (def.boss && inDungeon ? groupDmg(m) : 1) * (this.tmod(m, 'heavy') ? 1.15 : 1) * (m.rh ? 1.25 : 1);
           const special = def.boss && rand() < 0.3;
-          m.pending = { t: this.time + hitDelay, tgt: target.id, dmg: special ? dmg * 1.8 : dmg, aoe: special ? 6 : 0 };
+          // a dungeon or raid boss slam lands in full on its target only; everyone else nearby takes one plain hit (v120: fights are
+          // long enough now that full slams on every melee fighter wiped volunteer parties)
+          m.pending = { t: this.time + hitDelay, tgt: target.id, dmg: special ? dmg * 1.8 : dmg, aoe: special ? 6 : 0, splash: special && def.boss && inDungeon ? dmg / BOSS_SWING : 0 };
         }
       } else m.swingT = Math.min(m.swingT, 0.6);
     } else if (m.state === 'leash') {
@@ -3353,25 +3431,26 @@ export class World {
     m.y = walkHeight(m.x, m.z);
     if (m.pending && this.time >= m.pending.t) {
       const pd = m.pending; m.pending = null;
-      if (pd.aoe) { for (const p of this.players.values()) if (!p.dead && dist(p, m) < pd.aoe && (inDungeon || !houseCrosses(m.x, m.z, p.x, p.z))) this.playerDamaged(p, m, pd.dmg); this.broadcast({ k: 'slam', id: m.id, r: pd.aoe }); }
+      if (pd.aoe) { for (const p of this.players.values()) if (!p.dead && dist(p, m) < pd.aoe && (inDungeon || !houseCrosses(m.x, m.z, p.x, p.z))) this.playerDamaged(p, m, pd.splash && p.id !== pd.tgt ? pd.splash : pd.dmg); this.broadcast({ k: 'slam', id: m.id, r: pd.aoe }); }
       else { const p = this.players.get(pd.tgt); if (p && !p.dead && dist(p, m) < def.range + def.radius + 3 && (inDungeon || !houseCrosses(m.x, m.z, p.x, p.z))) this.playerDamaged(p, m, pd.dmg); }
     }
   }
 
-  // a raid boss is made for a full company (5): a smaller group meets a smaller boss. Players count 1, companions and other
-  // bots 0.6; the share runs from 35% (one player alone) to 100%. It only changes while the boss stands idle at full health.
+  // a raid boss (and, from v120, a five-player dungeon boss) is made for a full company (5): a smaller group meets a smaller boss. Players count 1, companions and other
+  // bots 0.3 (0.6 before v120); the share runs from 35% (one player alone) to 100%. It only changes while the boss stands idle at full health.
   raidFighters(D) {
     let n = 0;
-    for (const q of this.players.values()) if (!q.dead && q.x >= DUNGEON_MIN_X && dungeonAt(q.x, q.z) === D) n += q.bot ? 0.6 : 1;
+    for (const q of this.players.values()) if (!q.dead && q.x >= DUNGEON_MIN_X && dungeonAt(q.x, q.z) === D) n += q.bot ? 0.3 : 1; // v120: a bot counts 0.3 (a volunteer deals about a quarter of a geared hero's damage, and bosses are long fights now)
     return n;
   }
   raidScale(m) {
     const D = DUNGEON_BY_ID[m.sp.dungeon];
     if (!D) return;
     m.baseHp = m.baseHp || m.maxHp;
-    // 0.35 alone up to 1.0 at five fighters (as tuned), then +0.13 for each fighter past five, up to 1.65 with a full ten
+    // 0.35 alone up to 1.0 at five fighters (as tuned), then +0.18 for each fighter past five, up to 1.9 with a full ten
+    // (a five-player dungeon boss stops at 1.0)
     const nf = this.raidFighters(D);
-    const k = nf <= 5 ? clamp(0.35 + 0.1625 * Math.max(0, nf - 1), 0.35, 1) : Math.min(1.65, 1 + 0.13 * (nf - 5));
+    const k = nf <= 5 || !m.def.raid ? clamp(0.35 + 0.1625 * Math.max(0, nf - 1), 0.35, 1) : Math.min(1.9, 1 + 0.18 * (nf - 5));
     const hp = Math.round(m.baseHp * k);
     if (hp !== m.maxHp) { m.maxHp = m.hp = hp; m.raidK = k; }
   }
@@ -3402,8 +3481,9 @@ export class World {
         m.addsDone[i] = true;
         if (ab.text) this.broadcast({ k: 'yell', id: m.id, text: ab.text });
         const tgt = m.target ? this.players.get(m.target) : null;
-        for (let k = 0; k < ab.n; k++) {
-          const a = (k / ab.n) * Math.PI * 2 + R(0, 1), d = def.radius + 2.5;
+        const nAdds = Math.round(ab.n * Math.max(1, m.raidK || 1)); // more adds for a raid group bigger than five
+        for (let k = 0; k < nAdds; k++) {
+          const a = (k / nAdds) * Math.PI * 2 + R(0, 1), d = def.radius + 2.5;
           let x = m.x + Math.cos(a) * d, z = m.z + Math.sin(a) * d;
           if (x >= DUNGEON_MIN_X) [x, z] = dungeonPush(x, z, 0.8);
           const add = this.spawnMob({ mob: ab.mob, x, z, r: 0.5, n: 1, lvl: [Math.max(1, m.level - 1), Math.max(1, m.level - 1)], temp: true });
@@ -3454,7 +3534,7 @@ export class World {
           spots.push({ x: +x.toFixed(2), z: +z.toFixed(2), r: ab.r });
         }
       }
-      const dmg = R(def.dmg[0], def.dmg[1]) * (1 + 0.18 * (m.level - 1)) * ab.dmg * (m.enraged ? 1.15 : 1) * (this.tmod(m, 'heavy') ? 1.15 : 1) * (m.rh ? 1.25 : 1);
+      const dmg = R(def.dmg[0], def.dmg[1]) * (1 + 0.18 * (m.level - 1)) * mobAbilityMul(m.level) * groupDmg(m) * ab.dmg * (m.enraged ? 1.15 : 1) * (this.tmod(m, 'heavy') ? 1.15 : 1) * (m.rh ? 1.25 : 1);
       this.aoes.push({ t: this.time + ab.delay, spots, dmg, src: m.id, kind: ab.kind });
       this.broadcast({ k: 'tele', id: m.id, kind: ab.kind, spots, t: ab.delay, name: { circles: 'Ground strikes', nova: 'Blast', beam: 'Beam', pits: 'Flooding pits' }[ab.kind] || 'Attack' });
       if (ab.text) this.broadcast({ k: 'yell', id: m.id, text: ab.text });

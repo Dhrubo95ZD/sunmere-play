@@ -565,10 +565,12 @@ export function buildSlopeWarden(variant = 0) {
     b.addBuilder(vent(0.5, 0.32, { frameC: DARK, glow: G, seed: 2510 }), { p: [0, 0.62, -0.65], r: [0, PI, 0] });
     b.addBuilder(stack(0.18, 0.55, { c: '#323230', trimC: ironC, seed: 2511 }), { p: [-0.32, 1.78, -0.28] });
     gauge(b, G, [0.56, 0.7, 0.1], 0.3, PI / 2);
-    // the stake rack across its back above the firebox: a square frame of two posts and two rails, five upright stakes
+    // the stake rack across its back above the firebox: a square frame of two posts and two rails, four upright stakes
     for (const sx of [-1, 1]) b.add(rb(0.08, 1.2, 0.08, 0.02), 'wIron', { p: [sx * 0.42, 1.5, -0.58], c: ironC });
     for (const y of [1.05, 1.95]) b.add(rb(0.92, 0.07, 0.1, 0.02), 'wIron', { p: [0, y, -0.58], c: ironC });
-    for (let i = 0; i < 4; i++) b.add(rb(0.09, 1.4, 0.09, 0.02), 'wWood', { p: [-0.27 + i * 0.18, 1.55, -0.66], c: i % 2 ? wood2C : woodC });
+    // (the stakes stay inside the frame, under its top rail: a row of stake tips standing over the cap block read as a
+    // crown of prongs on a head from the game camera)
+    for (let i = 0; i < 4; i++) b.add(rb(0.09, 0.86, 0.09, 0.02), 'wWood', { p: [-0.27 + i * 0.18, 1.5, -0.66], c: i % 2 ? wood2C : woodC });
     mud(b, 0, 1.79, 0.1, 0.6, 0.3, 3, 0.05, P.green);
     if (variant) { moss(b, 0, 1.8, 0.05, 0.9, 0.6, 4, 0.1); mossHanks(b, -0.57, 1.3, -0.3, 0.3, 4, 0.3); }
   }, 2512 + variant));
