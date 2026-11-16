@@ -16,7 +16,9 @@ import { buildGreatSorter } from './oreBosses.js';
 import { buildGateWinder, buildTurbineHeart, buildFloodgate } from './sluiceBosses.js';
 import { buildRodEngine, buildCisternWarden, buildGreatPump } from './pumpBosses.js';
 import { buildLogCarriage, buildFrameSaw, buildGreatUndershot } from './millRaces.js';
+import { buildSpoilTipper, buildSumpRam, buildAditDriver } from './drainAdits.js';
 import { buildGateWinch, buildSiltRam, buildSluiceCarriage, buildTideEngine } from './seaGate.js';
+import { buildStumpPrime, buildSpoilConveyor, buildBedRam, buildTerraceEngine } from './upperCutting.js';
 import { buildBellowsEngine, buildCrucibleCrane, buildPatternCaster, buildFirstFurnace } from './furnaceRaid.js';
 import { buildPenstockEngine, buildIceBreaker, buildGovernor, buildDamHeart } from './damRaid.js';
 import { buildShopCrane, buildBoardPlane, buildGreatLathe, buildGreatGovernor } from './makersRest.js';
@@ -898,6 +900,8 @@ const CRAWLER_TINT = { skimmer: { c: '#f4efe6', k: 0.95, b: 2.5 }, shaftcrawler:
 export function buildMachine(model, variant = 0, mob = null) {
   // Part Fourteen, the Rainward Gorge (the rares dress their model: the Mired Puller's mud and last stump, the Moss-Grown Cutter's moss)
   if (model === 'stumppuller') return buildStumpPuller(variant, mob === 'miredpuller'); if (model === 'terracecutter') return buildTerraceCutter(variant, mob === 'mossgrowncutter'); if (model === 'drainborer') return buildDrainBorer(variant); if (model === 'seeddrill') return buildSeedDrill(variant); if (model === 'slopewarden') return buildSlopeWarden(variant); if (model === 'hillleveller') return buildHillLeveller();
+  // the Upper Cutting (Part Fourteen raid): the Stump Puller Prime, the Spoil Conveyor, the Bed Ram and the Terrace Engine
+  if (model === 'stumpprime') return buildStumpPrime(); if (model === 'spoilconveyor') return buildSpoilConveyor(); if (model === 'bedram') return buildBedRam(); if (model === 'terraceengine') return buildTerraceEngine();
   // Part Thirteen, Tidewater Sound (the rares dress their model: the Snagged Haulier's dragged log, the Mudbound Saw's silt)
   if (model === 'loghaulier') return buildLogHaulier(variant, mob === 'snaggedhaulier'); if (model === 'sawcarriage') return buildSawCarriage(variant, mob === 'mudboundsaw'); if (model === 'ropelayer') return buildRopeLayer(variant); if (model === 'siltdredge') return buildSiltDredge(variant); if (model === 'tidewarden') return buildTideWarden(variant); if (model === 'greatdredge') return buildGreatDredge();
   // Part Twelve, the Windward Heights
@@ -908,6 +912,8 @@ export function buildMachine(model, variant = 0, mob = null) {
   // the Sea Gate (Part Thirteen raid): the Gate Winch, the Silt Ram, the Sluice Carriage and the Tide Engine
   if (model === 'gatewinch') return buildGateWinch(); if (model === 'siltram') return buildSiltRam(); if (model === 'sluicecarriage') return buildSluiceCarriage(); if (model === 'tideengine') return buildTideEngine();
   // the Mill Races (Part Thirteen dungeon): the Log Carriage, the Frame Saw and the Great Undershot
+  // the Drain Adits (Part Fourteen dungeon): the Spoil Tipper, the Sump Ram and the Adit Driver
+  if (model === 'spoiltipper') return buildSpoilTipper(); if (model === 'sumpram') return buildSumpRam(); if (model === 'aditdriver') return buildAditDriver();
   if (model === 'logcarriage') return buildLogCarriage(); if (model === 'framesaw') return buildFrameSaw(); if (model === 'greatundershot') return buildGreatUndershot();
   if (model === 'rodengine') return buildRodEngine(); if (model === 'cisternwarden') return buildCisternWarden(); if (model === 'greatpump') return buildGreatPump();
   // Part Eleven, the Rime Steps

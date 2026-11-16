@@ -63,11 +63,20 @@ export const ASSETS = {
   logcarriage: { cat: 'Machines', make: () => buildMachine('logcarriage') },
   framesaw: { cat: 'Machines', make: () => buildMachine('framesaw') },
   greatundershot: { cat: 'Machines', make: () => buildMachine('greatundershot') },
+  // the Drain Adits dungeon bosses (client/assets/drainAdits.js)
+  spoiltipper: { cat: 'Machines', make: () => buildMachine('spoiltipper') },
+  sumpram: { cat: 'Machines', make: () => buildMachine('sumpram') },
+  aditdriver: { cat: 'Machines', make: () => buildMachine('aditdriver') },
   // the Sea Gate raid bosses (client/assets/seaGate.js)
   gatewinch: { cat: 'Machines', make: () => buildMachine('gatewinch') },
   siltram: { cat: 'Machines', make: () => buildMachine('siltram') },
   sluicecarriage: { cat: 'Machines', make: () => buildMachine('sluicecarriage') },
   tideengine: { cat: 'Machines', make: () => buildMachine('tideengine') },
+  // the Upper Cutting raid bosses (client/assets/upperCutting.js)
+  stumpprime: { cat: 'Machines', make: () => buildMachine('stumpprime') },
+  spoilconveyor: { cat: 'Machines', make: () => buildMachine('spoilconveyor') },
+  bedram: { cat: 'Machines', make: () => buildMachine('bedram') },
+  terraceengine: { cat: 'Machines', make: () => buildMachine('terraceengine') },
 };
 
 export function registerAssets(more) { Object.assign(ASSETS, more); }

@@ -1311,31 +1311,33 @@ ITEMS.leg_sword.model = 'keeper'; ITEMS.leg_axe.model = 'splitter'; ITEMS.leg_sc
 // class's whole set for the achievement "Dragonslayer". The models are Tripo GLBs split into moving parts
 // (client/assets/dragonslayer.js; model: 'ds_<class>_<piece>' in the look string).
 {
+  // (P14.5, 16 Nov: the weapons' power raised again by 15-20, so each stays above the Upper Cutting's and the Drain Adits'
+  // Heroic weapons, up to 329 at item level 96; tools/tests/uppercuttingtest.mjs checks it)
   const DS = (name, slot, kind, classes, model, stats, fx, power, desc) => ({
     name, slot, classes, q: 5, ilvl: 80, req: 55, stats, fx, power, desc, model, icon: model, unique: true, dragonslayer: true,
     // the Deadeye's off-hand Sidearm is a pistol in the left fist, not a shield
     ...(slot === 'weapon' ? { wtype: kind } : kind === 'sidearm' ? { otype: 'sidearm', base: 'Pressure Sidearm' } : { otype: 'shield', base: kind }),
   });
   Object.assign(ITEMS, {
-    ds_knight_sword: DS('Dragonslayer Greatblade', 'weapon', 'sword', ['knight'], 'ds_knight_sword', { power: 330, hp: 150, crit: 14 }, [['dmg', 0.1], ['leech', 0.05]],
+    ds_knight_sword: DS('Dragonslayer Greatblade', 'weapon', 'sword', ['knight'], 'ds_knight_sword', { power: 345, hp: 150, crit: 14 }, [['dmg', 0.1], ['leech', 0.05]],
       'Your strikes deal 10% more damage and heal you for 5% of the damage they deal.', 'Forged to bring down the great war-engines. Its edge plates part in battle, and the steel beneath runs red-hot.'),
     ds_knight_shield: DS('Dragonslayer Bulwark', 'offhand', 'Kite Shield', ['knight'], 'ds_knight_shield', { armor: 820, hp: 175, dodge: 18 }, [['armor', 0.05]],
       'You take 5% less damage.', 'Its wings slide back on their spine when the fighting starts. The engines that struck it are scrap.'),
-    ds_ranger_bow: DS('Dragonslayer Longbow', 'weapon', 'bow', ['ranger'], 'ds_ranger_bow', { power: 330, hp: 140, haste: 14 }, [['haste', 0.1], ['crit', 0.05]],
+    ds_ranger_bow: DS('Dragonslayer Longbow', 'weapon', 'bow', ['ranger'], 'ds_ranger_bow', { power: 345, hp: 140, haste: 14 }, [['haste', 0.1], ['crit', 0.05]],
       '+10% haste and +5% critical strike chance.', 'Its limb blades fan out at the draw. Made to put a shaft through an engine’s firebox from a hundred paces.'),
-    ds_chemist_rod: DS('Dragonslayer Pressure Rod', 'weapon', 'rod', ['chemist'], 'ds_chemist_rod', { power: 335, hp: 140, crit: 12 }, [['dot', 0.3], ['cdr', 0.12]],
+    ds_chemist_rod: DS('Dragonslayer Pressure Rod', 'weapon', 'rod', ['chemist'], 'ds_chemist_rod', { power: 350, hp: 140, crit: 12 }, [['dot', 0.3], ['cdr', 0.12]],
       'Your damage over time is 30% stronger and your skills recover 12% faster.', 'Its tanks run out on their pistons and its vent door drops open. Keep your face clear of the steam.'),
-    ds_sandblade_scimitar: DS('Dragonslayer Scimitar', 'weapon', 'scimitar', ['sandblade'], 'ds_sandblade_scimitar', { power: 330, hp: 145, dodge: 12 }, [['execute', 0.35], ['speed', 0.06]],
+    ds_sandblade_scimitar: DS('Dragonslayer Scimitar', 'weapon', 'scimitar', ['sandblade'], 'ds_sandblade_scimitar', { power: 345, hp: 145, dodge: 12 }, [['execute', 0.35], ['speed', 0.06]],
       'You deal 35% more damage to enemies below 35% health, and move 6% faster.', 'The plates along its back lift in a fight, and the hot steel under them shows red.'),
     ds_sandblade_buckler: DS('Dragonslayer Buckler', 'offhand', 'Buckler', ['sandblade'], 'ds_sandblade_buckler', { armor: 520, hp: 150, power: 60, dodge: 16 }, [['crit', 0.03]],
       '+3% critical strike chance.', 'A square of enamelled steel on four sliding corners. Light enough to dance with.'),
-    ds_warden_hammer: DS('Dragonslayer Maul', 'weapon', 'hammer', ['warden'], 'ds_warden_hammer', { power: 340, hp: 160 }, [['aoe', 0.3], ['dmg', 0.06]],
+    ds_warden_hammer: DS('Dragonslayer Maul', 'weapon', 'hammer', ['warden'], 'ds_warden_hammer', { power: 355, hp: 160 }, [['aoe', 0.3], ['dmg', 0.06]],
       'Your area attacks deal 30% more damage; all your damage is raised by 6%.', 'Its head opens like an engine block and the spike runs out on a ram. It was made for boilers, not for men.'),
     ds_warden_shield: DS('Dragonslayer Tower', 'offhand', 'Tower Shield', ['warden'], 'ds_warden_shield', { armor: 880, hp: 190, dodge: 14 }, [['thorns', 0.15]],
       'Machines that strike you take 15% of the damage back.', 'Its side plates run out on rails to cover the whole line. Still warm, deep inside.'),
-    ds_herbalist_staff: DS('Dragonslayer Lantern Staff', 'weapon', 'staff', ['herbalist'], 'ds_herbalist_staff', { power: 320, hp: 165, haste: 10 }, [['heal', 0.18], ['regen', 0.25]],
+    ds_herbalist_staff: DS('Dragonslayer Lantern Staff', 'weapon', 'staff', ['herbalist'], 'ds_herbalist_staff', { power: 340, hp: 165, haste: 10 }, [['heal', 0.18], ['regen', 0.25]],
       'Your heals are 18% stronger and your energy returns 25% faster.', 'A lantern on a steel staff. Its panels ease open a finger’s width when the fighting starts, and the coals inside burn red.'),
-    ds_deadeye_pistol: DS('Dragonslayer Hand Cannon', 'weapon', 'pistol', ['deadeye'], 'ds_deadeye_pistol', { power: 315, hp: 140, crit: 12 }, [['dmg', 0.08], ['speed', 0.05]],
+    ds_deadeye_pistol: DS('Dragonslayer Hand Cannon', 'weapon', 'pistol', ['deadeye'], 'ds_deadeye_pistol', { power: 335, hp: 140, crit: 12 }, [['dmg', 0.08], ['speed', 0.05]],
       'Your attacks deal 8% more damage, and you move 5% faster.', 'A square barrel as long as your forearm over a pressure tank. Its shroud rides forward and the hammer cocks back when the fighting starts.'),
     ds_deadeye_pistol_l: DS('Dragonslayer Sidearm', 'offhand', 'sidearm', ['deadeye'], 'ds_deadeye_pistol_l', { power: 95, hp: 120, crit: 10, dodge: 8 }, [['haste', 0.04]],
       '+4% haste.', 'The Hand Cannon’s twin for the left fist, a little shorter and darker in the enamel. Steam puffs from its tank between shots.'),
@@ -1387,7 +1389,9 @@ export const DRAGONSLAYER_ARMOUR = {};
   };
   // the stat budget: the Great Dam's named armour (item level 66-68, Epic) carried up to item level 80 and Legendary, the
   // same step the Dragonslayer weapons took over the Dam's weapons (about x1.43)
-  const BASE = { plate: { armor: 1090, hp: 290, power: 62 }, mail: { armor: 980, hp: 285, power: 44 }, cloth: { armor: 1000, hp: 250, power: 78 } };
+  // (P14.5, 16 Nov: armour raised by a tenth, 1090/980/1000 -> 1200/1080/1100, so each piece stays above Part Fourteen's
+  // item level 90-94 raid and mark armour, as the weapons were raised)
+  const BASE = { plate: { armor: 1200, hp: 290, power: 62 }, mail: { armor: 1080, hp: 285, power: 44 }, cloth: { armor: 1100, hp: 250, power: 78 } };
   // the class's second stat, per piece. Each point is 1% (sim.js recalc), so this stays small: seven pieces of it, then
   // rarity and +10 on top (up to about x1.45). Haste counts for half as much as crit or dodge (items.js AFFIX k).
   const SEC = { knight: ['crit', 3], warden: ['dodge', 2], ranger: ['crit', 3], sandblade: ['dodge', 3], chemist: ['crit', 3], herbalist: ['haste', 5], deadeye: ['crit', 3] };
@@ -4555,6 +4559,375 @@ SPAWNS.push(
   { mob: 'hillleveller', path: [[648, -3058], [650, -3047], [650, -3036]], rainPath: [[634, -3060], [633.5, -3048], [633, -3036]], r: 2, n: 1, world: true },
 );
 // ============================================================================ end of P14.3 RAINWARD MACHINES
+
+// ============================================================================ P14.5 THE UPPER CUTTING (raid, level 65)
+// The Makers' deep cut at the head of the Rainward Gorge, where their machines carved the terraces out of the hill (raid
+// id 'uppercutting': 'slip' is the Slip region's zone round the cutting's mouth). The cutting's own machines still cut it
+// to a plan set down a lifetime ago, and the Terrace Engine at the north face has undercut the hill above the Seed Terraces
+// ever since. Squalls come in over the lip of the cut on a short cycle of their own (shared/dungeons.js uppercutting tide,
+// read by dungeonTide: 'flood' is a squall pouring, 'ebb' the dry spell), and while it pours the slips run down the marked
+// lanes (pits: straight north-south runs of square slip pads). Four bosses, all machines (models in
+// client/assets/upperCutting.js): the Stump Puller Prime (the great tracked puller that cleared the cut of its timber),
+// the Spoil Conveyor (a long tracked belt that carried the spoil out of the cut), the Bed Ram (a tamping ram that rams new
+// beds level) and THE TERRACE ENGINE, the great cutting engine against the north face; it never moves, and each phase it
+// cuts harder, until in the last the slips run down the lanes in the dry spells too. Every boss calls the squalls (kind
+// 'tide'), sends the slips down its lanes while it pours (kind 'pits': stand out of the lanes) and strikes the open floor in
+// the dry. Strikes are mud and stone (teleColor). Ten players, Normal and Heroic (the raid kind, after a Normal clear);
+// weekly lockouts per boss; named drops at item level 92-94, raised to 96 on Heroic (rhIlvl); Makers' marks from every
+// boss. Boss health for the v120 balance: about 60 s for the harness party at 65 (party about 11,200 a second), 80 s for
+// the Terrace Engine. The door is the cutting's mouth, opened once the rain has stopped (m_c48_dry).
+{
+  const UC = (name, model, variant, lvl, hp, dmg, xp, extra = {}) => ({ name, model, variant, lvl, hp, dmg, speed: 3.4, aggro: 13, range: 3.2, swing: 2.3, xp, loot: 'cutRaid', radius: 1.2, elite: true, ...extra });
+  const MUD = { mud: true, teleColor: '#a0643c', novaColor: '#8a6a52' }; // (mud: the client reads teleColor/novaColor only with it)
+  const RAIN = (pour, dry) => ({ kind: 'tide', flood: pour, ebb: dry });
+  const SLIPS = (o) => ({ kind: 'pits', label: 'Slips', ...o });
+  Object.assign(MOBS, {
+    // trash: the cutting's own machines, still working to the old plan (old bronze, green at the seams)
+    ucpuller: UC('Cutting Stump Puller', 'stumppuller', 1, [65, 65], 11400, [96, 124], 3800, { speed: 3.0, range: 3.6, swing: 2.6, radius: 1.6 }),
+    uccutter: UC('Cutting Terrace Cutter', 'terracecutter', 1, [65, 65], 11800, [98, 126], 3850, { speed: 3.2, range: 3.6, radius: 1.6 }),
+    ucborer: UC('Cutting Drain Borer', 'drainborer', 1, [65, 65], 11600, [96, 126], 3850, { speed: 2.9, range: 3.8, swing: 2.6, radius: 1.5 }),
+    ucwarden: UC('Cutting Slope Warden', 'slopewarden', 1, [65, 65], 12000, [98, 128], 3900, { range: 3.4, radius: 1.3 }),
+    // 1. the Stump Puller Prime: a great tracked puller with a portal mast and a grip of two flat square plates
+    stumpprime: UC('The Stump Puller Prime', 'stumpprime', 0, [65, 65], 650000, [100, 130], 58000, { ...MUD, loot: 'u_stumpprime', rhIlvl: 96, speed: 2.4, aggro: 18, range: 5.2, swing: 2.6, radius: 3.4, boss: true, raid: true,
+      abilities: [RAIN('Rain sheets in over the lip of the cut, and the slips start down the lanes!', 'The squall blows over the cut, and the slips stop in the lanes.'),
+        SLIPS({ tide: 'flood', every: 7, delay: 2.0, dmg: 1.5, text: 'Mud and stone come down the marked lanes!' }),
+        { kind: 'circles', tide: 'ebb', every: 11, n: 5, r: 3.0, delay: 1.9, dmg: 1.45, text: 'The Stump Puller Prime rips old stumps out of the floor and flings them down all round!' },
+        { kind: 'beam', tide: 'ebb', every: 12, len: 24, r: 2.1, delay: 1.8, dmg: 1.55, text: 'The Stump Puller Prime drags its grip along the floor!' },
+        { kind: 'adds', at: 0.5, mob: 'ucpuller', n: 3, text: 'Stump pullers grind in from the edges of the Stump Field!' },
+        { kind: 'enrage', at: 0.15, text: 'The Stump Puller Prime races its winch and tears at everything in reach!' }] }),
+    // 2. the Spoil Conveyor: a long tracked belt with a square spoil hopper at its foot, tipping at its head
+    spoilconveyor: UC('The Spoil Conveyor', 'spoilconveyor', 0, [65, 65], 680000, [102, 132], 60000, { ...MUD, loot: 'u_spoilconveyor', rhIlvl: 96, speed: 2.2, aggro: 18, range: 5.6, swing: 2.8, radius: 3.6, boss: true, raid: true,
+      abilities: [RAIN('The squall comes over the cut, and wet spoil starts to slide off the Spoil Conveyor’s belt!', 'The rain stops, and the Spoil Conveyor’s belt runs dry.'),
+        SLIPS({ tide: 'flood', every: 6, delay: 2.0, dmg: 1.5, text: 'The slips run down the lanes beside the belt!' }),
+        { kind: 'beam', tide: 'ebb', every: 10, len: 26, r: 2.2, delay: 1.8, dmg: 1.6, text: 'The Spoil Conveyor throws spoil the whole length of its belt!' },
+        { kind: 'nova', tide: 'ebb', every: 13, r: 7.5, delay: 2.0, dmg: 1.6, text: 'The Spoil Conveyor tips its hopper, and spoil slides out all round it!' },
+        { kind: 'adds', at: 0.5, mob: 'ucborer', n: 3, text: 'Drain borers crawl out of the spoil to clear the belt!' },
+        { kind: 'enrage', at: 0.15, text: 'The Spoil Conveyor’s belt runs faster and faster!' }] }),
+    // 3. the Bed Ram: a tamping ram in a square frame on tracks, that rams new seed beds level
+    bedram: UC('The Bed Ram', 'bedram', 0, [65, 65], 710000, [104, 134], 62000, { ...MUD, loot: 'u_bedram', rhIlvl: 96, speed: 2.2, aggro: 18, range: 5.2, swing: 2.6, radius: 3.4, boss: true, raid: true,
+      abilities: [RAIN('The rain comes down on the Bed Floor, and the Bed Ram rams the wet beds harder!', 'The squall passes, and the new beds steam in the dry.'),
+        SLIPS({ tide: 'flood', every: 6, delay: 2.0, dmg: 1.55, text: 'The Bed Ram’s ramming shakes the slips loose down the lanes!' }),
+        { kind: 'circles', tide: 'ebb', every: 9, n: 6, r: 3.2, delay: 1.9, dmg: 1.5, text: 'The Bed Ram rams the floor, and the beds jump all round!' },
+        { kind: 'phase', below: 0.4, text: 'The Bed Ram’s ram jams in its frame, and it rams on with all its weight!' },
+        { kind: 'nova', every: 10, r: 8, delay: 2.0, dmg: 1.6, below: 0.4, text: 'Mud bursts out from under the Bed Ram’s jammed ram!' },
+        { kind: 'enrage', at: 0.12, text: 'The Bed Ram rams the floor faster than the eye can follow!' }] }),
+    // 4. THE TERRACE ENGINE: the great cutting engine at the north face of the cut, that has cut the hill to an old plan for a
+    // lifetime and undercut the terraces; it never moves. Three phases: its strikes come wider, more often and in more places,
+    // and in the last the slips run down the lanes in the dry spells too
+    terraceengine: UC('The Terrace Engine', 'terraceengine', 0, [66, 66], 880000, [104, 136], 92000, { ...MUD, loot: 'u_terraceengine', rhIlvl: 96, speed: 0, aggro: 22, range: 10.0, swing: 3.0, radius: 6.5, boss: true, raid: true,
+      abilities: [RAIN('A squall drives in over the cut, and the Terrace Engine cuts on into the wet face! The slips start down the lanes.', 'The squall blows over, and the slips stop in the lanes.'),
+        SLIPS({ tide: 'flood', every: 7, delay: 2.0, dmg: 1.5, above: 0.66, text: 'The cut face sheds its mud down the lanes!' }),
+        { kind: 'circles', tide: 'ebb', every: 11, n: 5, r: 3.0, delay: 1.9, dmg: 1.5, above: 0.66, text: 'The Terrace Engine’s drum bites the face, and stone comes down!' },
+        { kind: 'beam', tide: 'ebb', every: 12, len: 26, r: 2.3, delay: 1.8, dmg: 1.6, above: 0.66, text: 'The Terrace Engine shoots its spoil out along the floor!' },
+        { kind: 'phase', below: 0.66, text: 'The Terrace Engine reads the next step of its plan, and cuts deeper.' },
+        { kind: 'adds', at: 0.66, mob: 'ucwarden', n: 3, text: 'Slope wardens stake out the next terrace for the Terrace Engine!' },
+        SLIPS({ tide: 'flood', every: 6, delay: 1.9, dmg: 1.6, below: 0.66, above: 0.33, text: 'The slips come down the lanes thick and fast!' }),
+        { kind: 'circles', tide: 'ebb', every: 9, n: 7, r: 3.4, delay: 1.8, dmg: 1.55, below: 0.66, above: 0.33, text: 'Stone breaks off the face all along the floor!' },
+        { kind: 'beam', tide: 'ebb', every: 11, len: 26, r: 2.3, delay: 1.7, dmg: 1.6, n: 2, below: 0.66, above: 0.33, text: 'Two runs of spoil shoot out across the floor!' },
+        { kind: 'phase', below: 0.33, text: 'The Terrace Engine undercuts the face! Rain or dry, the slips run down the lanes.' },
+        SLIPS({ every: 7, delay: 1.9, dmg: 1.55, below: 0.33, text: 'The undercut face slides down the lanes in the dry!' }),
+        { kind: 'circles', every: 8, n: 8, r: 3.8, delay: 1.8, dmg: 1.5, below: 0.33, text: 'The whole face shakes, and stone comes down everywhere!' },
+        { kind: 'beam', every: 10, len: 28, r: 2.4, delay: 1.7, dmg: 1.55, n: 3, below: 0.33, text: 'Three runs of spoil shoot out of the Terrace Engine, one after another!' },
+        { kind: 'nova', every: 14, r: 9, delay: 2.2, dmg: 1.6, below: 0.33, text: 'Steam and mud blast out from under the Terrace Engine’s drum!' },
+        { kind: 'adds', at: 0.33, mob: 'uccutter', n: 4, text: 'Terrace cutters grind out of the face to cut the next step!' },
+        { kind: 'enrage', at: 0.1, text: 'The Terrace Engine drives its drum into the hill with everything it has!' }] }),
+  });
+  // named drops: item level 92 (the Stump Puller Prime), 93 (the Spoil Conveyor and the Bed Ram), 94 (the Terrace Engine),
+  // 96 on Heroic. The same stat budget as the Sea Gate's named drops (x1.45 over the item-level line). The Belt-Pin Pistol
+  // stays under the Dragonslayer Hand Cannon even raised to 96 (tools/tests/uppercuttingtest.mjs)
+  const ST = {
+    weapon: { power: 118, hp: 40, crit: 7 }, trinket: { power: 100, hp: 44, haste: 30 },
+    plate: { armor: 420, hp: 112, power: 24 }, mail: { armor: 380, hp: 110, crit: 8 }, cloth: { armor: 380, hp: 96, power: 30 },
+  };
+  const W = ['sword', 'axe', 'mace', 'hammer', 'bow', 'rod', 'scimitar', 'staff', 'pistol'];
+  const N = (name, slot, kind, ilvl, desc) => {
+    const w = W.includes(kind) ? kind : null, wt = ['plate', 'mail', 'cloth'].includes(kind) ? kind : null;
+    const base = ST[w ? 'weapon' : wt || 'trinket'], k = (ilvl / 50) * 1.45, stats = {};
+    for (const [s, v] of Object.entries(base)) stats[s] = Math.round(v * k);
+    const icon = w ? `w_${w}~3` : wt ? `a_${wt}_${slot}~3` : 't_trinket~3';
+    return { name, slot, q: 4, ilvl, req: 65, stats, desc, unique: true, icon, ...(w ? { wtype: w } : {}), ...(w === 'pistol' ? { classes: ['deadeye'] } : {}), ...(wt ? { weight: wt } : {}) };
+  };
+  const drops = {
+    stumpprime: [
+      ['Stump-Grip Axe', 'weapon', 'axe', 92, 'Its head was cut from one of the Stump Puller Prime’s grip plates, still ribbed on one face.'],
+      ['Grip-Plate Gauntlets', 'hands', 'plate', 92, 'Faced with the flat ribbed plate the Prime closed on a thousand stumps.'],
+      ['Mast-Cable Leggings', 'legs', 'mail', 92, 'Links worked from the Prime’s mast cable, red with gorge mud in every joint.']],
+    spoilconveyor: [
+      ['Belt-Roller Hammer', 'weapon', 'hammer', 93, 'A roller off the Spoil Conveyor’s belt, forged solid onto an oak shaft.'],
+      ['Spoil-Shed Hood', 'head', 'cloth', 93, 'Oiled canvas off the conveyor’s rain hood. The rain still runs straight off it.'],
+      ['Hopper-Lip Pauldrons', 'shoulders', 'plate', 93, 'Plate off the lip of the Spoil Conveyor’s hopper, worn bright by a lifetime of spoil.'],
+      ['Belt-Pin Pistol', 'weapon', 'pistol', 93, 'Its barrel was bored from one of the belt’s long hinge pins. It throws a low, flat shot.']],
+    bedram: [
+      ['Bed-Line Longbow', 'weapon', 'bow', 93, 'Cut from the straight line rail the Bed Ram ran its beds along, tarred and true.'],
+      ['Rammed-Earth Hauberk', 'chest', 'mail', 93, 'Heavy links off the ram’s lifting chain, every one worn flat on its working face.'],
+      ['Seedbed Boots', 'feet', 'cloth', 93, 'Wrapped in the felt the Bed Ram’s foot was shod with, so it never marked a bed.'],
+      ['Ram-Shaft Scimitar', 'weapon', 'scimitar', 93, 'Forged from a length of the ram’s own shaft.']],
+    terraceengine: [
+      ['Terrace-Plan Staff', 'weapon', 'staff', 94, 'The Terrace Engine’s measuring rod, every step of the old plan marked on it in the Makers’ measure.'],
+      ['Terrace Engine Breastplate', 'chest', 'plate', 94, 'Plate off the Terrace Engine’s frame, with a red mud line a hand above its hem.'],
+      ['The Engine’s Step Count', 'trinket', 'trinket', 94, 'A brass counter off the Terrace Engine’s drum shaft. It counted every step the engine cut into the hill.'],
+      ['Makers’ Level Rod', 'weapon', 'rod', 94, 'The rod the Makers levelled each terrace with. Every mark on it is still true.'],
+      ['Upper Cutting Mantle', 'shoulders', 'cloth', 94, 'Grey wool from the cutting crew’s hut, rain-dark only where the squalls reached it.']],
+  };
+  for (const [mob, list] of Object.entries(drops)) list.forEach(([name, slot, kind, ilvl, desc], i) => { ITEMS[`u_${mob}${i + 1}`] = N(name, slot, kind, ilvl, desc); });
+  const T = (mob, gold, ch, extra, gearN) => ({ gold, items: [...drops[mob].map((_, i) => [`u_${mob}${i + 1}`, ch]), ...extra], gear: 1, gearQ: 4, gearN });
+  Object.assign(LOOT_TABLES, {
+    cutRaid: { gold: [96, 136], items: [['gorgeiron', 0.5], ['bronzecog', 0.3], ['draught', 0.2]], gear: 0.45, gearQ: 3 },
+    u_stumpprime: T('stumpprime', [1400, 1650], 0.3, [['tonic', 1], ['gorgeiron', 1]], 2),
+    u_spoilconveyor: T('spoilconveyor', [1450, 1700], 0.3, [['tonic', 1], ['gorgeiron', 1]], 2),
+    u_bedram: T('bedram', [1500, 1750], 0.3, [['tonic', 1], ['gorgeiron', 1]], 2),
+    u_terraceengine: T('terraceengine', [2150, 2550], 0.28, [['draught', 1], ['gorgeiron', 1]], 3),
+  });
+  // Makers' marks for Quartermaster Hamid, more from each boss deeper into the cut
+  for (const [t, n] of [['u_stumpprime', 7], ['u_spoilconveyor', 7], ['u_bedram', 8], ['u_terraceengine', 14]]) for (let i = 0; i < n; i++) LOOT_TABLES[t].items.push(['makermark', 1]);
+  // and a cut-marked row in Hamid's stock to spend them on (item level 90, legs this time)
+  Object.assign(ITEMS, {
+    mk_clegplates: { name: 'Cut-Marked Legplates', slot: 'legs', icon: 'a_plate_legs~3', weight: 'plate', q: 4, stats: { armor: 1157, hp: 311, power: 65 }, ilvl: 90 },
+    mk_cleggings: { name: 'Cut-Marked Leggings', slot: 'legs', icon: 'a_mail_legs~3', weight: 'mail', q: 4, stats: { armor: 1027, hp: 300, crit: 22 }, ilvl: 90 },
+    mk_ctrousers: { name: 'Cut-Marked Trousers', slot: 'legs', icon: 'a_cloth_legs~3', weight: 'cloth', q: 4, stats: { armor: 679, hp: 248, power: 76 }, ilvl: 90 },
+    mk_ccharm: { name: 'Cut-Marked Keepsake', slot: 'trinket', icon: 't_trinket~3', q: 4, stats: { power: 180, hp: 100, crit: 23 }, ilvl: 90 },
+  });
+  MARK_SHOP.push({ item: 'mk_clegplates', price: 120 }, { item: 'mk_cleggings', price: 120 }, { item: 'mk_ctrousers', price: 120 }, { item: 'mk_ccharm', price: 140 });
+  // the floors, south to north (local metres in the raid grid): trash packs on the way, each boss on its own floor, every
+  // pack and boss clear of the slip lanes, the Terrace Engine last (the raid's final boss: Heroic opens after a Normal kill)
+  SPAWNS.push(
+    ds('uppercutting', 'ucwarden', 70, 191, 1, 1), ds('uppercutting', 'ucwarden', 82, 191, 1, 1),
+    ds('uppercutting', 'ucpuller', 34, 168, 3, 2), ds('uppercutting', 'uccutter', 116, 168, 3, 2), ds('uppercutting', 'ucborer', 36, 187, 2, 2), ds('uppercutting', 'ucwarden', 114, 187, 2, 2),
+    ds('uppercutting', 'stumpprime', 75, 176, 1, 1),
+    ds('uppercutting', 'ucwarden', 109, 155, 1, 2),
+    ds('uppercutting', 'ucborer', 108, 145, 3, 2), ds('uppercutting', 'ucpuller', 108, 112, 3, 2),
+    ds('uppercutting', 'spoilconveyor', 108, 128, 1, 1),
+    ds('uppercutting', 'ucwarden', 91, 100, 1, 2),
+    ds('uppercutting', 'uccutter', 60, 89, 3, 2), ds('uppercutting', 'ucborer', 60, 61, 3, 2), ds('uppercutting', 'ucpuller', 19, 75, 2, 2), ds('uppercutting', 'ucwarden', 99, 75, 2, 2),
+    ds('uppercutting', 'bedram', 60, 75, 1, 1),
+    ds('uppercutting', 'ucwarden', 93, 50, 1, 2),
+    ds('uppercutting', 'uccutter', 24, 38, 3, 2), ds('uppercutting', 'ucborer', 126, 38, 3, 2), ds('uppercutting', 'ucpuller', 26, 10, 3, 2), ds('uppercutting', 'ucwarden', 124, 10, 3, 2),
+    ds('uppercutting', 'terraceengine', 75, 11, 1, 1),
+  );
+  // homestead plaques for the Normal and Heroic clears
+  HOME_TROPHIES.push(['plaque_uppercutting', 'Upper Cutting plaque', { ach: 'rUpperCutting' }], ['plaque_huppercutting', 'Gilded Upper Cutting plaque (Heroic)', { ach: 'rhUpperCutting' }]);
+}
+// ============================================================================ end of P14.5 THE UPPER CUTTING
+
+// ============================================================================ P14.5 CHAPTER 48 "THE HILL HOLDS" (story text in story.js)
+// The last chapter of Part Fourteen (levels 64-65, the Upper Cutting). With the drains running again the hill still moves:
+// up at the head of the gorge the Terrace Engine keeps cutting to its old plan and undercuts the hill above the terraces.
+// Slipwatch Ghalib sends you against the slope wardens staking out its next terrace and for the bronze plan plates the
+// gorge's machines carry (c48_plate); Cutwatch Yaqub keeps the cutting's mouth and lifts its stop-logs once the rain has
+// stopped (m_c48_dry opens the raid); a company of ten stops the Terrace Engine, and the hill holds through the next storm.
+// Then the young poles are lifted from the beds (o_rglift1-3, kind rglift), the first load in a lifetime goes down the haul
+// road to the Sound, the valley lays out a nursery of its own beside its new row (o_twnurse1-3, kind twnurse) with seed
+// from the gorge, and the poles go up the lift to the Heights for Kamal's shelter rows. Rewards item level 90-91.
+{
+  const R = (name, slot, lvl, art, haste = false) => {
+    const g = gear(name, slot, 4, lvl, haste);
+    if (slot === 'weapon') { g.wtype = art; g.icon = `w_${art}~3`; }
+    else if (slot === 'trinket') g.icon = 't_trinket~3';
+    else if (slot === 'back') g.icon = 'a_back~3';
+    else { g.weight = art; g.icon = `a_${art}_${slot}~3`; }
+    return g;
+  };
+  Object.assign(ITEMS, {
+    c48_plate: { name: 'Bronze Plan Plate', slot: 'quest', icon: 'scrap', q: 1, stack: 20, desc: 'A square bronze plate punched in rows of holes: one step of the Makers’ old cutting plan, carried by the gorge’s machines. Ghalib wants every one out of the hill.' },
+    r_c48_gloves: R('Stop-Log Gauntlets', 'hands', 90, 'plate'),
+    r_c48_boots: R('Slipwatch Boots', 'feet', 90, 'mail'),
+    r_c48_legs: R('Cutwatch Breeches', 'legs', 90, 'cloth'),
+    r_c48_helm: R('Squall Helm', 'head', 90, 'mail'),
+    r_c48_coat: R('Nursery Coat', 'chest', 91, 'cloth'),
+    r_c48_sword: R('Plan-Plate Blade', 'weapon', 91, 'sword'),
+    r_c48_charm: { ...R('First Load Keepsake', 'trinket', 91, null, true), desc: 'A short peg of young timber off the first load down the haul road, its bark still green.' },
+    r_c48_mantle: R('Mantle of the Holding Hill', 'shoulders', 91, 'plate'),
+    r_c48_cloak: R('Cloak of the Rainward Gorge', 'back', 91),
+  });
+  // the plan plates come off the gorge's machines (only for those on the quest)
+  LOOT_TABLES.rainMach.items.push(['c48_plate', 0.5]);
+  // the young poles ready to lift: three beds on the first step of the Seed Terraces' west block, along the step (ry 0)
+  OBJECT_KINDS.rglift = { prompt: 'Lift the young poles out of the bed', goal: 'Beds of young poles lifted', done: 'lifted' };
+  // the valley's own nursery: three beds laid out in the lane east of the new row on the headland, parallel, along x
+  OBJECT_KINDS.twnurse = { prompt: 'Lay out a nursery bed with seed from the gorge', goal: 'Nursery beds laid out', done: 'laid out' };
+  OBJECTS.push(
+    { id: 'o_rglift1', kind: 'rglift', x: 488, z: -2978.1, ry: 0 },
+    { id: 'o_rglift2', kind: 'rglift', x: 494, z: -2978.1, ry: 0 },
+    { id: 'o_rglift3', kind: 'rglift', x: 500, z: -2978.1, ry: 0 },
+    { id: 'o_twnurse1', kind: 'twnurse', x: 603.75, z: -2598.5, ry: 0 },
+    { id: 'o_twnurse2', kind: 'twnurse', x: 603.75, z: -2601.5, ry: 0 },
+    { id: 'o_twnurse3', kind: 'twnurse', x: 603.75, z: -2604.5, ry: 0 },
+  );
+  NPCS.push(
+    { id: 'n_rg_yaqub', name: 'Cutwatch Yaqub', title: 'The Upper Cutting', look: 'villager', v: 7, x: 645, z: -2993, ry: 1.33, quests: [],
+      greet: 'My grandfather dropped the stop-logs across that mouth the year the cutting started to fill with mud. Nobody has lifted them since.' },
+  );
+}
+// the Main Story ran (applyStory) before Yaqub was placed: give him his story quests
+for (const [id, Q] of Object.entries(QUESTS)) if (Q.msq) { const g = NPCS.find((n) => n.id === Q.giver); if (g && !(g.quests ||= []).includes(id)) g.quests.push(id); }
+// ============================================================================ end of P14.5 CHAPTER 48
+
+// ============================================================================ P14.6 THE SEEDWRIGHTS (reputation, level 61-65)
+// The gorge's own reputation, kept by Head Grower Nadir at the Seedwrights' camp (shop ranks Friendly to Exalted, item
+// level 89-91: above the Chapter 45-48 rewards at 86-91 and the open-world drops at 86-88, below the Drain Adits' and the
+// Upper Cutting's drops at 92-94). Its zones are the gorge's three regions; kills in the Drain Adits and the Upper Cutting
+// count too. questRep 0.4 like the other outer areas. Rank 2 unlocks the Seed Terrace paint (moss-green panels, red clay
+// trim, a dark wet-timber seat). Stats are the Tidewrights' pieces carried up by item level (3 + 1.6 x ilvl).
+FACTIONS.seedwrights = { name: 'The Seedwrights', color: '#6a9a4a', zones: ['gorgefoot', 'seedterraces', 'slip', 'adits', 'uppercutting'], qm: 'n_rg_nadir', questRep: 0.4 };
+Object.assign(ITEMS, {
+  rep_sw1: { name: 'Seedwright’s Oilcloth Cape', slot: 'back', icon: 'a_back~2', q: 3, stats: { armor: 430, hp: 147, haste: 24 }, ilvl: 89 },
+  rep_sw2: { name: 'Bed-Edger’s Gauntlets', slot: 'hands', icon: 'a_plate_hands~2', weight: 'plate', q: 3, stats: { armor: 479, hp: 155, power: 52 }, ilvl: 89 },
+  rep_sw3: { name: 'Terrace-Walker’s Mail Spaulders', slot: 'shoulders', icon: 'a_mail_shoulders~3', weight: 'mail', q: 4, stats: { armor: 650, hp: 200, crit: 12 }, ilvl: 90 },
+  rep_sw4: { name: 'Drip-Brim Grower’s Hood', slot: 'head', icon: 'a_cloth_head~3', weight: 'cloth', q: 4, stats: { armor: 463, hp: 194, power: 54 }, ilvl: 90 },
+  rep_sw5: { name: 'Head Grower’s Iron Mattock', slot: 'weapon', icon: 'w_mace~3', wtype: 'mace', q: 4, stats: { power: 306, haste: 33, hp: 79 }, ilvl: 91 }, // under the Upper Cutting's own weapons (92-94)
+});
+REP_SHOP.seedwrights = [{ item: 'rep_sw1', rank: 1, price: 34000 }, { item: 'rep_sw2', rank: 2, price: 40000 }, { item: 'rep_sw3', rank: 3, price: 47000 }, { item: 'rep_sw4', rank: 3, price: 47000 }, { item: 'rep_sw5', rank: 4, price: 58000 }];
+PAINTS.seedterrace = { name: 'Seed Terrace', body: '#3e5a32', paint: true, trim: '#a8583a', metal: 'iron', seat: '#3a2a1e', need: { rep: 'seedwrights', rank: 2 } };
+{ const n = NPCS.find((x) => x.id === 'n_rg_nadir'); if (n) n.greet = 'Seven of us, and beds cut for seven hundred. Work the gorge with us and the sheds are open to you: oilcloth, good iron and what we make from them.'; }
+// ============================================================================ end of P14.6 THE SEEDWRIGHTS
+
+// ============================================================================ P14.4 THE DRAIN ADITS (dungeon, level 65)
+// (Chapters 46-47's story goes in story.js; their quest items, objects, nodes and Channelman Yasin in the block after this one)
+// The stone-lined drainage tunnels the Makers drove into the hill under the Seed Terraces. Not a water rise: the side adits
+// are choked and the hill is wet, so mud slips burst in through them on a timer of their own (shared/dungeons.js adits slip,
+// lanes): every mob fighting near a marked lane calls its burst (kind 'lanes': step out of the lane), and the choked sumps
+// back up wider each time a boss works its chamber (kind 'sumps') until someone stands on a sump's grate to clear it. Three
+// bosses, all machines (client/assets/drainAdits.js): the Spoil Tipper (the tracked skip that carried the spoil out of the
+// adits and now tips it into the Long Drain), the Sump Ram (the tamper that kept the sumps' grates seated; it packs them
+// shut) and the Adit Driver (the Makers' great drain-boring machine in the Collector, the last boss, still boring new adits
+// to an old plan and choking the old ones with its spoil). Their strikes are mud (mud/teleColor). Heroic is the raid kind
+// (dmode raidheroic, after a Normal clear); there the named drops come at item level 94 (rhIlvl). Trash uses the gorge's
+// machine models. Health per the v120 balance (docs/ai/balance_v120.md): the last boss about 40 s for the harness party.
+{
+  const AM = (name, model, variant, lvl, hp, dmg, xp, extra = {}) => ({ name, model, variant, lvl, hp, dmg, speed: 3.2, aggro: 13, range: 3.2, swing: 2.4, xp, loot: 'aditTrash', radius: 1.3, ...extra });
+  const MUD = { mud: true, teleColor: '#c8682e', novaColor: '#d8a070' };
+  const LANES = (text, dmg = 1.5) => ({ kind: 'lanes', dmg, ...(text ? { text } : {}) });
+  Object.assign(MOBS, {
+    adborer: AM('Adit Drain Borer', 'drainborer', 0, [64, 65], 11200, [96, 124], 3750, { ...MUD, speed: 2.9, range: 3.8, swing: 2.6, radius: 1.5, abilities: [LANES(null, 1.3)] }),
+    adcutter: AM('Adit Terrace Cutter', 'terracecutter', 0, [64, 65], 11000, [94, 122], 3700, { ...MUD, range: 3.6, radius: 1.6, abilities: [LANES(null, 1.3)] }),
+    adpuller: AM('Adit Stump Puller', 'stumppuller', 0, [64, 65], 11400, [96, 126], 3780, { ...MUD, speed: 3.0, range: 3.6, swing: 2.6, radius: 1.6, abilities: [LANES(null, 1.3)] }),
+    adwarden: AM('Adit Slope Warden', 'slopewarden', 1, [64, 65], 11800, [98, 128], 3820, { ...MUD, range: 3.4, abilities: [LANES(null, 1.3)] }),
+    spoiltipper: AM('The Spoil Tipper', 'spoiltipper', 0, [65, 65], 110000, [98, 126], 12000, { ...MUD, loot: 'u_spoiltipper', rhIlvl: 94, speed: 2.6, range: 4.4, swing: 2.6, radius: 2.6, elite: true,
+      abilities: [LANES('Mud bursts in through the side adits and runs down the marked lanes!'),
+        { kind: 'beam', every: 10, len: 18, r: 2.0, delay: 1.9, dmg: 1.45, text: 'The Spoil Tipper tips its skip, and a tongue of spoil slides down the drain!' },
+        { kind: 'circles', every: 12, n: 4, r: 2.8, delay: 1.8, dmg: 1.35, text: 'The Spoil Tipper shakes its skip, and clods of wet spoil fly across the Long Drain!' },
+        { kind: 'adds', at: 0.5, mob: 'adcutter', n: 2, text: 'Two terrace cutters grind down the Long Drain to cut the Spoil Tipper a load!' }] }),
+    sumpram: AM('The Sump Ram', 'sumpram', 0, [65, 65], 115000, [100, 128], 12200, { ...MUD, loot: 'u_sumpram', rhIlvl: 94, speed: 2.4, range: 4.6, swing: 2.6, radius: 2.6, elite: true,
+      abilities: [LANES('The side adits give, and mud slips down the lanes across the Sump Gallery!'),
+        { kind: 'sumps', every: 8, delay: 2.0, dmg: 1.3, max: 3, text: 'The Sump Ram tamps its foot down on the grates, and the choked sumps back up!' },
+        { kind: 'nova', every: 13, r: 6, delay: 2.0, dmg: 1.5, text: 'The Sump Ram drives its tamper into the floor, and the mud jumps all round it!' },
+        { kind: 'adds', at: 0.5, mob: 'adborer', n: 2, text: 'Drain borers crawl out of the side adits to bore the Sump Ram a new drain!' }] }),
+    // the last boss: fixed against the Collector's north wall, the slips and the sumps all round it, a heave of mud round its
+    // head, and below half health the roof above it sheds mud all over the chamber
+    aditdriver: AM('The Adit Driver', 'aditdriver', 0, [66, 66], 430000, [106, 138], 36000, { ...MUD, loot: 'u_aditdriver', rhIlvl: 94, speed: 0, aggro: 18, range: 7.0, swing: 3.0, radius: 4.6, elite: true, boss: true,
+      abilities: [LANES('The hill presses in through every side adit, and mud comes down the lanes into the Collector!', 1.6),
+        { kind: 'sumps', every: 9, delay: 2.0, dmg: 1.35, max: 3, text: 'The Adit Driver drives its spoil into the Collector’s sumps, and they back up!' },
+        { kind: 'nova', every: 14, r: 9, delay: 2.4, dmg: 1.6, text: 'The Adit Driver pulls its head out of the wall, and wet spoil sweeps out all round it!' },
+        { kind: 'circles', below: 0.5, every: 8, n: 6, r: 3.4, delay: 2.0, dmg: 1.4, text: 'The Adit Driver bores up into the hill, and the roof sheds mud all over the Collector!' }] }),
+  });
+  // named drops: item level 92 (all three), raised to 94 on Heroic
+  const ST = {
+    weapon: { power: 118, hp: 40, crit: 7 }, trinket: { power: 100, hp: 44, haste: 30 },
+    plate: { armor: 420, hp: 112, power: 24 }, mail: { armor: 380, hp: 110, crit: 8 }, cloth: { armor: 380, hp: 96, power: 30 },
+  };
+  const W = ['sword', 'axe', 'mace', 'hammer', 'bow', 'rod', 'scimitar', 'staff', 'pistol'];
+  const N = (name, slot, kind, ilvl, desc) => {
+    const w = W.includes(kind) ? kind : null, wt = ['plate', 'mail', 'cloth'].includes(kind) ? kind : null;
+    const base = ST[w ? 'weapon' : wt || 'trinket'], k = (ilvl / 50) * 1.45, stats = {}; // above the gorge's quest rewards, so the Adits are worth farming
+    for (const [s, v] of Object.entries(base)) stats[s] = Math.round(v * k);
+    const icon = w ? `w_${w}~3` : wt ? `a_${wt}_${slot}~3` : 't_trinket~3';
+    return { name, slot, q: 4, ilvl, req: 63, stats, desc, unique: true, icon, ...(w ? { wtype: w } : {}), ...(w === 'pistol' ? { classes: ['deadeye'] } : {}), ...(wt ? { weight: wt } : {}) };
+  };
+  const drops = {
+    spoiltipper: [['Skip-Hinge Maul', 'weapon', 'hammer', 92, 'The iron hinge pin the Spoil Tipper’s skip turned on, forged into a maul head on a timber shaft.'], ['Spoil-Skip Greaves', 'legs', 'plate', 92, 'Plates off the skip’s sides, scoured bright by a lifetime of spoil.'], ['Tipper Ram Pistol', 'weapon', 'pistol', 92, 'Its barrel was the tipper’s hollow ram rod. Red mud still works out of the grooves.']],
+    sumpram: [['Tamper-Shaft Mace', 'weapon', 'mace', 92, 'A length of the Sump Ram’s square tamper shaft, its foot still caked with grate mud.'], ['Sump-Grate Hood', 'head', 'cloth', 92, 'Felted drain cloth off the sump grates, stiff and dark with silt.'], ['Grate-Bar Recurve', 'weapon', 'bow', 92, 'Two grate bars of springy bronze, set straight and strung.']],
+    aditdriver: [['Driver-Shroud Hauberk', 'chest', 'mail', 92, 'Links off the chain that hung the Adit Driver’s shroud, each one worn flat on one side.'], ['The Adit Count', 'trinket', 'trinket', 92, 'A brass counter off the Adit Driver’s gearing. It counted every metre it bored, and it never stopped.'], ['Bore-Shaft Staff', 'weapon', 'staff', 92, 'A length of the Adit Driver’s boring shaft, marked in the Makers’ feet.']],
+  };
+  for (const [mob, list] of Object.entries(drops)) list.forEach(([name, slot, kind, ilvl, desc], i) => { ITEMS[`u_${mob}${i + 1}`] = N(name, slot, kind, ilvl, desc); });
+  const T = (mob, gold, extra, gearQ, gearN) => ({ gold, items: [...drops[mob].map((_, i) => [`u_${mob}${i + 1}`, mob === 'aditdriver' ? 0.3 : 0.25]), ...extra], gear: 1, gearQ, gearN });
+  const boss = [['tonic', 1], ['gorgeiron', 1]], last = [['draught', 1], ['gorgeiron', 1]];
+  Object.assign(LOOT_TABLES, {
+    aditTrash: { gold: [46, 68], items: [['gorgeiron', 0.45], ['bronzecog', 0.25], ['draught', 0.12]], gear: 0.4 },
+    u_spoiltipper: T('spoiltipper', [240, 300], boss, 3, 2), u_sumpram: T('sumpram', [240, 300], boss, 3, 2), u_aditdriver: T('aditdriver', [640, 820], last, 4, 3),
+  });
+  // trash packs chamber by chamber, south to north (local metres in the dungeon grid), each boss in its own chamber, every
+  // pack clear of the slip lanes and the sumps
+  SPAWNS.push(
+    ds('adits', 'adwarden', 72, 104, 2, 2),
+    ds('adits', 'adborer', 44, 104, 3, 3), ds('adits', 'adpuller', 98, 104, 3, 3), ds('adits', 'adcutter', 46, 88, 3, 2), ds('adits', 'adborer', 98, 88, 3, 2), ds('adits', 'adwarden', 118, 96, 2, 2), ds('adits', 'adcutter', 121, 84, 2, 2),
+    ds('adits', 'spoiltipper', 72, 92, 1, 1), // between the lanes, south of the drain channel
+    ds('adits', 'adwarden', 38, 75, 1.5, 2),
+    ds('adits', 'adpuller', 20, 60, 2, 3), ds('adits', 'adcutter', 70, 60, 2, 2), ds('adits', 'adborer', 77, 37, 2, 2),
+    ds('adits', 'sumpram', 47, 48, 1, 1),
+    ds('adits', 'adwarden', 87, 44, 1.5, 2),
+    ds('adits', 'adborer', 95, 24, 3, 2), ds('adits', 'adpuller', 140, 24, 3, 2), ds('adits', 'adcutter', 117, 52, 2, 2),
+    ds('adits', 'aditdriver', 117, 14, 1, 1),
+  );
+}
+// ============================================================================ end of P14.4 THE DRAIN ADITS
+
+// ============================================================================ P14.4 CHAPTERS 46-47 (story text in story.js)
+// "The Drains" and "Beds Under the Mud" (levels 62-63, the Seed Terraces). The Makers kept the rain from building up in the
+// hill with stone drains: channels along the back of every step, down the stair lanes, under iron grates into the adits.
+// Mahir sends you up to Drainman Mukhtar at the adit pads; you clear the four choked grates on the lanes (o_rggrate1-4),
+// break the drain borers boring new holes into the steps, gather lining stones washed down off the channels (questOnly
+// nodes rgstone0-7, item c46_stone) for Channelman Yasin (a new Seedwright, a man, at the foot of the first block of steps) and set them
+// back at the three channel heads behind the top steps (o_rgchannel1-3). The channels run, and still nothing comes out of
+// the adits: they are choked inside (Chapter 47). Then you dig four beds out from under the mud on the steps (o_rgbed1-4),
+// break the terrace cutters undercutting them, bring Mukhtar timber props the gorge's machines dragged off the adit pads
+// (c47_prop, off the rainMach table, only for those on the quest), Mukhtar digs the middle adit's mouth clear and props it
+// (the dungeon's door, need m_c47_mouth), you look in, Nadir brings the camp up with lamps and ropes, and a company of five
+// stops the Adit Driver in the Collector. Water runs out of all three adits and the hill drains, but at the head of the
+// gorge the Terrace Engine still cuts to its old plan (Chapter 48). Rewards item level 88-90.
+{
+  const R = (name, slot, lvl, art, haste = false) => {
+    const g = gear(name, slot, 4, lvl, haste);
+    if (slot === 'weapon') { g.wtype = art; g.icon = `w_${art}~3`; }
+    else if (slot === 'trinket') g.icon = 't_trinket~3';
+    else if (slot === 'back') g.icon = 'a_back~3';
+    else { g.weight = art; g.icon = `a_${art}_${slot}~3`; }
+    return g;
+  };
+  Object.assign(ITEMS, {
+    c46_stone: { name: 'Lining Stone', slot: 'quest', icon: 'scrap', q: 1, stack: 20, desc: 'A squared stone off the lining of a terrace drain channel, washed down the steps by a slip. Yasin wants it back in its channel.' },
+    c47_prop: { name: 'Timber Prop', slot: 'quest', icon: 'scrap', q: 1, stack: 20, desc: 'A squared timber prop off an adit pad, dragged away by a nursery machine. Mukhtar wants five to hold the middle adit’s mouth.' },
+    r_c46_gloves: R('Grate-Lifter’s Gauntlets', 'hands', 88, 'mail'),
+    r_c46_boots: R('Channel-Bed Boots', 'feet', 88, 'plate'),
+    r_c46_hood: R('Drainman’s Hood', 'head', 88, 'cloth'),
+    r_c46_coat: R('Lining-Stone Hauberk', 'chest', 89, 'mail'),
+    r_c46_rod: R('Channel Rod', 'weapon', 89, 'rod'),
+    r_c47_legs: R('Bed-Digger’s Legguards', 'legs', 89, 'plate'),
+    r_c47_blade: R('Adit-Prop Cleaver', 'weapon', 89, 'scimitar'),
+    r_c47_mantle: R('Adit-Mouth Pauldrons', 'shoulders', 90, 'mail'),
+    r_c47_charm: { ...R('Drain Water Keepsake', 'trinket', 90, null, true), desc: 'A stoppered glass of the first clear water out of the middle adit, drawn the day the hill began to drain.' },
+    r_c47_cloak: R('Cloak of the Seed Terraces', 'back', 90),
+  });
+  // the props come off the gorge's machines (only for those on the quest)
+  LOOT_TABLES.rainMach.items.push(['c47_prop', 0.5]);
+  OBJECT_KINDS.rggrate = { prompt: 'Lift the grate and dig out the sump under it', goal: 'Drain grates cleared', done: 'cleared' };
+  OBJECT_KINDS.rgchannel = { prompt: 'Set the lining stones back in the channel head', goal: 'Channel heads relined', done: 'relined' };
+  OBJECT_KINDS.rgbed = { prompt: 'Dig the bed out from under the mud', goal: 'Beds dug out', done: 'dug out' };
+  OBJECTS.push(
+    // the grates: where the steps' channels drop into the stair lanes' drains (on the lanes, square to them)
+    { id: 'o_rggrate1', kind: 'rggrate', x: 480.6, z: -2992, ry: 0 },
+    { id: 'o_rggrate2', kind: 'rggrate', x: 513.6, z: -3004, ry: 0 },
+    { id: 'o_rggrate3', kind: 'rggrate', x: 544.6, z: -2994, ry: 0 },
+    { id: 'o_rggrate4', kind: 'rggrate', x: 513.6, z: -3030, ry: 0 },
+    // the channel heads: the tops of the three drain lanes, behind the top steps
+    { id: 'o_rgchannel1', kind: 'rgchannel', x: 480.6, z: -3048, ry: 0 },
+    { id: 'o_rgchannel2', kind: 'rgchannel', x: 513.6, z: -3046, ry: 0 },
+    { id: 'o_rgchannel3', kind: 'rgchannel', x: 544.6, z: -3048, ry: 0 },
+    // the buried beds: on the steps of the three blocks, along the rows (ry 0: the beds run along x)
+    { id: 'o_rgbed1', kind: 'rgbed', x: 495, z: -2990, ry: 0 },
+    { id: 'o_rgbed2', kind: 'rgbed', x: 528, z: -3004, ry: 0 },
+    { id: 'o_rgbed3', kind: 'rgbed', x: 560, z: -2995, ry: 0 },
+    { id: 'o_rgbed4', kind: 'rgbed', x: 530, z: -2985, ry: 0 },
+  );
+  // the lining stones, washed down the steps onto the strip between the haul road and the lowest steps
+  NODES.push(...[[481, -2973.5], [490, -2974.5], [527, -2973.5], [536, -2974], [549, -2974.5], [558, -2973.5], [567, -2974], [576, -2974.5]].map(([x, z], i) => ({ id: 'rgstone' + i, item: 'c46_stone', x, z, questOnly: true })));
+  NPCS.push(
+    { id: 'n_rg_yasin', name: 'Channelman Yasin', title: 'The Seed Terraces', look: 'villager', v: 2, x: 480.5, z: -2966, ry: 2.9, quests: [],
+      greet: 'Every step has its channel along the back, and every channel runs to a lane. Keep the channels clean and the steps keep themselves.' },
+  );
+}
+// the Main Story ran (applyStory) before Yasin was placed: give him his story quests
+for (const [id, Q] of Object.entries(QUESTS)) if (Q.msq) { const g = NPCS.find((n) => n.id === Q.giver); if (g && !(g.quests ||= []).includes(id)) g.quests.push(id); }
+// ============================================================================ end of P14.4 CHAPTERS 46-47
 
 // ============================================================================ PAINTED ITEM ICONS
 // every everyday item (food, tonics, materials, quest items, junk) with its own painted icon uses it instead of the shared drawing

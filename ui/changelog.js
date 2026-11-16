@@ -1,6 +1,17 @@
 // What's new: shown once after an update (newest first). Bump `v` on the first entry whenever something is added.
 export const CHANGELOG = [
   {
+    v: 121, date: '16 November 2026', title: 'The Hill Holds',
+    items: [
+      ['Part Fourteen complete', 'Chapters 46 to 48: clear the choked drains, dig the buried beds out of the mud and stop the Terrace Engine that has cut the hill away for a lifetime. The hill holds through a storm, the first young poles go down to the Sound and up the lift, and the valley lays out a nursery of its own.'],
+      ['The Drain Adits', 'A level-65 dungeon for five players in the Makers’ drain tunnels. Mud slips burst down marked lanes on a clock, and the sumps back up until someone stands on the grate.'],
+      ['The Upper Cutting', 'A new ten-player raid, Normal and Heroic, through the Makers’ deep cut to the Terrace Engine.'],
+      ['Levels 61 to 65', 'A new talent row and two new skills for every class at levels 62 and 65, new gear and the Seedwrights reputation with Head Grower Nadir.'],
+      ['Who is online', 'A small badge under the minimap shows how many players are online. Hover or tap it to see who, with quick buttons to message, invite, befriend, inspect or trade.'],
+      ['A livelier gorge', 'The terraces now have seed beds, tools, fern banks, moss and more Seedwrights at work.'],
+    ],
+  },
+  {
     v: 120, date: '16 November 2026', title: 'The Rainward Gorge',
     items: [
       ['Part Fourteen begins', 'Chapter 45: three young poles are all the Sound has. The Tidewrights’ yard book says the Makers’ poles came up the Rainward Gorge by the haul road each spring, so the valley winds an old log haulier to work and rides the wagon up. The level cap rises to 65.'],

@@ -371,9 +371,43 @@ export const STORY = [
     ['q_c45_shelf', 'You dug the mud off the beds on the shelf across the river, where the young poles furthest on are growing.'],
     ['m_c45_spring', 'Bedman Mahir showed you the Seed Terraces, step on step of level beds, and the hill above them moving: the Makers’ drain adits have choked, and every heavy rain brings the hill down over the beds and the road.'],
   ] },
+  { id: 'c46', part: 14, name: 'The Drains', art: 'drains', blurb: 'The Makers never let the rain gather in the Rainward Gorge’s hill. Channels along the back of every step, drains down the stair lanes and stone adits into the hill carried it all away. Now the grates are choked, the channels broken, and every heavy rain stays in the hill until the hill moves.', steps: [
+    ['m_c46_drains', 'Mahir sent you up the stair lanes to Drainman Mukhtar at the adit pads behind the top steps, who has kept the drains alone since his father died.'],
+    ['q_c46_grates', 'You lifted the four choked grates where the steps’ channels drop into the stair lanes’ drains and dug the mud out of the sumps under them.'],
+    ['q_c46_borers', 'You broke the drain borers boring new holes into the steps to an old plan, letting the water down into the beds instead of out of the hill.'],
+    ['m_c46_yasin', 'Mukhtar sent you down to Channelman Yasin at the foot of the steps, who keeps the channels along the backs of the steps.'],
+    ['q_c46_stones', 'You gathered the lining stones the slips had washed off the channels and down the steps.'],
+    ['q_c46_channel', 'You set the lining stones back at the three channel heads behind the top steps, and the channels ran along the steps and down the lanes again.'],
+    ['m_c46_choked', 'The channels ran and the grates drank, and still nothing came out of the three adits: Mukhtar found them choked deep inside the hill.'],
+  ] },
+  { id: 'c47', part: 14, name: 'Beds Under the Mud', art: 'drains', blurb: 'The channels run again, but the adits that should carry the water out of the hill are choked inside, and the last rain brought the hill down over the beds. Something in the adits is still boring, and still packing them with spoil.', steps: [
+    ['m_c47_beds', 'Mukhtar sent you back down to Mahir, who showed you the beds the last rain buried on the steps.'],
+    ['q_c47_beds', 'You dug four beds out from under the mud on the steps and lifted the seedlings clear.'],
+    ['q_c47_cutters', 'You broke the terrace cutters undercutting the steps, cutting new terraces to an old plan under the ones the Seedwrights keep.'],
+    ['q_c47_props', 'You brought Mukhtar the timber props the gorge’s machines had dragged off the adit pads.'],
+    ['m_c47_mouth', 'Mukhtar dug the middle adit’s mouth clear and propped it, and Yasin turned the channels off the middle lane so nothing would come down it while a company was inside.'],
+    ['q_c47_look', 'You went in through the middle adit and looked down the Drain Adits: the Makers’ spoil tipper, sump ram and great adit driver still at work in the dark, and mud bursting in through the side adits.'],
+    ['m_c47_ropes', 'Mukhtar sent you down to Nadir, who brought the camp up to the adit pad with lamps and ropes.'],
+    ['q_c47_adits', 'With four companions you went into the Drain Adits, past the Spoil Tipper and the Sump Ram, and stopped the Adit Driver in the Collector.'],
+    ['m_c47_dry', 'Water ran clear out of all three adits, and the hill began to drain. But at the head of the gorge the hill still slides, where the Makers’ Terrace Engine cuts on to its old plan.'],
+  ] },
+  { id: 'c48', part: 14, name: 'The Hill Holds', art: 'haulroad', blurb: 'The drains run again, and still the hill above the Seed Terraces moves. Up at the head of the gorge the Makers’ Terrace Engine is still cutting the hill away to a plan set down a lifetime ago, undercutting every step below it.', steps: [
+    ['m_c48_head', 'Mahir sent you up the gorge to Slipwatch Ghalib at the Slip: the drains run, and the hill still moves, because at the head of the gorge the Makers’ Terrace Engine is still cutting.'],
+    ['q_c48_wardens', 'You broke the slope wardens staking out the Terrace Engine’s next terrace across the Slip.'],
+    ['q_c48_plates', 'You took the bronze plan plates off the gorge’s machines, the steps of the old cutting plan they still carried.'],
+    ['m_c48_dry', 'Ghalib sent you to Cutwatch Yaqub at the cutting’s mouth, and once the rain had stopped and the mud had run out, Yaqub lifted the stop-logs his grandfather dropped across it.'],
+    ['q_c48_look', 'You went down the ramp into the Upper Cutting and saw the Makers’ machines still at work in the open cut, and at the north face the Terrace Engine, cutting the next step.'],
+    ['m_c48_muster', 'Yaqub sent word down to Nadir, and all seven Seedwrights came up the haul road with ropes and shovels, Kareem with them.'],
+    ['q_c48_cutting', 'With nine companions you went down the Upper Cutting, past the Stump Puller Prime, the Spoil Conveyor and the Bed Ram, and stopped the Terrace Engine at the north face.'],
+    ['m_c48_storm', 'That night the worst storm in years came over the range. In the morning Mahir walked the terraces: no slip had come down, and the hill had held.'],
+    ['q_c48_lift', 'You lifted the young poles out of three beds on the first step of the Seed Terraces and carried them down to the wagon.'],
+    ['m_c48_load', 'Kareem chocked the load on the wagon, and the first load of young poles in a lifetime went down the haul road to the Tide Mills, with you on it.'],
+    ['q_c48_nursery', 'On the headland, in the lane beside the valley’s new row, you laid out three nursery beds with seed from the gorge, straight and level like the Makers’.'],
+    ['m_c48_after', 'The poles went round the cold cape on the ship and up Mansur’s lift to the Heights, where Kamal set out the first shelter row against the drifts. The hill holds, and the valley grows its own poles now, a Makers’ work copied in its own ground.'],
+  ] },
 ];
 // shown in the journal and the tracker once every step is done
-export const STORY_NEXT = 'Part Fourteen, the Rainward Gorge, has begun: the valley has wound a Makers’ log haulier to work, ridden the haul road up from the Tide Mills, and met the Seedwrights at the gorge foot, where the Makers’ drains have choked and every heavy rain brings the hill down over the seed beds. Chapter 46, The Drains, comes in a future update. Part Thirteen, the Tidewater Yards, is complete: the Tide Engine is stopped, the Makers’ Sea Gate shuts on the flood and opens on the ebb again, the creeks run fresh, the valley has planted a row of its own on the headland, and the first new lift rope laid on the Makers’ walk carries the cage to the Heights. Part Twelve, the Windward Heights, is complete. Part Eleven, the Long Road North, is complete too: the Floodgate and the Great Dam’s Heart are stopped, and the men of the Rime Steps keep the dams in repair. On the Heights all twelve wind engines turn, the Great Pump lifts meltwater into the cisterns, and the Makers’ Rest is lit again. The Makers left their works in order for whoever came next; the valley keeps them, and now it makes them too, for whoever comes after. Until then: the Sea Gate, the Mill Races, the Makers’ Rest and the Pump Works on Heroic, the Great Dam, the Sluice Galleries, the First Furnace and the Ore Galleries.';
+export const STORY_NEXT = 'Part Fourteen, the Rainward Gorge, is complete: the valley wound a Makers’ log haulier to work and rode the haul road up into the gorge, cleared the Makers’ drains and stopped the Terrace Engine in the Upper Cutting, and the hill holds through the storms. The first load of young poles in a lifetime has gone down the haul road to the Sound and up the lift to the Heights, and the valley has laid out a nursery of its own. More of the tale comes in a future update. Part Thirteen, the Tidewater Yards, is complete: the Tide Engine is stopped, the Makers’ Sea Gate shuts on the flood and opens on the ebb again, the creeks run fresh, the valley has planted a row of its own on the headland, and the first new lift rope laid on the Makers’ walk carries the cage to the Heights. Part Twelve, the Windward Heights, is complete. Part Eleven, the Long Road North, is complete too: the Floodgate and the Great Dam’s Heart are stopped, and the men of the Rime Steps keep the dams in repair. On the Heights all twelve wind engines turn, the Great Pump lifts meltwater into the cisterns, and the Makers’ Rest is lit again. The Makers left their works in order for whoever came next; the valley keeps them, and now it makes them too, for whoever comes after. Until then: the Upper Cutting and the Drain Adits, the Sea Gate, the Mill Races, the Makers’ Rest and the Pump Works on Heroic, the Great Dam, the Sluice Galleries, the First Furnace and the Ore Galleries.';
 
 // the story's own quests: mostly "talk" steps that carry the tale from one place to the next ({ talk: 1 } is done the
 // moment you accept it; hand it in to the turn-in NPC)
@@ -1151,6 +1185,110 @@ export const STORY_QUESTS = {
   m_c45_spring: { name: 'By the Haul Road Each Spring', giver: 'n_rg_nadir', turnin: 'n_rg_mahir', lvl: 61, goal: talk, xp: 14000, gold: 5000, rewards: ['r_c45_charm', 'r_c45_mantle', 'r_c45_cloak'], ach: true,
     text: 'Mahir works the lowest steps of the Seed Terraces, where the haul road runs along their foot. Go and look at the beds the Makers cut, and ask him why seven men cannot keep them.',
     done: 'Look up the side. Step on step, every bed level and straight, a spring’s poles in every one: the Makers’ nursery, cut for seven hundred men. Now look above the top step. The hill is moving. The Makers drained it with stone adits so the rain could never gather in it, and the adits have choked. The water stays in the hill, and every heavy rain the hill comes down a little further over the beds and the road. Clear the drains, and the poles can go down the haul road each spring again.' },
+  // Chapter 46: The Drains (level 62, the Seed Terraces). Mahir sends you up to Drainman Mukhtar at the adit pads; you clear
+  // the choked grates where the steps' channels drop into the stair lanes (rggrate), break the drain borers boring new holes
+  // into the steps, Channelman Yasin (a new Seedwright at the foot of the steps) wants the lining stones the slips washed down
+  // (c46_stone), and you set them back at the channel heads behind the top steps (rgchannel). The channels run, and still
+  // nothing comes out of the adits: they are choked inside (Chapter 47). Men only; the rain and the hill are the trouble.
+  m_c46_drains: { name: 'The Drainman', giver: 'n_rg_mahir', turnin: 'n_rg_mukhtar', lvl: 62, goal: talk, xp: 7000, gold: 5100, rewards: [],
+    text: 'Mukhtar keeps the drains, up at the adit pads behind the top steps. He is the only one of us who knows how the water was meant to go. Climb the stair lane and tell him a wagon came up the haul road, and that you mean to help.',
+    done: 'A wagon? Then the road is open, and somebody wants poles. Good. Look at this pad: the adit mouth behind me should be running with water after every rain, and it is dry. The water is still in the hill. We start at the top of the drains and work down.' },
+  q_c46_grates: { name: 'Choked Grates', giver: 'n_rg_mukhtar', turnin: 'n_rg_mukhtar', lvl: 62, goal: { use: 'rggrate', n: 4 }, xp: 12500, gold: 5200, rewards: ['r_c46_gloves'],
+    text: 'Where the steps’ channels drop into the stair lanes there are iron grates over square sumps. The sumps catch the silt so the drains below stay clear. Every one of them is choked. Lift the four grates on the lanes, dig the mud out from under them, and set them back flat.',
+    done: 'Four sumps, and the water already finding its way down into them. My father cleared those every spring with a long rake. I have been one man too few for twenty winters.' },
+  q_c46_borers: { name: 'Holes in the Steps', giver: 'n_rg_mukhtar', turnin: 'n_rg_mukhtar', lvl: 62, goal: { kill: 'drainborer', n: 6 }, xp: 13000, gold: 5200, rewards: ['r_c46_boots'],
+    text: 'The Makers’ drain borers were meant to bore the adits, out in the hill. They still bore, but to a plan nobody has changed in a lifetime, and the plan runs under the steps now. Every hole they put down lets the water into the beds instead of out of the hill. Break six of them.',
+    done: 'Six. You can hear the difference already: no more grinding under the steps. The water stays in the channels where it belongs.' },
+  m_c46_yasin: { name: 'The Channelman', giver: 'n_rg_mukhtar', turnin: 'n_rg_yasin', lvl: 62, goal: talk, xp: 7500, gold: 5100, rewards: [],
+    text: 'The channels along the backs of the steps are Yasin’s. He has been patching them with mud and turf because the lining stones are gone. Go down to him at the foot of the steps below the first block and see what he needs.',
+    done: 'Mukhtar sent you? Then the grates are clear, and the channels are the last thing between the rain and the beds. Look along the back of this step: the lining is broken in a dozen places, and the water goes into the step instead of along it.' },
+  q_c46_stones: { name: 'Lining Stones', giver: 'n_rg_yasin', turnin: 'n_rg_yasin', lvl: 62, goal: { gather: 'c46_stone', n: 6 }, xp: 13500, gold: 5300, rewards: ['r_c46_hood'],
+    text: 'Every slip washes lining stones out of the channels and down the steps, and they come to rest on the strip between the lowest steps and the haul road. Squared stones, a forearm long, every one cut to fit. Bring me six.',
+    done: 'Six, and none of them cracked. The Makers cut these to last, and they have.' },
+  q_c46_channel: { name: 'The Channel Heads', giver: 'n_rg_yasin', turnin: 'n_rg_yasin', lvl: 62, goal: { use: 'rgchannel', n: 3 }, xp: 14000, gold: 5300, rewards: ['r_c46_coat'],
+    text: 'The worst breaks are at the channel heads, where the channels behind the top steps turn down into the three drain lanes. Set the stones back there, one on another, until each head is closed and square. Then the water from the top steps goes down the lanes, not over the edge.',
+    done: 'There. Watch the lane: the water is coming down it in a sheet, along the drain, past the grates and away. That is how it ran in my grandfather’s day.' },
+  m_c46_choked: { name: 'Dry Adits', giver: 'n_rg_yasin', turnin: 'n_rg_mukhtar', lvl: 62, goal: talk, xp: 15000, gold: 5600, rewards: ['r_c46_rod'], ach: true,
+    text: 'The channels run and the lanes run. Go back up to Mukhtar and ask him whether the adits are running too. They should be pouring by now.',
+    done: 'Nothing. The lanes drain into the adits, and not a drop comes out of any of the three mouths. I put my lamp into the middle one, as far as it would go: it is choked to the lintel a few paces in, and past that I could hear something working. Grinding, and stopping, and grinding again. The adits are choked from the inside.' },
+  // Chapter 47: Beds Under the Mud (level 63, the Seed Terraces and the Drain Adits). Mahir shows you the beds the last rain
+  // buried (rgbed), you break the terrace cutters undercutting the steps, bring Mukhtar timber props off the gorge's machines
+  // (c47_prop), Mukhtar digs the middle adit's mouth clear and props it while Yasin turns the channels off the middle lane
+  // (the dungeon's door, need m_c47_mouth), you look into the Drain Adits, Nadir brings the camp up with lamps and ropes, and
+  // a company of five stops the Adit Driver. Water runs out of all three adits, but the Terrace Engine still cuts at the
+  // head of the gorge (Chapter 48).
+  m_c47_beds: { name: 'Beds Under the Mud', giver: 'n_rg_mukhtar', turnin: 'n_rg_mahir', lvl: 63, goal: talk, xp: 7500, gold: 5300, rewards: [],
+    text: 'Before anybody goes into a choked adit, the beds want seeing to. The rain the night before you came brought the hill down over Mahir’s steps. Go down and ask him how bad it is.',
+    done: 'Bad. Four beds on the steps lie under a hand of mud, and the seedlings under it will rot inside a week. The channels running again means no more water in them, at least. Now they want digging out.' },
+  q_c47_beds: { name: 'Dig Them Out', giver: 'n_rg_mahir', turnin: 'n_rg_mahir', lvl: 63, goal: { use: 'rgbed', n: 4 }, xp: 14000, gold: 5400, rewards: ['r_c47_legs'],
+    text: 'Four beds, one on the first block, two on the middle block and one on the far block. Dig the mud off each one down to the dark earth, and lift the seedlings that are still standing. Do not walk on the beds: walk the grass paths between them.',
+    done: 'Four beds, and more seedlings standing than I hoped. Mud is a slow killer. The water was the quick one, and the channels have stopped it.' },
+  q_c47_cutters: { name: 'Undercut', giver: 'n_rg_mahir', turnin: 'n_rg_mahir', lvl: 63, goal: { kill: 'terracecutter', n: 6 }, xp: 14000, gold: 5400, rewards: ['r_c47_blade'],
+    text: 'The terrace cutters still cut, to the Makers’ old plan, a new step under every step we keep. Each one they cut takes the foot out from under the step above, and the next rain brings it down. Break six of them before they undercut another.',
+    done: 'Six. The steps have stood a lifetime of rain. They can stand a little more if nothing cuts under them.' },
+  q_c47_props: { name: 'Timber Props', giver: 'n_rg_mahir', turnin: 'n_rg_mukhtar', lvl: 63, goal: { item: 'c47_prop', n: 5 }, xp: 14500, gold: 5500, rewards: [],
+    text: 'Mukhtar means to dig the middle adit’s mouth open, and he will want props to hold the roof while he does. The Makers kept props stacked on every adit pad, and the gorge’s machines have dragged them off all over the hill. Take five back off them and carry them up to him.',
+    done: 'Five, and square, the Makers’ size. That is enough to hold the mouth, and the first few paces in. Stand back from the lintel.' },
+  m_c47_mouth: { name: 'The Middle Adit', giver: 'n_rg_mukhtar', turnin: 'n_rg_yasin', lvl: 63, goal: talk, xp: 8000, gold: 5300, rewards: [],
+    text: 'I will dig the mouth clear and set the props as I go. While I dig, the middle lane must not run, or the water comes straight down on whoever is inside. Go down to Yasin and ask him to turn the channels off the middle lane, onto the other two.',
+    done: 'Turned. The middle lane is dry and the others are carrying it all. Look up there: Mukhtar is through. The mouth is open to the lintel and propped square, the first time in my life I have seen into it.' },
+  q_c47_look: { name: 'Into the Hill', giver: 'n_rg_yasin', turnin: 'n_rg_mukhtar', lvl: 63, goal: { reach: 'adits' }, xp: 13000, gold: 5400, rewards: [],
+    text: 'Go up to the pad and in through the middle adit, as far as the props go and a little past. Look down the drains and come straight back out. Do not go further on your own.',
+    done: 'Machines? Still working in there? The spoil tipper that carried the spoil out, the sump ram that kept the grates seated, and the adit driver itself, boring new adits to a plan from before my grandfather’s time, and packing the old ones with its spoil. And the mud coming in through the side adits like that. That is work for more than one man with a lamp.' },
+  m_c47_ropes: { name: 'Lamps and Ropes', giver: 'n_rg_mukhtar', turnin: 'n_rg_nadir', lvl: 63, goal: talk, xp: 8500, gold: 5300, rewards: [],
+    text: 'Somebody has to hold the mouth while a company is inside: ropes, lamps and men to dig anyone out a slip catches. Go down to the camp and ask Nadir to bring the Seedwrights up.',
+    done: 'All seven of us, and every lamp in the camp. We will hold the pad and the props. You go in.' },
+  q_c47_adits: { name: 'The Drain Adits', giver: 'n_rg_nadir', turnin: 'n_rg_mukhtar', lvl: 63, goal: { kill: 'aditdriver', n: 1 }, xp: 18000, gold: 5800, rewards: ['r_c47_mantle'],
+    text: 'Mukhtar drew the adits for us in the mud: the Adit Mouth, the Long Drain with its side adits, the Sump Gallery under the grates, and the Collector, where every drain meets and the adit driver stands against the far wall. When the side adits give, the mud comes straight down the marked lanes: step out of them. When the sumps back up, a man standing on a grate long enough can clear it. Gather four companions and stop the Adit Driver. Then come out to Mukhtar.',
+    done: 'We felt it on the props: the grinding stopped. Then a long low sound out of the hill, and look at the mouth. Water. Clear water, out of the middle adit, and now out of the other two. The hill is draining.' },
+  m_c47_dry: { name: 'The Hill Drains', giver: 'n_rg_mukhtar', turnin: 'n_rg_mahir', lvl: 63, goal: talk, xp: 16000, gold: 6000, rewards: ['r_c47_charm', 'r_c47_cloak'], ach: true,
+    text: 'Go down the steps with the water and tell Mahir. He will want to see the lanes running for himself.',
+    done: 'Listen to the lanes. Every drain on the side running, and the steps standing dry above them for the first time in my life. But look east, past the upper falls, to the head of the gorge. The hill still slides there. The Makers’ upper cutting goes into the head wall, and the Terrace Engine in it still cuts to its old plan, undercutting the whole Slip. While that runs, no step on this side is safe in a storm.' },
+  // Chapter 48: The Hill Holds (levels 64-65, the end of Part Fourteen). The drains run again, and still the hill moves: at
+  // the head of the gorge the Terrace Engine keeps cutting to its old plan. Mahir sends you to Slipwatch Ghalib at the Slip;
+  // you break the slope wardens staking out its next terrace and take the plan plates off the gorge's machines (c48_plate);
+  // Cutwatch Yaqub lifts the stop-logs across the cutting's mouth once the rain has stopped (m_c48_dry opens the raid: the
+  // cutting fills with mud while it pours); you look down the ramp, the Seedwrights come up with ropes, a company of ten stops
+  // the Terrace Engine, and the hill holds through the worst storm in years. Then the young poles come out of the beds
+  // (rglift), the first load goes down the haul road with Kareem's chocks on it, you lay out the valley's own nursery beside
+  // its new row on the headland (twnurse) with Qasim, and the poles go round the cold cape and up the lift to Kamal on the
+  // Heights. Men only; the rain and the hill are the trouble. Quest experience carries a level 64 hero to 65.
+  m_c48_head: { name: 'The Head of the Gorge', giver: 'n_rg_mahir', turnin: 'n_rg_ghalib', lvl: 64, goal: talk, xp: 8000, gold: 5200, rewards: [],
+    text: 'The drains run, and the water goes out of the hill as the Makers meant it to. And still, this morning, the top step had a fresh crack along its back. Something is cutting away at the hill from above. Go up the gorge to Ghalib at the Slip. He watches the head of the gorge.',
+    done: 'Mahir felt it too? Then come and look. Up there, at the head of the gorge, is the Makers’ upper cutting, where their machines cut the stone for every terrace below. They are still cutting. Listen: you can hear the Terrace Engine from here when the wind is right. Every step it cuts takes a little more of the hill’s foot away.' },
+  q_c48_wardens: { name: 'Stakes on the Slip', giver: 'n_rg_ghalib', turnin: 'n_rg_ghalib', lvl: 64, goal: { kill: 'slopewarden', n: 6 }, xp: 10000, gold: 5300, rewards: ['r_c48_gloves', 'r_c48_boots'],
+    text: 'The slope wardens on the Slip walk the hill with their stakes and drive them in where the Terrace Engine is to cut next. Every stake is a step it means to take out of the hill. Break six of them before they stake the whole slope.',
+    done: 'Six fewer, and their stakes lie where they fell. The Engine will have to find its next step without them.' },
+  q_c48_plates: { name: 'The Old Plan', giver: 'n_rg_ghalib', turnin: 'n_rg_ghalib', lvl: 64, goal: { item: 'c48_plate', n: 5 }, xp: 10000, gold: 5300, rewards: ['r_c48_legs', 'r_c48_helm'],
+    text: 'Every machine in this gorge carries a square bronze plate punched with holes: one step of the cutting plan the Makers set down when they cut the terraces. The machines read them and work to them still. Take five of the plates off them, so the plan they work to runs out.',
+    done: 'Five steps of the old plan. Look at the holes: row after row, every terrace measured, and the last ones run past the top step and on into the hill. The plan never stopped. The Makers did.' },
+  m_c48_dry: { name: 'After the Rain', giver: 'n_rg_ghalib', turnin: 'n_rg_yaqub', lvl: 64, goal: talk, xp: 8000, gold: 5300, rewards: [],
+    text: 'The way into the cutting is its mouth in the head wall, and Yaqub keeps it, as his father and grandfather did. While it pours the cutting fills with mud to the top log, so nobody goes in in the rain. Wait for the rain to stop, then go and tell him the hill cannot wait.',
+    done: 'The rain has stopped, and the mud has run out under the logs. Good. My grandfather dropped these stop-logs the year the cutting started filling with mud, and nobody has lifted them since. Help me with the chains. There: the way in is open, until the next rain.' },
+  q_c48_look: { name: 'The Ramp Down', giver: 'n_rg_yaqub', turnin: 'n_rg_yaqub', lvl: 64, goal: { reach: 'uppercutting' }, xp: 9000, gold: 5300, rewards: ['r_c48_coat'],
+    text: 'Go in through the mouth and down the ramp to its foot. Look along the cut, then come straight back out. Do not go further on your own, and be out before the next squall comes over the lip.',
+    done: 'You saw it. The Makers cut that whole cut, step on step, to make the terraces below. The Terrace Engine is at the far end, at the north face, and it has never once stopped. It will take a full company to stop it.' },
+  m_c48_muster: { name: 'Ropes and Shovels', giver: 'n_rg_yaqub', turnin: 'n_rg_nadir', lvl: 65, goal: talk, xp: 8000, gold: 5400, rewards: [],
+    text: 'If a company goes into the cutting, I want every Seedwright at the mouth with ropes, in case a slip catches them. Go down to the camp and tell Nadir.',
+    done: 'All seven of us, then, and Kareem with us. We will be at the mouth with ropes and shovels, and lamps if it runs into the night. The cutting is yours.' },
+  q_c48_cutting: { name: 'The Upper Cutting', giver: 'n_rg_nadir', turnin: 'n_rg_yaqub', lvl: 65, goal: { kill: 'terraceengine', n: 1 }, xp: 16000, gold: 5600, rewards: ['r_c48_sword', 'r_c48_charm'],
+    text: 'Yaqub drew the cutting for me in the mud once, as his father drew it for him: the Cutting Mouth and the ramp down; the Stump Field, where the Stump Puller Prime still pulls stumps that are long gone; the Spoil Run, where the Spoil Conveyor carries the spoil out; the Bed Floor, where the Bed Ram rams new beds level; and the Cutting Face, where the Terrace Engine cuts the next step. Take nine companions, keep out of the marked lanes when it pours, and stop the Terrace Engine.',
+    done: 'We felt it from the mouth: the whole hill shook, and then it was quiet. No drum, no belt, nothing cutting. For the first time in my life the head of the gorge is quiet. Now we see if the hill holds.' },
+  m_c48_storm: { name: 'The Storm', giver: 'n_rg_yaqub', turnin: 'n_rg_mahir', lvl: 65, goal: talk, xp: 8000, gold: 5400, rewards: [],
+    text: 'The sky over the range has gone black, and the wind is coming round. This will be the worst rain in years. Go down to Mahir at the terraces and stay with him tonight. In the morning we will know.',
+    done: 'All night it poured, and all night I waited for the hill to come down. It did not. This morning I walked every step from the bottom to the top: not one slip, not one new crack. The drains ran full, and the hill held.' },
+  q_c48_lift: { name: 'The First Load', giver: 'n_rg_mahir', turnin: 'n_rg_kareem', lvl: 65, goal: { use: 'rglift', n: 3 }, xp: 10000, gold: 5500, rewards: [],
+    text: 'Then it is spring, and there are poles to go down. On the first step, above the haul road, three beds of young poles are ready to lift: straight, a man’s height, their roots in the earth. Lift them out with their earth on, bundle them, and carry them down to Kareem at the road head.',
+    done: 'Young poles on the road head stand, waiting for the wagon. My father told me what this looked like. I never thought I would see it.' },
+  m_c48_load: { name: 'Down the Haul Road', giver: 'n_rg_kareem', turnin: 'n_tw_talib', lvl: 65, goal: talk, xp: 8000, gold: 5400, rewards: [],
+    text: 'Fawzi has the wagon on the stand. Help me chock the load, then ride down with it. Talib will want to see the first poles off the haul road with his own eyes.',
+    done: 'A wagon down the haul road, full of young poles. The yard book has a line for every spring the Makers sent one down, and now it gets a new one, in my hand. Half of these go round the cape to Kamal. But the other half stay here.' },
+  q_c48_nursery: { name: 'A Nursery of Our Own', giver: 'n_tw_talib', turnin: 'n_tw_row1', lvl: 65, goal: { use: 'twnurse', n: 3 }, xp: 10000, gold: 5500, rewards: [],
+    text: 'Nadir sent seed down with the poles, and his way of raising it. We will not need the haul road for every pole again. In the lane east of the new row Qasim has turned three beds of earth. Lay them out as the Makers laid theirs: level, straight, the seed in rows. Then tell Qasim.',
+    done: 'Three beds, level and straight, the seed in rows. In two springs they will be seedlings, in four young poles. The valley’s own nursery, beside the valley’s own row.' },
+  m_c48_after: { name: 'The Hill Holds', giver: 'n_tw_row1', turnin: 'n_wh_kamal', lvl: 65, goal: talk, xp: 9000, gold: 5600, rewards: ['r_c48_mantle', 'r_c48_cloak'], ach: true,
+    text: 'The other half of the load goes round the cold cape on the ship and up Mansur’s lift to the Heights. Go with it, and put the poles in Kamal’s hands.',
+    done: 'Young poles, up the lift. ... Look at them. Straight, every one. We will plant the first shelter row along the west edge tomorrow, against the drifts, and in ten winters there will be board timber for the thirteenth engine. The hill in the gorge holds, the Makers’ nursery sends its poles down again, and now the valley raises its own: a Makers’ work, copied in our own ground.' },
 };
 
 // existing quests that change hands so the story flows from one person to the next: [quest, new giver]
@@ -1198,6 +1336,10 @@ export const STORY_DONE = {
 
 // the story's big moments: handing these steps in plays a short scene (letterbox, the camera closes in, this line)
 export const STORY_SCENES = {
+  q_c48_cutting: 'At the Cutting Face the Terrace Engine’s drum slows in the cut it was making and stops. The belt stands still, the last spoil slides off it, and up on the lip of the cut the rain runs down the face in thin clean streams, carrying no mud at all.',
+  m_c48_storm: 'Night over the Rainward Gorge. Rain comes down in sheets, the falls roar white, and from every adit mouth behind the top steps the drains run full and brown. Along the Seed Terraces the beds lie dark and level, step on step, and the hill above them does not move.',
+  m_c48_load: 'Morning at the road head. The log haulier takes up the slack, and the wagon rolls out under its load: young poles, stacked straight to the stakes, their roots bundled in gorge earth. Down the haul road it goes, past the falls and out of the rain, the first load in a lifetime.',
+  m_c48_after: 'Evening on the Heights. Along the west edge, against the drifts, a first row of young poles stands staked and heeled in. Far below, on the headland by the Sea Gate, three new beds lie level beside the valley’s row, and up the Rainward Gorge the hill holds.',
   q_c44_seagate: 'In the Engine Hall the Tide Engine’s rack stops climbing. The flood comes in under the barrage, and far overhead the six leaves drop in their guides one after another, and the seventh comes down straight. The sea stops at the gate. On the ebb the leaves rise again, and the channel runs out clean.',
   q_c44_plant: 'At the south end of the Makers’ rows, between two lines of tall straight timber, three young poles stand in a new row, staked and heeled in, a hand’s breadth taller than the grass round them.',
   m_c44_after: 'The new rope runs onto the drum at the lift foot, pale with fresh tar. The cage lifts, climbs into the cold fog and out of it into the light of the Heights. Far to the south-west, on the headland by the Sea Gate, a row of young poles stands in the evening wind, for whoever comes after.',
@@ -1269,6 +1411,9 @@ export const STORY_SCENES = {
   q_c45_wind: 'On the stand between the mills the log haulier’s spring drum winds tight. Its tracks take up the slack with a long creak, and the empty wagon behind it rolls a hand’s breadth forward on its solid wheels and stops, as it was told.',
   q_c45_ride: 'Rain closes in as the haul road leaves the river mouth and climbs into the hills. The haulier pulls the empty wagon up a deep green gorge between walls of dripping rock and past white falls, until a fresh slip of red mud and stone lies across the road. The crew climb down with shovels and dig through it, and at dusk the wagon rolls onto the stand at the road head.',
   m_c45_spring: 'Dusk in the Rainward Gorge. Rain drips from the planted timber on the ridge, lamps are lit in the Seedwrights’ huts, and up the gorge the Seed Terraces climb the side in grey steps, while above the top step a fresh red scar of mud runs down the hill.',
+  q_c46_channel: 'Water comes over the channel head behind the top step in a clear sheet, turns square into the stair lane and runs down its drain past every grate, step after step, to the haul road and the river.',
+  m_c47_mouth: 'Mukhtar digs into the choked mouth of the middle adit by lamplight, setting a timber prop at every step, until the mud slumps away inside and the dark square of the adit opens under its flat stone lintel.',
+  m_c47_dry: 'Clear water runs out of all three adit mouths behind the top steps and down every stair lane. The steps stand dry in the evening light. Far up the gorge, past the upper falls, a fresh scar of red mud still moves on the Slip.',
 };
 
 // filled by applyStory(): every step in order, and where each quest sits in the story

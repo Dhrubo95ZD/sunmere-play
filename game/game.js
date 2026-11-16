@@ -32,7 +32,7 @@ import { NPCS, QUESTS, MOBS, ITEMS, npcSeen, enginesTurning } from '/sunmere-pla
 import { Builder, box, rbox, cyl, sphere, lathe } from '../assets/kit.js';
 import { glowSprite } from '../assets/dynamic.js';
 import { Townsfolk } from './townsfolk.js';
-import { QuestObjects, brassTagNode, tarBarrelNode, yarnHankNode, stopBoardNode, seedTrayNode } from './questObjects.js';
+import { QuestObjects, brassTagNode, tarBarrelNode, yarnHankNode, stopBoardNode, seedTrayNode, liningStoneNode } from './questObjects.js';
 import { buildHaulTrain } from '../assets/haulWagon.js';
 import { QuestWalk } from './questwalk.js';
 import { weatherAt, createRain, createSnow, nightAt } from '../engine/weather.js';
@@ -336,7 +336,7 @@ export async function startGame() {
     setTimeout(() => ui.maybeNews(), 2500);
     for (const n of m.npcs) entities.addNpc(n);
     for (const n of m.nodes) {
-      const mesh = n.item === 'c33_drift' ? driftwood() : n.item === 'c37_block' ? ironBlock() : n.item === 'c40_tag' ? brassTagNode() : n.item === 'c41_tar' ? tarBarrelNode() : n.item === 'c41_yarn' ? yarnHankNode() : n.item === 'c43_board' ? stopBoardNode() : n.item === 'c45_tray' ? seedTrayNode() : mushroom();
+      const mesh = n.item === 'c33_drift' ? driftwood() : n.item === 'c37_block' ? ironBlock() : n.item === 'c40_tag' ? brassTagNode() : n.item === 'c41_tar' ? tarBarrelNode() : n.item === 'c41_yarn' ? yarnHankNode() : n.item === 'c43_board' ? stopBoardNode() : n.item === 'c45_tray' ? seedTrayNode() : n.item === 'c46_stone' ? liningStoneNode() : mushroom();
       mesh.position.set(n.x, heightAt(n.x, n.z), n.z);
       mesh.visible = n.ready;
       engine.scene.add(mesh);
@@ -449,7 +449,7 @@ export async function startGame() {
       }
       case 'tele': { ui.unitCast(ev.id, ev.name || 'Attack', ev.t || 1.5);
         const v = entities.get(ev.id);
-        const wet = v?.def?.water; // machines whose strikes are water (the Sluice Galleries): blue circles
+        const wet = v?.def?.water || v?.def?.mud; // machines whose strikes are water (the Sluice Galleries): blue circles; mud (the Drain Adits): red-brown
         for (const sp of ev.spots) fx.telegraph(V(sp.x, 0, sp.z), sp.r, ev.t, ev.kind === 'nova' ? (wet ? v.def.novaColor || '#6ad0ff' : '#ff7a20') : (wet ? v.def.teleColor || '#2f9cff' : '#ff3020'));
         if (v?.machine) v.machine.attack(ev.t, 'slam'); else if (v?.anim) v.mobAttack(null, false, true, fx);
         if (v && local && v.pos.distanceTo(local.pos) < 45) sfx.play(ev.kind === 'nova' ? 'shout' : 'grind', 0.8);
@@ -459,6 +459,7 @@ export async function startGame() {
         const v = entities.get(ev.id);
         for (const sp of ev.spots) {
           const p = V(sp.x, heightAt(sp.x, sp.z), sp.z);
+          if (v?.def?.mud || ev.kind === 'lanes' || ev.kind === 'sumps') { fx.emit('dust', p, { n: 14, spread: sp.r * 0.5, size: 1.3, color: '#6e4232' }); fx.emit('ringdust', p, { n: 10, r: sp.r, speed: 1.2 + sp.r * 0.5, color: '#8a5a40' }); fx.ring(p, '#c8682e', sp.r, 0.5); continue; } // a slap of wet mud, no crack
           if (v?.def?.water) { fx.emit('drops', p, { n: 22 }); fx.emit('steam', p, { n: 8 }); fx.emit('ringdust', p, { n: 12, r: sp.r, speed: 1.5 + sp.r * 0.6, color: '#dcecf6' }); fx.ring(p, '#8cd0ff', sp.r, 0.5); continue; } // a burst of water, no crack
           fx.impact('earth', p, { r: sp.r });
           fx.emit('dust', p, { n: 10, spread: sp.r * 0.5, size: 1.4 });
@@ -995,7 +996,7 @@ export async function startGame() {
     } else {
       sfx.loop('breeze', 0);
       // the Deepway and the Makers' Hall: running water everywhere, a low hum from the deep wells
-      const deep = D.theme === 'deep', furnace = D.theme === 'furnace', sluice = D.theme === 'sluice', dam = D.theme === 'dam', pump = D.theme === 'pump' || D.theme === 'mills' || D.theme === 'seagate', shop = D.theme === 'workshop'; // the Makers' Rest: only the engines' hum in the walls // the Pump Works: dripping water and the hum of the engines // the casting hall: a low roar from the furnace and bellows; the sluices: running water and the turbines' hum; the Great Dam: heavier water and a deep hum from the lake behind it
+      const deep = D.theme === 'deep', furnace = D.theme === 'furnace', sluice = D.theme === 'sluice', dam = D.theme === 'dam', pump = D.theme === 'pump' || D.theme === 'mills' || D.theme === 'seagate' || D.theme === 'adits' || D.theme === 'cutting', shop = D.theme === 'workshop'; // the Makers' Rest: only the engines' hum in the walls // the Pump Works: dripping water and the hum of the engines // the casting hall: a low roar from the furnace and bellows; the sluices: running water and the turbines' hum; the Great Dam: heavier water and a deep hum from the lake behind it
       sfx.loop('water', deep ? 0.1 : sluice ? 0.16 : dam ? 0.2 : pump ? 0.12 : 0); sfx.loop('hum', deep ? 0.22 : furnace ? 0.24 : sluice ? 0.12 : dam ? 0.16 : pump ? 0.18 : shop ? 0.14 : 0);
       // nearby automata at work: brush drums swishing, counterweight chains clinking
       game.machT = (game.machT || 0) - dtRaw;

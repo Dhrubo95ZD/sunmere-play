@@ -5,7 +5,8 @@
 // the Reach row at 20, the whole path again, with the level 45 cap: 41 points, one full path of 21 and 20 in another;
 // the Rime row at 21, the whole path again, with the level 50 cap: 46 points, two full paths of 22 and 2 in the third;
 // the Heights row at 22, the whole path again, with the level 55 cap: 51 points, two full paths of 23 and 5 in the third;
-// the Tidewater row at 23, the whole path again, with the level 60 cap: 56 points, two full paths of 24 and 8 in the third).
+// the Tidewater row at 23, the whole path again, with the level 60 cap: 56 points, two full paths of 24 and 8 in the third;
+// the Rainward row at 24, the whole path again, with the level 65 cap: 61 points, two full paths of 25 and 11 in the third).
 // Each talent: { id, name, ic (a skill id whose painted icon it shows), ranks, e: effects per rank }
 // Effect kinds (values are per rank; percentages as fractions):
 //   dmg hp armor haste crit critDmg heal regen speed leech thorns cost dot aoe execute opener killRes dodge cdr threat ccDur absorb
@@ -14,7 +15,7 @@
 import { SKILLS } from './classes.js';
 
 export const TALENT_START = 5;
-export const TALENT_ROW_REQ = [0, 3, 6, 10, 14, 18, 19, 20, 21, 22, 23]; // rows 7 to 11 open once the rest of the path is full (19, 20, 21, 22, then 23)
+export const TALENT_ROW_REQ = [0, 3, 6, 10, 14, 18, 19, 20, 21, 22, 23, 24]; // rows 7 to 12 open once the rest of the path is full (19, 20, 21, 22, 23, then 24)
 export const talentPoints = (level) => Math.max(0, level - TALENT_START + 1);
 export const talentResetCost = (level) => 50 * level; // copper
 
@@ -38,6 +39,7 @@ export const TALENTS = {
       T('kv12', 'Millrace Edge', 'k_millrace', 1, 8, [sk('k_millrace', 'pow', 0.25), ['dmg', 0.03]]),
       T('kv13', 'Crosswind Edge', 'k_crosswind', 1, 9, [sk('k_crosswind', 'pow', 0.25), ['critDmg', 0.08]]),
       T('kv14', 'Tidebreak Edge', 'k_tidebreak', 1, 10, [sk('k_tidebreak', 'pow', 0.25), ['critDmg', 0.08]]),
+      T('kv15', 'Slipface Edge', 'k_slipface', 1, 11, [sk('k_slipface', 'pow', 0.25), ['critDmg', 0.08]]),
     ] },
     { name: 'Bulwark', desc: 'Plate, shield and a will that does not bend.', ic: 'k_guard', list: [
       T('kb1', 'Plate Drills', 'k_guard', 3, 0, [['armor', 0.02]]),
@@ -54,6 +56,7 @@ export const TALENTS = {
       T('kb12', 'Floodgate Shield', 'k_sluicegate', 1, 8, [['armor', 0.05], sk('k_sluicegate', 'cd', 8)]),
       T('kb13', 'Windwall Plate', 'k_windwall', 1, 9, [['armor', 0.05], sk('k_windwall', 'cd', 8)]),
       T('kb14', 'Sea Wall Plate', 'k_seawall', 1, 10, [['armor', 0.05], sk('k_seawall', 'cd', 8)]),
+      T('kb15', 'Dry-Stone Plate', 'k_drystone', 1, 11, [['armor', 0.05], sk('k_drystone', 'cd', 8)]),
     ] },
     { name: 'Banner', desc: 'Lead from the front and outlast the fight.', ic: 'k_rally', list: [
       T('kn1', 'Rallying Voice', 'k_rally', 3, 0, [sk('k_rally', 'cd', 5)]),
@@ -70,6 +73,7 @@ export const TALENTS = {
       T('kn12', 'Keeper of the Steps', 'k_sluicegate', 1, 8, [['heal', 0.08], sk('k_sluicegate', 'pow', 0.2)]),
       T('kn13', 'Standard of the Heights', 'k_windwall', 1, 9, [['heal', 0.08], sk('k_windwall', 'pow', 0.2)]),
       T('kn14', 'Standard of the Yards', 'k_seawall', 1, 10, [['heal', 0.08], sk('k_seawall', 'pow', 0.2)]),
+      T('kn15', 'Standard of the Gorge', 'k_drystone', 1, 11, [['heal', 0.08], sk('k_drystone', 'pow', 0.2)]),
     ] },
   ],
   ranger: [
@@ -88,6 +92,7 @@ export const TALENTS = {
       T('rm12', 'Chisel-Point Fletching', 'r_chisel', 1, 8, [sk('r_chisel', 'pow', 0.25), ['critDmg', 0.08]]),
       T('rm13', 'Ridgeline Eye', 'r_ridgeline', 1, 9, [sk('r_ridgeline', 'pow', 0.2), ['crit', 0.02]]),
       T('rm14', 'Spring Tide Eye', 'r_springtide', 1, 10, [sk('r_springtide', 'pow', 0.2), ['crit', 0.02]]),
+      T('rm15', 'Cloudburst Eye', 'r_cloudburst', 1, 11, [sk('r_cloudburst', 'pow', 0.2), ['crit', 0.02]]),
     ] },
     { name: 'Trapper', desc: 'Snares, barbs and ground of your choosing.', ic: 'r_trap', list: [
       T('rt1', 'Barbed Arrows', 'r_explosive', 3, 0, [['dot', 0.08]]),
@@ -104,6 +109,7 @@ export const TALENTS = {
       T('rt12', 'Falling Bodkins', 'r_hail', 1, 8, [sk('r_hail', 'pow', 0.2), ['aoe', 0.04]]),
       T('rt13', 'Waxed Hemp', 'r_tether', 1, 9, [sk('r_tether', 'cd', 3), ['ccDur', 0.1]]),
       T('rt14', 'Pine Tar Heads', 'r_tarhead', 1, 10, [sk('r_tarhead', 'cd', 3), ['ccDur', 0.1]]),
+      T('rt15', 'Ash Stakes', 'r_stake', 1, 11, [sk('r_stake', 'cd', 3), ['ccDur', 0.1]]),
     ] },
     { name: 'Wayfarer', desc: 'Light on the feet, hard to pin down.', ic: 'r_disengage', list: [
       T('rw1', 'Light Feet', 'r_disengage', 3, 0, [['speed', 0.03]]),
@@ -120,6 +126,7 @@ export const TALENTS = {
       T('rw12', 'Glacier Footing', 'r_hail', 1, 8, [['speed', 0.04], sk('r_hail', 'cd', 8)]),
       T('rw13', 'Windward Stride', 'r_tether', 1, 9, [['speed', 0.04], ['dodge', 0.03]]),
       T('rw14', 'Mudflat Stride', 'r_tarhead', 1, 10, [['speed', 0.04], ['dodge', 0.03]]),
+      T('rw15', 'Wet-Rock Stride', 'r_stake', 1, 11, [['speed', 0.04], ['dodge', 0.03]]),
     ] },
   ],
   chemist: [
@@ -138,6 +145,7 @@ export const TALENTS = {
       T('cv12', 'Saltpetre Charge', 'c_frostpack', 1, 8, [sk('c_frostpack', 'pow', 0.25), ['ccDur', 0.1]]),
       T('cv13', 'Short Fuse', 'c_ridgecharge', 1, 9, [sk('c_ridgecharge', 'pow', 0.25), ['aoe', 0.04]]),
       T('cv14', 'Tar Kettle', 'c_tarpot', 1, 10, [sk('c_tarpot', 'pow', 0.25), ['aoe', 0.04]]),
+      T('cv15', 'Mortar Drum', 'c_limemortar', 1, 11, [sk('c_limemortar', 'pow', 0.25), ['aoe', 0.04]]),
     ] },
     { name: 'Corrosion', desc: 'Acids that keep working after you walk away.', ic: 'c_acid', list: [
       T('cc1', 'Stronger Acids', 'c_acid', 3, 0, [['dot', 0.08]]),
@@ -154,6 +162,7 @@ export const TALENTS = {
       T('cc12', 'Slaked Lime', 'c_quicklime', 1, 8, [['dot', 0.05], sk('c_quicklime', 'cd', 2)]),
       T('cc13', 'Carbide Bed', 'c_carbide', 1, 9, [['dot', 0.05], sk('c_carbide', 'cd', 2)]),
       T('cc14', 'Saturated Brine', 'c_brine', 1, 10, [['dot', 0.05], sk('c_brine', 'cd', 2)]),
+      T('cc15', 'Kiln-Hot Lime', 'c_kilnlime', 1, 11, [['dot', 0.05], sk('c_kilnlime', 'cd', 2)]),
     ] },
     { name: 'Apparatus', desc: 'Padding, remedies and a well-kept kit.', ic: 'c_draught', list: [
       T('ca1', 'Padded Coat', 'c_smokebomb', 3, 0, [['armor', 0.02]]),
@@ -170,6 +179,7 @@ export const TALENTS = {
       T('ca12', 'Oilskin Coat', 'c_frostpack', 1, 8, [['armor', 0.04], ['hp', 0.04]]),
       T('ca13', 'Felted Liner', 'c_carbide', 1, 9, [['armor', 0.04], ['hp', 0.04]]),
       T('ca14', 'Oilskin Apron', 'c_brine', 1, 10, [['armor', 0.04], ['hp', 0.04]]),
+      T('ca15', 'Waxed Oilcloth', 'c_kilnlime', 1, 11, [['armor', 0.04], ['hp', 0.04]]),
     ] },
   ],
   sandblade: [
@@ -188,6 +198,7 @@ export const TALENTS = {
       T('sd12', 'Falling Water', 's_cascade', 1, 8, [sk('s_cascade', 'pow', 0.2), ['execute', 0.04]]),
       T('sd13', 'Snowblind Edge', 's_whiteout', 1, 9, [sk('s_whiteout', 'pow', 0.2), ['execute', 0.04]]),
       T('sd14', 'Bore Edge', 's_tidalbore', 1, 10, [sk('s_tidalbore', 'pow', 0.2), ['execute', 0.04]]),
+      T('sd15', 'Landslide Edge', 's_landslide', 1, 11, [sk('s_landslide', 'pow', 0.2), ['execute', 0.04]]),
     ] },
     { name: 'Dunestrider', desc: 'Move like the wind across the sand.', ic: 's_step', list: [
       T('ss1', 'Sand Legs', 's_step', 3, 0, [['speed', 0.03]]),
@@ -204,6 +215,7 @@ export const TALENTS = {
       T('ss12', 'Riverstone Step', 's_undertow', 1, 8, [['dodge', 0.02], sk('s_undertow', 'cd', 2)]),
       T('ss13', 'Drift Step', 's_scour', 1, 9, [['dodge', 0.02], sk('s_scour', 'cd', 2)]),
       T('ss14', 'Rip Current Step', 's_riptide', 1, 10, [['dodge', 0.02], sk('s_riptide', 'cd', 2)]),
+      T('ss15', 'Undercut Step', 's_undercut', 1, 11, [['dodge', 0.02], sk('s_undercut', 'cd', 2)]),
     ] },
     { name: 'Bladeguard', desc: 'Shield up, blade ready, never down.', ic: 's_ram', list: [
       T('sg1', 'Round Shield', 's_ram', 3, 0, [['armor', 0.02]]),
@@ -220,6 +232,7 @@ export const TALENTS = {
       T('sg12', 'Ice-Rimmed Shield', 's_undertow', 1, 8, [['armor', 0.05], sk('s_undertow', 'pow', 0.2)]),
       T('sg13', 'Rimed Buckler', 's_scour', 1, 9, [['armor', 0.05], sk('s_scour', 'pow', 0.2)]),
       T('sg14', 'Salt-Crusted Buckler', 's_riptide', 1, 10, [['armor', 0.05], sk('s_riptide', 'pow', 0.2)]),
+      T('sg15', 'Moss-Rimmed Buckler', 's_undercut', 1, 11, [['armor', 0.05], sk('s_undercut', 'pow', 0.2)]),
     ] },
   ],
   warden: [
@@ -238,6 +251,7 @@ export const TALENTS = {
       T('wi12', 'Dam-Stone Wall', 'w_icefall', 1, 8, [['hp', 0.05], sk('w_icefall', 'cd', 6)]),
       T('wi13', 'Brake-Shoe Wall', 'w_brakeblock', 1, 9, [['hp', 0.05], sk('w_brakeblock', 'cd', 6)]),
       T('wi14', 'Breakwater Wall', 'w_breakwater', 1, 10, [['hp', 0.05], sk('w_breakwater', 'cd', 6)]),
+      T('wi15', 'Crib Wall Face', 'w_cribwall', 1, 11, [['hp', 0.05], sk('w_cribwall', 'cd', 6)]),
     ] },
     { name: 'Earthshaker', desc: 'Make the ground do the work.', ic: 'w_pound', list: [
       T('we1', 'Heavy Hammer', 'w_blow', 3, 0, [['dmg', 0.02]]),
@@ -254,6 +268,7 @@ export const TALENTS = {
       T('we12', 'Icefall Weight', 'w_icefall', 1, 8, [sk('w_icefall', 'pow', 0.25), ['aoe', 0.04]]),
       T('we13', 'Counterweight Mass', 'w_counterweight', 1, 9, [sk('w_counterweight', 'pow', 0.25), ['aoe', 0.04]]),
       T('we14', 'Spud Weight', 'w_spud', 1, 10, [sk('w_spud', 'pow', 0.25), ['aoe', 0.04]]),
+      T('we15', 'Pile Weight', 'w_pilehammer', 1, 11, [sk('w_pilehammer', 'pow', 0.25), ['aoe', 0.04]]),
     ] },
     { name: 'Reprisal', desc: 'Every blow taken is paid back.', ic: 'w_shatter', list: [
       T('wr1', 'Grudge', 'w_slam', 3, 0, [['crit', 0.02]]),
@@ -270,6 +285,7 @@ export const TALENTS = {
       T('wr12', 'Trip Ledger', 'w_triphammer', 1, 8, [sk('w_triphammer', 'pow', 0.25), ['thorns', 0.04]]),
       T('wr13', 'Ratchet Ledger', 'w_brakeblock', 1, 9, [sk('w_brakeblock', 'pow', 0.2), ['thorns', 0.04]]),
       T('wr14', 'Tide Ledger', 'w_breakwater', 1, 10, [sk('w_breakwater', 'pow', 0.2), ['thorns', 0.04]]),
+      T('wr15', 'Slope Ledger', 'w_cribwall', 1, 11, [sk('w_cribwall', 'pow', 0.2), ['thorns', 0.04]]),
     ] },
   ],
   herbalist: [
@@ -288,6 +304,7 @@ export const TALENTS = {
       T('hr12', 'Willow Hands', 'h_willowsteam', 1, 8, [sk('h_willowsteam', 'pow', 0.25), sk('h_willowsteam', 'cd', 8)]),
       T('hr13', 'Spruce Hands', 'h_sprucebroth', 1, 9, [sk('h_sprucebroth', 'pow', 0.25), sk('h_sprucebroth', 'cd', 8)]),
       T('hr14', 'Kettle Hands', 'h_saltkettle', 1, 10, [sk('h_saltkettle', 'pow', 0.25), sk('h_saltkettle', 'cd', 8)]),
+      T('hr15', 'Cedar Hands', 'h_cedarsteam', 1, 11, [sk('h_cedarsteam', 'pow', 0.25), sk('h_cedarsteam', 'cd', 8)]),
     ] },
     { name: 'Bramble', desc: 'Nettles, seeds and a hard staff.', ic: 'h_dart', list: [
       T('hb1', 'Nettles', 'h_dart', 3, 0, [['dot', 0.08]]),
@@ -304,6 +321,7 @@ export const TALENTS = {
       T('hb12', 'Lime-Steeped Thorns', 'h_dart', 1, 8, [['dot', 0.08], ['crit', 0.02]]),
       T('hb13', 'Pitch-Dipped Darts', 'h_dart', 1, 9, [['dot', 0.08], ['crit', 0.02]]),
       T('hb14', 'Brine-Soaked Darts', 'h_dart', 1, 10, [['dot', 0.08], ['crit', 0.02]]),
+      T('hb15', 'Bog-Water Darts', 'h_dart', 1, 11, [['dot', 0.08], ['crit', 0.02]]),
     ] },
     { name: 'Cultivation', desc: 'Deep roots and a full herb pouch.', ic: 'h_bark', list: [
       T('hc1', 'Deep Roots', 'h_bark', 3, 0, [['hp', 0.04]]),
@@ -320,6 +338,7 @@ export const TALENTS = {
       T('hc12', 'Meltwater Stock', 'h_snowmelt', 1, 8, [sk('h_snowmelt', 'pow', 0.2), sk('h_snowmelt', 'cost', 5)]),
       T('hc13', 'Pitch Stock', 'h_pitch', 1, 9, [sk('h_pitch', 'pow', 0.2), sk('h_pitch', 'cost', 5)]),
       T('hc14', 'Samphire Beds', 'h_samphire', 1, 10, [sk('h_samphire', 'pow', 0.2), sk('h_samphire', 'cost', 5)]),
+      T('hc15', 'Moss Beds', 'h_moss', 1, 11, [sk('h_moss', 'pow', 0.2), sk('h_moss', 'cost', 5)]),
     ] },
   ],
   deadeye: [
@@ -338,6 +357,7 @@ export const TALENTS = {
       T('dg12', 'Splitting Ball', 'd_splitter', 1, 8, [sk('d_splitter', 'pow', 0.25), ['critDmg', 0.08]]),
       T('dg13', 'Dry-Fire Drill', 'd_dry', 1, 9, [sk('d_dry', 'pow', 0.2), ['crit', 0.02]]),
       T('dg14', 'Broadside Drill', 'd_broadside', 1, 10, [sk('d_broadside', 'pow', 0.2), ['crit', 0.02]]),
+      T('dg15', 'Rolling Fire Drill', 'd_rollingfire', 1, 11, [sk('d_rollingfire', 'pow', 0.2), ['crit', 0.02]]),
     ] },
     { name: 'Powderwright', desc: 'Burning wadding, smoke and splash.', ic: 'd_powderburn', list: [
       T('dp1', 'Hot Wadding', 'd_powderburn', 3, 0, [['dot', 0.08]]),
@@ -354,6 +374,7 @@ export const TALENTS = {
       T('dp12', 'Gauge Pressure', 'd_pressure', 1, 8, [sk('d_pressure', 'pow', 0.2), ['aoe', 0.04]]),
       T('dp13', 'Black Cloud', 'd_pressure', 1, 9, [sk('d_pressure', 'cd', 3), sk('d_smoke', 'cd', 3)]),
       T('dp14', 'Rock Salt Pouch', 'd_saltshot', 1, 10, [sk('d_saltshot', 'pow', 0.25), ['dot', 0.08]]),
+      T('dp15', 'Gravel Pouch', 'd_gravel', 1, 11, [sk('d_gravel', 'pow', 0.25), ['dot', 0.08]]),
     ] },
     { name: 'Skirmisher', desc: 'Never where the engine swings.', ic: 'd_roll', list: [
       T('dk1', 'Light Boots', 'd_roll', 3, 0, [['speed', 0.03]]),
@@ -370,6 +391,7 @@ export const TALENTS = {
       T('dk12', 'Hard to Pin', 'd_chain', 1, 8, [['dodge', 0.04], ['leech', 0.03]]),
       T('dk13', 'Wide Road', 'd_roll', 1, 9, [['hp', 0.04], ['dodge', 0.03]]),
       T('dk14', 'Shingle Road', 'd_roll', 1, 10, [['hp', 0.04], ['dodge', 0.03]]),
+      T('dk15', 'Haul Road', 'd_roll', 1, 11, [['hp', 0.04], ['dodge', 0.03]]),
     ] },
   ],
 };

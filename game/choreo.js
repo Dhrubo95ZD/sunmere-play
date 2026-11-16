@@ -536,6 +536,35 @@ const DEF = {};
     ], [{ t: 'hit', e: 'impact', kind: 'shield', at: 'front1', shake: 0.55, stop: 0.09 }, { t: 'hit', e: 'impact', kind: 'seaspray', at: 'front1', r: 5 },{ t: 'hit', e: 'decal', kind: 'crack', r: 1.4, at: 'front1' },
       { t: 0.48, e: 'trail', on: true, color: T, w: 1.3 }, { t: 0.52, e: 'sound', s: 'swing' }, { t: 'hit2', e: 'impact', kind: 'sweep', at: 'self', r: 5, shake: 0.5, stop: 0.08 }, { t: 'hit2', e: 'cloud', kind: 'seaspray', r: 5, at: 'self' }, { t: 0.8, e: 'trail', on: false }], { endRoot: [0, 0, 0.1] });
   }
+  // ---- level 62 and 65 (the Rainward Gorge) ----
+  // Slipface Cut: the sword gathered high over the right shoulder on a short step back, then brought down steeply
+  // from high right to low left through the target on a hard step in (contact on the hit, an even speed), finishing
+  // low by the left knee; wet red mud flies off the blow
+  DEF.k_slipface = C('knight', 0.95, 'full', [
+    k(0, GL),
+    k(0.16, P(SH, arc(-70, { lead: -30, dy: 0.1, r: 0.38, tilt: -30, bend: 2 }), L.stepBack), { root: [0, -0.02, -0.04] }),
+    ...swing(0.95, 0.44, { wind: -100, mid: -52, hit: 4, follow: 56, end: 70 }, (a, role, e) => {
+      const f = Math.min(1, Math.max(0, (a + 100) / 170));
+      return [P(SH, arc(a, { lead: role === 'wind' ? -28 : role === 'follow' || role === 'end' ? 22 : -4, dy: 0.14 - 0.56 * f, tilt: -36 + 66 * f, bend: 4 + 20 * f, r: role === 'wind' ? 0.38 : 0.46 }), role === 'wind' ? L.stepBack : L.lungeL), { root: role === 'wind' ? [0, -0.02, -0.04] : [0, -0.18, 0.26], e }];
+    }, 1100),
+    k(1, GL, { root: R.guard, e: 'smooth' }),
+  ], [{ t: 0.14, e: 'trail', on: true, color: T, w: 1.3 }, { t: 0.26, e: 'sound', s: 'swing' }, { t: 'hit', e: 'impact', kind: 'slash', shake: 0.35, stop: 0.07 }, { t: 'hit', e: 'impact', kind: 'mud' }, { t: 0.72, e: 'trail', on: false }]);
+  // Dry-Stone Wall (capstone): the kite shield lifted and set down hard and square on the ground ahead on a low,
+  // wide crouch (the first contact, held), then the sword swept back round the front from left to right over the
+  // shield's rim on wide feet (the second contact, at an even speed), and the guard taken back up; stone dust and wet
+  // grit jump off the ground at the shield
+  {
+    const SET = P(G, { spine: [24, -8, 0], chest: [6, -4, 0], armL: [-54, 24, 16], foreL: [-36, 0, 0], armR: [-30, 0, -30], foreR: [-50, 0, 0], head: [12, 4, 0] }, L.wide);
+    DEF.k_drystone = C('knight', 1.4, 'full', [
+      k(0, GL),
+      k(0.12, P(G, { spine: [-6, -12, 0], armL: [-110, 36, 26], foreL: [-56, 0, 0], armR: [-20, 0, -30] }, L.stepBack), { root: [0, 0.02, -0.06] }),
+      k(0.36 / 1.4, SET, { root: [0, -0.3, 0.08], e: 'snap' }),
+      k(0.34, SET, { root: [0, -0.3, 0.08] }),
+      ...swing(1.4, 0.86, { wind: 104, mid: 52, hit: -4, follow: -66, end: -84 }, (a, role, e) => [P(SH, arc(a, { lead: role === 'wind' ? 26 : role === 'mid' ? 12 : role === 'hit' ? 0 : -22, dy: -0.18, bend: 16 }), L.wide), { root: [0, -0.22, 0.08], e }], 1150),
+      k(1, GL, { root: [0, 0, 0.08], e: 'smooth' }),
+    ], [{ t: 'hit', e: 'impact', kind: 'shield', at: 'front1', shake: 0.55, stop: 0.09 }, { t: 'hit', e: 'impact', kind: 'stonechip', at: 'front1', r: 5 }, { t: 'hit', e: 'decal', kind: 'crack', r: 1.2, at: 'front1' },
+      { t: 0.52, e: 'sound', s: 'swing' }, { t: 'hit2', e: 'impact', kind: 'sweep', at: 'self', r: 5, shake: 0.5, stop: 0.08 }, { t: 'hit2', e: 'cloud', kind: 'mud', r: 5, at: 'self' }], { endRoot: [0, 0, 0.08] }); // no swing trail: the sweep round the front read as a ring round him
+  }
 }
 
 // ============================== RANGER ====================================
@@ -814,6 +843,31 @@ const DEF = {};
     { t: 'hit', e: 'proj', kind: 'arrow', from: 'bow', pierce: true, big: true }, { t: 'hit', e: 'bowstring', pull: 0 }, { t: 'hit', e: 'sound', s: 'bow' }, { t: 'hit', e: 'wave', kind: 'water', len: 18 }, { t: 'hit', e: 'shake', amt: 0.25 },
     { t: 0.68, e: 'bowstring', pull: 1 },
     { t: 'hit2', e: 'proj', kind: 'arrow', from: 'bow', pierce: true, big: true }, { t: 'hit2', e: 'bowstring', pull: 0 }, { t: 'hit2', e: 'sound', s: 'bow' }, { t: 'hit2', e: 'wave', kind: 'water', len: 18 }, { t: 'hit2', e: 'shake', amt: 0.35 }]);
+  // ---- level 62 and 65 (the Rainward Gorge) ----
+  // Ash Stake Arrow: the heavy stake arrow nocked low, drawn and aimed down at the track plates, held a breath and
+  // loosed; it drives in with a wet splash of mud
+  DEF.r_stake = C('ranger', 0.95, 'full', [
+    k(0, GL),
+    k(0.08, mixPose(GL, P(LOW.NOCK, SIDE), 0.5), { root: [0, -0.04, 0] }),
+    k(0.18, P(LOW.NOCK, SIDE), { root: [0, -0.06, 0] }),
+    k(0.34, P(LOW.AIM, SIDE), { root: [0, -0.08, 0.04] }),
+    k(0.42, P(LOW.AIM, SIDE, { spine: [12, -54, 0] }), { root: [0, -0.08, 0.04] }),
+    k(0.46 / 0.95, P(LOW.REL, SIDE), { root: [0, -0.08, 0.02], e: 'snap' }),
+    k(0.76, mixPose(P(LOW.REL, SIDE), GL, 0.5), { root: [0, -0.04, 0.02] }),
+    k(1, GL),
+  ], [{ t: 0.14, e: 'bowstring', pull: 1 }, { t: 0.484, e: 'proj', kind: 'arrow', from: 'bow', impact: 'mud', big: true }, { t: 0.484, e: 'bowstring', pull: 0 }, { t: 0.484, e: 'sound', s: 'bow' }]);
+  // Cloudburst (capstone): on wide feet, the bow tipped nearly straight up; four arrows nocked, drawn and loosed as
+  // fast as the bow allows, then a hard rush of arrows and rain-wet mud comes down on the ground ahead, four times
+  {
+    const STEEP = set({ torso: lean(T_AIM, -22), nockTorso: lean(T_NOCK, -10), pitch: 68 });
+    const rel = [0.42, 0.55, 0.68, 0.81];
+    const keys = [k(0, GL), k(0.05, mixPose(GL, P(STEEP.NOCK, SIDE), 0.5)), k(0.1, P(STEEP.NOCK, SIDE)), k(0.28, P(STEEP.AIM, L.wide), { root: [0, -0.12, 0] }), k(0.38, P(STEEP.AIM, L.wide, { spine: [-18, -52, 0] }), { root: [0, -0.14, 0] })];
+    rel.forEach((u, i) => { keys.push(k(u, P(STEEP.REL, L.wide), { root: [0, -0.12, 0], e: 'snap' })); if (i < 3) { keys.push(k(u + 0.05, P(STEEP.NOCK, L.wide), { root: [0, -0.12, 0] }), k(u + 0.1, P(STEEP.AIM, L.wide), { root: [0, -0.12, 0] })); } });
+    keys.push(k(0.9, mixPose(P(STEEP.REL, L.wide), GL, 0.5), { root: [0, -0.06, 0] }), k(1, GL));
+    DEF.r_cloudburst = C('ranger', 1.6, 'full', keys.map((q) => (q.t === rel[0] ? { ...q, e: 'snap' } : q)), [{ t: 0.08, e: 'bowstring', pull: 1 },
+      ...rel.flatMap((u, i) => [{ t: u, e: 'proj', kind: 'arrow', from: 'bow', up: true }, { t: u, e: 'bowstring', pull: 0 }, { t: u + 0.01, e: 'sound', s: 'bow' }, ...(i < 3 ? [{ t: u + 0.05, e: 'bowstring', pull: 1 }] : [])]),
+      { t: 'hit', e: 'rain', kind: 'arrow', r: 6, n: 60, dur: 1.0 }, { t: 'hit', e: 'cloud', kind: 'mud', r: 6 }, { t: 'hit2', e: 'impact', kind: 'mud', at: 'target', r: 3 }, { t: 'hit3', e: 'shake', amt: 0.25 }, { t: 'hit4', e: 'impact', kind: 'mud', at: 'target', r: 4 }, { t: 'hit4', e: 'shake', amt: 0.35 }]);
+  }
 }
 
 // ============================== CHEMIST ===================================
@@ -1084,6 +1138,40 @@ const DEF = {};
       { t: 0.74, e: 'holdItem', side: 'both', item: 'pot', on: false }, { t: 0.74, e: 'proj', kind: 'flask', item: 'pot', from: 'chest', arc: 1.1, impact: 'tarpot', ground: true, spin: 3, r: 6 }, { t: 0.74, e: 'sound', s: 'whoosh' },
       { t: 'hit', e: 'shake', amt: 0.45 }, { t: 'hit', e: 'cloud', kind: 'smoke', r: 5 }],
       { channel: { from: 0.12, to: 0.5, hz: 3.0, bones: { armL: [5, 0, 3], armR: [5, 0, -3], foreL: [-6], foreR: [-6], spine: [2, 0, 0], head: [2, 0, 0] } } });
+  }
+  // ---- level 62 and 65 (the Rainward Gorge) ----
+  // Kiln Lime Flask: the flask of fresh kiln lime held up before the face and shaken once so the lime settles, then a low
+  // sidearm throw across the body on a step in; it bursts on the wet plating in a hot white boil of steam
+  C1('c_kilnlime', 1.0, [
+    k(0, GL),
+    k(0.14, P(ROD, { spine: [6, 6, 0], head: [10, -4, 0], armL: [-80, 12, 18], foreL: [-104, 0, 0], handL: [-14, 0, 0] })),
+    k(0.3, P(ROD, { spine: [8, 8, 0], head: [12, -4, 0], armL: [-86, 16, 16], foreL: [-100, 0, 0], handL: [14, 0, 0] })),
+    k(0.44, P(ROD, { spine: [0, 48, 0], chest: [-6, 22, 0], armL: [-66, -26, 76], foreL: [-54, 0, 0], handL: [-10, 0, 0], head: [0, -36, 0] }, L.stepBack), { root: [0, -0.08, -0.08] }),
+    k(0.6, P(ROD, { spine: [22, -38, 0], chest: [8, -20, 0], armL: [-84, 36, 12], foreL: [-12, 0, 0], handL: [20, 0, 0], head: [6, 16, 0] }, L.lungeL), { root: [0, -0.16, 0.24], e: 'snap' }),
+    k(0.74, P(ROD, { spine: [24, -42, 0], armL: [-66, 40, 10], foreL: [-30, 0, 0] }, L.lungeL), { root: [0, -0.14, 0.22] }),
+    k(1, GL, { root: R.guard }),
+  ], [{ t: 0.08, e: 'holdItem', side: 'L', item: 'flaskLime', on: true }, { t: 0.18, e: 'trailSmoke', side: 'L', dur: 0.24 },
+    { t: 0.6, e: 'holdItem', side: 'L', item: 'flaskLime', on: false }, { t: 0.6, e: 'proj', kind: 'flask', item: 'flaskLime', from: 'L', arc: 0.7, impact: 'lime', spin: 10 }, { t: 0.6, e: 'sound', s: 'whoosh' }],
+    { channel: { from: 0.14, to: 0.36, hz: 3, bones: { armL: [3, 0, 3], foreL: [-6], handL: [14, 0, 0] } } });
+  // Lime Mortar Drum (capstone): the sealed iron drum held in both hands against the hip while its fuse is lit on the
+  // rod's flint wheel (sparks, the cast), swung back low on a deep crouch and heaved underarm up and out with the whole
+  // body rising; it bursts in a low, flat splash of hot grey mortar that steams where the rain meets it
+  {
+    const HOLD = (x) => P({ spine: [16 + x, 10, 0], head: [18 + x, -6, 0], armR: [-44 - x, -8, -10], foreR: [-64, 0, 0], handR: [10, 0, 0], armL: [-40 - x, 14, 10], foreL: [-66 - x, 0, 0] }, L.wide);
+    const UP = (x) => P({ spine: [-8 - x * 0.2, 0, 0], chest: [-6, 0, 0], head: [-10 - x * 0.2, 0, 0], armR: [-96 - x, 0, -10], foreR: [-8 - x * 0.3, 0, 0], armL: [-96 - x, 0, 10], foreL: [-8 - x * 0.3, 0, 0] }, L.stepL);
+    C1('c_limemortar', 2.2, [
+      k(0, GL),
+      k(0.1, HOLD(0), { root: [0, -0.12, 0] }),
+      k(0.5, HOLD(3), { root: [0, -0.14, 0] }),
+      k(0.64, P({ spine: [42, 0, 0], chest: [8, 0, 0], head: [30, 0, 0], armR: [0, -6, -10], foreR: [-16, 0, 0], armL: [0, 6, 10], foreL: [-16, 0, 0] }, L.deep), { root: [0, -0.38, -0.04] }),
+      k(0.74, UP(0), { root: [0, 0.02, 0.18], e: 'snap' }),
+      k(0.84, UP(20), { root: [0, 0.04, 0.2] }),
+      k(0.92, mixPose(UP(20), GL, 0.5), { root: [0, 0.02, 0.1] }),
+      k(1, GL, { root: R.guard }),
+    ], [{ t: 0.06, e: 'holdItem', side: 'both', item: 'drum', on: true }, { t: 0.1, e: 'sparks', at: 'rod', dur: 0.4 }, { t: 0.14, e: 'trailSmoke', side: 'L', dur: 0.8 },
+      { t: 0.74, e: 'holdItem', side: 'both', item: 'drum', on: false }, { t: 0.74, e: 'proj', kind: 'flask', item: 'drum', from: 'chest', arc: 1.1, impact: 'mortar', ground: true, spin: 3, r: 6 }, { t: 0.74, e: 'sound', s: 'whoosh' },
+      { t: 'hit', e: 'shake', amt: 0.5 }, { t: 'hit', e: 'cloud', kind: 'mud', r: 6 }],
+      { channel: { from: 0.12, to: 0.5, hz: 3.0, bones: { armL: [4, 0, 3], armR: [4, 0, -3], foreL: [-5], foreR: [-5], spine: [2, 0, 0], head: [2, 0, 0] } } });
   }
 }
 
@@ -1358,6 +1446,30 @@ const DEF = {};
     ], [{ t: 0.04, e: 'trail', on: true, color: '#e4eef0', w: 1.3 }, { t: 'hit', e: 'impact', kind: 'sweep', at: 'cone', r: 6, shake: 0.25, stop: 0.05 }, { t: 'hit', e: 'cloud', kind: 'seaspray', r: 3, cone: true },
       { t: 'hit2', e: 'impact', kind: 'sweep', at: 'cone', r: 6, shake: 0.3, stop: 0.05 }, { t: 'hit2', e: 'cloud', kind: 'seaspray', r: 3, cone: true },
       { t: 'hit3', e: 'impact', kind: 'execute', shake: 0.6, stop: 0.1 }, { t: 'hit3', e: 'wave', kind: 'water', len: 8 }, { t: 0.9, e: 'trail', on: false }], { endRoot: [0, 0, 1.1] });
+  }
+  // ---- level 62 and 65 (the Rainward Gorge) ----
+  // Undercut: a low cut drawn in level under the plating on a deep lunge (the first contact), then the blade pulled back
+  // out along the same low line from left to right as the sandblade rises and steps back (the second contact)
+  S1('s_undercut', 0.85, 'full', [
+    k(0, GL),
+    ...swing(0.85, 0.3, { wind: 74, mid: 38, hit: -4, follow: -36 }, (a, role, e) => [P(SH, arc(a, { lead: role === 'wind' ? 24 : role === 'follow' ? -16 : 4, dy: -0.5, r: role === 'wind' ? 0.38 : 0.5, bend: 26, tilt: 4 }), role === 'wind' ? L.stepL : P(L.lungeL, { thighL: [-74, 0, 6], shinL: [78] })), { root: role === 'wind' ? [0, -0.12, 0.04] : [0, -0.34, 0.32], e }], 1100),
+    ...swing(0.85, 0.6, { wind: -58, mid: -30, hit: 4, follow: 50, end: 64 }, (a, role, e) => [P(SH, arc(a, { lead: role === 'wind' ? -20 : role === 'follow' || role === 'end' ? 20 : -4, dy: -0.44, bend: 20 }), L.stepBack), { root: [0, -0.18, 0.12], e }], 1100),
+    k(1, GL, { root: R.guard, e: 'smooth' }),
+  ], [{ t: 0.06, e: 'trail', on: true, color: T }, { t: 'hit', e: 'impact', kind: 'slash', shake: 0.2, stop: 0.045 }, { t: 'hit', e: 'impact', kind: 'mud' }, { t: 'hit2', e: 'impact', kind: 'slash', shake: 0.3, stop: 0.06 }, { t: 'hit2', e: 'cloud', kind: 'mud', r: 2, cone: true }, { t: 0.84, e: 'trail', on: false }]);
+  // Landslide (capstone): three cuts coming downhill, each a long step further in: a falling forehand, a falling
+  // backhand and a last heavy cut down and across on a deep lunge, held; mud and loose stone run on along the ground
+  {
+    const BL = P(L.lungeL, { thighL: [-78, 0, 6], shinL: [82] });
+    S1('s_landslide', 1.4, 'full', [
+      k(0, GL),
+      ...swing(1.4, 0.3, { wind: 90, mid: 44, hit: -5, follow: -52 }, (a, role, e) => { const f = Math.min(1, Math.max(0, (90 - a) / 142)); return [P(SH, arc(a, { lead: role === 'wind' ? 26 : role === 'follow' ? -18 : 5, dy: 0.02 - 0.36 * f, tilt: 24 - 40 * f, bend: 14 }), L.stepL), { root: [0, -0.08, role === 'wind' ? 0.06 : 0.3], e }]; }, 1150),
+      ...swing(1.4, 0.62, { wind: -90, mid: -46, hit: 5, follow: 52 }, (a, role, e) => { const f = Math.min(1, Math.max(0, (a + 90) / 142)); return [P(SH, arc(a, { lead: role === 'wind' ? -26 : role === 'follow' ? 18 : -5, dy: 0.0 - 0.36 * f, tilt: -24 + 40 * f, r: role === 'wind' ? 0.36 : 0.44, bend: 16 }), L.lungeR), { root: [0, -0.16, 0.7], e }]; }, 1150),
+      ...swing(1.4, 0.94, { wind: 96, mid: 48, hit: -5, follow: -56, end: -70 }, (a, role, e) => { const f = Math.min(1, Math.max(0, (96 - a) / 166)); return [P(SH, arc(a, { lead: role === 'wind' ? 26 : role === 'follow' || role === 'end' ? -18 : 5, dy: 0.06 - 0.5 * f, tilt: 30 - 56 * f, bend: 24 }), BL), { root: [0, -0.32, 1.1], e }]; }, 1150),
+      k(0.92, P(SH, arc(-70, { lead: -18, dy: -0.44, tilt: -26, bend: 24 }), BL), { root: [0, -0.32, 1.1] }),
+      k(1, GL, { root: [0, 0, 1.1], e: 'smooth' }),
+    ], [{ t: 0.04, e: 'trail', on: true, color: '#b8805a', w: 1.3 }, { t: 'hit', e: 'impact', kind: 'sweep', at: 'cone', r: 6, shake: 0.25, stop: 0.05 }, { t: 'hit', e: 'cloud', kind: 'mud', r: 3, cone: true },
+      { t: 'hit2', e: 'impact', kind: 'sweep', at: 'cone', r: 6, shake: 0.3, stop: 0.05 }, { t: 'hit2', e: 'cloud', kind: 'mud', r: 3, cone: true },
+      { t: 'hit3', e: 'impact', kind: 'execute', shake: 0.6, stop: 0.1 }, { t: 'hit3', e: 'wave', kind: 'mud', len: 9 }, { t: 0.9, e: 'trail', on: false }], { endRoot: [0, 0, 1.1] });
   }
 }
 
@@ -1647,6 +1759,39 @@ const DEF = {};
     ], [{ t: 'hit', e: 'impact', kind: 'shield', at: 'cone', r: 6, shake: 0.6, stop: 0.1 }, { t: 'hit', e: 'cloud', kind: 'seaspray', r: 4, cone: true }, { t: 'hit', e: 'dust' }, { t: 0.42, e: 'trail', on: true, color: T, w: 1.4, along: 0.85 }, { t: 0.5, e: 'sound', s: 'swing' },
       { t: 'hit2', e: 'impact', kind: 'blunt', at: 'cone', r: 6, shake: 0.85, stop: 0.12 }, { t: 'hit2', e: 'impact', kind: 'seaspray', at: 'cone', r: 6 }, { t: 0.78, e: 'trail', on: false }], { strike: 0.2 });
   }
+  // ---- level 62 and 65 (the Rainward Gorge) ----
+  // Pile Hammer: the hammer hauled up two-handed high over the head with the body rising onto the toes and held a
+  // beat at the top like a pile driver's weight, then dropped straight down onto the machine; the contact is held,
+  // deep in the crouch, in a spray of timber splinters and mud (no swing trail: the overhead arc read as a ring round him)
+  W1('w_pilehammer', 1.15, 'full', [
+    k(0, GL),
+    k(0.12, P(SH, { spine: [22, 0, 0], armR: [-40, 0, -20], foreR: [-60, 0, 0], handR: [30, 0, 0] }, L.deep), { root: [0, -0.26, 0] }),
+    k(0.24, P(SH, overhead({ spine: [-18, 0, 0], chest: [-10, 0, 0], head: [-14, 0, 0] }), L.stand), { root: [0, 0.12, 0] }),
+    k(0.42, P(SH, overhead({ spine: [-26, 0, 0], chest: [-16, 0, 0], head: [-20, 0, 0] }), L.stand), { root: [0, 0.18, 0.02] }),
+    k(0.6 / 1.15, P(SH, slamAt({ spine: [36, 0, 0], chest: [14, 0, 0], head: [14, 0, 0] }, L.deep, [-0.04, 0.3, 1.0], [0.04, -0.8, 0.6], 0.85, 0.16), L.deep), { root: [0, -0.4, 0.12], e: 'snap' }),
+    k(0.68, P(SH, slamAt({ spine: [35, 0, 0], chest: [13, 0, 0], head: [13, 0, 0] }, L.deep, [-0.04, 0.32, 1.0], [0.04, -0.78, 0.62], 0.85, 0.16), L.deep), { root: [0, -0.38, 0.12] }),
+    k(1, GL, { root: R.guard, e: 'smooth' }),
+  ], [{ t: 0.08, e: 'dust' }, { t: 0.4, e: 'sound', s: 'swing' }, { t: 'hit', e: 'impact', kind: 'blunt', shake: 0.75, stop: 0.12 }, { t: 'hit', e: 'impact', kind: 'splinters', at: 'front1' }], { strike: 0.2 });
+  // Crib Wall (capstone): the tower shield drawn in on a back step and driven forward and down into the machines on a
+  // long low lunge, set square like the face of a crib wall (held), then, the shield still set, the hammer swung up
+  // over the right shoulder and brought down behind its rim like the next log dropped on the crib; held
+  {
+    const SET = { armL: [-84, 14, 4], foreL: [-30, -18, 0] };
+    const LL = P(L.lungeL, { thighL: [-74, 0, 6], shinL: [74] });
+    W1('w_cribwall', 1.5, 'full', [
+      k(0, GL),
+      k(0.1, P(G, { spine: [-4, -28, 0], armL: [-50, 70, 40], foreL: [-104, 0, 0] }, L.stepBack), { root: [0, -0.1, -0.12] }),
+      k(0.34 / 1.5, P(G, { spine: [28, 18, 0], head: [10, -12, 0] }, SET, LL), { root: [0, -0.26, 0.4], e: 'snap' }),
+      k(0.3, P(G, { spine: [26, 18, 0], head: [10, -12, 0] }, SET, LL), { root: [0, -0.26, 0.42] }),
+      k(0.4, P(G, { spine: [14, 8, 0], armR: [-60, 0, -20], foreR: [-50, 0, 0], handR: [20, 0, 0], head: [4, -8, 0] }, SET, L.lungeL), { root: [0, -0.16, 0.42] }),
+      k(0.5, P(overhead({ spine: [-14, 0, 0], chest: [-8, 0, 0], head: [-10, 0, 0] }), SET, L.stand), { root: [0, 0.0, 0.42] }),
+      k(0.89 / 1.5, P(slamAt({ spine: [30, 0, 0], chest: [12, 0, 0], head: [12, 0, 0] }, L.lungeL, [-0.04, 0.44, 1.2], [0.06, -0.56, 0.82], 0.85, 0.28), SET, LL), { root: [0, -0.24, 0.42], e: 'snap' }),
+      k(0.68, P(slamAt({ spine: [29, 0, 0], chest: [12, 0, 0], head: [12, 0, 0] }, L.lungeL, [-0.04, 0.42, 1.18], [0.06, -0.54, 0.83], 0.85, 0.28), SET, LL), { root: [0, -0.24, 0.42] }),
+      k(0.84, P(G, { spine: [18, 0, 0], chest: [6, 0, 0], armR: [-40, 0, -20], foreR: [-60, 0, 0], handR: [30, 0, 0], head: [8, 0, 0] }, L.stepL), { root: [0, -0.14, 0.2] }),
+      k(1, GL, { root: R.guard, e: 'smooth' }),
+    ], [{ t: 'hit', e: 'impact', kind: 'shield', at: 'cone', r: 6, shake: 0.6, stop: 0.1 }, { t: 'hit', e: 'cloud', kind: 'mud', r: 4, cone: true }, { t: 'hit', e: 'dust' }, { t: 0.5, e: 'sound', s: 'swing' },
+      { t: 'hit2', e: 'impact', kind: 'blunt', at: 'cone', r: 6, shake: 0.85, stop: 0.12 }, { t: 'hit2', e: 'impact', kind: 'splinters', at: 'cone', r: 6 }], { strike: 0.2 });
+  }
 }
 
 // ============================== HERBALIST =================================
@@ -1899,6 +2044,33 @@ const DEF = {};
   ], [{ t: 0.08, e: 'holdItem', side: 'L', item: 'herbBundle', on: true }, { t: 0.12, e: 'lanternFlare', dur: 0.6 }, { t: 0.16, e: 'trailSmoke', side: 'L', dur: 0.6 }, { t: 0.18, e: 'motes', color: '#e8f4ee', n: 30, at: 'handL', dur: 1.0 }, { t: 0.6, e: 'holdItem', side: 'L', item: 'herbBundle', on: false },
     { t: 0.81, e: 'cloud', kind: 'mist', r: 12, at: 'self' }, { t: 0.81, e: 'cloud', kind: 'seaspray', r: 8, at: 'self' },{ t: 0.83, e: 'motes', color: '#f0fff0', n: 40, dur: 1.2 }],
     { channel: { from: 0.16, to: 0.5, hz: 2.2, bones: { armL: [6, 4, 0], foreL: [-8], handL: [12, 0, 0], spine: [2, 2, 0] } } });
+  // ---- level 62 and 65 (the Rainward Gorge) ----
+  // Moss Dressing: the linen-bound moss pad held to the lantern a moment so the pine water steams, swung back past the
+  // hip and tossed underhand up the front to the ally
+  H1('h_moss', 0.85, [
+    k(0, GL),
+    k(0.16, P(STAFF, { spine: [8, 12, 0], head: [16, -8, 0], armL: [-56, 28, 10], foreL: [-98, 0, 0], handL: [-16, 0, 0] })),
+    k(0.3, P(STAFF, { spine: [10, 14, 0], head: [16, -8, 0], armL: [-58, 32, 8], foreL: [-102, 0, 0], handL: [-6, 0, 0] })),
+    k(0.44, P(STAFF, { spine: [18, -8, 0], head: [10, 6, 0], armL: [24, 0, 18], foreL: [-20, 0, 0], handL: [10, 0, 0] }, L.stepBack), { root: [0, -0.1, -0.04] }),
+    k(0.5 / 0.85, P(STAFF, { spine: [4, -12, 0], head: [0, 8, 0], armL: [-78, 4, 10], foreL: [-12, 0, 0], handL: [-20, 0, 0] }, L.stepL), { root: [0, -0.06, 0.12], e: 'snap' }),
+    k(0.74, P(STAFF, { spine: [0, -12, 0], armL: [-100, 6, 10], foreL: [-20, 0, 0], handL: [-20, 0, 0] }, L.stepL), { root: [0, -0.04, 0.12] }),
+    k(1, GL, { root: R.guard }),
+  ], [{ t: 0.06, e: 'holdItem', side: 'L', item: 'bandage', on: true }, { t: 0.16, e: 'trailSmoke', side: 'L', dur: 0.25 }, { t: 0.16, e: 'motes', color: '#d8f0c8', n: 10, at: 'handL', dur: 0.3 },
+    { t: 0.588, e: 'holdItem', side: 'L', item: 'bandage', on: false }, { t: 0.588, e: 'proj', kind: 'salve', item: 'bandage', from: 'L', arc: 0.5, impact: 'hot' }]);
+  // Cedar Bark Steam (capstone): the staff tipped forward on wide feet so the lantern pan sits before the chest, the
+  // curl of cedar bark and bracken dropped onto it and pressed down while it smokes (the cast), then the staff swept
+  // out low and wide from side to side as the thick resin steam rolls over the party
+  H1('h_cedarsteam', 1.6, [
+    k(0, GL),
+    k(0.14, P(wield({ spine: [12, 4, 0], chest: [2, 0, 0], head: [12, -4, 0] }, [-0.3, 1.06, 0.44], [-0.04, 0.6, 0.8], [-0.7, 0.9, 0.0]), { armL: [-66, 22, 10], foreL: [-84, 0, 0], handL: [14, 0, 0] }, L.wide), { root: [0, -0.14, 0] }),
+    k(0.5, P(wield({ spine: [16, 6, 0], chest: [4, 0, 0], head: [14, -4, 0] }, [-0.3, 1.02, 0.46], [-0.04, 0.58, 0.82], [-0.7, 0.9, 0.0]), { armL: [-60, 24, 8], foreL: [-92, 0, 0], handL: [24, 0, 0] }, L.wide), { root: [0, -0.18, 0] }),
+    k(0.66, P(wield({ spine: [10, 30, 0], chest: [4, 10, 0], head: [6, -10, 0] }, [0.1, 1.2, 0.6], [0.5, 0.2, 0.84], [-0.4, 1.0, 0.2]), { armL: [-60, 30, 30], foreL: [-30, 0, 0] }, L.wide), { root: [0, -0.16, 0] }),
+    k(1.3 / 1.6, P(wield({ spine: [12, -30, 0], chest: [4, -10, 0], head: [6, 10, 0] }, [-0.7, 1.2, 0.5], [-0.6, 0.2, 0.78], [-0.9, 1.0, -0.2]), { armL: [-70, 10, 40], foreL: [-30, 0, 0] }, L.wide), { root: [0, -0.18, 0], e: 'snap' }),
+    k(0.9, P(wield({ spine: [12, -32, 0], chest: [4, -10, 0], head: [6, 10, 0] }, [-0.72, 1.2, 0.48], [-0.6, 0.2, 0.78], [-0.9, 1.0, -0.2]), { armL: [-70, 10, 40], foreL: [-30, 0, 0] }, L.wide), {}),
+    k(1, GL, { root: R.guard }),
+  ], [{ t: 0.08, e: 'holdItem', side: 'L', item: 'herbBundle', on: true }, { t: 0.12, e: 'lanternFlare', dur: 0.6 }, { t: 0.16, e: 'trailSmoke', side: 'L', dur: 0.6 }, { t: 0.3, e: 'holdItem', side: 'L', item: 'herbBundle', on: false },
+    { t: 0.66, e: 'cloud', kind: 'resin', r: 8, at: 'self' }, { t: 0.81, e: 'cloud', kind: 'mist', r: 12, at: 'self' }, { t: 0.81, e: 'cloud', kind: 'resin', r: 12, at: 'self' }, { t: 0.82, e: 'sound', s: 'whoosh' }],
+    { channel: { from: 0.16, to: 0.5, hz: 2.0, bones: { armL: [4, 2, 0], foreL: [-8], handL: [10, 0, 0], spine: [2, 2, 0] } } });
 }
 
 // ============================== DEADEYE ===================================
@@ -2188,6 +2360,24 @@ function gunArm(torso, side, aim, o = {}) {
       ...[0, 1, 2].flatMap((i) => { const h = i ? 'hit' + (i + 1) : 'hit'; return [ball('R', { t: h, big: true }), ball('L', { t: h, big: true }), { t: h, e: 'shake', amt: 0.25 + 0.1 * i }]; }),
       { t: 'hit3', e: 'cloud', kind: 'gunsmoke', r: 3 },
     ], { endRoot: [0, 0, -0.18] }); }
+  // ---- level 62 and 65 (the Rainward Gorge) ----
+  // Gravel Load: the pistol brought up from low on the right and fired down at the tracks; grey gravel bursts off them
+  { const tf = HT('d_gravel', 0.22), d = 0.6;
+    D1('d_gravel', d, 'upper', [
+      k(0, G), k(Math.max(0.04, (tf - 0.12) / d), AIM('R', { pitch: -24, reach: 0.46 }), { e: 'snap' }), k(tf / d, AIM('R', { pitch: -8 }), { e: 'out' }),
+      k((tf + 0.05) / d, AIM('R', { pitch: -8, kick: 1.1 }), { e: 'out' }), k((tf + 0.22) / d, AIM('R', { pitch: -8, kick: 0.15 })), k(1, G),
+    ], [ball('R', { impact: 'gravel' })]); }
+  // Rolling Fire (capstone): down on one knee, the pistols fired one after the other at an even beat, right, left,
+  // right, left, each laid low along the ground at the tracks; each shot kicks its barrel up and the arm comes back
+  // onto the line for the next
+  { const d = 1.6, KN = L.kneel, n = 4;
+    const keys = [k(0, GL), k(Math.max(0.04, (HT('d_rollingfire', 0.3) - 0.16) / d), P(AIM('R', { pitch: -6 }), KN), { root: R.kneel, e: 'snap' })];
+    for (let i = 0; i < n; i++) { const side = i % 2 ? 'L' : 'R', t = HT('d_rollingfire', 0.3, i) / d; keys.push(k(t, P(AIM(side, { pitch: -6 }), KN), { root: R.kneel, hold: true }), k(t + 0.05 / d, P(AIM(side, { pitch: -6, kick: 1.1 }), KN), { root: [0, -0.42, -0.08], e: 'out' }), k(t + 0.2 / d, P(AIM(i % 2 ? 'R' : 'L', { pitch: -6, kick: 0.1 }), KN), { root: R.kneel })); }
+    keys.push(k(0.92, mixPose(P(AIM('L', { pitch: -6 }), KN), GL, 0.5), { root: [0, -0.22, -0.04] }), k(1, GL));
+    D1('d_rollingfire', d, 'full', keys.filter((q, i, a) => i === 0 || q.t > a[i - 1].t).map((q, i) => (i === 1 ? { ...q, e: 'snap' } : q)), [
+      ...[0, 1, 2, 3].flatMap((i) => { const h = i ? 'hit' + (i + 1) : 'hit'; return [ball(i % 2 ? 'L' : 'R', { t: h, impact: 'gravel' }), { t: h, e: 'shake', amt: 0.15 + 0.06 * i }]; }),
+      { t: 'hit4', e: 'cloud', kind: 'gunsmoke', r: 3 },
+    ]); }
 }
 
 // --------------------------------------------------------------------------
@@ -2231,7 +2421,7 @@ const BLEND = new Set([
   'h_dart', 'h_poultice', 'h_net', 'h_antidote', 'h_bark', 'h_sap', 'h_seed',
   // the Deadeye fires on the run: every shot plays on the upper body (Powder Storm and Pressure Volley too)
   'd_snap', 'd_snap_l', 'd_pair', 'd_reload', 'd_powderburn', 'd_knee', 'd_fan', 'd_chalk', 'd_ricochet', 'd_cartridge', 'd_slug', 'd_chain', 'd_quick',
-  'd_lastround', 'd_splitter', 'd_hotshot', 'd_dry', 'd_storm', 'd_pressure', 'd_saltshot',
+  'd_lastround', 'd_splitter', 'd_hotshot', 'd_dry', 'd_storm', 'd_pressure', 'd_saltshot', 'd_gravel',
 ]);
 const MELEE = new Set(['slash', 'blunt', 'pierce', 'sweep', 'shield', 'sand', 'execute', 'shatter', 'earth']);
 

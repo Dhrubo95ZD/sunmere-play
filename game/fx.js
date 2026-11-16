@@ -282,7 +282,7 @@ class ContactShadows {
 }
 
 // ---------------------------------------------------------------- props used by effects
-const ITEM_FLASK = { flaskFire: 'wGlowAmber', flaskAcid: 'wGlowGreen', flaskVolatile: 'wGlowPurple', flaskHeal: 'wGlowRed', flaskElixir: 'wGlowBlue', flaskAntidote: 'wGlowBlue', tonic: 'wGlowGreen', salve: 'wGlowGreen', poultice: 'wGlowGreen', sap: 'wGlowAmber', barkpaste: 'wGlowAmber' };
+const ITEM_FLASK = { flaskLime: 'wCloth', flaskFire: 'wGlowAmber', flaskAcid: 'wGlowGreen', flaskVolatile: 'wGlowPurple', flaskHeal: 'wGlowRed', flaskElixir: 'wGlowBlue', flaskAntidote: 'wGlowBlue', tonic: 'wGlowGreen', salve: 'wGlowGreen', poultice: 'wGlowGreen', sap: 'wGlowAmber', barkpaste: 'wGlowAmber' };
 function itemMesh(item) {
   if (ITEM_FLASK[item]) {
     if (['salve', 'poultice', 'sap', 'barkpaste'].includes(item)) {
@@ -309,6 +309,11 @@ function itemMesh(item) {
       b.add(lathe([[0.001, -0.22], [0.15, -0.22], [0.19, -0.1], [0.2, 0], [0.19, 0.1], [0.15, 0.22], [0.001, 0.22]], 16), 'wWood', { c: '#8a5a32' });
       for (const y of [-0.15, 0, 0.15]) b.add(torus(0.195, 0.01, 4, 20), 'wDark', { p: [0, y, 0], r: [Math.PI / 2, 0, 0], c: 0xffffff });
       b.add(cyl(0.012, 0.012, 0.12, 6), 'wCloth', { p: [0, 0.27, 0], c: '#c8b890' });
+      break;
+    case 'drum': // the Lime Mortar Drum: a squat iron drum, straight sides, flat ends, flush hoops (no barrel belly), a short fuse
+      b.add(cyl(0.15, 0.15, 0.3, 16), 'wDark', { c: '#5a5a56' });
+      for (const y of [-0.11, 0.11]) b.add(cyl(0.153, 0.153, 0.025, 16), 'wDark', { p: [0, y, 0], c: '#3a3a38' });
+      b.add(cyl(0.012, 0.012, 0.08, 6), 'wCloth', { p: [0, 0.19, 0], c: '#c8b890' });
       break;
     case 'clockbomb':
       b.add(cyl(0.12, 0.12, 0.12, 16), 'wBrass', { c: 0xffffff });
@@ -676,6 +681,8 @@ export class FX {
       mist: { color: '#c8f0e0', alpha: 0.35, size: 1.6, add: '#b8ffd8' },
       // Tidewater (level 57-60 skills): a low drift of sea spray, and a brown haze of flung silt
       seaspray: { color: '#e4eef0', alpha: 0.45, size: 1.3, low: true }, silt: { color: '#7a6a52', alpha: 0.55, size: 1.4, low: true },
+      // the Rainward Gorge (level 62-65 skills): a low spray of flung red mud, and a thick resin steam off cedar bark
+      mud: { color: '#7a4a32', alpha: 0.5, size: 1.3, low: true }, resin: { color: '#e8e0d0', alpha: 0.4, size: 1.7 },
       // the Deadeye's Smoke Charge: a low, uneven bank of grey powder smoke (no glow)
       gunsmoke: { color: '#9a948a', alpha: 0.72, size: 2.7, low: true, dens: 1.6 },
     }[kind] || { color: '#888', alpha: 0.5, size: 1.4 };
@@ -951,6 +958,62 @@ export class FX {
         this.decal('tar', p, o.r || 5, 7);
         this.sound('splat'); this.sound('hiss'); break;
       }
+      // ---- the Rainward Gorge (level 62-65 skills): mud, stone, lime, timber and gravel, all physical ----
+      // wet red-brown gorge mud flung off a blow: clods, muddy water and a smear on the ground
+      case 'mud': {
+        const p = pos.clone().setY(g);
+        this.hitCore(up, 0.8, '#e8d8c0');
+        this.emit('drops', up, { n: 22, color: '#6a3a22' });
+        this.emit('drops', p.clone().setY(g + 0.3), { n: 14, color: '#8a5a3a' });
+        this.emit('dust', p.clone().setY(g + 0.2), { n: 4, color: '#7a4a32', size: 0.9, alpha: 0.5 });
+        if (o.r) { this.decal('smudge', p, o.r * 0.6, 5); this.cloud('mud', pos, o.r * 0.7, 1.2); }
+        this.sound('splat'); break;
+      }
+      // a shield set down hard on stony ground: grey stone chips, grit and a puff of stone dust
+      case 'stonechip': {
+        const p = pos.clone().setY(g);
+        this.emit('grit', p.clone().setY(g + 0.3), { n: 18, color: '#8a8a84' });
+        this.emit('shards', p.clone().setY(g + 0.3), { n: 10, color: '#a8a49a' });
+        this.emit('dust', p.clone().setY(g + 0.2), { n: 6, color: '#9a968c', size: 1.0, alpha: 0.6 });
+        this.emit('drops', p.clone().setY(g + 0.2), { n: 10, color: '#6a5a4a' });
+        this.sound('thud'); break;
+      }
+      // burnt lime bursting on wet plating: white chalky lumps and a hard boil of white steam where the rain meets it
+      case 'lime':
+        this.emit('grit', at, { n: 16, color: '#f2f0e8' });
+        this.emit('dust', at, { n: 6, size: 0.8, color: '#eeeae0', alpha: 0.75 });
+        this.emit('steam', at, { n: 10, color: '#f4f4f0', alpha: 0.5, size: 1.4, speed: 1.4 });
+        this.emit('shards', at, { n: 8 });
+        this.sound('glass'); this.sound('hiss'); break;
+      // a drum of lime mortar bursting: a low, flat grey splash, a wide grey stain that sets, steam off the hot lime
+      case 'mortar': {
+        const p = pos.clone().setY(g);
+        this.emit('drops', p.clone().setY(g + 0.4), { n: 56, color: '#8a8880' });
+        this.emit('drops', p.clone().setY(g + 0.9), { n: 24, color: '#b8b4aa' });
+        this.emit('ringdust', p.clone().setY(g + 0.1), { n: 16, r: 1.2, speed: 3.2, color: '#a8a49a' });
+        this.emit('steam', p.clone().setY(g + 0.4), { n: 14, color: '#f0eee8', alpha: 0.5, size: 1.6, speed: 1.2 });
+        this.emit('shards', p.clone().setY(g + 0.4), { n: 6, color: '#d8d4ca' });
+        this.decal('smudge', p, o.r || 5, 7);
+        this.shake(0.3);
+        this.sound('splat'); this.sound('hiss'); break;
+      }
+      // a heavy blow on timber and wet ground: pale wood splinters, bark chips and mud
+      case 'splinters': {
+        const p = pos.clone().setY(g);
+        this.emit('shards', up, { n: 16, color: '#c8a070' });
+        this.emit('flecks', up, { n: 6, color: '#8a6a44' });
+        this.emit('drops', p.clone().setY(g + 0.3), { n: 20, color: '#6a3a22' });
+        this.emit('dust', p.clone().setY(g + 0.2), { n: 5, color: '#7a5a3a', size: 1.0, alpha: 0.5 });
+        if (o.r) this.decal('smudge', p, o.r * 0.5, 5);
+        this.sound('thud'); break;
+      }
+      // a charge of river gravel: grey grit bursting across the tracks and a puff of grey dust
+      case 'gravel':
+        this.hitCore(up, 0.6, '#f0ece4');
+        this.emit('grit', up, { n: 16, color: '#7a7a74' });
+        this.emit('shards', up, { n: 6, color: '#9a968c' });
+        this.emit('dust', up, { n: 3, size: 0.6, color: '#8a8680', alpha: 0.6 });
+        break;
       default: this.hitCore(up, 0.9, '#ffffff'); this.emit('sparks', up, { n: 10 }); this.emit('dust', up, { n: 2, size: 0.5 });
     }
     if (o.shake) this.shake(o.shake);
@@ -1100,6 +1163,7 @@ export class FX {
             const p = start.clone().addScaledVector(fwd, done + 0.5);
             p.y = this.ground(p) + 0.2;
             if (ev.kind === 'dust') { this.emit('dust', p, { n: 4, size: 1.2, speed: 1.5 }); if (done % 2 === 0) this.emit('sparks', p, { n: 2, color: '#ffe0a0' }); }
+            else if (ev.kind === 'mud') { this.emit('drops', p, { n: 5, color: '#6a3a22' }); if (done % 2 === 0) this.emit('grit', p, { n: 3, color: '#7a7268' }); if (done % 3 === 0) this.emit('dust', p, { n: 1, color: '#7a4a32', size: 0.9, alpha: 0.5 }); }
             else if (ev.kind === 'water') { this.emit('drops', p, { n: 5, color: '#d8e8ee' }); if (done % 2 === 0) this.emit('steam', p, { n: 1, color: '#eef4f6', alpha: 0.3, size: 0.9, speed: 0.8 }); }
             else if (ev.kind === 'fire') { this.emit('flame', p, { n: 5, size: 1.1, spread: 0.4 }); this.emit('embers', p, { n: 3 }); if (done % 3 === 0) this.light(p, '#ff7a20', 6, 0.5); }
             else if (ev.kind === 'rock') { this.spike(p.clone().add(V(r(-0.4, 0.4), 0, r(-0.4, 0.4))), r(0.9, 1.8), 1.8); if (done % 2) this.rocks(p, 2, 0.6); this.emit('dust', p, { n: 3 }); }

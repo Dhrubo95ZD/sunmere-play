@@ -2,6 +2,8 @@
 import * as THREE from 'three';
 import { TEX } from './fx.js';
 import { G } from '../engine/globals.js';
+import { DUNGEON_BY_ID, dungeonTide } from '/sunmere-play/shared/dungeons.js';
+import { tideNow } from '/sunmere-play/shared/tidewater.js';
 
 const C = (h) => new THREE.Color(h);
 const r = (a, b) => a + (b - a) * Math.random();
@@ -19,7 +21,10 @@ export class Ambient {
       this.acc.motes += dt * 10;
       while (this.acc.motes > 1) { this.acc.motes--; const a = Math.random() * Math.PI * 2, d = Math.sqrt(Math.random()) * R; const p = new THREE.Vector3(focus.x + Math.cos(a) * d, r(0.4, 3), focus.z + Math.sin(a) * d); this.fx.alpha.spawn({ pos: p, vel: new THREE.Vector3(r(-0.08, 0.08), r(-0.04, 0.04), r(-0.08, 0.08)), age: 0, life: r(4, 7), size: r(0.04, 0.07), tex: TEX.glow, alpha: indoor === 'workshop' ? 0.28 : 0.5, rot: 0, color: C(indoor === 'vault' ? '#f0d8a0' : indoor === 'workshop' ? '#b89868' : '#d8c8b0'), fadeIn: 1.5, fadePow: 2 }); }
       // the Sluice Galleries and the Great Dam: fine spray and frost drifting down through the lamplight, now and then a drip off the icicles
-      if (indoor === 'sluice' || indoor === 'dam' || indoor === 'pump' || indoor === 'mills' || indoor === 'seagate') { this.acc.ash += dt * (indoor === 'dam' ? 15 : 12); while (this.acc.ash > 1) { this.acc.ash--; const a = Math.random() * Math.PI * 2, d = Math.sqrt(Math.random()) * R; const p = new THREE.Vector3(focus.x + Math.cos(a) * d, r(1.5, 4.5), focus.z + Math.sin(a) * d); this.fx.alpha.spawn({ pos: p, vel: new THREE.Vector3(r(-0.15, 0.15), r(-0.5, -0.2), r(-0.15, 0.15)), age: 0, life: r(3, 6), size: r(0.04, 0.08), tex: TEX.glow, alpha: 0.7, rot: 0, color: C('#e8f4ff'), fadeIn: 0.8, fadePow: 2 }); } }
+      if (indoor === 'sluice' || indoor === 'dam' || indoor === 'pump' || indoor === 'mills' || indoor === 'seagate' || indoor === 'adits') { this.acc.ash += dt * (indoor === 'dam' ? 15 : 12); while (this.acc.ash > 1) { this.acc.ash--; const a = Math.random() * Math.PI * 2, d = Math.sqrt(Math.random()) * R; const p = new THREE.Vector3(focus.x + Math.cos(a) * d, r(1.5, 4.5), focus.z + Math.sin(a) * d); this.fx.alpha.spawn({ pos: p, vel: new THREE.Vector3(r(-0.15, 0.15), r(-0.5, -0.2), r(-0.15, 0.15)), age: 0, life: r(3, 6), size: r(0.04, 0.08), tex: TEX.glow, alpha: 0.7, rot: 0, color: C('#e8f4ff'), fadeIn: 0.8, fadePow: 2 }); } }
+      // the Upper Cutting: an open cut, so the squalls come down into it (its own cycle, dungeonTide on the server's clock):
+      // falling drops and splashes round the hero while it pours, thickest at the height of the squall
+      if (indoor === 'cutting') { const T = dungeonTide(DUNGEON_BY_ID.uppercutting, tideNow()), k = T ? Math.max(0, (T.k - 0.3) / 0.7) : 0; if (k > 0.02) { this.acc.splash = (this.acc.splash || 0) + dt * 90 * k; while (this.acc.splash > 1) { this.acc.splash--; const a = Math.random() * Math.PI * 2, d = Math.sqrt(Math.random()) * R; const x = focus.x + Math.cos(a) * d, z = focus.z + Math.sin(a) * d; this.fx.alpha.spawn({ pos: new THREE.Vector3(x, r(3, 7), z), vel: new THREE.Vector3(r(-0.4, 0.4), r(-14, -10), r(-0.4, 0.4)), age: 0, life: 0.45, size: r(0.03, 0.05), tex: TEX.glow, alpha: 0.6, rot: 0, color: C('#dce8ec'), fadeIn: 0.05 }); if (Math.random() < 0.5) this.fx.alpha.spawn({ pos: new THREE.Vector3(x, 0.06, z), vel: new THREE.Vector3(0, 0.7, 0), age: 0, life: 0.25, size: r(0.08, 0.16), tex: TEX.puff, alpha: 0.5, rot: r(0, 6), color: C('#cfd8d4'), grow: 2.5 }); } } }
       if (indoor === 'foundry' || indoor === 'ore' || indoor === 'furnace') { this.acc.ember += dt * (indoor === 'furnace' ? 20 : 14); while (this.acc.ember > 1) { this.acc.ember--; const a = Math.random() * Math.PI * 2, d = Math.sqrt(Math.random()) * R; const p = new THREE.Vector3(focus.x + Math.cos(a) * d, r(0.1, 1.5), focus.z + Math.sin(a) * d); this.fx.add.spawn({ pos: p, vel: new THREE.Vector3(r(-0.3, 0.3), r(0.5, 1.4), r(-0.3, 0.3)), age: 0, life: r(1.5, 3), size: r(0.04, 0.07), tex: TEX.glow, alpha: 1, rot: 0, color: C('#ffb050'), c2: C('#ff3010'), drag: 0.3, fadeIn: 0.3 }); } }
       return;
     }

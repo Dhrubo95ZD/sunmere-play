@@ -10,7 +10,7 @@ import { fire, glowSprite, lanternBuilder, smoke, assemble } from './dynamic.js'
 import { mineCart, railTrack } from './dressing.js';
 import { rubble, stoneStack, workTent } from './quarry.js';
 import { crateStack, campfire, cart } from './props.js';
-import { CELL, cellFloor, dungeonTide } from '/sunmere-play/shared/dungeons.js';
+import { CELL, cellFloor, dungeonTide, dungeonSlip } from '/sunmere-play/shared/dungeons.js';
 import { tideNow } from '/sunmere-play/shared/tidewater.js';
 import { mulberry32 } from '/sunmere-play/shared/noise.js';
 import { getMat } from '../engine/materials.js';
@@ -52,6 +52,8 @@ const THEME = {
   dam: { floor: 'dFloorDeep', wall: 'dWallDeep', wallH: 6.4, light: 0xffc890, floorTint: '#bcc4ca', wallTint: '#a2aab0', floorUs: 0.12 },
   pump: { floor: 'dFloorDeep', wall: 'dWallMine', wallH: 5.6, light: 0xffc890, floorTint: '#aeb2b4', wallTint: '#9a9ea2', floorUs: 0.14 },
   mills: { floor: 'dFloorDeep', wall: 'dWallDeep', wallH: 5.2, light: 0xffc890, floorTint: '#9a9890', wallTint: '#8a8a84', floorUs: 0.15 },
+  adits: { floor: 'dFloorDeep', wall: 'dWallDeep', wallH: 4.8, light: 0xffc890, floorTint: '#8e8072', wallTint: '#7a7268', floorUs: 0.15 },
+  cutting: { floor: 'dFloorMine', wall: 'dWallMine', wallH: 8.5, light: 0xfff0e0, floorTint: '#a8866a', wallTint: '#7e8276', rock: '#6e7068' },
   seagate: { floor: 'dFloorDeep', wall: 'dWallDeep', wallH: 6.2, light: 0xffc890, floorTint: '#8e928c', wallTint: '#7e8480', floorUs: 0.15 },
   workshop: { floor: 'dFloorBoard', wall: 'plaster', wallH: 5.6, light: 0xffd8a0, floorTint: '#f4e8d4', wallTint: '#ece6d8', floorUs: 0.18 },
 };
@@ -182,6 +184,20 @@ export function buildDungeon(D) {
           b.add(box(1.16, 0.24, 0.56), 'dWallDeep', { p: [fx - di * 0.28, H - 0.5, fz - dj * 0.28], r: [0, rot, 0], uv: 'box', us: 0.4, c: '#9aa09c' });
         }
         if (D.theme === 'seagate') b.add(box(CELL + 0.02, 0.14, 0.05), 'snowPack', { p: [fx - di * 0.03, 1.35, fz - dj * 0.03], r: [0, rot, 0], c: '#d8d4ca' });
+        // the Drain Adits: a square timber prop post every few metres under a flat cap, and a red-brown mud line round the
+        // walls a hand above the floor where the slips have run
+        if (D.theme === 'adits' && k % 3 === 0) {
+          b.add(box(0.4, H - 0.5, 0.3), 'dTimber', { p: [fx - di * 0.15, (H - 0.5) / 2, fz - dj * 0.15], r: [0, rot, 0], c: '#4a3c2e' });
+          b.add(box(0.6, 0.24, 0.4), 'dTimber', { p: [fx - di * 0.2, H - 0.38, fz - dj * 0.2], r: [0, rot, 0], c: '#5a4a38' });
+        }
+        if (D.theme === 'adits') b.add(box(CELL + 0.02, 0.5, 0.05), 'dirtPlain', { p: [fx - di * 0.03, 0.3, fz - dj * 0.03], r: [0, rot, 0], c: '#6a4a3a' });
+        // the Upper Cutting: raw rock strata, a stepped buttress of dark rock every few metres with moss on its ledge, and a
+        // red-brown mud line round the walls where the slips have run
+        if (D.theme === 'cutting' && k % 4 === 0) {
+          b.add(box(1.4, H * 0.55, 0.7), 'dWallDeep', { p: [fx - di * 0.35, H * 0.275, fz - dj * 0.35], r: [0, rot, 0], uv: 'box', us: 0.4, c: '#54564f' });
+          b.add(box(1.5, 0.12, 0.8), 'dirtPlain', { p: [fx - di * 0.36, H * 0.55 + 0.06, fz - dj * 0.36], r: [0, rot, 0], c: '#4e5e38' });
+        }
+        if (D.theme === 'cutting') { b.add(box(CELL + 0.02, 0.6, 0.05), 'dirtPlain', { p: [fx - di * 0.03, 0.32, fz - dj * 0.03], r: [0, rot, 0], c: '#6a4a3a' }); b.add(box(CELL + 0.02, 0.08, 0.12), 'dirtPlain', { p: [fx - di * 0.06, H * 0.78, fz - dj * 0.06], r: [0, rot, 0], c: '#4e5e38' }); }
         if (D.theme === 'mills') b.add(box(CELL + 0.02, 0.14, 0.05), 'snowPack', { p: [fx - di * 0.03, 1.15, fz - dj * 0.03], r: [0, rot, 0], c: '#d8d4ca' });
         if (deep && k % 4 === 0) b.add(box(0.6, H - 0.5, 0.22), 'dWallDeep', { p: [fx - di * 0.11, H / 2, fz - dj * 0.11], r: [0, rot, 0], uv: 'box', us: 0.4, c: '#b8b09c' });
         k++;
@@ -276,6 +292,8 @@ export function buildDungeon(D) {
   else if (D.theme === 'dam') dressDam(D, b, { r, rng, isFloorL, addDyn, col, placeRes, group, dyn, torches });
   else if (D.theme === 'pump') dressPump(D, b, { r, rng, isFloorL, addDyn, col, placeRes, group, dyn, torches });
   else if (D.theme === 'mills') dressMills(D, b, { r, rng, isFloorL, addDyn, col, placeRes, group, dyn, torches });
+  else if (D.theme === 'adits') dressAdits(D, b, { r, rng, isFloorL, addDyn, col, placeRes, group, dyn, torches });
+  else if (D.theme === 'cutting') dressCutting(D, b, { r, rng, isFloorL, addDyn, col, placeRes, group, dyn, torches });
   else if (D.theme === 'seagate') dressSeaGate(D, b, { r, rng, isFloorL, addDyn, col, placeRes, group, dyn, torches });
   else if (D.theme === 'workshop') dressWorkshop(D, b, { r, rng, isFloorL, addDyn, col, placeRes, group, dyn, torches });
   else dressFoundry(D, b, { r, rng, isFloorL, torch, addDyn, col, placeRes, group, dyn, torches });
@@ -2006,6 +2024,137 @@ function dressMills(D, b, { r, rng, isFloorL, addDyn, col, placeRes, group, dyn,
   logs(97, 51.5, 0, 2, 5); boards(125, 51, 0); heap(112, 34, 0.8, '#6a6256');
 }
 
+// ----------------------------------------------------------------------------------------- THE DRAIN ADITS (dungeon 'adits')
+// The stone-lined drainage tunnels inside the hill under the Seed Terraces: wet dark stone walls with timber props along them
+// (two square posts and a flat cap: never braced across), red-brown mud everywhere, moss along the wall feet, drips. The
+// Adit Mouth (the propped way in), the Long Drain (a stone drain channel along its south wall, ending at square grates either
+// side of the way in), the Sump Gallery and the Collector. The marked slip lanes (D.lanes) run north to south from square
+// side adit mouths in each chamber's north wall (dark openings between square stone jambs under flat lintels, a mud tongue
+// spilled out of each), edged both sides with pale painted kerb strips, all side by side and never crossing anything; a sheet
+// of mud slides down each lane when the slips burst (shared/dungeons.js dungeonSlip, on the server's clock). The choked sumps
+// (D.sumps): square stone kerbs round a mud-filled pit under an iron grate whose bars all run one way. Lamps on square posts,
+// never in pairs on a face; everything square from above.
+function dressAdits(D, b, { r, rng, isFloorL, addDyn, col, placeRes, group, dyn, torches }) {
+  const ST = '#5e5a52', ST2 = '#4a4640', TB = '#4a3c2e', TB2 = '#5a4a38', IR = '#3a3c38', MUD = '#6a4a3a', MUD2 = '#7c5a44', MOSS = '#4e5e38', PAINTK = '#c8b070';
+  const warm = (x, y, z, k = 1.0) => torches.push({ x: D.ox + x, y, z: D.oz + z, color: 0xffc890, k });
+  // a lamp post: a square timber post shod in iron, a caged lamp on top
+  const post = (x, z, h = 3.0) => {
+    b.add(box(0.5, 0.3, 0.5), 'dWallDeep', { p: [x, 0.15, z], uv: 'box', us: 0.4, c: ST2 });
+    b.add(box(0.22, h, 0.22), 'dTimber', { p: [x, h / 2, z], c: TB });
+    for (const y of [0.6, h - 0.5]) b.add(box(0.28, 0.1, 0.28), 'dIron', { p: [x, y, z], c: IR });
+    lanternBuilder('yellow', 1.05, b, [x, h + 0.05, z]);
+    addDyn(glowSprite(0xffc878, 2.2, 0.7), x, h - 0.35, z);
+    warm(x, h - 0.3, z, 1.2);
+    col(x, z, 0.3);
+  };
+  // mud: a low lopsided slab with lumps (never a dome)
+  const heap = (x, z, s = 1, c = MUD) => { if (!isFloorL(x, z)) return; b.add(box(2.2 * s, 0.06, 1.6 * s), 'dirtPlain', { p: [x, 0.03, z], r: [0, r(-0.3, 0.3), 0], uv: 'box', c }); for (let q = 0; q < 4; q++) b.add(ico(r(0.35, 0.7) * s, 0), 'snowPack', { p: [x + r(-0.9, 0.9) * s, 0.02, z + r(-0.7, 0.7) * s], s: [1.6, 0.28, 1.3], r: [0, r(0, 3), 0], c: q % 2 ? MUD : MUD2 }); };
+  const wet = (x, z, w, d) => b.add(box(w, 0.02, d), 'dWaterDeep', { p: [x, 0.03, z], uv: 'box', us: 0.35 });
+  // a prop set against a wall: two square posts and a flat cap timber, along x (rot 0) or z
+  const props = (x, z, rot, w = 2.6, h = 3.2) => {
+    const c = Math.cos(rot), s = Math.sin(rot);
+    for (const t of [-1, 1]) { b.add(box(0.3, h, 0.3), 'dTimber', { p: [x + c * t * w / 2, h / 2, z - s * t * w / 2], c: TB2 }); col(x + c * t * w / 2, z - s * t * w / 2, 0.25); }
+    b.add(box(w + 0.5, 0.32, 0.36), 'dTimber', { p: [x, h + 0.16, z], r: [0, rot, 0], c: TB });
+  };
+  // a stack of clay drain pipes, parallel, along x (rot 0)
+  const pipes = (x, z, rot, n = 3) => { for (let k = 0; k < n; k++) b.add(cyl(0.22, 0.22, 2.4, 10), 'dTimber', { p: [x - Math.sin(rot) * (k - (n - 1) / 2) * 0.46, 0.22, z - Math.cos(rot) * (k - (n - 1) / 2) * 0.46], r: [0, rot, PI / 2], order: 'YXZ', c: k % 2 ? '#8a5840' : '#9c6448' }); if (n > 2) b.add(cyl(0.22, 0.22, 2.2, 10), 'dTimber', { p: [x, 0.62, z], r: [0, rot, PI / 2], order: 'YXZ', c: '#9c6448' }); col(x, z, 1.2); };
+
+  // ---- the slip lanes: pale kerb strips down both edges, a side adit mouth in the north wall at the top, a mud tongue at its foot
+  const sheets = [];
+  for (const [x0, z0, x1, z1] of D.lanes || []) {
+    const cx = (x0 + x1) / 2, L = z1 - z0, w = x1 - x0;
+    for (const ex of [x0 + 0.12, x1 - 0.12]) b.add(box(0.22, 0.03, L), 'snowPack', { p: [ex, 0.025, (z0 + z1) / 2], c: PAINTK });
+    b.add(box(w - 0.4, 0.015, L), 'dirtPlain', { p: [cx, 0.012, (z0 + z1) / 2], uv: 'box', c: '#5a4234' }); // the lane's floor, stained by every slip
+    // the side adit: a dark square opening in the north wall between two square jambs under a flat lintel
+    const wz = z0 - 0.45;
+    b.add(box(w - 0.6, 2.6, 0.5), 'dCap', { p: [cx, 1.3, wz - 0.2], c: '#070605' });
+    for (const s of [-1, 1]) b.add(box(0.5, 2.9, 0.6), 'dWallDeep', { p: [cx + s * (w / 2 - 0.05), 1.45, wz], uv: 'box', us: 0.4, c: ST });
+    b.add(box(w + 0.6, 0.5, 0.7), 'dWallDeep', { p: [cx, 3.05, wz], uv: 'box', us: 0.4, c: '#6e6a62' });
+    b.add(box(w - 0.6, 0.6, 0.9), 'dirtPlain', { p: [cx, 0.2, wz + 0.3], uv: 'box', c: MUD }); // mud spilled over the sill
+    for (let q = 0; q < 3; q++) b.add(ico(r(0.4, 0.7), 0), 'snowPack', { p: [cx + r(-1, 1), 0.04, z0 + 1 + q * 0.9], s: [1.8, 0.3, 1.4], c: q % 2 ? MUD : MUD2 });
+    // the mud sheet that slides down the lane when it bursts (dynamic, hidden between bursts)
+    const m = new THREE.Mesh(new THREE.BoxGeometry(w - 0.5, 0.14, 1), getMat('dirtPlain'));
+    m.material = m.material.clone(); m.material.color = new THREE.Color('#6a4632');
+    m.position.set(cx, 0.08, z0); m.visible = false; group.add(m);
+    sheets.push({ m, z0, L });
+  }
+  { const fl = new THREE.Group(); fl.userData.update = () => {
+      const S = dungeonSlip(D, tideNow());
+      for (const s of sheets) {
+        if (!S || (!S.running && !S.warn)) { s.m.visible = false; continue; }
+        // the warning: the mud bulges out of the side adit; the burst: the sheet runs the length of the lane in a second
+        const k = S.running ? Math.min(1, 0.15 + S.since / 1.0) : 0.06 + 0.08 * (1 - S.toBurst / D.slip.warn);
+        const len = Math.max(0.3, s.L * k), fade = S.running && S.since > 1.0 ? 1 - (S.since - 1.0) / 0.5 : 1;
+        s.m.visible = fade > 0.02; s.m.scale.set(1, Math.max(0.2, fade), len); s.m.position.z = s.z0 + len / 2;
+      }
+    }; group.add(fl); dyn.push(fl); }
+
+  // ---- the sumps: a square stone kerb, the pit full of mud, an iron grate over it with its bars all one way
+  for (const [px, pz, pr] of D.sumps || []) {
+    const s = pr * 0.62;
+    for (const [qx, qz, bw, bd] of [[px, pz - s, 2 * s + 0.5, 0.5], [px, pz + s, 2 * s + 0.5, 0.5], [px - s, pz, 0.5, 2 * s], [px + s, pz, 0.5, 2 * s]]) b.add(box(bw, 0.3, bd), 'dWallDeep', { p: [qx, 0.15, qz], uv: 'box', us: 0.4, c: ST2 });
+    b.add(box(2 * s - 0.4, 0.04, 2 * s - 0.4), 'dirtPlain', { p: [px, 0.16, pz], uv: 'box', c: MUD });
+    for (const sz of [-1, 1]) b.add(box(2 * s - 0.3, 0.08, 0.14), 'dIron', { p: [px, 0.3, pz + sz * (s - 0.3)], c: IR }); // the grate's two side rails
+    for (let k = -3; k <= 3; k++) b.add(box(0.08, 0.06, 2 * s - 0.6), 'dIron', { p: [px + k * (s - 0.3) / 3.2, 0.3, pz], c: '#4a4c48' }); // its bars, all along z
+    for (let q = 0; q < 4; q++) b.add(ico(r(0.25, 0.45), 0), 'snowPack', { p: [px + r(-s, s) * 0.7, 0.32, pz + r(-s, s) * 0.7], s: [1.6, 0.3, 1.3], c: q % 2 ? MUD : MUD2 }); // mud backed up through it
+    heap(px + s + 1.2, pz + 0.4, 0.6);
+  }
+
+  // ---- the Adit Mouth: the propped way in from the pad, the mud dug back to the walls, two lamps
+  for (const z of [134, 128]) props(72, z, 0, 8.6, 3.6);
+  heap(64.5, 131, 0.8); heap(79.5, 127, 0.7); post(64, 138, 3.0); post(80, 125, 3.0);
+  pipes(77.5, 136.5, PI / 2, 3);
+  // the way in: props down the passage
+  for (const z of [122, 116]) props(72, z, 0, 6.6, 3.4);
+  wet(72, 118, 1.2, 10);
+
+  // ---- the Long Drain: the stone drain channel along the south wall (two runs, ending at square grates either side of the
+  // way in), prop sets along the walls between the lanes, spoil heaps, lamp posts
+  for (const [xa, xb] of [[21, 64], [80, 123]]) {
+    const L = xb - xa, cx = (xa + xb) / 2;
+    b.add(box(L, 0.03, 1.6), 'dWaterDeep', { p: [cx, 0.04, 110.2], uv: 'box', us: 0.35 });
+    b.add(box(L, 0.3, 0.3), 'dWallDeep', { p: [cx, 0.15, 109.1], uv: 'box', us: 0.4, c: ST });
+  }
+  for (const gx of [65.2, 78.8]) { b.add(box(1.8, 0.08, 1.8), 'dIron', { p: [gx, 0.06, 110.2], c: IR }); for (let k = -2; k <= 2; k++) b.add(box(0.08, 0.05, 1.6), 'dIron', { p: [gx + k * 0.32, 0.12, 110.2], c: '#4a4c48' }); }
+  for (const x of [48, 72, 98, 120]) props(x, 81.0, 0, 3.2, 3.6);
+  heap(48, 96, 1.0); heap(96, 96, 1.0); heap(36, 84, 0.8); heap(118, 104, 0.8); heap(70, 84, 1.1, MUD2);
+  for (const [x, z] of [[24, 106], [46, 82], [72, 104], [98, 82], [121, 88]]) post(x, z, 3.2);
+  pipes(64, 84, 0, 3); pipes(80, 86, 0, 2);
+  wet(100, 104, 4, 3); wet(40, 100, 3, 2); // (kept off the way in's line: with its wet strip and the channel's gap it read as a + from above)
+
+  // ---- passage west
+  props(37, 72, PI / 2, 10, 3.3); post(42, 79, 2.8);
+
+  // ---- the Sump Gallery: three choked sumps, props, spoil, pipes
+  for (const x of [14, 26, 46, 70, 80]) props(x, 35.0, 0, 3.0, 3.6);
+  heap(18, 50, 0.9); heap(80, 52, 0.9); heap(30, 64, 0.8); heap(62, 40, 0.8, MUD2);
+  for (const [x, z] of [[12, 40], [12, 66], [82, 66], [64, 66], [30, 40]]) post(x, z, 3.2);
+  pipes(22, 66.5, 0, 3); pipes(52, 66, 0, 3);
+
+  // ---- passage east
+  props(87, 44, PI / 2, 6, 3.3); post(92, 41.5, 2.8);
+
+  // ---- the Collector: where every drain meets. Square inflow mouths in the east and west walls with water running out of
+  // them in short stone channels, square stone piers, the Adit Driver's spoil heaped along the north wall, lamp posts
+  for (const [x, z, s] of [[88.4, 20, 1], [145.6, 20, -1], [145.6, 44, -1]]) {
+    b.add(box(0.5, 1.8, 2.4), 'dCap', { p: [x - s * 0.2, 0.9, z], c: '#070605' });
+    for (const t of [-1, 1]) b.add(box(0.6, 2.1, 0.5), 'dWallDeep', { p: [x, 1.05, z + t * 1.4], uv: 'box', us: 0.4, c: ST });
+    b.add(box(0.7, 0.45, 3.4), 'dWallDeep', { p: [x, 2.3, z], uv: 'box', us: 0.4, c: '#6e6a62' });
+    b.add(box(5, 0.03, 1.2), 'dWaterDeep', { p: [x + s * 2.6, 0.04, z], uv: 'box', us: 0.35 });
+    for (const t of [-1, 1]) b.add(box(5, 0.26, 0.24), 'dWallDeep', { p: [x + s * 2.6, 0.13, z + t * 0.72], uv: 'box', us: 0.4, c: ST2 });
+  }
+  for (const [x, z] of [[94, 8], [140, 8], [94, 52], [140, 52]]) {
+    b.add(box(1.8, 0.45, 1.8), 'dWallDeep', { p: [x, 0.22, z], uv: 'box', us: 0.4, c: ST2 });
+    b.add(box(1.3, 5.0, 1.3), 'dWallDeep', { p: [x, 2.7, z], uv: 'box', us: 0.4, c: ST });
+    b.add(box(1.4, 0.16, 1.4), 'dTimber', { p: [x, 5.2, z], c: TB });
+    b.add(box(1.36, 0.12, 1.36), 'snowPack', { p: [x, 0.7, z], c: MOSS });
+    col(x, z, 1.0);
+  }
+  for (const x of [110, 124]) heap(x, 6.5, 1.3, MUD2);
+  heap(96, 22, 1.0); heap(138, 22, 1.0); heap(117, 30, 0.8);
+  for (const [x, z] of [[92, 30], [142, 30], [110, 54], [124, 54]]) post(x, z, 3.4);
+  addDyn(smoke({ rate: 2, life: 2.4, size: 1.3, rise: 0.8, color: 0x7a6a5a, opacity: 0.3 }), 112, 0.4, 9); addDyn(smoke({ rate: 2, life: 2.2, size: 1.1, rise: 0.8, color: 0x7a6a5a, opacity: 0.28 }), 122, 0.4, 9.5);
+}
 
 // ----------------------------------------------------------------------------------------- THE SEA GATE (raid 'barrage')
 // The galleries inside the Makers' barrage across the mouth of Tidewater Sound: five halls of wet grey dressed stone, south
@@ -2306,6 +2455,116 @@ function dressWorkshop(D, b, { r, rng, isFloorL, addDyn, col, torches }) {
   for (const [x, z] of [[44, 22], [106, 22], [56, 36], [94, 36], [20, 30], [130, 30]]) post(x, z, 3.6);
 }
 
+// ----------------------------------------------------------------------------------------- THE UPPER CUTTING (raid 'uppercutting')
+// The Makers' deep cut at the head of the Rainward Gorge: an open cut, its walls raw dark wet rock in straight strata with
+// moss along the ledges, red-brown mud on every floor, five floors south to north. The Cutting Mouth (a ramp of cut stone
+// steps down from the mouth, the stop-logs stacked beside it), the Stump Field (old cut stumps and pulled stumps lying all
+// one way), the Spoil Run (the conveyor's straight timber belt bed down the floor, spoil heaps along the walls), the Bed
+// Floor (new seed beds rammed level in parallel rows, all along x) and the Cutting Face (the Makers' next steps cut into the
+// north face as straight square ledges, a spoil heap under them). The slip lanes (D.pits, runs of square pads in north-south
+// lines): a trough of raw mud between banded marker posts down both edges, and while it pours a sheet of running mud fills
+// it (shared/dungeons.js dungeonTide on the cut's own squall cycle, the server's clock); everything parallel, never crossing.
+// Lamps on square posts, never in pairs on a face; everything square from above.
+function dressCutting(D, b, { r, isFloorL, addDyn, col, group, dyn, torches }) {
+  const ST = '#5e605a', ST2 = '#4a4c46', TB = '#4a3c2e', TB2 = '#5a4a38', IR = '#3a3c38', MUD = '#6a4a3a', MUD2 = '#7c5a44', MOSS = '#4e5e38', BAND = '#c8b070';
+  const warm = (x, y, z, k = 1.0) => torches.push({ x: D.ox + x, y, z: D.oz + z, color: 0xffc890, k });
+  const post = (x, z, h = 3.4) => {
+    b.add(box(0.55, 0.3, 0.55), 'dWallDeep', { p: [x, 0.15, z], uv: 'box', us: 0.4, c: ST2 });
+    b.add(box(0.24, h, 0.24), 'dTimber', { p: [x, h / 2, z], c: TB });
+    for (const y of [0.6, h - 0.5]) b.add(box(0.3, 0.1, 0.3), 'dIron', { p: [x, y, z], c: IR });
+    lanternBuilder('yellow', 1.05, b, [x, h + 0.05, z]);
+    addDyn(glowSprite(0xffc878, 2.2, 0.7), x, h - 0.35, z);
+    warm(x, h - 0.3, z, 1.2);
+    col(x, z, 0.3);
+  };
+  // mud: a low lopsided slab with flattened lumps on it (never a dome)
+  const heap = (x, z, s = 1, c = MUD) => { if (!isFloorL(x, z)) return; b.add(box(2.4 * s, 0.08, 1.8 * s), 'dirtPlain', { p: [x, 0.04, z], r: [0, r(-0.3, 0.3), 0], uv: 'box', c }); for (let q = 0; q < 5; q++) b.add(ico(r(0.35, 0.75) * s, 0), 'dirtPlain', { p: [x + r(-1, 1) * s, 0.06, z + r(-0.8, 0.8) * s], s: [1.6, 0.35, 1.3], r: [0, r(0, 3), 0], c: q % 2 ? MUD2 : c }); };
+  // a cut stump: a short eight-sided butt with a pale flat top (no roots); lying, it lies along x
+  const stump = (x, z, h = 0.6, rr = 0.45) => { if (!isFloorL(x, z)) return; b.add(cyl(rr, rr * 1.08, h, 8), 'dTimber', { p: [x, h / 2, z], c: '#5a4a3a' }); b.add(cyl(rr * 0.94, rr * 0.94, 0.02, 8), 'dTimber', { p: [x, h + 0.01, z], c: '#b89a72' }); col(x, z, rr); };
+  const butt = (x, z, len = 1.6, rr = 0.35) => { if (!isFloorL(x, z)) return; b.add(cyl(rr, rr * 1.06, len, 8), 'dTimber', { p: [x, rr, z], r: [0, 0, PI / 2], c: '#5a4a3a' }); for (const s of [-1, 1]) b.add(cyl(rr * 0.92, rr * 0.92, 0.02, 8), 'dTimber', { p: [x + s * (len / 2 + 0.01), rr, z], r: [0, 0, PI / 2], c: '#b89a72' }); };
+  const moss = (x, z, w, d) => b.add(box(w, 0.03, d), 'dirtPlain', { p: [x, 0.03, z], uv: 'box', c: MOSS });
+
+  // ---- the slip lanes: group the pads into runs (one x, touching), a mud trough down each run, banded posts both sides,
+  // and the running mud shown while it pours
+  const runs = [];
+  { const byX = new Map(); for (const P of D.pits || []) (byX.get(P[0]) || byX.set(P[0], []).get(P[0])).push(P);
+    for (const [x, L] of byX) { L.sort((a, c) => a[1] - c[1]); let cur = [L[0]]; for (let i = 1; i < L.length; i++) { if (L[i][1] - L[i - 1][1] <= L[0][2] * 1.7) cur.push(L[i]); else { runs.push([x, cur]); cur = [L[i]]; } } runs.push([x, cur]); } }
+  const mudMat = new THREE.MeshStandardMaterial({ color: 0x4a2e20, roughness: 0.3, metalness: 0.1 }), sheets = []; // wet running mud
+  for (const [x, L] of runs) {
+    const s = L[0][2], z0 = L[0][1] - s, z1 = L.at(-1)[1] + s, len = z1 - z0, zm = (z0 + z1) / 2; // (the trough as wide as the strikes: outside the marker posts is always safe)
+    b.add(box(2 * s, 0.03, len), 'dirtPlain', { p: [x, 0.02, zm], uv: 'box', c: '#5a4234' }); // the trough, stained by every slip
+    for (const ex of [-1, 1]) b.add(box(0.2, 0.04, len), 'snowPack', { p: [x + ex * (s - 0.1), 0.035, zm], c: '#8a7a60' });
+    for (let z = z0 + 1.5; z < z1 - 0.5; z += 6) for (const ex of [-1, 1]) {
+      const px = x + ex * (s + 0.5); if (!isFloorL(px, z)) continue;
+      b.add(box(0.16, 1.4, 0.16), 'dTimber', { p: [px, 0.7, z], c: TB2 });
+      for (const y of [0.55, 1.1]) b.add(box(0.18, 0.16, 0.18), 'snowPack', { p: [px, y, z], c: BAND });
+      col(px, z, 0.15);
+    }
+    heap(x + r(-0.5, 0.5), z1 + 1.2, 0.8, MUD2); // the mud tongue at its foot
+    const m = new THREE.Mesh(new THREE.BoxGeometry(2 * s - 0.3, 0.06, 1), mudMat);
+    m.position.set(x, 0.06, zm); m.scale.z = len; m.receiveShadow = true; m.visible = false; group.add(m);
+    sheets.push({ m, z0, len });
+  }
+  { const fl = new THREE.Group(); fl.userData.update = () => {
+      const T = dungeonTide(D, tideNow()), k = T ? T.k : 0;
+      // the sheet runs down from the top (north) end as the squall builds, and drains away as it passes
+      const f = Math.max(0, Math.min(1, (k - 0.35) / 0.4));
+      for (const S of sheets) { S.m.visible = f > 0.02; S.m.scale.z = Math.max(0.01, S.len * f); S.m.position.z = S.z0 + S.len * f / 2; S.m.position.y = 0.05 + 0.05 * f; }
+    }; group.add(fl); dyn.push(fl); }
+
+  // ---- the Cutting Mouth: cut stone steps down from the mouth to a landing, the stop-logs stacked beside, two lamps
+  for (let k = 0; k < 4; k++) b.add(box(6.0, 0.2 + k * 0.2, 0.6), 'dWallDeep', { p: [76, (0.2 + k * 0.2) / 2, 214.3 + k * 0.6], uv: 'box', us: 0.4, c: k % 2 ? ST : ST2 });
+  for (let i = 0; i < 4; i++) b.add(box(0.36, 0.36, 4.2), 'dTimber', { p: [66.2 + (i % 2) * 0.4, 0.18 + Math.floor(i / 2) * 0.37, 210], c: i % 2 ? TB : TB2 }); // the stop-logs, all along z
+  col(66.4, 210, 0.9);
+  post(70, 206, 3.0); post(86, 207, 3.0);
+  heap(80, 198, 0.7);
+
+  // ---- the Stump Field: old cut stumps standing in rows across the field, pulled stumps lying all one way (along x)
+  for (let ix = 0; ix < 9; ix++) for (let iz = 0; iz < 4; iz++) {
+    const x = 28 + ix * 11 + r(-1.5, 1.5), z = 163 + iz * 8.5 + r(-1.2, 1.2);
+    if (Math.abs(x - 50) < 5 || Math.abs(x - 100) < 5 || Math.hypot(x - 75, z - 176) < 9 || r(0, 1) < 0.35) continue;
+    stump(x, z, r(0.4, 0.8), r(0.35, 0.55));
+  }
+  for (const [x, z] of [[30, 178], [118, 178], [64, 164], [88, 190], [40, 192], [110, 163]]) butt(x, z, r(1.4, 2.0), r(0.3, 0.4));
+  for (const [x, z] of [[26, 162], [124, 162], [26, 192], [124, 192], [62, 186], [88, 166]]) post(x, z, 3.6);
+  heap(124, 176, 1.0); heap(26, 170, 0.9); moss(75, 192.5, 30, 1.4);
+
+  // ---- passage east
+  post(106, 155, 3.0); heap(112, 151, 0.7);
+
+  // ---- the Spoil Run: the conveyor's straight timber belt bed down the floor (two rails along z, no sleepers across),
+  // spoil heaps along the walls
+  for (const sx of [-1, 1]) b.add(box(0.3, 0.3, 40), 'dTimber', { p: [108 + sx * 2.2, 0.15, 128], c: TB });
+  b.add(box(4.0, 0.03, 40), 'dirtPlain', { p: [108, 0.03, 128], uv: 'box', c: '#5a4234' });
+  for (const sx of [-1, 1]) { b.add(box(1.2, 0.8, 4.0), 'dWallDeep', { p: [108 + sx * 2.2, 0.4, 106.6], uv: 'box', us: 0.4, c: ST }); }
+  for (const [x, z] of [[78, 112], [138, 112], [78, 146], [138, 146], [96, 128], [120, 128]]) post(x, z, 3.4);
+  heap(80, 128, 1.2); heap(137, 120, 1.1); heap(137, 138, 1.0); heap(96, 148, 0.8);
+
+  // ---- passage west
+  post(87, 100, 3.0); heap(93, 96, 0.6);
+
+  // ---- the Bed Floor: new seed beds rammed level in parallel rows, all along x, between the lanes (dark earth, a pale
+  // rammed edge), the Bed Ram's own square footprints in the next row
+  for (let z = 60; z <= 90; z += 2.6) {
+    b.add(box(36, 0.05, 1.3), 'dirtPlain', { p: [60, 0.04, z], uv: 'box', c: '#3e3024' });
+    b.add(box(36, 0.06, 0.12), 'dirtPlain', { p: [60, 0.05, z - 0.7], c: '#8a6a50' });
+  }
+  for (let i = 0; i < 4; i++) b.add(box(2.4, 0.03, 1.8), 'dirtPlain', { p: [20 + i * 3.4, 0.05, 90.5], c: '#5a4636' });
+  for (const [x, z] of [[16, 60], [104, 60], [16, 90], [104, 90], [42, 92], [78, 58]]) post(x, z, 3.4);
+  heap(104, 75, 0.9); heap(16, 66, 0.8);
+
+  // ---- passage east
+  post(89, 50, 3.0); heap(96, 46, 0.6);
+
+  // ---- the Cutting Face: the next steps of the old plan cut into the north wall as straight square ledges (each set back
+  // from the one below, square corners), a spoil heap under them, stone blocks squared and stacked
+  for (let k = 0; k < 4; k++) b.add(box(110 - k * 14, 1.6, 2.2 - k * 0.3), 'dWallDeep', { p: [75, 0.8 + k * 1.6, 3.1 - k * 0.5], uv: 'box', us: 0.4, c: k % 2 ? ST : ST2 });
+  for (let k = 0; k < 4; k++) moss(75, 2.1 - k * 0.5, 110 - k * 14, 0.4);
+  for (const [x, z] of [[22, 20], [128, 20], [22, 40], [128, 40], [60, 42], [90, 42]]) post(x, z, 3.8);
+  for (const [x, z] of [[36, 8], [114, 8]]) { for (let q = 0; q < 3; q++) b.add(box(1.4, 0.8, 1.0), 'dWallDeep', { p: [x + (q % 2) * 1.5, 0.4 + Math.floor(q / 2) * 0.8, z], uv: 'box', us: 0.4, c: ST }); col(x + 0.75, z, 1.4); }
+  heap(64, 28, 1.3); heap(86, 28, 1.2); heap(124, 30, 0.9); heap(26, 30, 0.9);
+}
+
 // ======================================================================================== OVERWORLD ENTRANCES
 // local, front (the way in) faces +z
 export function dungeonEntrance(D) {
@@ -2319,6 +2578,10 @@ export function dungeonEntrance(D) {
   // the Sea Gate: the north gatehouse's own plank door (tidewaterLayout stoneBlock, 2.2 x 2.3 from the ground, its face
   // 0.27 m behind the door point) shows as an open dark doorway
   if (D.theme === 'seagate') { dark(2.1, 2.2, 0.012, 1.1, -0.22); return res; }
+  // the Drain Adits: the middle adit's own square mouth in the north cliff (rainwardLayout: 3.2 x 3.0, dug open and propped)
+  if (D.theme === 'adits') return res;
+  // the Upper Cutting: the cutting's own mouth in the gorge's head wall (rainwardLayout) is the doorway, already dark inside
+  if (D.theme === 'cutting') return res;
   if (D.door.bare) { dark(1.75, 2.95, 0.12, 0.9 + 1.48, 0.06); return res; }
   if (D.theme === 'warren') {
     // a bolt-hole dug into a grassy bank: timber frame, a plank door hanging open, crates of stolen goods

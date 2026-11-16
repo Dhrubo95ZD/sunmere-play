@@ -376,6 +376,95 @@ DEFS.push({
     [54, 30, 4.6], [96, 30, 4.6], [75, 36, 4.6], // the Engine Hall: three tide wells before the Tide Engine
   ],
 });
+// Part Fourteen: the Drain Adits, the stone-lined drainage tunnels the Makers drove into the hill under the Seed Terraces of the
+// Rainward Gorge (dungeon, level 65). Four chambers south to north, each a plain block joined by a short passage set off the
+// middle (centre, then west, then east), so from above the plan is a staggered run of blocks, never a cross: the Adit Mouth
+// (the middle adit's mouth, dug clear and propped), the Long Drain (the main adit, a stone drain channel along it and side
+// adits in its north wall), the Sump Gallery (square sumps under iron grates where the drains settle their silt) and the
+// Collector, where every drain meets and the Adit Driver, the Makers' great drain-boring machine, stands against the north
+// wall. Not a water rise: the hill is wet and the side adits are choked, so mud slips burst in through them on a timer of
+// their own (slip.period seconds; slip.warn seconds of warning) and run straight down the marked lanes (lanes: local x0, z0,
+// x1, z1, all running north to south, side by side, never crossing): step out of a lane before it bursts. The choked sumps
+// (sumps: local x, z and the radius of the ground they flood) back up with mud while a boss works its chamber, wider each
+// time, until someone stands on a sump's grate long enough to clear it. The door is the middle adit's mouth in the cliff
+// behind the top steps of the Seed Terraces (shared/rainward.js adits[1], its pad held for it; the mouth faces south, its face
+// 0.6 m past the pad's north edge). It opens once Drainman Mukhtar has dug the mouth clear and propped it (Chapter 47,
+// m_c47_mouth).
+DEFS.push({
+  id: 'adits', name: 'The Drain Adits', level: '65', theme: 'adits', ox: 5800, oz: -60, w: 150, h: 142,
+  door: { x: 528.5, z: -3059.4, ry: 0, label: 'The Drain Adits', bare: true },
+  need: { done: 'm_c47_mouth', text: 'The adit mouth is choked with mud and stone to the lintel. Drainman Mukhtar means to dig it clear and prop it before anyone goes in (Chapter 47: "The Middle Adit").' },
+  start: [72, 132], exit: [72, 137],
+  rects: [
+    [62, 124, 82, 140], [68, 110, 76, 126], // the Adit Mouth and the way in
+    [20, 80, 124, 112], // the Long Drain
+    [30, 68, 44, 82], // passage west
+    [10, 34, 84, 70], // the Sump Gallery
+    [80, 40, 94, 48], // passage east
+    [88, 4, 146, 56], // the Collector
+  ],
+  slip: { period: 30, warn: 3.2 },
+  lanes: [
+    [23.8, 80.4, 28.2, 107.6], [55.8, 80.4, 60.2, 107.6], [83.8, 80.4, 88.2, 107.6], [107.8, 80.4, 112.2, 107.6], // the Long Drain (down to its channel)
+    [33.8, 34.4, 38.2, 69.6], [55.8, 34.4, 60.2, 69.6], // the Sump Gallery
+    [101.8, 4.4, 106.2, 55.6], [127.8, 4.4, 132.2, 55.6], // the Collector
+  ],
+  sumps: [
+    [24, 44, 3.4], [47, 60, 3.4], [70, 44, 3.4], // the Sump Gallery
+    [96, 34, 3.6], [138, 34, 3.6], [117, 44, 3.6], // the Collector
+  ],
+});
+// Part Fourteen: the Upper Cutting, the Makers' deep cut at the head of the Rainward Gorge, where their machines carved the
+// terraces out of the hill (raid, level 65). The raid id is 'uppercutting', not 'slip': that is the Slip region's zone id
+// round the cutting's mouth (as the Sea Gate is 'barrage' beside the Tidewater zone 'seagate'). An open cut, its walls raw
+// dark rock, five floors south to north, each a plain block joined by a short passage set off the middle (centre, east,
+// west, east), so from above the plan is a staggered run of blocks, never a cross: the Cutting Mouth (the ramp down from
+// the mouth in the head wall), the Stump Field (old stumps the Stump Puller Prime still pulls), the Spoil Run (the Spoil
+// Conveyor's belt line), the Bed Floor (the Bed Ram's new beds, rammed level to an old plan) and the Cutting Face, where
+// the Terrace Engine that has kept cutting the hill away for a lifetime stands against the north face. Squalls come in over
+// the lip of the cut on a short cycle of their own (tide.period seconds, read by dungeonTide: 'flood' is a squall pouring,
+// 'ebb' the dry spell between), and while it pours the slips run down the marked lanes: each lane a straight north-south
+// run of square slip pads (pits: local x, z and the strike's radius), all the lanes parallel, never crossing. The door is
+// the cutting's mouth in the gorge's head wall (shared/rainward.js cutting, client rainwardLayout: the square cut with its
+// flat lintel), at the east edge of the cutting pad, facing west onto it. It opens once the rain has stopped and the
+// stop-logs are lifted (Chapter 48, m_c48_dry: the cutting floods with mud while it pours).
+DEFS.push({
+  id: 'uppercutting', name: 'The Upper Cutting', level: '65', theme: 'cutting', raid: true, ox: 6000, oz: -60, w: 150, h: 222,
+  door: { x: 657, z: -2990, ry: -PI / 2, label: 'The Upper Cutting', bare: true },
+  need: { done: 'm_c48_dry', text: 'Timber stop-logs are dropped across the cutting mouth, and red mud stands behind them to the top log. Cutwatch Yaqub lifts them only once the rain has stopped (Chapter 48: "After the Rain").' },
+  start: [76, 212], exit: [76, 217],
+  rects: [
+    [64, 204, 88, 218], [72, 192, 80, 206], // the Cutting Mouth and the ramp down
+    [22, 160, 128, 194], // the Stump Field
+    [102, 148, 116, 162], // passage east
+    [76, 106, 140, 150], // the Spoil Run
+    [84, 92, 98, 108], // passage west
+    [12, 56, 108, 94], // the Bed Floor
+    [86, 42, 100, 58], // passage east
+    [12, 2, 138, 44], // the Cutting Face
+  ],
+  tide: { period: 44 }, // the squalls over the cut
+  rain: true,
+  pits: [
+    // the Stump Field: two lanes
+    ...[165.5, 171.1, 176.7, 182.3, 187.9].flatMap((z) => [[50, z, 3.4], [100, z, 3.4]]),
+    // the Spoil Run: two lanes either side of the belt line
+    ...[116, 121.6, 127.2, 132.8, 138.4].flatMap((z) => [[88, z, 3.4], [128, z, 3.4]]),
+    // the Bed Floor: two lanes
+    ...[64, 69.6, 75.2, 80.8, 86.4].flatMap((z) => [[34, z, 3.4], [86, z, 3.4]]),
+    // the Cutting Face: two lanes down from the face
+    ...[8, 13.6, 19.2, 24.8, 30.4, 36].flatMap((z) => [[50, z, 3.4], [100, z, 3.4]]),
+  ],
+});
+// the slips in a dungeon with them (the Drain Adits) at world time t: n (the burst coming next, counted on the world clock),
+// toBurst (seconds to it), warn (inside the warning before it), running (a burst in the lanes now: the first 1.5 s after one).
+// Every player sees the same slips: the client passes the server's clock.
+export function dungeonSlip(D, t) {
+  const S = D?.slip;
+  if (!S) return null;
+  const q = t / S.period, n = Math.floor(q) + 1, toBurst = (n - q) * S.period, since = (q - Math.floor(q)) * S.period;
+  return { n, toBurst, warn: toBurst <= S.warn, running: since < 1.5, since };
+}
 // the short tide in a dungeon with one (the Mill Races) at world time t: k 0 (dry) .. 1 (full), flood (the pits are full
 // enough to drown a strike in), rising. Every player sees the same water: the client passes the server's clock.
 export function dungeonTide(D, t) {

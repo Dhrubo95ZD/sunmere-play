@@ -215,6 +215,38 @@ function build(kind, seed) {
     d.add(cone(0.34, 1.0, 9), 'bushGreen', { p: [0, 2.55, 0], c: '#6a9a52' });
     d.add(box(0.3, 0.05, 0.07), 'woodDark', { p: [0.15, 0.8, 0], c: '#b8a07a' }); // the tie to the stake
     d.add(box(1.1, 0.08, 1.1), 'dirtPlain', { p: [0, 0.07, 0], uv: 'box', c: '#3e3428' }); // pressed down
+  } else if (kind === 'rglift') {
+    // a bed of young poles ready to lift on a Seed Terraces step (Chapter 48): untouched, a row of young poles a man's height
+    // stands in a square bed of dark earth along the step (along x, all one way), each a straight stem under a slim tiered
+    // crown (round from above, no points); lifted, the bed is turned earth and the poles lie bundled beside it, their roots
+    // balled in sacking, all laid one way, tied with two straight bands
+    for (const k of [a, d]) k.add(box(4.6, 0.08, 1.3), 'dirtPlain', { p: [0, 0.04, 0], uv: 'box', c: '#3e3024' });
+    for (let i = 0; i < 5; i++) {
+      const x = -1.8 + i * 0.9;
+      a.add(cyl(0.035, 0.05, 1.5, 6), 'woodDark', { p: [x, 0.75, 0], c: '#6a5440' });
+      a.add(cone(0.34, 1.1, 9), 'bushGreen', { p: [x, 1.45, 0], c: '#5a8a46' });
+      a.add(cone(0.22, 0.6, 9), 'bushGreen', { p: [x, 1.95, 0], c: '#6a9a52' });
+    }
+    d.add(box(4.4, 0.1, 1.1), 'dirtPlain', { p: [0, 0.07, 0], uv: 'box', c: '#4e3e30' }); // turned
+    for (let i = 0; i < 5; i++) d.add(cyl(0.04, 0.05, 2.0, 6), 'woodDark', { p: [0.2, 0.32 + (i % 2) * 0.08, 0.95 + i * 0.09], r: [0, 0, PI / 2], c: '#6a5440' });
+    d.add(box(0.5, 0.36, 0.6), 'cloth', { p: [-1.05, 0.22, 1.13], c: '#8a7a5a' }); // the balled roots in sacking
+    d.add(box(1.4, 0.24, 0.5), 'bushGreen', { p: [1.0, 0.3, 1.13], c: '#4e7a3e' }); // the crowns, laid along
+    for (const x of [-0.4, 0.5]) d.add(box(0.06, 0.4, 0.66), 'leather', { p: [x, 0.34, 1.13], c: '#5a3a22' });
+  } else if (kind === 'twnurse') {
+    // a nursery bed in the lane beside the valley's new row (Chapter 48): a long square bed edged in plain boards (along x).
+    // Untouched, turned earth waiting, a seed tray from the gorge on its end board; laid out, the earth raked level with three
+    // straight rows of tiny seedlings (single leaf cards, all along x), a short stake at each end
+    for (const k of [a, d]) {
+      for (const sz of [-1, 1]) k.add(box(3.0, 0.2, 0.08), 'woodLight', { p: [0, 0.1, sz * 0.6], c: '#8a6e52' });
+      for (const sx of [-1, 1]) k.add(box(0.08, 0.2, 1.28), 'woodLight', { p: [sx * 1.5, 0.1, 0], c: '#8a6e52' });
+    }
+    a.add(box(2.9, 0.1, 1.1), 'dirtPlain', { p: [0, 0.08, 0], uv: 'box', c: '#4e3e30' });
+    for (let i = 0; i < 4; i++) a.add(box(0.5, 0.12, 0.4), 'dirtPlain', { p: [-1 + i * 0.7, 0.16, 0.15 * (i % 2 ? 1 : -1)], c: '#5a4836' });
+    a.add(box(0.6, 0.12, 0.6), 'woodLight', { p: [1.85, 0.06, 0], c: '#9a7a56' });
+    a.add(box(0.52, 0.03, 0.52), 'dirtPlain', { p: [1.85, 0.13, 0], c: '#3e3024' });
+    d.add(box(2.9, 0.12, 1.1), 'dirtPlain', { p: [0, 0.09, 0], uv: 'box', c: '#3e3024' });
+    for (const z of [-0.32, 0, 0.32]) for (let x = -1.3; x <= 1.31; x += 0.2) d.add(box(0.1, 0.1, 0.02), 'cloth', { p: [x, 0.2, z], c: '#8ac460' });
+    for (const sx of [-1, 1]) d.add(box(0.05, 0.6, 0.05), 'woodDark', { p: [sx * 1.6, 0.3, 0], c: '#7a6a52' });
   } else if (kind === 'twhaul') {
     // the Makers' log haulier on its stand between the Tide Mills (Chapter 45), its wagon coupled behind: unwound, still and
     // chocked, moss and silt on its tracks; wound, the chocks out and stacked beside it, the haulier ticking over
@@ -228,6 +260,35 @@ function build(kind, seed) {
     for (let i = 0; i < 4; i++) a.add(lumpy(sphere(0.22, 7, 5), 0.25, 2, seed + 9 + i), 'stoneDark', { p: [-1.3 + i * 0.9, 0.35, (i % 2 ? -0.5 : 0.55)], c: '#5e5c56' });
     d.add(box(3.6, 0.06, 0.8), 'dirtPlain', { p: [0, 0.03, 1.6], uv: 'box', c: '#6e4232' });
     for (let i = 0; i < 3; i++) d.add(lumpy(sphere(0.2, 7, 5), 0.25, 2, seed + 20 + i), 'stoneDark', { p: [-1 + i * 1.1, 0.1, 2.1], c: '#5e5c56' });
+  } else if (kind === 'rggrate') {
+    // a drain grate on a stair lane (Chapter 46): a square stone kerb round a square sump, an iron grate on it with its bars
+    // all one way (along the lane); choked, mud heaped up through the bars and over the kerb; cleared, the grate set flat
+    // and clean, water running in the sump under it
+    for (const k of [a, d]) {
+      for (const [x, z, w, dd] of [[0, -0.85, 1.9, 0.2], [0, 0.85, 1.9, 0.2], [-0.85, 0, 0.2, 1.5], [0.85, 0, 0.2, 1.5]]) k.add(box(w, 0.22, dd), 'stoneDark', { p: [x, 0.11, z], c: '#6a6c66' });
+      for (const sx of [-0.6, 0.6]) k.add(box(0.08, 0.06, 1.5), 'iron', { p: [sx, 0.24, 0], c: '#3a3c38' });
+    }
+    for (let i = -2; i <= 2; i++) d.add(box(0.06, 0.05, 1.4), 'iron', { p: [i * 0.22, 0.25, 0], c: '#4a4c48' });
+    d.add(box(1.4, 0.02, 1.4), 'wDark', { p: [0, 0.06, 0], c: '#2a3a3a' });
+    for (let i = 0; i < 4; i++) a.add(lumpy(sphere(0.55, 8, 6), 0.3, 1.6, seed + i, { flatBottom: 0 }), 'dirtPlain', { p: [-0.6 + i * 0.4, 0.15, (i % 2 ? 0.3 : -0.2)], s: [1.2, 0.5, 1.1], uv: 'box', c: i % 2 ? '#6e4232' : '#7a4a36' });
+  } else if (kind === 'rgchannel') {
+    // a channel head behind a top step (Chapter 46): the square stone channel turning down into its lane; broken, its lining
+    // stones gone and turf and mud slumped in; relined, squared stones laid one on another, water running along it
+    for (const k of [a, d]) for (const sx of [-0.7, 0.7]) k.add(box(0.3, 0.3, 3.2), 'stoneDark', { p: [sx, 0.12, 0], c: '#6a6c66' });
+    for (let i = 0; i < 5; i++) d.add(box(0.5, 0.18, 0.6), 'stoneDark', { p: [0, 0.2, -1.3 + i * 0.65], c: i % 2 ? '#7a7c74' : '#6e706a' });
+    d.add(box(0.9, 0.03, 3.1), 'wWet', { p: [0, 0.3, 0], c: '#3a4a44' });
+    for (let i = 0; i < 3; i++) a.add(lumpy(sphere(0.5, 8, 6), 0.3, 1.6, seed + i, { flatBottom: 0 }), 'dirtPlain', { p: [0, 0.05, -1 + i * 1.0], s: [1.0, 0.5, 1.3], uv: 'box', c: i % 2 ? '#6e4232' : '#5a5a3a' });
+    a.add(box(0.5, 0.18, 0.6), 'stoneDark', { p: [1.3, 0.09, 0.6], r: [0, 0.4, 0], c: '#6e706a' });
+  } else if (kind === 'rgbed') {
+    // a seed bed on a terrace step (Chapter 47): a timber-edged bed along the row; buried, a long tongue of red mud over it;
+    // dug out, dark earth and two straight rows of seedling tufts (single leaf cards, no rosettes)
+    for (const k of [a, d]) {
+      for (const sz of [-1, 1]) k.add(box(6, 0.24, 0.1), 'woodDark', { p: [0, 0.12, sz * 0.65], c: '#5e4c38' });
+      for (const sx of [-1, 1]) k.add(box(0.1, 0.24, 1.3), 'woodDark', { p: [sx * 3.0, 0.12, 0], c: '#5e4c38' });
+      k.add(box(5.9, 0.16, 1.2), 'dirtPlain', { p: [0, 0.1, 0], uv: 'box', c: '#3e3024' });
+    }
+    for (let i = 0; i < 4; i++) a.add(lumpy(sphere(0.75, 9, 6), 0.3, 1.6, seed + i, { flatBottom: 0 }), 'dirtPlain', { p: [-2.1 + i * 1.4, 0.12, 0.05], s: [1.4, 0.45, 1.0], uv: 'box', c: i % 2 ? '#6e4232' : '#7a4a36' });
+    for (const sz of [-0.3, 0.3]) for (let x = -2.6; x < 2.7; x += 0.5) d.add(box(0.03, 0.26, 0.2), 'cloth', { p: [x, 0.3, sz], r: [0, 0.2, 0], c: '#6a9a52' });
   } else if (kind === 'rgshelf') {
     // a seed bed on the shelf over the river (Chapter 45): a timber-edged bed along the shelf; buried, a long tongue of red mud
     // over it; cleared, dark earth and two straight rows of seedling tufts (single leaf cards, no rosettes)
@@ -300,6 +361,18 @@ export function yarnHankNode() {
   return g;
 }
 
+// a lining stone node (Chapter 46, item c46_stone): one squared stone off a terrace channel lying on the strip below the
+// steps, a smear of red mud, a soft glint to spot it by
+export function liningStoneNode() {
+  const b = new Builder(85);
+  b.add(box(0.7, 0.26, 0.36), 'stoneDark', { p: [0, 0.13, 0], r: [0, 0.35, 0], c: '#7a7c74' });
+  b.add(box(0.6, 0.02, 0.5), 'dirtPlain', { p: [0.25, 0.01, 0.35], r: [0, 0.35, 0], uv: 'box', c: '#6e4232' });
+  const g = b.build();
+  const gl = glowSprite(0xfff0c8, 1.5, 0.45); gl.position.y = 0.8; g.add(gl);
+  g.userData.update = (dt, t) => gl.userData.update(dt, t);
+  return g;
+}
+
 // a seed tray node (Chapter 45, item c45_tray): a shallow square timber tray of seedlings lying where a slip left it, two
 // straight rows of single leaf cards in dark earth, a smear of red mud, a soft glint to spot it by
 export function seedTrayNode() {
@@ -365,10 +438,11 @@ export class QuestObjects {
     else if (o.kind === 'restrod') { fx.emit('shards', p.setY(p.y - 0.3), { n: 16, color: '#e0f0f8' }); fx.emit('dust', p, { n: 6 }); sfx?.play('clang'); }
     else if (o.kind === 'restbrake') { fx.emit('sparks', p.setY(p.y + 0.6), { n: 10, color: '#ffd090' }); fx.emit('smoke', p, { n: 4, size: 0.6, color: '#e8e4e0' }); sfx?.play('clang'); }
     else if (o.kind === 'engbrake' || o.kind === 'rowbrake' || o.kind === 'rowice' || o.kind === 'farbrake') { fx.emit('shards', p.setY(p.y + 0.3), { n: 14, color: '#e0f0f8' }); sfx?.play('clang'); }
+    else if (o.kind === 'rglift' || o.kind === 'twnurse') { fx.emit('dust', p.setY(p.y - 0.5), { n: 12, color: '#4e3e30' }); sfx?.play('thud'); }
     else if (o.kind === 'twplant') { fx.emit('dust', p.setY(p.y - 0.4), { n: 10, color: '#5a4c3c' }); sfx?.play('thud'); }
     else if (o.kind === 'twflap' || o.kind === 'twrace') { fx.emit('dust', p.setY(p.y - 0.3), { n: 10, color: '#8a8478' }); sfx?.play('thud'); }
     else if (o.kind === 'twhaul') { fx.emit('smoke', p.setY(p.y + 1.6), { n: 8, color: '#8a8884', size: 0.6 }); fx.emit('dust', p.setY(p.y - 2.0), { n: 10, color: '#5a5148' }); sfx?.play('chain'); }
-    else if (o.kind === 'rgspoil' || o.kind === 'rgshelf') { fx.emit('dust', p.setY(p.y - 0.4), { n: 12, color: '#6e4232' }); sfx?.play('thud'); }
+    else if (o.kind === 'rgspoil' || o.kind === 'rgshelf' || o.kind === 'rggrate' || o.kind === 'rgchannel' || o.kind === 'rgbed') { fx.emit('dust', p.setY(p.y - 0.4), { n: 12, color: '#6e4232' }); sfx?.play('thud'); }
     else if (o.kind === 'twscour') { fx.emit('dust', p.setY(p.y - 0.4), { n: 12, color: '#8a8478' }); fx.emit('shards', p, { n: 8, color: '#6a6458' }); sfx?.play('thud'); }
     else if (o.kind === 'rangeplate') { fx.emit('sparks', p.setY(p.y + 0.15), { n: 8, color: '#ffd090' }); fx.emit('smoke', p, { n: 3, size: 0.5, color: '#c8c4bc' }); sfx?.play('shot'); sfx?.play('clang'); }
     else if (o.kind === 'beacon' || o.kind === 'ridgefire') { fx.emit('flame', p.setY(p.y + 1.0), { n: 14 }); fx.emit('embers', p, { n: 20 }); sfx?.play('ui'); }

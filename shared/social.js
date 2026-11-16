@@ -24,6 +24,8 @@ export const SOCIAL = {
 // Real character names are letters only (server/store.js normName), so a real player can never carry the tag.
 export const BOT_TAG = ' (bot)';
 export const shownName = (name, bot) => (bot ? String(name ?? '') + BOT_TAG : String(name ?? ''));
+// v121: how many real players and how many bots are in a who list (or a list of World players); bots never count as online
+export const onlineCounts = (list) => { let real = 0, bots = 0; for (const r of list || []) if (r?.bot) bots++; else if (r) real++; return { real, bots }; };
 
 const dist = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
 const cleanName = (s) => String(s ?? '').replace(/[^A-Za-z]/g, '').slice(0, 14);
@@ -108,6 +110,11 @@ export const SOCIAL_METHODS = {
   // ------------------------------------------------------------------ who is online
   on_who(p, m) {
     if (!this.allow(p, 'who', 0.5, 3)) return;
+    // v121 the "N online" badge by the minimap: count only (no list), cheap enough to ask every few seconds
+    if (m?.count) {
+      const c = onlineCounts([...this.players.values()].filter((q) => !q.bot || q.wander));
+      return p.session.send({ t: 'who', count: 1, n: c.real, bots: c.bots });
+    }
     const f = cleanName(m?.q).toLowerCase(), friends = new Set((p.friends || []).map((n) => n.toLowerCase()));
     const list = [];
     for (const q of this.players.values()) {
@@ -116,7 +123,8 @@ export const SOCIAL_METHODS = {
       list.push({ id: q.id, name: q.name, cls: q.cls, level: q.level, where: this.whereName(q), guild: q.guild?.name || undefined, party: !!(p.party && q.party === p.party) || undefined, friend: friends.has(q.name.toLowerCase()) || undefined, bot: q.bot ? 1 : undefined });
     }
     list.sort((a, b) => (a.bot || 0) - (b.bot || 0) || a.name.localeCompare(b.name));
-    p.session.send({ t: 'who', list: list.slice(0, 200), n: list.filter((x) => !x.bot).length });
+    const c = onlineCounts(list);
+    p.session.send({ t: 'who', list: list.slice(0, 200), n: c.real, bots: c.bots, q: f || undefined });
   },
 
   // ------------------------------------------------------------------ friends (kept with the character)

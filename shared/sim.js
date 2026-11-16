@@ -2,7 +2,7 @@
 // Players move client-side (validated); combat, mobs, loot, quests and progression live here.
 import { CLASSES, SKILLS, SKILL_BY_ID, LEVEL_CAP, xpForLevel, powerAt } from './classes.js';
 import { MOBS, SPAWNS, NPCS, QUESTS, ITEMS, LOOT_TABLES, VENDORS, NODES, GEAR_NAMES, GEAR_PREFIX, GRAVEYARDS, OBJECTS, OBJECT_KINDS, CARAVANS, WORLD_EVENTS, COMPANIONS, companionCost, MUSTER, HOME_DECO, HOME_TROPHIES, HOME_SPOTS, HOME_MOVABLE, WANDERERS, WANDERER_LINES, WANDERER_LINES_AREA, RUNABOUT, FACTIONS, REP_RANKS, REP_CAP, REP_SHOP, repRank, factionOfZone, EMOTES, SETS, RECIPES, RECIPE_BY_ID, SALVAGE, PAINTS, PETS, ARENA, ARENA_POOL, ESCORTS, DUR_LOSS, repairCost, DUEL, DUEL_YES, DUEL_NO, POST, TRADE, ORDER_FROM, tradeFair, BAG_BASE, BAG_V, RESTED, RECALL, mountSpeed, mountKind, LOADOUT_LEVEL, BOUNTY, PROF_NAME, PROF_MAX, profColor, TEMPEST, tempestMods, weekNumber, LEDGER, GUILD, GUILD_LINES, LEGENDARIES, DRAGONSLAYER, DS_BOSS, DS_NORMAL_CHANCE, DRAGONSLAYER_ARMOUR, DSA_SOURCE, DSA_HEROIC_CHANCE, DSA_NORMAL_CHANCE, DRAWINGS, MARK_SHOP, VALLEY, SAIL, sailRoutes , npcSeen, ENDGAME_LVL, UPGRADE_DROPS, QUALITY_NAME } from './data.js';
-import { DUNGEONS, DUNGEON_BY_ID, DUNGEON_MIN_X, dungeonAt, dungeonPush, dungeonSpot, dungeonTide } from './dungeons.js';
+import { DUNGEONS, DUNGEON_BY_ID, DUNGEON_MIN_X, dungeonAt, dungeonPush, dungeonSpot, dungeonTide, dungeonSlip } from './dungeons.js';
 import { heightAt, walkHeight, zoneAt, waterAt, waterNear, waterKind, LAKE, WORLD, AREA_BY_ID, islandAt, areaOf, inWorld, clampWorld, regionAt } from './terrain.js';
 import { mulberry32 } from './noise.js';
 import { tpSpot } from './tpspot.js';
@@ -3142,8 +3142,8 @@ export class World {
       const a = this.aoes[i];
       if (this.time < a.t) continue;
       this.aoes.splice(i, 1);
-      const src = this.mobs.get(a.src);
-      if (!src || src.dead) continue;
+      const src = this.mobs.get(a.src) || a.caller;
+      if (!src || (src.dead && !a.caller)) continue; // (a slip's lane burst lands even after its caller is dead)
       // bots (volunteers, companions) cannot read the telegraph, so they are taken to step out of most of it (v120: boss fights
       // now last long enough for many telegraphs to land, and a muster party of bots must still win the early dungeons)
       for (const p of this.players.values()) if (!p.dead && a.spots.some((sp) => Math.hypot(p.x - sp.x, p.z - sp.z) < sp.r) && !(p.bot && rand() < BOT_SIDESTEP)) this.playerDamaged(p, src, a.dmg);
@@ -3462,6 +3462,7 @@ export class World {
     if (!m.abT || m.abT.length !== list.length) m.abT = list.map((ab) => (ab.every || 0) * R(0.45, 0.75));
     // a dungeon with its own short tide (the Mill Races): abilities with tide 'flood' / 'ebb' wait for their half of it
     const TD0 = m.sp?.dungeon ? DUNGEON_BY_ID[m.sp.dungeon] : null, TD = TD0 ? dungeonTide(TD0, this.time) : null;
+    const abDmg = (ab) => R(def.dmg[0], def.dmg[1]) * (1 + 0.18 * (m.level - 1)) * mobAbilityMul(m.level) * groupDmg(m) * ab.dmg * (m.enraged ? 1.15 : 1) * (this.tmod(m, 'heavy') ? 1.15 : 1) * (m.rh ? 1.25 : 1);
     list.forEach((ab, i) => {
       const hpf = m.hp / m.maxHp;
       if ((ab.below != null && hpf > ab.below) || (ab.above != null && hpf <= ab.above)) return; // not this phase
@@ -3470,6 +3471,37 @@ export class World {
         return;
       }
       if (ab.tide && (!TD || TD.flood !== (ab.tide === 'flood'))) return; // not this tide
+      if (ab.kind === 'lanes') { // the dungeon's mud slips (the Drain Adits): each marked lane near the mob bursts once a slip
+        const SL = TD0 ? dungeonSlip(TD0, this.time) : null; // (any mob fighting near it calls it; a lane is told once per burst)
+        if (!SL || !SL.warn) return;
+        const done = (this.slipDone ||= {}), spots = [];
+        (TD0.lanes || []).forEach(([x0, z0, x1, z1], li) => {
+          const key = TD0.id + ':' + li, X0 = TD0.ox + x0, X1 = TD0.ox + x1, Z0 = TD0.oz + z0, Z1 = TD0.oz + z1;
+          if (done[key] === SL.n || Math.hypot(m.x - clamp(m.x, X0, X1), m.z - clamp(m.z, Z0, Z1)) > (ab.reach || 34)) return;
+          done[key] = SL.n;
+          const r = Math.max(X1 - X0, 0.5) / 2 + 0.3, cxl = (X0 + X1) / 2;
+          for (let z = Z0 + r * 0.7; z <= Z1 - r * 0.5 + 0.01; z += r * 1.3) spots.push({ x: +cxl.toFixed(2), z: +z.toFixed(2), r: +r.toFixed(2) });
+        });
+        if (!spots.length) return;
+        // (the mud comes from the hill, not the machine: the burst lands on the clock even if its caller falls or is gone,
+        // since the lanes are already told for this slip and nothing else will call them again)
+        this.aoes.push({ t: this.time + SL.toBurst, spots, dmg: abDmg(ab), src: m.id, kind: 'lanes', caller: m });
+        this.broadcast({ k: 'tele', id: m.id, kind: 'lanes', spots, t: SL.toBurst, name: 'Mud slip' });
+        if (ab.text) this.broadcast({ k: 'yell', id: m.id, text: ab.text });
+        return;
+      }
+      if (ab.kind === 'sumps') { // the choked sumps of the mob's chamber: stand on a grate long enough and it runs clear for a while
+        if (m.hp >= m.maxHp) m.sumps = null; // a fresh pull: every sump choked again
+        const ss = (m.sumps ||= {});
+        (TD0?.sumps || []).forEach(([sx, sz], k) => {
+          const x = TD0.ox + sx, z = TD0.oz + sz, st = (ss[k] ||= { lv: 0, hold: 0, clr: -1e9 });
+          if (Math.hypot(x - m.x, z - m.z) > (ab.reach || 34) || this.time - st.clr < (ab.clear || 24)) return;
+          const on = [...this.players.values()].some((p) => !p.dead && !p.bot && Math.hypot(p.x - x, p.z - z) < 1.6);
+          st.hold = on ? st.hold + dt : 0;
+          if (st.hold >= (ab.hold || 2)) { st.hold = 0; st.lv = 0; st.clr = this.time; this.broadcast({ k: 'yell', id: m.id, text: ab.cleared || 'The grate gives, and the backed-up mud drains away down the sump!' }); }
+        });
+      }
+
       if (ab.kind === 'phase') {
         m.phaseDone = m.phaseDone || {};
         if (!m.phaseDone[i]) { m.phaseDone[i] = true; this.broadcast({ k: 'yell', id: m.id, text: ab.text }); }
@@ -3519,6 +3551,14 @@ export class World {
         }
         if (!spots.length) return;
         m.ry = Math.atan2(tgts[0].x - m.x, tgts[0].z - m.z);
+      } else if (ab.kind === 'sumps') {
+        // every choked sump in reach backs up, a little wider each time (up to ab.max steps), until it is cleared
+        (TD0?.sumps || []).forEach(([sx, sz, sr], k) => {
+          const x = TD0.ox + sx, z = TD0.oz + sz, st = m.sumps?.[k];
+          if (!st || Math.hypot(x - m.x, z - m.z) > (ab.reach || 34) || this.time - st.clr < (ab.clear || 24)) return;
+          spots.push({ x, z, r: +(sr * (1 + 0.3 * st.lv)).toFixed(2) }); st.lv = Math.min(ab.max || 3, st.lv + 1);
+        });
+        if (!spots.length) return;
       } else if (ab.kind === 'nova') spots.push({ x: +m.x.toFixed(2), z: +m.z.toFixed(2), r: ab.r + def.radius * 0.5 });
       else if (ab.kind === 'pits') {
         // the flooded pits of the boss's chamber (the dungeon's pits within reach): stand out of the water
@@ -3534,9 +3574,9 @@ export class World {
           spots.push({ x: +x.toFixed(2), z: +z.toFixed(2), r: ab.r });
         }
       }
-      const dmg = R(def.dmg[0], def.dmg[1]) * (1 + 0.18 * (m.level - 1)) * mobAbilityMul(m.level) * groupDmg(m) * ab.dmg * (m.enraged ? 1.15 : 1) * (this.tmod(m, 'heavy') ? 1.15 : 1) * (m.rh ? 1.25 : 1);
+      const dmg = abDmg(ab);
       this.aoes.push({ t: this.time + ab.delay, spots, dmg, src: m.id, kind: ab.kind });
-      this.broadcast({ k: 'tele', id: m.id, kind: ab.kind, spots, t: ab.delay, name: { circles: 'Ground strikes', nova: 'Blast', beam: 'Beam', pits: 'Flooding pits' }[ab.kind] || 'Attack' });
+      this.broadcast({ k: 'tele', id: m.id, kind: ab.kind, spots, t: ab.delay, name: ab.label || { circles: 'Ground strikes', nova: 'Blast', beam: 'Beam', pits: 'Flooding pits', sumps: 'Backed-up sumps' }[ab.kind] || 'Attack' });
       if (ab.text) this.broadcast({ k: 'yell', id: m.id, text: ab.text });
       m.swingT = Math.max(m.swingT, Math.min(ab.delay, 1.2));
     });

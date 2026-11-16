@@ -213,6 +213,22 @@ export const ACHIEVEMENTS = [
   A('rGreatDredge', 'Combat', 'Run Aground at Last', 'Defeat the Great Dredge on the mud flats of Tidewater Sound.', { c: 'kill:greatdredge', n: 1 }, { pts: 10 }),
   // Part Fourteen: the Rainward Gorge
   A('haulRoad', 'Quests', 'By the Haul Road', 'Finish Chapter 45 of the Main Story: wind the Makers’ log haulier to work, ride the haul road up the Rainward Gorge, and meet the Seedwrights.', { c: 'quest:m_c45_spring', n: 1 }, { pts: 25 }),
+  // the Drain Adits (P14.4, dungeon) and Chapters 46-47
+  A('rSpoilTipper', 'Dungeons', 'Tipped Out', 'Defeat the Spoil Tipper in the Drain Adits.', { c: 'kill:spoiltipper', n: 1 }, { pts: 10 }),
+  A('rSumpRam', 'Dungeons', 'Grates Up', 'Defeat the Sump Ram in the Drain Adits.', { c: 'kill:sumpram', n: 1 }, { pts: 10 }),
+  A('rDrainAdits', 'Dungeons', 'The Hill Drains', 'Defeat the Adit Driver in the Drain Adits.', { c: 'kill:aditdriver', n: 1 }, { pts: 25 }),
+  A('rhDrainAdits', 'Dungeons', 'Heroic: The Drain Adits', 'Defeat the Adit Driver on Heroic.', { c: 'rhkill:aditdriver', n: 1 }, { title: 'the Drainman', pts: 50 }),
+  A('drainsRun', 'Quests', 'The Drains Run', 'Finish Chapter 46 of the Main Story: clear the terrace grates, reline the channel heads, and set the Seed Terraces’ drains running.', { c: 'quest:m_c46_choked', n: 1 }, { pts: 25 }),
+  A('bedsDry', 'Quests', 'Beds Under the Mud', 'Finish Chapter 47 of the Main Story: dig the beds out, open the middle adit, and stop the Adit Driver so the hill can drain.', { c: 'quest:m_c47_dry', n: 1 }, { pts: 25 }),
+  // the Upper Cutting (P14.5, raid 'uppercutting', level 65), Chapter 48 and the end of Part Fourteen
+  A('rStumpPrime', 'Dungeons', 'Pulled Up Short', 'Defeat the Stump Puller Prime in the Upper Cutting.', { c: 'kill:stumpprime', n: 1 }, { pts: 25 }),
+  A('rSpoilConveyor', 'Dungeons', 'End of the Belt', 'Defeat the Spoil Conveyor in the Upper Cutting.', { c: 'kill:spoilconveyor', n: 1 }, { pts: 25 }),
+  A('rBedRam', 'Dungeons', 'Rammed Level', 'Defeat the Bed Ram in the Upper Cutting.', { c: 'kill:bedram', n: 1 }, { pts: 25 }),
+  A('rUpperCutting', 'Dungeons', 'The Last Step', 'Defeat the Terrace Engine in the Upper Cutting.', { c: 'kill:terraceengine', n: 1 }, { title: 'of the Upper Cutting', pts: 50 }),
+  A('rhUpperCutting', 'Dungeons', 'Heroic: The Upper Cutting', 'Defeat the Terrace Engine on Heroic.', { c: 'rhkill:terraceengine', n: 1 }, { title: 'the Hillwright', pts: 100 }),
+  A('rHillLeveller', 'Combat', 'Levelled at Last', 'Defeat the Hill Leveller on the Slip in the Rainward Gorge.', { c: 'kill:hillleveller', n: 1 }, { pts: 10 }),
+  A('rainwardGorge', 'Quests', 'The Rainward Gorge', 'Finish Part Fourteen of the Main Story: stop the Terrace Engine so the hill holds, send the first load of young poles down the haul road and up the lift, and lay out a nursery of your own.', { c: 'quest:m_c48_after', n: 1 }, { title: 'of the Rainward Gorge', pts: 25 }),
+  A('gorgeAll', 'Quests', 'Keeper of the Gorge', 'Do everything Part Fourteen asks: finish its story, set the drains running and the hill draining, and stop the Adit Driver, the Terrace Engine and the Hill Leveller.', { req: ['rainwardGorge', 'haulRoad', 'drainsRun', 'bedsDry', 'rDrainAdits', 'rUpperCutting', 'rHillLeveller'] }, { title: 'Keeper of the Gorge', pts: 50 }),
 ];
 
 export const ACH_BY_ID = Object.fromEntries(ACHIEVEMENTS.map((a) => [a.id, a]));

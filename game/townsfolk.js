@@ -616,6 +616,12 @@ export class Townsfolk {
     for (const [x, z, v] of [[530.6, -2605.5, 5], [576.6, -2608.5, 8]]) add('villager', v, { role: 'hoe', at: [x, z], face: -PI / 2, ghost: true });
     { const p = add('villager', 1, { role: 'stroll', spots: [[581, -2606.5], [582, -2603.5], [587.5, -2596]], walk: 1.0 }); p.hold = CARRY; const c = propCrate(); c.position.set(0, 1.12, 0.36); p.char.add(c); }
     { const a3 = add('villager', 4, { role: 'chat', at: [544, -2593], face: Math.atan2(1.3, -0.8) }), b3 = add('villager', 7, { role: 'chat', at: [545.3, -2593.8], face: Math.atan2(-1.3, 0.8) }); a3.partner = b3; b3.partner = a3; a3.speaker = true; }
+    // the Rainward Gorge's Seedwrights at work (their spots come from the gorge's dressing pass: rainwardLayout.js W.rainwardFolk)
+    for (const f of world.rainwardFolk || []) {
+      const p = add('villager', f.v, f.o);
+      if (f.tool) p.char.userData.bones.weaponR.add(handTool(f.tool));
+      if (f.carry) { p.hold = CARRY; const c = f.carry === 'sack' ? propSack() : propCrate(); c.position.set(0, 1.12, 0.36); p.char.add(c); }
+    }
     this.addVillageWork(add, scene, T);
     this.addIndoor(add);
     this.arrows = [];

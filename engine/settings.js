@@ -27,14 +27,15 @@ export const KEY_ACTIONS = [
   ['skill23', 'Skill 23 (level 47)', 'KeyT'], ['skill24', 'Skill 24 (level 50)', 'KeyV'], // R rides, F interacts, G recalls: T and V are the next free keys
   ['skill25', 'Skill 25 (level 52)', 'KeyX'], ['skill26', 'Skill 26 (level 55)', 'KeyP'], // Z hides the interface, H is help: X and P are the last free letters
   ['skill27', 'Skill 27 (level 57)', 'BracketLeft'], ['skill28', 'Skill 28 (level 60)', 'BracketRight'], // no letters left: [ and ] sit beside P
+  ['skill29', 'Skill 29 (level 62)', 'Semicolon'], ['skill30', 'Skill 30 (level 65)', 'Quote'], // ; and ' sit under [ and ]
 ];
 SETTINGS.keys = { ...Object.fromEntries(KEY_ACTIONS.map(([a, , k]) => [a, k])), ...(SETTINGS.keys || {}) };
 export const keyFor = (action) => SETTINGS.keys[action];
 export const actionFor = (code) => { for (const [a] of KEY_ACTIONS) if (SETTINGS.keys[a] === code) return a; return null; };
-export const keyLabel = (code) => (code || '').replace(/^Key/, '').replace(/^Digit/, '').replace('Equal', '=').replace('Minus', '-').replace('Space', 'Space').replace('Numpad', 'Num ').replace('Backquote', '`').replace('BracketLeft', '[').replace('BracketRight', ']'); // metres of world shown from the minimap's centre to its rim
+export const keyLabel = (code) => (code || '').replace(/^Key/, '').replace(/^Digit/, '').replace('Equal', '=').replace('Minus', '-').replace('Space', 'Space').replace('Numpad', 'Num ').replace('Backquote', '`').replace('BracketLeft', '[').replace('BracketRight', ']').replace('Semicolon', ';').replace('Quote', "'"); // metres of world shown from the minimap's centre to its rim
 let _saved = {};
 try { _saved = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; Object.assign(SETTINGS, _saved); } catch { /* private window: defaults */ }
-// keys added since the options were saved (skills 21 to 28) get their defaults, unless the key is already taken
+// keys added since the options were saved (skills 21 to 30) get their defaults, unless the key is already taken
 { const taken = new Set(Object.values(SETTINGS.keys || {})); for (const [a, , k] of KEY_ACTIONS) if (!(SETTINGS.keys ||= {})[a]) SETTINGS.keys[a] = taken.has(k) ? '' : k; }
 
 // touch controls (phones and tablets; the desktop ignores them). Saved options are merged over these defaults, so

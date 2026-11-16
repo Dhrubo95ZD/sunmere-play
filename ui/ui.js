@@ -431,8 +431,8 @@ export class UI {
     const rows = [$('.row1', this.root), $('.row2', this.root), $('.row3', this.root)];
     this.slots = [];
     list.forEach((s, i) => {
-      // skills 21 to 28 (levels 42 to 60) sit on a short third row, a tab on the top right of the bars, on
-      // their own keys (Q, E, T, V, X, P, [ and ] by default), so the bars keep their width and stay clear of the chat and the menu buttons
+      // skills 21 to 30 (levels 42 to 65) sit on a short third row, a tab on the top right of the bars, on
+      // their own keys (Q, E, T, V, X, P, [, ], ; and ' by default), so the bars keep their width and stay clear of the chat and the menu buttons
       const row = rows[i < 10 ? 0 : i < 20 ? 1 : 2];
       const b = el('div', 'slot');
       b.innerHTML = `<img src="${skillIcon(s)}"><div class="cd"></div><span class="key">${skillKeyLabel(i, true)}</span><span class="cdt"></span><div class="lock"><span>${s.lvl}</span></div>`;
@@ -1375,7 +1375,7 @@ export class UI {
       const lname = (t) => { const s = TALENTS[cls].map((P, pi) => [P.name, pathSpent(cls, t || {}, pi)]).sort((a, b) => b[1] - a[1]); return s[0][1] ? `${s[0][0]} ${s.map((x) => x[1]).join('/')}` : 'Empty'; };
       const sets = y.level < TALENT_START ? '' : `<div class="tl-sets">${[0, 1].map((i) => `<button class="tl-set ${i === lo ? 'on' : ''}" data-i="${i}" ${i !== lo && y.level < 10 ? 'disabled title="Opens at level 10"' : ''}>${i + 1}. ${lname(L[i])}${i === lo ? ' (active)' : ''}</button>`).join('')}</div>`;
       const gearNote = y.level < 10 ? '' : `<div class="tl-gearnote">Each set also remembers the gear it wore when you left it${(y.lgear || []).some(Boolean) ? ` (${[0, 1].map((i) => `set ${i + 1}: ${y.lgear?.[i] ? y.lgear[i] + ' pieces' : 'not yet'}`).join(', ')})` : ''}, and puts it back on when you return.</div>`;
-      $('.wb', w).innerHTML = sets + gearNote + head + `<div class="tl-paths">${cols}</div><div class="bag-hint">${IS_TOUCH ? 'Tap' : 'Click'} a talent to learn a rank. Rows open as you spend points in the same path (3, 6, 10, 14, 18, 19, 20, 21, 22 and 23).</div>`;
+      $('.wb', w).innerHTML = sets + gearNote + head + `<div class="tl-paths">${cols}</div><div class="bag-hint">${IS_TOUCH ? 'Tap' : 'Click'} a talent to learn a rank. Rows open as you spend points in the same path (3, 6, 10, 14, 18, 19, 20, 21, 22, 23 and 24).</div>`;
       w.querySelectorAll('.tl').forEach((e) => {
         const t = TALENTS[cls].flatMap((P) => P.list).find((x) => x.id === e.dataset.id);
         e.onclick = () => { this.g.send({ t: 'talent', id: t.id }); this.g.sfx?.play('ui'); };
@@ -2166,7 +2166,7 @@ export class UI {
     $('.wb', w).innerHTML = `<div class="help"><p><button class="news-btn">What’s new</button></p>${IS_TOUCH ? `
       <p><b>Touch:</b> put your left thumb anywhere on the left of the screen to walk (push further to run). Drag on the right to turn the camera and pinch to zoom. Tap an enemy to target it, and the big buttons at the bottom right to fight (the arrow button shows more skills). Tap a person, remains or a mushroom to walk up to it, or tap the round prompt when it shows. The buttons at the top open chat, your character, your bags and every other window. In a window, tap an item for its details and what you can do with it; hold a finger on anything for its tooltip.</p>` : ''}
       <p><b>Move:</b> WASD or left-click the ground. <b>Jump:</b> Space. <b>Camera:</b> mouse wheel to zoom, hold the right mouse button and drag to turn.</p>
-      <p><b>Target:</b> click an enemy or press Tab. <b>Skills:</b> 1-0 and Shift+1-0 (you learn one per level); the skills of levels 42 to 60 sit on Q, E, T, V, X, P, [ and ] (change them in Options).</p>
+      <p><b>Target:</b> click an enemy or press Tab. <b>Skills:</b> 1-0 and Shift+1-0 (you learn one per level); the skills of levels 42 to 65 sit on Q, E, T, V, X, P, [, ], ; and ' (change them in Options).</p>
       <p><b>Talk / loot / gather / enter dungeons:</b> walk up and press <b>F</b>, or right-click people, sparkling remains and glowing mushrooms.</p>
       <p><b>The valley:</b> Sunmere and its meadows (1-5), the Glade and Ironcliff Quarry (5-10), the Sunscar desert (10-15), Rustwood and the Old Foundry (15-20), and the Highreach plateau above the glade falls (20-25). Each of the first four bands ends in a dungeon, marked on the map (M); from level 23 every dungeon can be run on Heroic (24-26).</p>
       <p><b>Windows:</b> C character · N talents · B bags · L quests · K skills · Y achievements · J journal · M map · I loot history · O options (volume, quality) · Esc closes, or opens options.</p>
@@ -3202,7 +3202,7 @@ export class UI {
     c.width = D.nx * k; c.height = D.nz * k;
     const x = c.getContext('2d');
     x.fillStyle = '#16120e'; x.fillRect(0, 0, c.width, c.height);
-    const floorCol = { mine: '#6a5a46', warren: '#6a5636', vault: '#a8946e', foundry: '#5e5650', storm: '#4e5a6a', ore: '#5a504a', furnace: '#4e4846', sluice: '#56606a', dam: '#5c666e', pump: '#5a6064', mills: '#585a56', seagate: '#565a58', workshop: '#7a6a56' }[D.theme] || '#5e5650';
+    const floorCol = { mine: '#6a5a46', warren: '#6a5636', vault: '#a8946e', foundry: '#5e5650', storm: '#4e5a6a', ore: '#5a504a', furnace: '#4e4846', sluice: '#56606a', dam: '#5c666e', pump: '#5a6064', mills: '#585a56', seagate: '#565a58', cutting: '#5e5246', workshop: '#7a6a56' }[D.theme] || '#5e5650';
     for (let j = 0; j < D.nz; j++) for (let i = 0; i < D.nx; i++) if (cellFloor(D, i, j)) { x.fillStyle = floorCol; x.fillRect(i * k, j * k, k, k); }
     x.strokeStyle = 'rgba(255,220,160,0.25)'; x.lineWidth = 1;
     for (let j = 0; j < D.nz; j++) for (let i = 0; i < D.nx; i++) if (cellFloor(D, i, j)) {

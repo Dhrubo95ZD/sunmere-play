@@ -2,7 +2,7 @@
 // player (right-click, or More on the target frame), the trade window and the inspect window.
 // Installed on the UI class by ui.js (installSocial). The server checks everything; this only shows it.
 import { CLASSES } from '/sunmere-play/shared/classes.js';
-import { shownName } from '/sunmere-play/shared/social.js';
+import { shownName, SOCIAL } from '/sunmere-play/shared/social.js';
 import { ITEMS, QUALITY } from '/sunmere-play/shared/data.js';
 import { SLOT_LABEL, gearName } from '/sunmere-play/shared/items.js';
 import { icon, miscArt } from './icons.js';
@@ -79,7 +79,12 @@ export const SOCIAL_UI = {
   },
 
   // ------------------------------------------------------------------ Players window: who is online, friends
-  setWho(m) { this.whoList = m; if (this.windows.social?.isConnected) this.renderSocial(); },
+  setWho(m) {
+    // v121: a count-only answer feeds the badge by the minimap; a full list (not a name search) feeds both
+    if (m.count) return this.setOnline(m);
+    if (!m.q) this.setOnline(m);
+    this.whoList = m; if (this.windows.social?.isConnected) this.renderSocial();
+  },
   setFriends(m) { this.friendList = m.list || []; if (this.windows.social?.isConnected) this.renderSocial(); },
   winSocial() {
     const w = this.makeWindow('Players', 'w-social', Math.max(10, innerWidth / 2 - 220), 90);
@@ -192,9 +197,131 @@ export const SOCIAL_UI = {
   },
 };
 
+// ------------------------------------------------------------------ v121: "N online" by the minimap
+// A small badge under the minimap: real players online (bots not counted; a dim "· M bots" after). Hover (desktop) or
+// tap (phones) opens a list of who is online with quick Message / Invite / Friend / Inspect / Trade. While closed it
+// asks the server for the count only every 15 s; while open, the full who list every 5 s. Offline play shows nothing.
+const ON_POLL_OPEN = 5, ON_POLL_SHUT = 15;
+export const ONLINE_UI = {
+  buildOnline() {
+    const mm = $('.minimap', this.root), hud = this.hud || $('.hud', this.root);
+    if (!mm || !hud || $('.on-badge', mm)) return;
+    const b = el('button', 'on-badge hidden', '');
+    b.type = 'button'; b.title = 'Players online';
+    const after = $('.coords', mm);
+    if (after) after.after(b); else mm.appendChild(b);
+    const pop = el('div', 'on-pop hidden');
+    hud.appendChild(pop);
+    this._onB = b; this._onPop = pop; this._onLast = -99;
+    const keep = () => clearTimeout(this._onCloseT);
+    const later = () => { keep(); this._onCloseT = setTimeout(() => this.closeOnline(), 350); };
+    b.addEventListener('pointerenter', (e) => { if (e.pointerType === 'mouse') { keep(); this.openOnline(); } });
+    b.addEventListener('pointerleave', (e) => { if (e.pointerType === 'mouse') later(); });
+    pop.addEventListener('pointerenter', (e) => { if (e.pointerType === 'mouse') keep(); });
+    pop.addEventListener('pointerleave', (e) => { if (e.pointerType === 'mouse') later(); });
+    // a tap (phones) toggles; a mouse click keeps it open (hover already opened it)
+    b.addEventListener('pointerdown', (e) => { this._onTap = e.pointerType !== 'mouse'; });
+    b.addEventListener('click', (e) => { e.stopPropagation(); if (this._onOpen && this._onTap) this.closeOnline(); else this.openOnline(); });
+    pop.addEventListener('click', (e) => this.onlineClick(e));
+    clearInterval(this._onTick);
+    this._onTick = setInterval(() => this.onlineTick(), 1000);
+    this.onlineTick();
+  },
+  onlineOff() { return !this.g.net || !!this.g.net.offline; },
+  onlineTick() {
+    const b = this._onB;
+    if (!b?.isConnected) { clearInterval(this._onTick); return; }
+    if (this.onlineOff()) { b.classList.add('hidden'); this.closeOnline(); return; }
+    if (document.hidden) return;
+    const now = performance.now() / 1000;
+    if (now - this._onLast >= (this._onOpen ? ON_POLL_OPEN : ON_POLL_SHUT)) {
+      this._onLast = now;
+      this.g.send(this._onOpen ? { t: 'who' } : { t: 'who', count: 1 });
+    }
+  },
+  setOnline(m) {
+    const b = this._onB;
+    if (!b) return;
+    if (!m.count) this._onList = m.list || [];
+    const n = m.n ?? 0, bots = m.bots ?? (m.list ? m.list.filter((r) => r.bot).length : 0);
+    this._onN = { n, bots };
+    b.innerHTML = `<i class="on-dot"></i><b>${n}</b><span>online</span>${bots ? `<em>· ${bots} bot${bots === 1 ? '' : 's'}</em>` : ''}`;
+    b.classList.toggle('hidden', this.onlineOff());
+    if (this._onOpen) this.renderOnline();
+  },
+  openOnline() {
+    if (this.onlineOff() || !this._onPop) return;
+    const wasOpen = this._onOpen;
+    this._onOpen = true;
+    this._onPop.classList.remove('hidden');
+    this._onB.classList.add('on');
+    this.renderOnline();
+    if (wasOpen) return;
+    // a fresh list now (the last full one may be old), then every few seconds while open
+    const now = performance.now() / 1000;
+    if (now - this._onLast > 1.5) { this._onLast = now; this.g.send({ t: 'who' }); }
+    this._onKey = (e) => { if (e.key === 'Escape') { e.preventDefault(); e.stopImmediatePropagation(); this.closeOnline(); } };
+    this._onDown = (e) => { const t = e.target; if (!this._onPop.contains(t) && !this._onB.contains(t) && !t?.closest?.('.pmenu')) this.closeOnline(); };
+    addEventListener('keydown', this._onKey, true);
+    addEventListener('pointerdown', this._onDown, true);
+  },
+  closeOnline() {
+    clearTimeout(this._onCloseT);
+    if (!this._onOpen) return;
+    this._onOpen = false;
+    this._onPop?.classList.add('hidden');
+    this._onB?.classList.remove('on');
+    removeEventListener('keydown', this._onKey, true);
+    removeEventListener('pointerdown', this._onDown, true);
+  },
+  renderOnline() {
+    const pop = this._onPop, b = this._onB;
+    if (!pop || !b || !this._onOpen) return;
+    const me = this.g.localId, at = this.g.playerPos?.(), list = this._onList;
+    const near = (id, r) => { const v = this.g.entities?.get(id); return !!(v?.pos && at && Math.hypot(v.pos.x - at.x, v.pos.z - at.z) <= r); };
+    const lead = this.party?.leader === me || !this.party?.members?.length;
+    const row = (r) => {
+      const self = r.id === me, col = ccol(r.cls), cn = CLASSES[r.cls] ? r.cls : null, fr = r.friend || (!self && !r.bot && this.isFriend(r.name));
+      const btns = self || r.bot ? '' : [
+        '<button data-a="w" title="Whisper">Message</button>',
+        !r.party && lead ? '<button data-a="i" title="Invite to party">Invite</button>' : '',
+        fr ? '' : '<button data-a="f" title="Add friend">Friend</button>',
+        `<button data-a="n"${near(r.id, SOCIAL.inspectRange) ? ' title="Inspect"' : ' disabled title="Too far away to inspect"'}>Inspect</button>`,
+        near(r.id, SOCIAL.tradeRange) ? '<button data-a="t" title="Trade">Trade</button>' : '',
+      ].join('');
+      const tags = `${self ? '<em>you</em>' : ''}${r.party ? '<em class="t-p">party</em>' : ''}${fr ? '<em class="t-f">friend</em>' : ''}`;
+      return `<div class="on-row${r.bot ? ' bot' : ''}${self ? ' me' : ''}" data-id="${esc(r.id)}" data-n="${esc(r.name)}">`
+        + `<div class="on-l1">${cn ? `<img class="on-ci" src="/sunmere-play/ui/classes/${cn}.webp" alt="" style="border-color:${col}">` : `<i class="on-ci" style="background:${col}"></i>`}<b class="on-nm" style="color:${col}">${esc(shownName(r.name, r.bot))}</b><span class="on-lv">${r.level}</span><span class="on-tags">${tags}</span></div>`
+        + `<div class="on-l2"><span class="on-wh">${esc(r.where || '')}</span>${btns ? `<span class="on-btns">${btns}</span>` : ''}</div></div>`;
+    };
+    const real = (list || []).filter((r) => !r.bot), bots = (list || []).filter((r) => r.bot);
+    pop.innerHTML = `<div class="on-h"><span>Online <b>${this._onN?.n ?? real.length}</b>${bots.length ? ` <em>· ${bots.length} bot${bots.length === 1 ? '' : 's'}</em>` : ''}</span><button class="on-all" data-a="all" title="Players window: search and friends">All players</button></div>`
+      + `<div class="on-list">${!list ? '<p class="on-empty">Asking the server...</p>' : real.map(row).join('') + (bots.length ? '<div class="on-sep">Adventurers (bots)</div>' + bots.map(row).join('') : '')}</div>`;
+    // under the badge, right edges lined up, kept on screen
+    const br = b.getBoundingClientRect(), W = pop.offsetWidth || 320;
+    pop.style.left = Math.max(8, Math.min(innerWidth - W - 8, br.right - W)) + 'px';
+    pop.style.top = Math.round(br.bottom + 4) + 'px';
+    pop.style.maxHeight = Math.max(120, innerHeight - br.bottom - 14) + 'px';
+  },
+  onlineClick(e) {
+    const btn = e.target.closest('button'), r = e.target.closest('.on-row'), a = btn?.dataset.a;
+    if (a === 'all') { this.closeOnline(); if (!this.windows.social?.isConnected) this.toggle('social'); return; }
+    if (!r || r.classList.contains('bot') || r.classList.contains('me')) return;
+    const id = r.dataset.id, n = r.dataset.n;
+    if (a === 'w') { this.closeOnline(); return this.whisperTo(n); }
+    if (a === 'i') { btn.disabled = true; return this.g.send({ t: 'chat', text: '/invite ' + n }); }
+    if (a === 'f') { btn.disabled = true; return this.g.send({ t: 'friend', op: 'add', name: n }); }
+    if (a === 'n') return this.g.send({ t: 'inspect', id });
+    if (a === 't') { this.closeOnline(); return this.g.send({ t: 'ptrade', op: 'ask', id }); }
+    if (!btn && e.target.closest('.on-l1')) this.playerMenu(id, n, e.clientX, e.clientY);
+  },
+};
+
 // wire the module into the UI class: the methods, the Players window in toggle(), and a fresh trade view whenever your bags change
 export function installSocial(UI) {
-  Object.assign(UI.prototype, SOCIAL_UI);
+  Object.assign(UI.prototype, SOCIAL_UI, ONLINE_UI);
+  const buildHUD = UI.prototype.buildHUD;
+  UI.prototype.buildHUD = function (...a) { const r = buildHUD.apply(this, a); this.buildOnline(); return r; };
   const setYou = UI.prototype.setYou;
   UI.prototype.setYou = function (you) { setYou.call(this, you); if (this.ptrade && this.windows.ptrade?.isConnected) this.renderPTrade(); };
   const toggle = UI.prototype.toggle;

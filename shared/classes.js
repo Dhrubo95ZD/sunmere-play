@@ -1,4 +1,4 @@
-// Classes and their 28 skills (20 to level 20, then one at 42 and a capstone at 45, one at 47 and a capstone at 50, one at 52 and a capstone at 55, one at 57 and a capstone at 60) (gameplay data shared by server and client).
+// Classes and their 30 skills (20 to level 20, then one at 42 and a capstone at 45, one at 47 and a capstone at 50, one at 52 and a capstone at 55, one at 57 and a capstone at 60, one at 62 and a capstone at 65) (gameplay data shared by server and client).
 // effects: ['dmg', coef] ['dot', coef, dur] ['heal', coef] ['hot', coef, dur] ['stun', dur] ['slow', pct, dur]
 //          ['root', dur] ['knock', dist] ['dash', dist] ['leap', dist] ['back', dist] ['buff', stat, pct, dur]
 //          ['debuff', stat, pct, dur] ['taunt', dur] ['absorb', coef, dur] ['cleanse'] ['execute', mult]
@@ -83,6 +83,9 @@ export const SKILLS = {
     // ---- level 57 and 60 (Tidewater Sound) ----
     S('k_tidebreak', 'Tidebreak Cut', { icon: 'slash', lvl: 57, cost: 20, cd: 10, hit: { t: 0.46, kind: 'melee' }, fx: [['dmg', 1.8], ['slow', 40, 4]], desc: 'A diagonal cut falling from high over the left shoulder on a hard step in, breaking over the machine like a wave on the quay. It wades on slowly after.' }),
     S('k_seawall', 'Sea Wall', { icon: 'bastion', lvl: 60, cost: 45, cd: 30, target: 'self', range: 0, hit: { t: 0.36, kind: 'aoe', r: 5, n: 2, gap: 0.5 }, fx: [['dmg', 1.6], ['stun', 1.0], ['taunt', 4]], desc: 'Capstone: drive the kite shield down edge-first into the ground like a sea wall, then sweep the sword round over its rim. Every machine nearby is struck twice, staggered and turned on you.' }),
+    // ---- level 62 and 65 (the Rainward Gorge) ----
+    S('k_slipface', 'Slipface Cut', { icon: 'slash', lvl: 62, cost: 20, cd: 10, hit: { t: 0.44, kind: 'melee' }, fx: [['dmg', 1.85], ['debuff', 'armor', 10, 6]], desc: 'A heavy cut falling steeply from high over the right shoulder on a hard step in, shearing down through the plating like the face of a slip coming off a wet bank. The plates it lands on are left loose.' }),
+    S('k_drystone', 'Dry-Stone Wall', { icon: 'bastion', lvl: 65, cost: 45, cd: 30, target: 'self', range: 0, hit: { t: 0.36, kind: 'aoe', r: 5, n: 2, gap: 0.5 }, fx: [['dmg', 1.65], ['stun', 1.0], ['taunt', 4], ['slow', 30, 4]], desc: 'Capstone: set the kite shield down square like the first stone of a dry-stone wall, then sweep the sword round over its rim, forehand and back. Every machine nearby is struck twice, staggered, slowed and turned on you.' }),
   ],
   ranger: [
     S('r_quick', 'Quick Shot', { icon: 'arrow', lvl: 1, cost: 8, range: 28, hit: { t: 0.28, kind: 'proj', speed: 48 }, fx: [['dmg', 0.9]], desc: 'A fast snap shot.' }),
@@ -114,6 +117,9 @@ export const SKILLS = {
     // ---- level 57 and 60 (Tidewater Sound) ----
     S('r_tarhead', 'Tar-Head Arrow', { icon: 'pierce', lvl: 57, cost: 20, cd: 10, range: 30, hit: { t: 0.46, kind: 'proj', speed: 50 }, fx: [['dmg', 1.8], ['slow', 45, 5]], desc: 'An arrow with its head bound in tarred rope fibre. It sticks where it lands, and the machine drags the tar into every joint.' }),
     S('r_springtide', 'Spring Tide', { icon: 'aim', lvl: 60, cost: 45, cd: 30, cast: 0.8, range: 34, hit: { t: 0.9, kind: 'line', r: 34, speed: 85, n: 2, gap: 0.4 }, fx: [['dmg', 1.8], ['slow', 50, 5], ['debuff', 'vuln', 10, 6]], desc: 'Capstone: drop to one knee and send two long, heavy arrows down the same line, the second hard on the first, through every machine in the way like a spring tide over the flats. They are slowed, and take more from every blow after.' }),
+    // ---- level 62 and 65 (the Rainward Gorge) ----
+    S('r_stake', 'Ash Stake Arrow', { icon: 'pin', lvl: 62, cost: 20, cd: 10, range: 30, hit: { t: 0.46, kind: 'proj', speed: 50 }, fx: [['dmg', 1.95], ['root', 2]], desc: 'A short, thick ash-shafted arrow with a square iron head, loosed low into the track plates like a surveyor’s stake driven into wet ground. The machine stays where it is pinned.' }),
+    S('r_cloudburst', 'Cloudburst', { icon: 'rain', lvl: 65, cost: 45, cd: 35, cast: 1.0, target: 'ground', range: 30, hit: { t: 1.4, kind: 'ground', r: 6, n: 4, gap: 0.25 }, fx: [['dmg', 1.25], ['slow', 40, 5], ['debuff', 'vuln', 8, 6]], desc: 'Capstone: four heavy arrows loosed nearly straight up, one after another as fast as the bow can be drawn. They come down on the ground ahead in a hard, wet rush, four times over, slowing every machine there and leaving it open to every blow after.' }),
   ],
   chemist: [
     S('c_fire', 'Fire Flask', { icon: 'flame', lvl: 1, cost: 14, cast: 1.0, range: 26, hit: { t: 1.25, kind: 'proj', speed: 22, arc: 1, r: 2.5 }, fx: [['dmg', 1.3], ['dot', 0.4, 4]], desc: 'Hurl a flask of lamp oil that bursts into flame.' }),
@@ -145,6 +151,9 @@ export const SKILLS = {
     // ---- level 57 and 60 (Tidewater Sound) ----
     S('c_brine', 'Brine Flask', { icon: 'acid', lvl: 57, cost: 25, cd: 10, range: 24, hit: { t: 0.6, kind: 'proj', speed: 24, arc: 0.8, r: 3.5 }, fx: [['dmg', 1.4], ['dot', 0.6, 6], ['debuff', 'armor', 10, 6]], desc: 'A flask of sea brine boiled down hard and spiked with oil of vitriol. It bursts in a hot, stinging spray that pits plating and keeps eating at it.' }),
     S('c_tarpot', 'Boiling Tar Pot', { icon: 'cask', lvl: 60, cost: 45, cd: 35, target: 'ground', range: 24, cast: 1.2, hit: { t: 2.0, kind: 'ground', r: 7 }, fx: [['dmg', 2.8], ['slow', 50, 6], ['dot', 1.2, 6]], desc: 'Capstone: hold a sealed iron pot of pine tar to the heater on the rod until it spits, then heave it underarm. It bursts in a black splash of boiling tar over every machine nearby, scalding it and gumming its joints.' }),
+    // ---- level 62 and 65 (the Rainward Gorge) ----
+    S('c_kilnlime', 'Kiln Lime Flask', { icon: 'acid', lvl: 62, cost: 25, cd: 10, range: 24, hit: { t: 0.6, kind: 'proj', speed: 24, arc: 0.8, r: 3.5 }, fx: [['dmg', 1.5], ['dot', 0.7, 6], ['slow', 30, 4]], desc: 'A flask of lime fresh from the kiln, thrown to burst on wet plating. The lime drinks the rain and boils hot against the steel, scalding it and clogging its joints.' }),
+    S('c_limemortar', 'Lime Mortar Drum', { icon: 'cask', lvl: 65, cost: 45, cd: 35, target: 'ground', range: 24, cast: 1.2, hit: { t: 2.0, kind: 'ground', r: 7 }, fx: [['dmg', 3.0], ['root', 2.5], ['dot', 0.6, 6], ['debuff', 'armor', 15, 6]], desc: 'Capstone: light the short fuse of a sealed iron drum of quicklime, sand and rainwater on the flint wheel of the rod and heave it. It bursts over every machine nearby in a hot grey mortar that scalds, sets round their tracks and eats into their plating.' }),
   ],
   sandblade: [
     S('s_slash', 'Sand Slash', { icon: 'slash', lvl: 1, cost: 10, hit: { t: 0.22, kind: 'melee' }, fx: [['dmg', 0.95]], desc: 'A swift curved cut.' }),
@@ -176,6 +185,9 @@ export const SKILLS = {
     // ---- level 57 and 60 (Tidewater Sound) ----
     S('s_riptide', 'Riptide', { icon: 'twin', lvl: 57, cost: 20, cd: 8, hit: { t: 0.3, kind: 'melee', n: 2, gap: 0.3 }, fx: [['dmg', 0.95], ['slow', 40, 4]], desc: 'A low thrust in under the guard and a cut drawn back out across it, the way a rip current takes the legs from under you.' }),
     S('s_tidalbore', 'Tidal Bore', { icon: 'whirlwind', lvl: 60, cost: 45, cd: 28, range: 6, hit: { t: 0.3, kind: 'cone', r: 6, cone: 120, n: 3, gap: 0.32 }, fx: [['dmg', 1.05], ['execute', 0.8], ['slow', 40, 4]], desc: 'Capstone: three cuts, each a long step further up the line, coming on like the bore that runs up a creek on the spring flood. Every machine in front is struck three times, far harder when it is wounded.' }),
+    // ---- level 62 and 65 (the Rainward Gorge) ----
+    S('s_undercut', 'Undercut', { icon: 'twin', lvl: 62, cost: 20, cd: 8, hit: { t: 0.3, kind: 'melee', n: 2, gap: 0.3 }, fx: [['dmg', 1.0], ['debuff', 'armor', 10, 5]], desc: 'A low cut in under the plating and a second drawn back out along the same line, the way running water undercuts a bank until it falls.' }),
+    S('s_landslide', 'Landslide', { icon: 'whirlwind', lvl: 65, cost: 45, cd: 28, range: 6, hit: { t: 0.3, kind: 'cone', r: 6, cone: 130, n: 3, gap: 0.32 }, fx: [['dmg', 1.1], ['execute', 0.8], ['knock', 1.5]], desc: 'Capstone: three cuts coming downhill one after another, each a long step further on, like a slope letting go. Every machine in front is struck three times, far harder when it is wounded, and driven back.' }),
   ],
   warden: [
     S('w_blow', 'Hammer Blow', { icon: 'hammer', lvl: 1, cost: 10, hit: { t: 0.42, kind: 'melee' }, fx: [['dmg', 1.1]], desc: 'A heavy sideways swing.' }),
@@ -207,6 +219,9 @@ export const SKILLS = {
     // ---- level 57 and 60 (Tidewater Sound) ----
     S('w_spud', 'Spud Drop', { icon: 'hammer', lvl: 57, cost: 20, cd: 12, hit: { t: 0.6, kind: 'melee' }, fx: [['dmg', 1.9], ['root', 2.5]], desc: 'The hammer hauled up two-handed and driven straight down like the spud post of a dredge into the mud, pinning the machine where it stands.' }),
     S('w_breakwater', 'Breakwater', { icon: 'shield', lvl: 60, cost: 45, cd: 30, range: 6, hit: { t: 0.34, kind: 'cone', r: 6, cone: 140, n: 2, gap: 0.55 }, fx: [['dmg', 1.7], ['knock', 2], ['stun', 1.0], ['taunt', 4]], desc: 'Capstone: heave the tower shield forward into the machines like a breakwater taking a wave, then bring the hammer down flat behind it. Every machine in front is battered twice, staggered and turned on you.' }),
+    // ---- level 62 and 65 (the Rainward Gorge) ----
+    S('w_pilehammer', 'Pile Hammer', { icon: 'hammer', lvl: 62, cost: 20, cd: 12, hit: { t: 0.6, kind: 'melee' }, fx: [['dmg', 2.0], ['stun', 1.2]], desc: 'The hammer lifted two-handed high over the head and dropped straight down like the weight of a pile driver onto a timber pile, stopping the machine dead.' }),
+    S('w_cribwall', 'Crib Wall', { icon: 'shield', lvl: 65, cost: 45, cd: 30, range: 6, hit: { t: 0.34, kind: 'cone', r: 6, cone: 140, n: 2, gap: 0.55 }, fx: [['dmg', 1.8], ['knock', 2], ['root', 1.5], ['taunt', 4]], desc: 'Capstone: set the tower shield square like the face of a timber crib wall holding up a slope, then bring the hammer down twice behind it. Every machine in front is battered twice, held fast and turned on you.' }),
   ],
   herbalist: [
     S('h_salve', 'Mending Salve', { icon: 'salve', lvl: 1, cost: 15, cast: 1.3, target: 'ally', range: 28, hit: { t: 1.4, kind: 'proj', speed: 22, arc: 0.5 }, fx: [['heal', 1.8]], desc: 'Toss a healing salve to an ally (or yourself).' }),
@@ -238,6 +253,9 @@ export const SKILLS = {
     // ---- level 57 and 60 (Tidewater Sound) ----
     S('h_samphire', 'Samphire Poultice', { icon: 'sap', lvl: 57, cost: 25, cd: 10, target: 'ally', range: 28, hit: { t: 0.5, kind: 'proj', speed: 26, arc: 0.4 }, fx: [['heal', 1.8], ['hot', 1.2, 8]], desc: 'A warm poultice of marsh samphire and salt grass bound in linen, tossed to an ally. It mends at once and keeps mending.' }),
     S('h_saltkettle', 'Marsh Kettle Steam', { icon: 'brew', lvl: 60, cost: 50, cd: 45, target: 'self', range: 0, cast: 1.2, hit: { t: 1.3, kind: 'self', r: 18 }, fx: [['heal', 2.8], ['hot', 1.4, 10], ['absorb', 1.2, 10]], desc: 'Capstone: hold the lantern pan of brine and marsh herbs over the flame until it boils, then lift the staff high so the steam rolls out over every ally nearby. It mends them, keeps mending them, and hardens them against the next blows.' }),
+    // ---- level 62 and 65 (the Rainward Gorge) ----
+    S('h_moss', 'Moss Dressing', { icon: 'sap', lvl: 62, cost: 25, cd: 10, target: 'ally', range: 28, hit: { t: 0.5, kind: 'proj', speed: 26, arc: 0.4 }, fx: [['heal', 1.9], ['hot', 1.15, 8], ['cleanse']], desc: 'A pad of washed bog moss soaked in hot pine-needle water and bound in linen, tossed to an ally. It mends at once, keeps mending, and draws out what clings to the wound.' }),
+    S('h_cedarsteam', 'Cedar Bark Steam', { icon: 'brew', lvl: 65, cost: 50, cd: 45, target: 'self', range: 0, cast: 1.2, hit: { t: 1.3, kind: 'self', r: 18 }, fx: [['heal', 3.1], ['hot', 1.5, 10], ['buff', 'armor', 12, 10]], desc: 'Capstone: drop a curl of cedar bark and wet bracken onto the hot lantern pan and sweep the staff out low. The thick resin steam rolls over every ally nearby, mends them, keeps mending them, and toughens them against the next blows.' }),
   ],
   // the Deadeye (v106): every shot is instant and fires on the run; a round ball ('ball' projectile, 'pierce' impact on the client).
   // Quick Reload gives Powder back ('res') and a short Loaded window; the left and right hands alternate on the client only.
@@ -272,6 +290,9 @@ export const SKILLS = {
     // ---- level 57 and 60 (Tidewater Sound) ----
     S('d_saltshot', 'Rock Salt Load', { icon: 'blast', lvl: 57, move: true, cost: 20, cd: 9, range: 22, hit: { t: 0.22, kind: 'proj', speed: 70 }, fx: [['dmg', 1.3], ['debuff', 'miss', 20, 5]], desc: 'A charge of coarse rock salt in place of the ball. It bursts across the plating and packs every lens and joint with grit.' }),
     S('d_broadside', 'Broadside', { icon: 'barrage', lvl: 60, cost: 45, cd: 30, range: 22, hit: { t: 0.3, kind: 'proj', speed: 80, n: 3, gap: 0.42 }, fx: [['dmg', 1.25], ['knock', 2], ['debuff', 'armor', 15, 6]], desc: 'Capstone: feet planted square, fire both pistols together, three times over, each pair landing as one heavy blow. The machine is driven back and its plating buckles.' }),
+    // ---- level 62 and 65 (the Rainward Gorge) ----
+    S('d_gravel', 'Gravel Load', { icon: 'blast', lvl: 62, move: true, cost: 20, cd: 9, range: 22, hit: { t: 0.22, kind: 'proj', speed: 70 }, fx: [['dmg', 1.5], ['slow', 40, 5]], desc: 'A charge of sharp river gravel in place of the ball. It strips the track plates and leaves the machine labouring.' }),
+    S('d_rollingfire', 'Rolling Fire', { icon: 'barrage', lvl: 65, cost: 45, cd: 30, range: 22, hit: { t: 0.3, kind: 'proj', speed: 80, n: 4, gap: 0.32 }, fx: [['dmg', 1.0], ['root', 1.5], ['debuff', 'vuln', 10, 6]], desc: 'Capstone: drop to one knee in the mud and fire four times at an even beat, right, left, right, left, every ball laid low into the tracks. The machine is pinned where it stands and takes more from every blow after.' }),
   ],
 };
 

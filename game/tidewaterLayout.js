@@ -812,6 +812,8 @@ export function buildTidewater(W, S) {
     if (DUNGEONS.some((Dg) => Math.hypot(x - Dg.door.x, z - Dg.door.z) < 10 + pad)) return false;
     // (P13.5) the glade where the valley plants its own row (Chapter 44, the twplant objects): no old tree over the young poles
     if (OBJECTS.some((o) => o.kind === 'twplant' && Math.hypot(x - o.x, z - o.z) < 4.6 + pad)) return false;
+    // (P14.5) the valley's own nursery beside it (Chapter 48, the twnurse beds): kept clear too
+    if (OBJECTS.some((o) => o.kind === 'twnurse' && Math.hypot(x - o.x, z - o.z) < 3.4 + pad)) return false;
     for (const [hx, hz] of huts) if (Math.hypot(x - hx, z - hz) < 6 + pad) return false;
     if (Math.hypot(x - (Tw.taryard.x + 5.5), z - (Tw.taryard.z - 17)) < 6 + pad) return false; // (the tar house)
     return true;

@@ -267,6 +267,67 @@ function smallWheel(seed, R = 0.9, thick = 0.32) {
   b.add(box(1.2, 0.12, 0.12), 'wIron', { p: [0.6 - thick / 2, 0, 0], c: '#2e3034' });
   return b;
 }
+// (dressing pass) a nursery bed for the sloping low ground: a seed bed with a deep plank skirt, so it sits level on ground that
+// falls away a little without showing a gap under its edge
+function nurseryBed(seed, kind, L) {
+  const r2 = seedBed(seed, kind, L), b = r2.builder, W = 1.3;
+  for (const sz of [-1, 1]) b.add(box(L, 0.5, 0.1), 'wood', { p: [0, -0.24, sz * W / 2], c: '#4e3e2e' });
+  for (const sx of [-1, 1]) b.add(box(0.1, 0.5, W), 'wood', { p: [sx * L / 2, -0.24, 0], c: '#4e3e2e' });
+  return r2;
+}
+// a tool rack against a wall (along local x): two square posts on stone footings, one level rail, the Seedwrights' hand tools
+// hanging handle-up side by side (a hoe, a rake, two spades: every handle upright and parallel, each head at its foot, never
+// crossed), a square watering can on the ground beside it
+function toolRack(seed) {
+  const b = new Builder(seed);
+  for (const sx of [-0.95, 0.95]) { b.add(box(0.16, 1.75, 0.16), 'beam', { p: [sx, 0.87, 0], c: '#4e3e2e' }); b.add(box(0.34, 0.16, 0.34), 'stoneLarge', { p: [sx, 0.06, 0], c: ST_L }); }
+  b.add(box(2.2, 0.12, 0.12), 'beam', { p: [0, 1.62, 0], c: '#4e3e2e' });
+  [['hoe', -0.6], ['spade', -0.2], ['rake', 0.2], ['spade', 0.6]].forEach(([k, x]) => {
+    b.add(cyl(0.024, 0.026, 1.3, 6), 'woodLight', { p: [x, 0.98, 0.1], c: '#a08060' });
+    if (k === 'spade') b.add(box(0.2, 0.3, 0.03), 'wIron', { p: [x, 0.2, 0.1], c: '#5a5e62' });
+    if (k === 'hoe') b.add(box(0.06, 0.12, 0.2), 'wIron', { p: [x, 0.3, 0.18], c: '#4a4e52' });
+    if (k === 'rake') { b.add(box(0.34, 0.05, 0.05), 'wIron', { p: [x, 0.33, 0.1], c: '#4a4e52' }); for (const t of [-0.15, -0.05, 0.05, 0.15]) b.add(box(0.02, 0.1, 0.02), 'wIron', { p: [x + t, 0.26, 0.1], c: '#4a4e52' }); } // (no tine under the handle: handle, head and a middle tine read as a cross)
+  });
+  b.add(box(0.36, 0.3, 0.24), 'wIron', { p: [1.45, 0.15, 0.1], c: '#5e6a6a' });
+  b.add(box(0.06, 0.06, 0.24), 'wIron', { p: [1.45, 0.34, 0.1], c: '#4a5252' });
+  beam(b, [1.62, 0.2, 0.1], [1.9, 0.36, 0.1], 0.04, 'wIron', '#5e6a6a');
+  return { builder: b, collider: { r: 1.0 } };
+}
+// seed trays stacked on a low plank pallet in two square stacks, the top trays green with seedlings
+function trayStack(seed) {
+  const b = new Builder(seed);
+  b.add(box(1.5, 0.12, 0.9), 'wood', { p: [0, 0.06, 0], c: '#6a5440' });
+  for (const sx of [-0.36, 0.36]) {
+    const n = 2 + Math.floor(b.r(0, 2.99));
+    for (let i = 0; i < n; i++) { b.add(box(0.62, 0.12, 0.62), 'wood', { p: [sx, 0.18 + i * 0.13, 0], c: '#9a7a56' }); b.add(box(0.54, 0.02, 0.54), 'dirtPlain', { p: [sx, 0.245 + i * 0.13, 0], c: '#3e3024' }); }
+    for (let k = 0; k < 4; k++) addTuft(b, 'leafTree', [sx + b.r(-0.2, 0.2), 0.25 + (n - 1) * 0.13, b.r(-0.2, 0.2)], b.r(0.16, 0.24), b.r(0.12, 0.2), b.r(0, 3.1), '#7aa65a', 1);
+  }
+  return { builder: b, collider: { r: 0.8 } };
+}
+// a plank barrow (along local z): a square tray of earth on two parallel handles, a solid plank disc wheel at the front (no
+// spokes), two square legs at the back
+function barrow(seed) {
+  const b = new Builder(seed);
+  b.add(box(0.7, 0.34, 0.95), 'wood', { p: [0, 0.52, 0], c: '#7a6248' });
+  b.add(box(0.6, 0.04, 0.85), 'dirtPlain', { p: [0, 0.68, 0], c: '#3e3024' });
+  for (const sx of [-0.3, 0.3]) { b.add(box(0.06, 0.06, 1.9), 'beam', { p: [sx, 0.4, -0.3], c: '#5a4632' }); b.add(box(0.06, 0.36, 0.06), 'beam', { p: [sx, 0.18, -0.55], c: '#5a4632' }); }
+  b.add(cyl(0.24, 0.24, 0.08, 18), 'woodDark', { p: [0, 0.24, 0.62], r: [0, 0, PI / 2], c: '#4a3a2c' });
+  return { builder: b, collider: { r: 0.8 } };
+}
+// poles laid out on the ground side by side (along local x), all one way, none crossing
+function polesLaid(seed, n = 7) {
+  const b = new Builder(seed);
+  for (let i = 0; i < n; i++) { const L = b.r(4.4, 5.4); b.add(cyl(0.05, 0.065, L, 6), 'bark', { p: [b.r(-0.3, 0.3), 0.07, (i - (n - 1) / 2) * 0.2], r: [0, 0, PI / 2], c: i % 3 ? '#8a7058' : '#7a6450' }); }
+  return { builder: b };
+}
+// a drain grate set in the ground: a square stone frame, the dark sump under it, iron bars all one way (parallel, never a grid)
+function drainGrate(seed) {
+  const b = new Builder(seed);
+  for (const s of [-1, 1]) { b.add(box(1.0, 0.14, 0.14), 'stoneLarge', { p: [0, 0.04, s * 0.43], c: ST_L }); b.add(box(0.14, 0.14, 0.72), 'stoneLarge', { p: [s * 0.43, 0.04, 0], c: ST_L }); }
+  b.add(box(0.72, 0.04, 0.72), 'wDark', { p: [0, -0.02, 0], c: '#101210' });
+  for (let x = -0.3; x <= 0.301; x += 0.1) b.add(box(0.035, 0.04, 0.74), 'wIron', { p: [x, 0.06, 0], c: '#2e3034' });
+  return { builder: b };
+}
 
 // ------------------------------------------------------------------ the area
 export function buildRainward(W, S) {
@@ -522,9 +583,14 @@ export function buildRainward(W, S) {
     b.add(box(ow + 2.6, 0.2, 0.9), 'stoneLarge', { p: [0, oh + 0.9, 0.15], c: '#9a9c94' });
     b.add(box(ow, oh, 5.5), 'wDark', { p: [0, oh / 2, -2.6], c: '#0e100e' }); // the dark inside
     b.add(box(ow + 0.3, 0.2, 0.6), 'stoneLarge', { p: [0, 0.05, 0.3], c: ST }); // the sill
-    // choked: mud and stones heaped in the mouth, a trickle running out of it down a short stone channel
-    b.add(lumpy(sphere(1.2, 10, 6), 0.3, 1.6, 1675 + i, { flatBottom: 0 }), 'dirtPlain', { p: [0.2, -0.1, -0.4], s: [1.3, 0.8, 1.1], c: MUD, uv: 'box' });
-    for (let k = 0; k < 4; k++) addRock(b, [b.r(-1.2, 1.2), 0, b.r(-0.8, 0.6)], [b.r(0.25, 0.5), b.r(0.2, 0.4), b.r(0.25, 0.45)], 1680 + i * 5 + k, { moss: 0.4, tint: '#7a7a74' });
+    // choked: mud and stones heaped in the mouth, a trickle running out of it down a short stone channel. The middle adit
+    // (adits[1], the Drain Adits' door, P14.4) is dug open and propped: two square timber props under a flat cap inside the
+    // jambs, the dug mud pushed back to the pad's sides
+    if (i === 1) {
+      for (const sx of [-1, 1]) { b.add(box(0.26, oh - 0.3, 0.26), 'wood', { p: [sx * (ow / 2 - 0.25), (oh - 0.3) / 2, -0.5], c: '#5a4a38' }); b.add(lumpy(sphere(0.8, 9, 6), 0.3, 1.6, 1677 + sx, { flatBottom: 0 }), 'dirtPlain', { p: [sx * 3.6, -0.1, 1.2], s: [1.2, 0.6, 1.0], c: MUD, uv: 'box' }); }
+      b.add(box(ow - 0.1, 0.28, 0.32), 'wood', { p: [0, oh - 0.15, -0.5], c: '#4a3c2e' });
+    } else b.add(lumpy(sphere(1.2, 10, 6), 0.3, 1.6, 1675 + i, { flatBottom: 0 }), 'dirtPlain', { p: [0.2, -0.1, -0.4], s: [1.3, 0.8, 1.1], c: MUD, uv: 'box' });
+    if (i !== 1) for (let k = 0; k < 4; k++) addRock(b, [b.r(-1.2, 1.2), 0, b.r(-0.8, 0.6)], [b.r(0.25, 0.5), b.r(0.2, 0.4), b.r(0.25, 0.45)], 1680 + i * 5 + k, { moss: 0.4, tint: '#7a7a74' });
     for (const s of [-1, 1]) b.add(box(0.16, 0.3, 3.4), 'stoneLarge', { p: [1.3 + s * 0.35, 0.1, 2.2], c: ST });
     b.add(box(0.55, 0.04, 3.4), 'wWet', { p: [1.3, 0.04, 2.2], c: '#3a4a44' });
     W.placeAt(res(b, { colliders: [{ x: 0, z: -1.2, hw: 5, hd: 1.2 }] }), A.x, y, mz, 0);
@@ -691,6 +757,193 @@ export function buildRainward(W, S) {
     };
     W.rainwardTick(0, 0);
   }
+
+  // ---------------------------------------------------------------- (dressing pass) the terrace floors and the low ground
+  if (!(typeof location !== 'undefined' && /[?&]nodress=1/.test(location.search))) dressGorge(W, S, { put, pre, placeAbs, keepClear, people, runtime }); // (?nodress=1: without it, for comparison)
+}
+
+// (dressing pass) the plain floors filled: nursery beds in parallel rows on the low ground in front of the Seed Terraces,
+// short beds or a work corner (a tool rack, seed trays, a barrow, poles laid parallel) at each row's empty east end, fern
+// banks of single upright cards against the terrace walls (the lowest walls' feet, the row ends, the walls behind the top
+// steps), moss on the copings and down the wall faces, iron grates over the rows' drains and in the low ground, puddles that
+// come up while it rains, and more Seedwrights at work (W.rainwardFolk, which townsfolk.js adds). Placed after everything
+// else and checked clear of the colliders, the tracks, the lanes, the people, the spawns and the water.
+function dressGorge(W, S, { put, pre, placeAbs, keepClear, people, runtime }) {
+  const R = RAINWARD, T = W.terrain, H = (x, z) => T.height(x, z), rng = mulberry32(1777);
+  for (let k = 0; k < 3; k++) pre('rgnbed' + k, nurseryBed(1780 + k, k, 3.6));
+  pre('rgbedT0', seedBed(1784, 0, 3.6)); pre('rgbedT1', seedBed(1785, 1, 3.6));
+  pre('rgtools', toolRack(1786)); pre('rgtrays', trayStack(1787)); pre('rgbarrow', barrow(1788)); pre('rgpolesL', polesLaid(1789)); pre('rggrate', drainGrate(1790));
+  const spawns = SPAWNS.filter((Sp) => !Sp.world && Sp.x > R.minX && Sp.x < R.maxX && Sp.z > R.minZ && Sp.z < R.maxZ);
+  const mine = [], count = { nbeds: 0, tbeds: 0, corners: 0, ferns: 0, grates: 0, puddles: 0, moss: 0, folk: 0 };
+  const blocked = (x, z, pad) => {
+    for (const [mx, mz, mr] of mine) if (Math.hypot(mx - x, mz - z) < mr + pad) return true;
+    for (const c of S.colliders) if (Math.abs(c.x - x) < c.r + pad && Math.hypot(c.x - x, c.z - z) < c.r + pad) return true;
+    for (const bx of W.boxes) { const dx = x - bx.x, dz = z - bx.z; if (Math.abs(dx) > bx.hw + bx.hd + pad + 1 || Math.abs(dz) > bx.hw + bx.hd + pad + 1) continue; const c = Math.cos(bx.rot || 0), s = Math.sin(bx.rot || 0), lx = dx * c - dz * s, lz = dx * s + dz * c; if (Math.abs(lx) < bx.hw + pad && Math.abs(lz) < bx.hd + pad) return true; }
+    return false;
+  };
+  const nearSpawn = (x, z, pad = 0) => spawns.some((Sp) => Math.hypot(Sp.x - x, Sp.z - z) < (Sp.r || 3) + 6 + pad);
+  const ok = (x, z, pad = 0.3) => keepClear(x, z, pad) && !blocked(x, z, pad) && !nearSpawn(x, z) && rainwardGap(x, z) < -1.5;
+  const bedSlots = (B) => { const xs = []; for (let x = B.x0 + 1.6; x + 7 <= B.x1 - 1.2; x += 7.6) xs.push(x); return xs; };
+  const folk = (W.rainwardFolk = []);
+  const hoer = (x, z, face, v) => { folk.push({ v, o: { role: 'hoe', at: [x, z], face, ghost: true }, tool: 'hoe' }); mine.push([x, z, 0.8]); count.folk++; };
+
+  // each row's empty east end: short beds carrying on the row's lines where there is room, or a work corner (a tool rack
+  // against the end wall, seed trays, a barrow, poles laid side by side along the end wall)
+  R.terraces.forEach((B, bi) => {
+    const xs = bedSlots(B), end = xs[xs.length - 1] + 7 + 0.4, room = B.x1 - 0.9 - end;
+    for (let r = 0; r < B.n; r++) {
+      const y = B.levels[r], v0 = B.v0 + r * B.d, buried = bi === 3 && r >= 4;
+      if (room >= 3.3 && rng() < 0.6 && !buried) {
+        let n = 0;
+        for (let f = 1.4 + 0.64; f < B.d - 1.8; f += 2.3) {
+          const xm = end + 0.2 + 1.5, z = zOfV(xm, v0 + f);
+          if (blocked(xm, z, 0.2) || blocked(xm - 1.4, z, 0.2) || blocked(xm + 1.4, z, 0.2) || people.some((e) => Math.hypot(e.x - xm, e.z - z) < 3.5)) continue;
+          S.place('rgbedT' + (r <= 1 && rng() < 0.7 ? 0 : 1), xm, y - 0.02, z, 0, 1); mine.push([xm, z, 1.7]); count.tbeds++; n++;
+        }
+        if (n) continue;
+      }
+      if (room < 1.2) continue;
+      const xr = B.x1 - 0.6, xc = Math.min(end + 1.0, B.x1 - 1.6);
+      const items = [['rgtools', xr, v0 + B.d * 0.5 - 1.6, -PI / 2], ['rgpolesL', xc, v0 + B.d * 0.5 + 0.3, PI / 2 + 0.02], ['rgtrays', xc, v0 + 2.4, PI / 2], ['rgbarrow', xc, v0 + B.d - 2.1, PI / 2 + 0.2]];
+      let placed = 0;
+      for (const [key, x, v, ry] of items) {
+        const z = zOfV(x, v);
+        if (buried && key !== 'rgpolesL') continue;
+        if (blocked(x, z, key === 'rgpolesL' ? 0.2 : 0.4) || people.some((e) => Math.hypot(e.x - x, e.z - z) < 3)) continue;
+        S.place(key, x, y - 0.02, z, ry, key === 'rgpolesL' ? 0.75 : 1); mine.push([x, z, key === 'rgpolesL' ? 1.0 : 0.9]); placed++;
+      }
+      if (placed) count.corners++;
+    }
+  });
+
+  // nursery beds in parallel rows on the low ground in front of the Seed Terraces (between the stair lanes, river side of the
+  // first wall), short ones that sit level on the gentle fall; a tool rack and a barrow by each group
+  for (let bi = 1; bi < R.terraces.length; bi++) {
+    const B = R.terraces[bi], x0 = R.lanes[bi - 1].x + 3.2, x1 = (R.lanes[bi]?.x ?? B.x1 + 2) - 3.2;
+    let first = null;
+    for (let v = 6; v < B.v0 - 2.2; v += 2.3) for (let x = x0 + 1.8; x + 1.8 <= x1; x += 4.2) {
+      const z = zOfV(x, v), zl = zOfV(x - 1.8, v), zr = zOfV(x + 1.8, v);
+      if (terraceAt(x, z) || !ok(x - 1.8, zl) || !ok(x + 1.8, zr) || !ok(x, z) || !ok(x, zOfV(x, v - 1)) || !ok(x, zOfV(x, v + 1))) continue;
+      const hs = [H(x - 1.8, zl), H(x + 1.8, zr), H(x, zOfV(x, v - 0.6)), H(x, zOfV(x, v + 0.6)), H(x, z)];
+      if (Math.max(...hs) - Math.min(...hs) > 0.36) continue;
+      const roll = rng(), k = roll < 0.6 ? 0 : roll < 0.85 ? 1 : 2;
+      S.place('rgnbed' + k, x, Math.max(...hs) - 0.1, z, 0, 1); mine.push([x, z, 1.9]); count.nbeds++;
+      if (!first) first = [x, v];
+    }
+    if (first) {
+      for (const [key, dx, dv, ry] of [['rgtools', -3.6, 0.6, PI / 2], ['rgbarrow', -3.4, 3.2, 0.5], ['rgtrays', -3.4, -1.8, 0.1]]) {
+        const x = first[0] + dx, z = zOfV(x, first[1] + dv);
+        if (!ok(x, z, 0.4)) continue;
+        put(key, x, z, ry, 1, 0.03); mine.push([x, z, 1.1]);
+      }
+    }
+  }
+
+  // fern banks against the walls (after the corners and the beds, round them): the foot of each block's lowest front wall, both
+  // row ends inside the end walls, and along the wall behind each block's top step
+  R.terraces.forEach((B) => {
+    for (let x = B.x0 + 1.5; x < B.x1 - 1; x += 2.6 + rng() * 1.2) {
+      const z = zOfV(x, B.v0 - 1.0);
+      if (rng() < 0.7 && keepClear(x, z, -0.5) && !blocked(x, z, 0.2)) { put('rgfernbank' + Math.floor(rng() * 3), x, z, (rng() - 0.5) * 0.15, 0.8 + rng() * 0.3, 0.03); mine.push([x, z, 1.3]); count.ferns++; }
+    }
+    for (let r = 0; r < B.n; r++) for (const ex of [B.x0 + 0.55, B.x1 - 0.55]) for (let f = 1.6; f < B.d - 1.8; f += 2.6) {
+      const v = B.v0 + r * B.d + f + rng() * 0.6, z = zOfV(ex, v);
+      if (rng() < 0.75 && !blocked(ex, z, 0.3) && !people.some((e) => Math.hypot(e.x - ex, e.z - z) < 2.5)) { S.place('rgfernbank' + Math.floor(rng() * 3), ex, B.levels[r] - 0.03, z, PI / 2 + (rng() - 0.5) * 0.15, 0.7 + rng() * 0.25); mine.push([ex, z, 1.2]); count.ferns++; }
+    }
+    for (let x = B.x0 + 1.4; x < B.x1 - 1; x += 2.2 + rng()) { const z = zOfV(x, B.v1 - 0.15); if (rng() < 0.7 && !blocked(x, z, 0.1)) { S.place('rgfernbank' + Math.floor(rng() * 3), x, B.levels[B.n - 1] - 0.03, z, (rng() - 0.5) * 0.12, 0.65 + rng() * 0.2); count.ferns++; } }
+  });
+
+  // moss on stone: patches along the copings of the front and end walls, and moss hanging down the wall faces under them;
+  // iron grates over the rows' drain troughs (bars along the trough)
+  R.terraces.forEach((B, bi) => {
+    const b = new Builder(1800 + bi), mc = () => texTint('mossRoof', ['#4e6a40', '#5a7848', '#46603a'][Math.floor(rng() * 3)]);
+    for (let r = 0; r < B.n; r++) {
+      const v = B.v0 + r * B.d, top = B.levels[r] + 0.25;
+      for (let x = B.x0 + rng() * 2; x < B.x1 - 0.6; x += 1.2 + rng() * 2.4) {
+        const len = Math.min(B.x1 - 0.2 - x, 0.5 + rng() * 1.8), xm = x + len / 2;
+        if (len < 0.4) continue;
+        const lo = r ? B.levels[r - 1] : rainwardHeight(xm, zOfV(xm, v - 1.5)), face = zOfV(xm, v - 0.6);
+        if (top - lo < 0.3) continue;
+        if (rng() < 0.7) { b.add(lumpy(sphere(0.5, 7, 4), 0.35, 2.2, 1810 + count.moss, { flatBottom: 0 }), 'mossRoof', { p: [xm, top + 0.12, zOfV(xm, v - 0.3) + 0.12 + (rng() - 0.5) * 0.2], s: [len, 0.1, 0.3 + rng() * 0.25], c: mc(), uv: 'box', us: 0.6 }); count.moss++; }
+        if (rng() < 0.55) for (let k = 0, nk = 1 + Math.floor(rng() * 3); k < nk; k++) { const dh = Math.min(top - lo - 0.15, 0.2 + rng() * 0.9), w = 0.12 + rng() * 0.35; b.add(box(w, dh, 0.035), 'mossRoof', { p: [xm + (rng() - 0.5) * (len - w), top - dh / 2 + 0.05, face + 0.02], c: mc(), uv: 'box', us: 0.6 }); count.moss++; }
+      }
+      for (const [ex, sx] of [[B.x0, -1], [B.x1, 1]]) if (rng() < 0.7) {
+        const L = 0.8 + rng() * 2.5, vm = v + 0.6 + rng() * (B.d - L - 1.2);
+        b.add(lumpy(sphere(0.5, 7, 4), 0.35, 2.2, 1900 + count.moss, { flatBottom: 0 }), 'mossRoof', { p: [ex + sx * 0.32, top + 0.12, zOfV(ex, vm + L / 2)], s: [0.4, 0.1, L], c: mc(), uv: 'box', us: 0.6 }); count.moss++;
+      }
+      // grates over the drain trough: a square iron frame on the trough walls, bars along the trough
+      const dv = v + B.d - 0.9, y = B.levels[r];
+      for (let x = B.x0 + 3 + rng() * 3; x < B.x1 - 2; x += 8 + rng() * 4) {
+        const zc = zOfV(x, dv);
+        for (const s of [-1, 1]) { b.add(box(1.2, 0.05, 0.08), 'wIron', { p: [x, y + 0.34, zc + s * 0.44], c: '#2e3034' }); b.add(box(0.08, 0.05, 0.96), 'wIron', { p: [x + s * 0.6, y + 0.34, zc], c: '#2e3034' }); }
+        for (let t = -0.3; t <= 0.301; t += 0.1) b.add(box(1.12, 0.035, 0.035), 'wIron', { p: [x, y + 0.34, zc + t], c: '#34363a' });
+        count.grates++;
+      }
+    }
+    placeAbs({ builder: b });
+  });
+  // two grates in the camp's worked square (none by the lane channels: the quest's grates are there)
+  for (const [dx, dz] of [[-5.5, 4.5], [6, 3.5]]) { const x = R.camp.x + dx, z = R.camp.z + dz; if (!blocked(x, z, 0.4) && !people.some((e) => Math.hypot(e.x - x, e.z - z) < 1.5)) { put('rggrate', x, z, 0.1, 1, 0.02); count.grates++; } }
+
+  // puddles: flat, soft-edged pools of rain water on the tracks, the paths between the beds, the low ground and the camp, one
+  // merged mesh following the ground; they come up as the rain sets in and are gone when it is dry
+  {
+    const spots = [];
+    R.terraces.forEach((B) => {
+      const xs = bedSlots(B);
+      for (let r = 0; r < B.n; r++) for (let f = 1.4 + 0.64 + 1.15; f < B.d - 2.4; f += 2.3) for (const x of xs) if (rng() < 0.6) spots.push([x + 0.8 + rng() * 5.4, zOfV(x, B.v0 + r * B.d + f), 0.34 + rng() * 0.12, 2.0 + rng() * 2.0, B.levels[r]]);
+    });
+    for (let z = R.minZ + 10; z < R.maxZ - 10; z += 3.5) for (let x = R.minX + 8; x < R.east; x += 3.5) {
+      const px = x + rng() * 3, pz = z + rng() * 3;
+      if (rainwardGap(px, pz) > -2 || terraceAt(px, pz) || Math.abs(vOf(px, pz)) < riverHW(px) + 2) continue;
+      const onPath = rainwardPathDist(px, pz) < 2.6, inCamp = Math.max(Math.abs(px - R.camp.x), Math.abs(pz - R.camp.z)) < R.camp.s - 3;
+      if (rng() > (onPath ? 0.35 : inCamp ? 0.12 : 0.03)) continue;
+      if (blocked(px, pz, 0.5) || people.some((e) => Math.hypot(e.x - px, e.z - pz) < 1.5)) continue;
+      const h = [H(px - 1, pz), H(px + 1, pz), H(px, pz - 1), H(px, pz + 1)];
+      if (Math.max(...h) - Math.min(...h) > 0.35) continue;
+      spots.push([px, pz, 0.45 + rng() * 0.5, 1.2 + rng() * 1.2, null]);
+    }
+    const pos = [], col = [], idx = [], N = 10;
+    for (const [cx, cz, r0, sx, lvl] of spots) {
+      const ry = rng() * PI, c = Math.cos(ry), s = Math.sin(ry), base = pos.length / 3, y = (x, z) => (lvl ?? H(x, z)) + 0.035;
+      pos.push(cx, y(cx, cz), cz); col.push(1, 1, 1, 1);
+      const rad = []; for (let i = 0; i < N; i++) rad.push(r0 * (0.75 + rng() * 0.4));
+      for (const [k, a] of [[0.62, 1], [1, 0]]) for (let i = 0; i < N; i++) {
+        const t = (i / N) * PI * 2, lx = Math.cos(t) * rad[i] * k * sx, lz = Math.sin(t) * rad[i] * k, x = cx + lx * c - lz * s, z = cz + lx * s + lz * c;
+        pos.push(x, y(x, z), z); col.push(1, 1, 1, a);
+      }
+      for (let i = 0; i < N; i++) { const j = (i + 1) % N; idx.push(base, base + 1 + j, base + 1 + i); idx.push(base + 1 + i, base + 1 + j, base + 1 + N + j, base + 1 + i, base + 1 + N + j, base + 1 + N + i); }
+    }
+    count.puddles = spots.length;
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 4));
+    geo.setAttribute('normal', new THREE.Float32BufferAttribute(new Float32Array(pos.length).map((_, i) => (i % 3 === 1 ? 1 : 0)), 3));
+    geo.setIndex(idx); geo.computeBoundingSphere();
+    const mat = new THREE.MeshStandardMaterial({ color: '#36444a', emissive: '#121a1e', roughness: 0.05, metalness: 0.25, vertexColors: true, transparent: true, opacity: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2, side: THREE.DoubleSide });
+    const m = new THREE.Mesh(geo, mat); m.name = 'rainwardPuddles'; m.renderOrder = 1; m.visible = false; m.receiveShadow = true;
+    W.rainwardGroup.add(m); runtime.push(m);
+    const tick = W.rainwardTick;
+    W.rainwardTick = (dt, t) => { tick(dt, t); const k = Math.max(0, Math.min(1, (rainLevel() - 0.2) / 0.45)); mat.opacity = 0.82 * k; m.visible = k > 0.01; };
+    W.rainwardTick(0, 0);
+  }
+
+  // more Seedwrights at work: men hoeing in the paths between the beds (facing a bed), on the low ground, the lowest steps and
+  // the Gorge Foot's beds; one carrying sacks along the first block's lowest step, one sweeping the camp's square
+  {
+    const fr = (B, r, k) => B.v0 + r * B.d + 1.4 + 0.64 + 0.65 + 0.5 + k * 2.3; // the path between bed rows k and k+1
+    const spots = [[0, 0, 0, 2.5], [0, 1, 1, 15], [1, 0, 0, 9], [1, 1, 1, 17], [2, 0, 1, 3], [3, 0, 0, 12], [3, 1, 1, 4]];
+    for (const [bi, r, k, dx] of spots) {
+      const B = R.terraces[bi], x = B.x0 + 1.6 + dx, v = fr(B, r, k), z = zOfV(x, v);
+      if (blocked(x, z, 0.3) || nearSpawn(x, z, 4) || people.some((e) => Math.hypot(e.x - x, e.z - z) < 3)) continue;
+      hoer(x, z, (k + r) % 2 ? 0 : PI, 2 + ((bi * 3 + r) % 7));
+    }
+    // on the low ground's nursery beds (the middle block's group)
+    { const B = R.terraces[2], x = R.lanes[1].x + 8, v = 8.15 + 1.15, z = zOfV(x, v); if (!blocked(x, z, 0.3) && !nearSpawn(x, z, 2) && keepClear(x, z, -1)) hoer(x, z, PI, 6); }
+    { const B = R.terraces[1], v = B.v0 + 1.0, a = [B.x0 + 3, zOfV(B.x0 + 3, v)], b2 = [B.x1 - 4, zOfV(B.x1 - 4, v)], m2 = [(B.x0 + B.x1) / 2, zOfV((B.x0 + B.x1) / 2, v)]; folk.push({ v: 5, o: { role: 'stroll', spots: [a, m2, b2], walk: 0.9 }, carry: 'sack' }); count.folk++; }
+    for (const [dx, dz] of [[2, 5], [-5, -4], [5, 4], [-2, -6]]) { const x = R.camp.x + dx, z = R.camp.z + dz; if (blocked(x, z, 0.6) || people.some((e) => Math.hypot(e.x - x, e.z - z) < 2.5)) continue; folk.push({ v: 3, o: { role: 'sweep', home: [x, z], spots: [[x, z]], walk: 0.55 }, tool: 'broom' }); count.folk++; break; }
+  }
+  W.rainwardDress = count;
 }
 
 // a slip of running mud down a lane: a ribbon over the ground (the lane's width), its s attribute 0 at the top .. 1 at the
