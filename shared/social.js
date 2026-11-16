@@ -57,20 +57,24 @@ export const SOCIAL_METHODS = {
   say(p, text, links) {
     if (!text || !this.chatOk(p)) return;
     for (const q of this.players.values()) if (!q.bot && dist(p, q) <= SOCIAL.sayRange) q.session.send({ t: 'ev', list: [{ k: 'say', id: p.id, from: p.name, cls: p.cls, text, links }] });
+    if (!p.bot) this.botHearSay?.(p, text);
   },
   on_whisper(p, m) {
     const text = cleanText(m.text);
     if (!text) return;
-    const q = this.findPlayer(cleanName(m.to));
+    const byId = m.id ? this.players.get(m.id) : null;
+    const q = byId && !byId.bot ? byId : this.findPlayer(cleanName(m.to));
     if (!q) {
-      const n = cleanName(m.to).toLowerCase(), b = n && [...this.players.values()].find((x) => x.bot && x.wander && x.name.toLowerCase() === n);
-      return this.err(p, b ? `${b.name} is busy adventuring and does not answer whispers.` : `${capName(cleanName(m.to)) || 'That player'} is not online.`);
+      // a wandering adventurer (living bots C.2): by id from the menu, or by name when no real player has it
+      const n = cleanName(m.to).toLowerCase(), b = byId?.bot && byId.wander ? byId : n && [...this.players.values()].find((x) => x.bot && x.wander && x.name.toLowerCase() === n);
+      if (b) return this.botWhisper(p, b, text);
+      return this.err(p, `${capName(cleanName(m.to)) || 'That player'} is not online.`);
     }
     if (q === p) return this.err(p, 'You murmur to yourself.');
     if (q.held) return this.err(p, `${q.name} is away (their connection dropped). Try again in a moment.`);
     if (!this.chatOk(p)) return;
     const links = this.cleanLinks(m.links, text);
-    q.lastWhisper = p.name; p.lastWhisperTo = q.name;
+    q.lastWhisper = p.name; q.lastWhisperBot = null; p.lastWhisperTo = q.name;
     q.session.send({ t: 'ev', list: [{ k: 'whisper', from: p.name, cls: p.cls, text, links }] });
     p.session.send({ t: 'ev', list: [{ k: 'whisper', to: q.name, cls: q.cls, text, links, out: 1 }] });
   },
@@ -84,7 +88,7 @@ export const SOCIAL_METHODS = {
     }
     if (cmd === '/r' || cmd === '/reply') {
       if (!p.lastWhisper) { this.err(p, 'No one has whispered to you yet.'); return true; }
-      this.on_whisper(p, { to: p.lastWhisper, text: text.slice(cmd.length), links });
+      this.on_whisper(p, { to: p.lastWhisper, id: p.lastWhisperBot || undefined, text: text.slice(cmd.length), links }); // (a bot by id: living bots C.2)
       return true;
     }
     if (cmd === '/s' || cmd === '/say') { this.say(p, cleanText(text.slice(cmd.length)), links); return true; }
@@ -112,13 +116,13 @@ export const SOCIAL_METHODS = {
     if (!this.allow(p, 'who', 0.5, 3)) return;
     // v121 the "N online" badge by the minimap: count only (no list), cheap enough to ask every few seconds
     if (m?.count) {
-      const c = onlineCounts([...this.players.values()].filter((q) => !q.bot || q.wander));
+      const c = onlineCounts([...this.players.values()].filter((q) => !q.away && (!q.bot || q.wander)));
       return p.session.send({ t: 'who', count: 1, n: c.real, bots: c.bots });
     }
     const f = cleanName(m?.q).toLowerCase(), friends = new Set((p.friends || []).map((n) => n.toLowerCase()));
     const list = [];
     for (const q of this.players.values()) {
-      if (q.bot && !q.wander) continue;
+      if ((q.bot && !q.wander) || q.away) continue; // (a living bot away on a crossing or a run is hidden)
       if (f && !q.name.toLowerCase().includes(f)) continue;
       list.push({ id: q.id, name: q.name, cls: q.cls, level: q.level, where: this.whereName(q), guild: q.guild?.name || undefined, party: !!(p.party && q.party === p.party) || undefined, friend: friends.has(q.name.toLowerCase()) || undefined, bot: q.bot ? 1 : undefined });
     }

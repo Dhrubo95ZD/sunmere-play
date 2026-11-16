@@ -1,7 +1,7 @@
 // v114: the offline world (shared/sim.js World) in a Web Worker, so its ticks never land inside the render frame.
 // net.js starts it for offline / Android play and speaks the same game messages through it; ?simworker=0 keeps the
 // World on the page (the off-screen shot scripts that reach into game.net.world use that).
-// Page -> worker: { t: 'init', saves: { 'sunmere:<name>': json }, farHz }  the saves the World may load (a worker has no
+// Page -> worker: { t: 'init', saves: { 'sunmere:<name>': json }, farHz, bots }  the saves the World may load (a worker has no
 //                   localStorage: they are handed over once, and every save the World makes comes back to the page)
 //                 { t: 'msg', m }        a game message from the player (World.receive)
 //                 { t: 'run', on }       tick or pause (a phone pauses the world in the background)
@@ -50,7 +50,7 @@ onmessage = async (e) => {
     for (const [k, v] of Object.entries(d.saves || {})) saves.set(k, v);
     try {
       const { World } = await import('/sunmere-play/shared/sim.js');
-      world = new World(store);
+      world = new World({ ...store, bots: d.bots || undefined });
       world.tiers = { farHz: d.farHz || 2 };
       // structured clone copies each message as JSON.parse(JSON.stringify(m)) did on the page; one post per loop turn
       session = world.connect((m) => { out.push(m); if (!outQ) { outQ = true; queueMicrotask(flushOut); } });

@@ -13,8 +13,10 @@ const KEY = 'sunmere:opts';
 //   wisps and sparks on hits (desktop: the 8 nearest +10 characters within 20 m; phones: your own character as you attack);
 //   Simple: a steady glow and only your own sparks as you attack; Off: plain steel (the Prismatic sheen stays). Phones Simple.
 // perfHud: (v116) the Performance readout panel (ui/perfhud.js), off by default
+// botChat / botInvites / botWhispers: (living bots C.11) show adventurers' (bots') chat per channel; adventurers may invite
+//   me to groups; adventurers may whisper me first. The server is told (net.js botPrefsMsg) and skips hidden channels.
 // freeCam: Free camera (every platform, off by default): never turns on its own, wider zoom, hand-set pitch (game/camera.js)
-export const SETTINGS = { volume: 0.5, muted: false, bgMute: true, quality: IS_MOBILE ? 'mobile' : 'high', server: '', uiScale: 1, shake: true, miniZoom: 70, mapFog: true, fpsCap: IS_MOBILE ? 60 : 0, vsync: true, battery: false, dynRes: IS_MOBILE, freeCam: false, upgradeFx: IS_MOBILE ? 'simple' : 'full' };
+export const SETTINGS = { volume: 0.5, muted: false, bgMute: true, quality: IS_MOBILE ? 'mobile' : 'high', server: '', uiScale: 1, shake: true, miniZoom: 70, mapFog: true, fpsCap: IS_MOBILE ? 60 : 0, vsync: true, battery: false, dynRes: IS_MOBILE, freeCam: false, upgradeFx: IS_MOBILE ? 'simple' : 'full', botChat: { world: 1, say: 1, whisper: 1, guild: 1, party: 1 }, botInvites: true, botWhispers: true };
 export const MINI_ZOOMS = [40, 70, 110, 160];
 // rebindable keys (KeyboardEvent.code); arrow keys always move as well
 export const KEY_ACTIONS = [

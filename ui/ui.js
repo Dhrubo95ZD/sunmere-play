@@ -45,6 +45,7 @@ import { icon, skillIcon, talentArt, pathArt, buffArt, achArt, factionArt, homeA
 import { CHANGELOG, CHANGELOG_VERSION } from './changelog.js';
 import { installSocial } from './social.js';
 import { PerfHud } from './perfhud.js';
+import { botPrefsMsg } from '../game/net.js';
 import { STAT_NAME, STAT_PCT, SLOT_LABEL, typeLine, gearValue, offhandLook, wornLook, SHINE_NAME, OH_NAME, SH_NAME, CLOAK_NAME, GEMS, UPG, upOf, canUpgrade, upgradeCost, upgraded, upgradeTotal, gearName, salvageYield, unsocketFee, BILLET, ENGINE_CORE } from '/sunmere-play/shared/items.js';
 import { buildCharacter, setCharWeapon, setCharArmor, setCharCape, setCharGear } from '../assets/characters.js';
 import { disposeCharGeometry } from '../assets/rig.js';
@@ -1454,7 +1455,7 @@ export class UI {
   }
   invitePopup(ev) {
     const pop = $('.invite-pop', this.root);
-    pop.innerHTML = `<div><span style="color:${CLASSES[ev.cls]?.color || '#fff'}">${ev.from}</span> invites you to join a party.</div><div class="dbtns"><button class="ok">Accept</button><button class="no">Decline</button></div>`;
+    pop.innerHTML = `<div><span style="color:${CLASSES[ev.cls]?.color || '#fff'}">${shownName(ev.from, ev.bot)}</span> invites you to join a party.</div><div class="dbtns"><button class="ok">Accept</button><button class="no">Decline</button></div>`;
     pop.classList.remove('hidden');
     const done = (accept) => { this.g.send({ t: 'partyReply', accept }); pop.classList.add('hidden'); };
     $('.ok', pop).onclick = () => done(true);
@@ -1923,6 +1924,7 @@ export class UI {
         ${IS_TOUCH ? '' : '<h4>Performance</h4>' + this.perfOptsHtml()}
         <h4>Interface</h4>
         <div class="opt"><span>Interface size</span><div class="o-s">${[0.85, 1, 1.15, 1.3].map((v) => `<button data-s="${v}" class="${SETTINGS.uiScale === v ? 'on' : ''}">${Math.round(v * 100)}%</button>`).join('')}</div></div>
+        ${this.botChatHtml()}
         <h4>Keys</h4><div class="o-kb">${KEY_ACTIONS.map(([a, label]) => `<div class="kb"><span>${label}</span><button data-k="${a}" class="${this._rebind === a ? 'wait' : ''}">${this._rebind === a ? 'Press a key...' : keyLabel(SETTINGS.keys[a])}</button></div>`).join('')}</div>
         <div class="o-note">${IS_TOUCH ? 'Tap a key, then press the new one on your keyboard' : 'Click a key, then press the new one'} (Esc cancels). Skills stay on 1-0 and Shift+1-0; arrow keys always move. <a class="o-kreset">Reset keys</a></div>`;
       if (IS_TOUCH) this.optTouch(w);
@@ -1937,6 +1939,7 @@ export class UI {
       $('.o-shake', w).onchange = (e) => { SETTINGS.shake = e.target.checked; set(); };
       $('.o-perfhud', w).onchange = (e) => { SETTINGS.perfHud = e.target.checked; set(); this.perfHud?.setOn(SETTINGS.perfHud); };
       this.bindFreeCam(w);
+      this.bindBotChat(w);
       w.querySelectorAll('.o-q button').forEach((b) => (b.onclick = () => { SETTINGS.quality = b.dataset.q; SETTINGS.qualityPicked = true; set(); w.refresh(); })); // a picked quality wins over the phone's auto pick (settings.js)
       w.querySelectorAll('.o-s button').forEach((b) => (b.onclick = () => { SETTINGS.uiScale = Number(b.dataset.s); set(); applyScale(); w.refresh(); }));
       $('.o-reload', w).onclick = () => location.reload();
@@ -2010,6 +2013,25 @@ export class UI {
     $('.o-treset', wb).onclick = () => { const wheel = T.wheel; Object.assign(T, TOUCH_DEFAULTS, { wheel }); apply(); w.refresh(); };
     this.bindFreeCam(w);
     this.bindPerfOpts(w);
+  }
+
+  // Bot chat (living bots C.11, desktop and phones): which adventurers' (bots') chat to show, per channel, and whether they may
+  // invite or whisper first. Saved here and sent to the server (net.js botPrefsMsg), which then makes no line for a hidden channel.
+  botChatHtml() {
+    const C = SETTINGS.botChat || {};
+    const on = (ch) => C[ch] !== 0 && C[ch] !== false;
+    const box = (ch, label) => `<label class="opt chk"><input type="checkbox" class="o-bc" data-c="${ch}" ${on(ch) ? 'checked' : ''}> ${label}</label>`;
+    return `<h4>Bot chat</h4>
+        ${box('world', 'Show adventurers’ chat in World')}${box('say', 'Show adventurers’ chat in Say')}${box('whisper', 'Show adventurers’ Whispers')}${box('guild', 'Show adventurers’ chat in Guild')}${box('party', 'Show adventurers’ chat in Party')}
+        <label class="opt chk"><input type="checkbox" class="o-binv" ${SETTINGS.botInvites !== false ? 'checked' : ''}> Adventurers may invite me to groups</label>
+        <label class="opt chk"><input type="checkbox" class="o-bwh" ${SETTINGS.botWhispers !== false ? 'checked' : ''}> Adventurers may whisper me first</label>
+        <div class="o-note">Adventurers are the valley’s bots, shown as “Name (bot)”.</div>`;
+  }
+  bindBotChat(w) {
+    const send = () => { saveSettings(); try { this.g.send?.(botPrefsMsg()); } catch { /* not in the world yet: sent after the welcome */ } };
+    w.querySelectorAll('.o-bc').forEach((i) => (i.onchange = () => { SETTINGS.botChat = { world: 1, say: 1, whisper: 1, guild: 1, party: 1, ...(SETTINGS.botChat || {}), [i.dataset.c]: i.checked ? 1 : 0 }; send(); }));
+    const inv = w.querySelector('.o-binv'); if (inv) inv.onchange = () => { SETTINGS.botInvites = inv.checked; send(); };
+    const wh = w.querySelector('.o-bwh'); if (wh) wh.onchange = () => { SETTINGS.botWhispers = wh.checked; send(); };
   }
 
   // Free camera (SETTINGS.freeCam, every platform; camera.js reads it each frame): the camera never turns by itself, zooms
@@ -2598,9 +2620,10 @@ export class UI {
       const who = (x, extra) => `<span class="mu-m" style="--rc:${RC[x.role]}"><b style="color:${CLASSES[x.cls].color}">${x.name}</b> <em>${x.role}</em>${extra || ''}</span>`;
       $('.wb', w).innerHTML = `<h3>Group Finder</h3><p class="qtext">Bram fills your company to five: a tank first, then a healer, then damage. Volunteers meet you inside and go home when you leave. Road money: ${fmtMoney(M.cost)}.</p>
         <div class="mu-party"><div><label>Your company</label>${M.have.map((x) => who(x, x.you ? ' (you)' : '')).join('')}</div><div><label>Volunteers</label>${M.need.length ? M.need.map((x) => who(x)).join('') : '<span class="mu-m">None needed: your company is full.</span>'}</div></div>
-        ${M.alone ? '' : '<p class="qtext" style="color:#ffb070">The board is for those travelling alone or with companions.</p>'}
-        <div class="tr-list">${M.list.map((x) => `<div class="tr-row ${x.ok ? '' : 'done'}">${dgIc(x.id, false)}<div class="tr-mid"><b>${x.name}</b><span>Level ${x.level}${x.raid ? ' \u00b7 raid' : ''}</span></div><div class="tr-end">${x.ok && M.alone ? `<button class="mu-go" data-id="${x.id}">Muster</button>` : ''}</div></div>`).join('')}</div><div class="dbtns"><button class="back">Back</button></div>`;
+        ${M.alone ? '' : '<p class="qtext" style="color:#ffb070">The board is for those travelling alone or with companions.</p>'}${this.lfgPanelHtml?.(M) || ''}
+        <div class="tr-list">${M.list.map((x) => `<div class="tr-row ${x.ok ? '' : 'done'}">${dgIc(x.id, false)}<div class="tr-mid"><b>${x.name}</b><span>Level ${x.level}${x.raid ? ' \u00b7 raid' : ''}</span></div><div class="tr-end">${x.ok && M.alone ? `<button class="mu-go" data-id="${x.id}">Muster</button>` : ''}${x.ok && M.queue && M.lead && !(this.lfg || M.queue).queued ? `<button class="mu-q" data-id="${x.id}">Queue</button>` : ''}</div></div>`).join('')}</div><div class="dbtns"><button class="back">Back</button></div>`;
       w.querySelectorAll('.mu-go').forEach((b) => (b.onclick = () => { this.g.send({ t: 'muster', npc: d.npc, id: b.dataset.id }); w.remove(); }));
+      this.lfgPanelWire?.(w, M, muster); // the group finder queue (living bots A.7, client/ui/social.js)
       $('.back', w).onclick = () => main();
     };
     const rides = () => {

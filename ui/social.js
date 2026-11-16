@@ -317,9 +317,88 @@ export const ONLINE_UI = {
   },
 };
 
+// ------------------------------------------------------------------ the group finder queue (living bots A.7)
+// The server sends { t: 'lfg', state: { queued, id, name, role, roles, since, fillIn, have, check }, ready? }. Shown here:
+// a panel in Muster-Sergeant Bram's window (role choice, time waited, "filling with adventurers in 0:45", leave), a
+// ready-check popup with the whole company (bots tagged), and a queue badge under the minimap.
+const RCOL = { tank: '#7ab0ff', healer: '#8ae07a', damage: '#ff9a6a' };
+const mmss = (s) => { s = Math.max(0, Math.round(s)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
+export const LFG_UI = {
+  setLfg(m) {
+    if (m.state) { this.lfg = m.state; this.lfgAt = performance.now() / 1000; }
+    this.lfgBadge();
+    this._lfgPanelRedraw?.();
+    if (m.ready) this.lfgReadyPopup(m.ready);
+    else if (!this.lfg?.check) this._lfgPop?.classList.add('hidden');
+  },
+  // seconds waited and seconds until bots fill in, counted on from the last state
+  lfgTimes() { const L = this.lfg, d = performance.now() / 1000 - (this.lfgAt || 0); return L?.queued ? { waited: (L.since || 0) + d, fill: Math.max(0, (L.fillIn || 0) - d) } : null; },
+  lfgJoin(id, role) { this.g.send({ t: 'lfg', op: 'join', id, role }); },
+  lfgLeave() { this.g.send({ t: 'lfg', op: 'leave' }); },
+  // the panel in Bram's window: M is the muster dialog data (M.queue is the state when the window opened)
+  lfgPanelHtml(M) {
+    const L = this.lfg || M?.queue;
+    if (!L) return '';
+    if (L.queued) {
+      const T = this.lfgTimes() || { waited: L.since || 0, fill: L.fillIn || 0 };
+      return `<div class="lfg-panel mu-party" style="display:block"><label>Group finder queue</label><div class="qtext">${esc(L.name || L.id)} as <b style="color:${RCOL[L.role] || '#fff'}">${esc(L.role)}</b>. Waiting <b class="lfg-w">${mmss(T.waited)}</b>${L.check ? ' \u00b7 ready check' : T.fill > 0 ? ` \u00b7 filling with adventurers in <b class="lfg-f">${mmss(T.fill)}</b>` : ' \u00b7 filling with adventurers'}</div><div class="dbtns"><button class="lfg-leave">Leave the queue</button></div></div>`;
+    }
+    const roles = L.roles || ['damage'], role = this._lfgRole && roles.includes(this._lfgRole) ? this._lfgRole : L.role || roles[0];
+    return `<div class="lfg-panel mu-party" style="display:block"><label>Queue with other players</label><div class="qtext">Queue for a dungeon and Bram matches you with other players by role (1 tank, 1 healer, 3 damage). Free seats are filled with adventurers after a short wait. Your role: ${roles.map((r) => `<button class="lfg-role${r === role ? ' on' : ''}" data-r="${r}" style="padding:2px 10px;font-size:12px;${r === role ? `outline:2px solid ${RCOL[r]}` : 'opacity:.7'}">${r}</button>`).join(' ')}</div></div>`;
+  },
+  // wire the panel and the Queue buttons; redraw() re-renders the whole muster page (it is called again on each state)
+  lfgPanelWire(w, M, redraw) {
+    const L = this.lfg || M?.queue;
+    w.querySelectorAll('.lfg-role').forEach((b) => (b.onclick = () => { this._lfgRole = b.dataset.r; redraw(); }));
+    w.querySelectorAll('.mu-q').forEach((b) => (b.onclick = () => { const roles = L?.roles || ['damage']; this.lfgJoin(b.dataset.id, this._lfgRole && roles.includes(this._lfgRole) ? this._lfgRole : L?.role); }));
+    const lv = w.querySelector('.lfg-leave'); if (lv) lv.onclick = () => this.lfgLeave();
+    this._lfgPanelRedraw = () => { if (w.isConnected && w.querySelector('.lfg-panel')) redraw(); else this._lfgPanelRedraw = null; };
+    clearInterval(this._lfgPanelT);
+    this._lfgPanelT = setInterval(() => {
+      if (!w.isConnected) { clearInterval(this._lfgPanelT); return; }
+      const T = this.lfgTimes(); if (!T) return;
+      const a = w.querySelector('.lfg-w'), f = w.querySelector('.lfg-f');
+      if (a) a.textContent = mmss(T.waited); if (f) f.textContent = mmss(T.fill);
+    }, 1000);
+  },
+  // the ready check: everyone in the company, 30 s to say yes
+  lfgReadyPopup(r) {
+    let pop = this._lfgPop;
+    if (!pop?.isConnected) { pop = this._lfgPop = el('div', 'invite-pop lfg-ready hidden'); pop.style.top = '30%'; this.root.appendChild(pop); }
+    const end = performance.now() / 1000 + (r.t || 30);
+    pop.innerHTML = `<div class="dc-h">${esc(r.name)}: your group is ready</div><div class="lfg-roles">${(r.roles || []).map((q) => `<div><b style="color:${ccol(q.cls)}">${esc(shownName(q.name, q.bot))}</b>${q.you ? ' (you)' : ''} <em style="color:${RCOL[q.role] || '#fff'}">${esc(q.role)}</em></div>`).join('')}</div><div class="qtext">Road money is paid when everyone is ready. <b class="lfg-c">${r.t || 30}</b> s</div><div class="dbtns"><button class="ok">Ready</button><button class="no">Leave</button></div>`;
+    pop.classList.remove('hidden');
+    const done = (accept) => { this.g.send({ t: 'lfg', op: 'ready', accept }); pop.classList.add('hidden'); clearInterval(this._lfgPopT); };
+    $('.ok', pop).onclick = () => done(true);
+    $('.no', pop).onclick = () => done(false);
+    this.g.sfx?.play('ui');
+    clearInterval(this._lfgPopT);
+    this._lfgPopT = setInterval(() => { const left = end - performance.now() / 1000; const c = $('.lfg-c', pop); if (c) c.textContent = Math.max(0, Math.ceil(left)); if (left <= 0) { pop.classList.add('hidden'); clearInterval(this._lfgPopT); } }, 500);
+  },
+  // the queue badge under the minimap (next to the online badge): time waited; click twice to leave
+  lfgBadge() {
+    const mm = $('.minimap', this.root);
+    if (!mm) return;
+    let b = this._lfgB;
+    if (!b?.isConnected) {
+      b = this._lfgB = el('button', 'on-badge lfg-badge hidden', '');
+      b.type = 'button';
+      const ref = this._onB?.isConnected ? this._onB : $('.coords', mm);
+      if (ref) ref.after(b); else mm.appendChild(b);
+      b.onclick = (e) => { e.stopPropagation(); if (this._lfgSure) { this._lfgSure = 0; this.lfgLeave(); } else { this._lfgSure = 1; b.innerHTML = 'Leave queue?'; setTimeout(() => { this._lfgSure = 0; this.lfgBadge(); }, 3000); } };
+      clearInterval(this._lfgBT); this._lfgBT = setInterval(() => { if (!b.isConnected) return clearInterval(this._lfgBT); if (!this._lfgSure) this.lfgBadge(); }, 1000);
+    }
+    const L = this.lfg, T = this.lfgTimes();
+    b.classList.toggle('hidden', !L?.queued);
+    if (!L?.queued || this._lfgSure) return;
+    b.title = `Group finder: ${L.name || L.id} as ${L.role}. Click twice to leave the queue.`;
+    b.innerHTML = `<b style="color:${RCOL[L.role] || '#fff'}">Queue</b> <em>${mmss(T?.waited || 0)}</em>`;
+  },
+};
+
 // wire the module into the UI class: the methods, the Players window in toggle(), and a fresh trade view whenever your bags change
 export function installSocial(UI) {
-  Object.assign(UI.prototype, SOCIAL_UI, ONLINE_UI);
+  Object.assign(UI.prototype, SOCIAL_UI, ONLINE_UI, LFG_UI);
   const buildHUD = UI.prototype.buildHUD;
   UI.prototype.buildHUD = function (...a) { const r = buildHUD.apply(this, a); this.buildOnline(); return r; };
   const setYou = UI.prototype.setYou;

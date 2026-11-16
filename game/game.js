@@ -23,7 +23,9 @@ import { FX } from './fx.js';
 import { SFX } from './sfx.js';
 import { EntityManager } from './entities.js';
 import { Ambient } from './ambient.js';
-import { connect } from './net.js';
+import { connect, botPrefsMsg } from './net.js';
+// living bots C.11: a bot's line on a channel the player hid in Options is not shown (also guards older servers)
+const botHid = (ev, ch) => !!ev.bot && !ev.out && (SETTINGS.botChat?.[ch] === 0 || SETTINGS.botChat?.[ch] === false);
 import { UI } from '../ui/ui.js';
 import { CHOREO } from './choreo.js';
 import { CLASSES, SKILLS, SKILL_BY_ID } from '/sunmere-play/shared/classes.js';
@@ -303,6 +305,7 @@ export async function startGame() {
       case 'ach': ui.setAch(m); world.updateHomestead?.(game.you, m.done); qobjects.achC = m.c; if (game.you) qobjects.refresh(game.you); break;
       case 'achc': ui.achCounter(m); break;
       case 'party': ui.setParty(m); break;
+      case 'lfg': ui.setLfg?.(m); break; // the group finder queue (living bots A.7)
       case 'bank': ui.setBank(m.items); break;
       case 'mail': ui.setMail(m.list); break;
       case 'trade': ui.setTrade(m); break;
@@ -326,6 +329,7 @@ export async function startGame() {
     game.localId = m.id;
     game.send({ t: 'ptrade', op: 'cancel' }); // (a trade left open on a dropped connection closes; the window is gone)
     game.send({ t: 'friend', op: 'list' });
+    game.send(botPrefsMsg()); // living bots C.11: which bot chat this player sees
     entities.localId = m.id;
     game.you = m.you;
     world.updateHomestead?.(m.you, ui.ach?.done); // nothing in the homestead shows until it is earned or built
@@ -441,7 +445,7 @@ export async function startGame() {
       case 'upgrade': ui.onUpgrade(ev); break;
       case 'recv': ui.receipt(ev); break;
       case 'err': ui.error(ev.text); break;
-      case 'chat': ui.chat(ev.text, '#ffffff', `<span style="color:${CLASSES[ev.cls]?.color || '#fff'}">${shownName(ev.from, ev.bot)}</span>`, ev.links); break;
+      case 'chat': if (botHid(ev, 'world')) break; ui.chat(ev.text, '#ffffff', `<span style="color:${CLASSES[ev.cls]?.color || '#fff'}">${shownName(ev.from, ev.bot)}</span>`, ev.links); break;
       case 'mobAtk': {
         const v = entities.get(ev.id), t = entities.get(ev.tgt);
         if (v) { if (t) v.ry = Math.atan2(t.pos.x - v.pos.x, t.pos.z - v.pos.z); v.mobAttack(t, ev.ranged, ev.special, fx); }
@@ -505,16 +509,16 @@ export async function startGame() {
       case 'duelAsk': ui.duelPopup(ev); sfx.play('ui'); break;
       case 'questShare': ui.sharePopup(ev); sfx.play('ui'); break;
       case 'guildAsk': ui.guildPopup(ev); sfx.play('ui'); break;
-      case 'gchat': ui.chat(ev.text, '#7aff9a', `<span style="color:#7aff9a">Guild</span>] [<span style="color:${CLASSES[ev.cls]?.color || '#fff'}">${shownName(ev.from, ev.bot)}</span>`, ev.links); break;
+      case 'gchat': if (botHid(ev, 'guild')) break; ui.chat(ev.text, '#7aff9a', `<span style="color:#7aff9a">Guild</span>] [<span style="color:${CLASSES[ev.cls]?.color || '#fff'}">${shownName(ev.from, ev.bot)}</span>`, ev.links); break;
       case 'mailNew': sfx.play('ui'); break;
       case 'claim': ui.claimCard(ev); sfx.play('ui'); break;
       case 'rare': ui.ping(ev.x, ev.z, '#e0e8ff'); sfx.play('ui'); break;
       case 'recall': game.casting = { cast: ev.secs, t0: performance.now() / 1000, name: 'Homeward Compass' }; break;
       case 'recallStop': if (game.casting?.name === 'Homeward Compass') game.casting = null; break;
-      case 'whisper': ui.chat(ev.text, '#e8a0ff', `<span style="color:#e8a0ff">${ev.out ? 'To ' + ev.to : ev.from + ' whispers'}</span>`, ev.links); if (!ev.out) sfx.play('ui', 0.5); break;
-      case 'say': ui.chat(ev.text, '#fff4d8', `<span style="color:#ffe8b0">Say</span>] [<span style="color:${CLASSES[ev.cls]?.color || '#fff'}">${ev.from}</span>`, ev.links); break;
+      case 'whisper': if (botHid(ev, 'whisper')) break; ui.chat(ev.text, '#e8a0ff', `<span style="color:#e8a0ff">${ev.out ? 'To ' + shownName(ev.to, ev.bot) : shownName(ev.from, ev.bot) + ' whispers'}</span>`, ev.links); if (!ev.out) sfx.play('ui', 0.5); break;
+      case 'say': if (botHid(ev, 'say')) break; ui.chat(ev.text, '#fff4d8', `<span style="color:#ffe8b0">Say</span>] [<span style="color:${CLASSES[ev.cls]?.color || '#fff'}">${shownName(ev.from, ev.bot)}</span>`, ev.links); break;
       case 'ptradeAsk': ui.ptradeAsk(ev); sfx.play('ui'); break;
-      case 'pchat': ui.chat(ev.text, '#9ac8ff', `<span style="color:#7ab0ff">[Party] ${ev.from}</span>`, ev.links); break;
+      case 'pchat': if (botHid(ev, 'party')) break; ui.chat(ev.text, '#9ac8ff', `<span style="color:#7ab0ff">Party</span>] [<span style="color:#7ab0ff">${shownName(ev.from, ev.bot)}</span>`, ev.links); break; // (shown as [Party] [Name], like guild chat)
       case 'sail': startCrossing(ev.to, ev.from); break;
       case 'lift': startLift(ev.to, ev.from); break;
       case 'haul': startHaul(ev.to, ev.from); break;

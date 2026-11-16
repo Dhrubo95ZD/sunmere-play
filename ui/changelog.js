@@ -1,6 +1,16 @@
 // What's new: shown once after an update (newest first). Bump `v` on the first entry whenever something is added.
 export const CHANGELOG = [
   {
+    v: 122, date: '16 November 2026', title: 'Living Adventurers',
+    items: [
+      ['Adventurers who play', 'The adventurers you meet now play the game for themselves: they take quests, hunt, gather and craft, level up and move on to new lands, and come and go through the day like other players. They still show (bot) after their names.'],
+      ['Play together', 'Now and then an adventurer nearby may ask if you want to group up for a quest or a world boss, and you can invite them too. They follow you, fight with you and say their goodbyes when the job is done. Turn their invites off in Options if you prefer.'],
+      ['Group finder', 'Queue for a dungeon as tank, healer or damage. Real players are matched first, and adventurers fill any empty places so you can always go.'],
+      ['Talk to them', 'Whisper an adventurer or say their name and they answer, briefly and casually. They remember who you are and what you did together, and they chat with their own friends now and then. Ask one if they are a bot and they will tell you plainly.'],
+      ['Hide bot chat', 'Options, Bot chat: hide adventurer lines in world, say, whisper, guild or party chat.'],
+    ],
+  },
+  {
     v: 121, date: '16 November 2026', title: 'The Hill Holds',
     items: [
       ['Part Fourteen complete', 'Chapters 46 to 48: clear the choked drains, dig the buried beds out of the mud and stop the Terrace Engine that has cut the hill away for a lifetime. The hill holds through a storm, the first young poles go down to the Sound and up the lift, and the valley lays out a nursery of its own.'],

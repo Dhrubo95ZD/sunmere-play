@@ -3,7 +3,7 @@
 import { CLASSES, SKILLS, SKILL_BY_ID, LEVEL_CAP, xpForLevel, powerAt } from './classes.js';
 import { MOBS, SPAWNS, NPCS, QUESTS, ITEMS, LOOT_TABLES, VENDORS, NODES, GEAR_NAMES, GEAR_PREFIX, GRAVEYARDS, OBJECTS, OBJECT_KINDS, CARAVANS, WORLD_EVENTS, COMPANIONS, companionCost, MUSTER, HOME_DECO, HOME_TROPHIES, HOME_SPOTS, HOME_MOVABLE, WANDERERS, WANDERER_LINES, WANDERER_LINES_AREA, RUNABOUT, FACTIONS, REP_RANKS, REP_CAP, REP_SHOP, repRank, factionOfZone, EMOTES, SETS, RECIPES, RECIPE_BY_ID, SALVAGE, PAINTS, PETS, ARENA, ARENA_POOL, ESCORTS, DUR_LOSS, repairCost, DUEL, DUEL_YES, DUEL_NO, POST, TRADE, ORDER_FROM, tradeFair, BAG_BASE, BAG_V, RESTED, RECALL, mountSpeed, mountKind, LOADOUT_LEVEL, BOUNTY, PROF_NAME, PROF_MAX, profColor, TEMPEST, tempestMods, weekNumber, LEDGER, GUILD, GUILD_LINES, LEGENDARIES, DRAGONSLAYER, DS_BOSS, DS_NORMAL_CHANCE, DRAGONSLAYER_ARMOUR, DSA_SOURCE, DSA_HEROIC_CHANCE, DSA_NORMAL_CHANCE, DRAWINGS, MARK_SHOP, VALLEY, SAIL, sailRoutes , npcSeen, ENDGAME_LVL, UPGRADE_DROPS, QUALITY_NAME } from './data.js';
 import { DUNGEONS, DUNGEON_BY_ID, DUNGEON_MIN_X, dungeonAt, dungeonPush, dungeonSpot, dungeonTide, dungeonSlip } from './dungeons.js';
-import { heightAt, walkHeight, zoneAt, waterAt, waterNear, waterKind, LAKE, WORLD, AREA_BY_ID, islandAt, areaOf, inWorld, clampWorld, regionAt } from './terrain.js';
+import { heightAt, walkHeight, zoneAt, waterAt, waterNear, waterKind, LAKE, WORLD, AREA_BY_ID, islandAt, areaOf, inWorld, clampWorld, regionAt, worldGap } from './terrain.js';
 import { mulberry32 } from './noise.js';
 import { tpSpot } from './tpspot.js';
 import { setTideClock, tideState } from './tidewater.js';
@@ -13,6 +13,10 @@ import { rollGear, gearValue, CLASS_WEIGHT, offhandLook, wornLook, shoulderLook,
 import { ACHIEVEMENTS, ACH_BY_ID, ACH_BY_COUNTER, DUNGEON_BOSSES, achTitle, achDone } from './achievements.js';
 import { ARMORY_SET, ARMORY_TOTAL } from './armory.js';
 import { SOCIAL_METHODS } from './social.js';
+import { BOT_MIND_METHODS } from './botmind.js';
+import { BOT_SOCIAL_METHODS, BOT_PARTY } from './botsocial.js';
+import { BOT_CHAT_METHODS } from './botchat.js';
+import { BOT_MEMORY_METHODS } from './botmemory.js';
 import { TALENT_BY_ID, TALENTS, TALENT_ROW_REQ, talentMods, talentPoints, talentResetCost, pathSpent, totalSpent, skillCost, skillCd } from './talents.js';
 
 const rand = mulberry32(Date.now() & 0xffff);
@@ -86,6 +90,9 @@ export class World {
     }
     for (const n of NODES) { const y = heightAt(n.x, n.z); if (y > 0.4) this.nodes.set(n.id, { ...n, y, ready: true, t: 0 }); }
     for (const sp of SPAWNS) for (let i = 0; i < sp.n; i++) this.spawnMob(sp);
+    // living bots (docs/ai/living_bots_design.md B.6): roster size, how many may be in the world, how many at least
+    this.bots = { roster: 40, maxActive: 24, minOnline: 8, ...io.bots };
+    this.botsLoad();
     if (io.wanderers !== false) this.spawnWanderers();
     // world bosses arrive a while after the world wakes, with an announcement
     for (const m of this.mobs.values()) if (m.def.world) { m.dead = true; m.respawnT = this.time + 600 + R(0, 600); }
@@ -174,6 +181,7 @@ export class World {
     p.guild = saved && saved.cls === cls && saved.guild || null;
     p.friends = saved && saved.cls === cls ? this.loadFriends(saved) : [];
     p.ringWeek = saved && saved.cls === cls && saved.ringWeek || null;
+    p.botPrefs = saved && saved.cls === cls && saved.botPrefs || null; p.lfgRole = saved && saved.cls === cls && saved.lfgRole || null;
     p.compGear = saved && saved.cls === cls && saved.compGear || {};
     p.looks = saved && saved.cls === cls && saved.looks || [];
     p.wlook = saved && saved.cls === cls && saved.wlook || null;
@@ -222,7 +230,7 @@ export class World {
   }
 
   savePlayer(p) {
-    this.io.save(p.name, { cls: p.cls, level: p.level, xp: p.xp, gold: p.gold, bag: p.bag, equip: p.equip, quests: p.quests, done: p.done, picks: p.picks || {}, spares: p.spares || {}, lgear: p.lgear || null, raidLock: p.raidLock || null, x: p.x, z: p.z, visited: p.visited, talents: p.talents, ach: p.ach, title: p.title, companions: this.myBots(p).filter((b) => !b.lfg).map((b) => b.cls), runabout: !!p.runabout, rep: p.rep || {}, daily: p.daily || {}, bank: p.bank || [], paint: p.paint || 'brass', pets: p.pets || {}, pet: p.pet || null, cv: p.cv || 0, arenaBest: p.arenaBest || 0, bagSize: p.bagSize || BAG_BASE, bagV: BAG_V, rested: Math.round(p.rested || 0), savedAt: Date.now(), savedHub: this.inHub(p), home: p.home || 'village', looks: p.looks || [], wlook: p.wlook || null, ohlooks: p.ohlooks || [], ohlook: p.ohlook || null, shines: p.shines || [], wshine: p.wshine || null, shlooks: p.shlooks || [], shlook: p.shlook || null, cklooks: p.cklooks || [], cklook: p.cklook || null, homeDeco: p.homeDeco || {}, homePos: p.homePos || {}, compGear: p.compGear || {}, ringWeek: p.ringWeek || null, guild: p.guild || null, ledger: p.ledger || [], prof: p.prof || {}, bounty: p.bounty || null, lo: p.lo || 0, loadouts: this.loadouts(p), runaboutMk: p.runaboutMk || 1, crawler: !!p.crawler, mountKind: p.mountKind || 'runabout', recallReady: p.recallReady || 0, mail: p.mail || [], buyOrders: p.buyOrders || [], wo: p.wo || null, gearV: p.gearV || GEAR_V, temper: p.temper || newTemper(), heats: p.heats || [], wheat: p.wheat ?? null, friends: p.friends || [] });
+    this.io.save(p.name, { cls: p.cls, level: p.level, xp: p.xp, gold: p.gold, bag: p.bag, equip: p.equip, quests: p.quests, done: p.done, picks: p.picks || {}, spares: p.spares || {}, lgear: p.lgear || null, raidLock: p.raidLock || null, x: p.x, z: p.z, visited: p.visited, talents: p.talents, ach: p.ach, title: p.title, companions: this.myBots(p).filter((b) => !b.lfg).map((b) => b.cls), runabout: !!p.runabout, rep: p.rep || {}, daily: p.daily || {}, bank: p.bank || [], paint: p.paint || 'brass', pets: p.pets || {}, pet: p.pet || null, cv: p.cv || 0, arenaBest: p.arenaBest || 0, bagSize: p.bagSize || BAG_BASE, bagV: BAG_V, rested: Math.round(p.rested || 0), savedAt: Date.now(), savedHub: this.inHub(p), home: p.home || 'village', looks: p.looks || [], wlook: p.wlook || null, ohlooks: p.ohlooks || [], ohlook: p.ohlook || null, shines: p.shines || [], wshine: p.wshine || null, shlooks: p.shlooks || [], shlook: p.shlook || null, cklooks: p.cklooks || [], cklook: p.cklook || null, homeDeco: p.homeDeco || {}, homePos: p.homePos || {}, compGear: p.compGear || {}, ringWeek: p.ringWeek || null, guild: p.guild || null, ledger: p.ledger || [], prof: p.prof || {}, bounty: p.bounty || null, lo: p.lo || 0, loadouts: this.loadouts(p), runaboutMk: p.runaboutMk || 1, crawler: !!p.crawler, mountKind: p.mountKind || 'runabout', recallReady: p.recallReady || 0, mail: p.mail || [], buyOrders: p.buyOrders || [], wo: p.wo || null, gearV: p.gearV || GEAR_V, temper: p.temper || newTemper(), heats: p.heats || [], wheat: p.wheat ?? null, friends: p.friends || [], botPrefs: p.botPrefs || null, lfgRole: p.lfgRole || null });
   }
 
   // plan A7: every place a character keeps gear, moved to the gearV 2 shape (bs/tq/up; rf n -> up n). Idempotent. The
@@ -349,6 +357,7 @@ export class World {
     if (text.startsWith('/')) return this.command(p, text, this.cleanLinks(m.links, text));
     if (!this.chatOk(p)) return;
     this.broadcast({ k: 'chat', from: p.name, cls: p.cls, text, links: this.cleanLinks(m.links, text) });
+    this.botHearWorld?.(p, text);
   }
   command(p, text, links) {
     const [cmd, arg] = text.split(/\s+/);
@@ -374,8 +383,9 @@ export class World {
     else if (cmd === '/gold' && arg) { p.gold += clamp(Number(arg) | 0, 0, 1000) * 10000; this.pushSelf(p); } // test option, like /level
     else if (cmd === '/invite' && arg) this.invite(p, arg);
     else if (cmd === '/leave') { if (p.party) { this.leaveParty(p); this.msg(p, 'You leave the party.', '#7ab0ff'); } }
-    else if (cmd === '/kick' && arg) { const P = this.partyOf(p), q = this.findPlayer(arg); if (P && P.leader === p.id && q && q.party === P.id && !q.bot) { this.leaveParty(q); this.msg(q, 'You were removed from the party.', '#7ab0ff'); } }
-    else if (cmd === '/p' || cmd === '/party') { const t = text.slice(cmd.length).trim(); if (!t) return; if (!p.party) return this.err(p, 'You are not in a party.'); if (!this.chatOk(p)) return; for (const q of this.partyMembers(p)) if (!q.bot) q.session.send({ t: 'ev', list: [{ k: 'pchat', from: p.name, cls: p.cls, text: t, links }] }); }
+    else if (cmd === '/kick' && arg) { const P = this.partyOf(p), q = this.findPlayer(arg) || (P ? this.partyMembers(p).find((r) => r.bot && r.wander && r.name.toLowerCase() === arg.toLowerCase()) : null); if (P && P.leader === p.id && q && q.party === P.id && q.bot && q.wander) this.botKicked(p, q); else if (P && P.leader === p.id && q && q.party === P.id && !q.bot) { this.leaveParty(q); this.msg(q, 'You were removed from the party.', '#7ab0ff'); } }
+    else if (cmd === '/lfg') { const [, a1, a2] = text.split(/\s+/); if (!a1) this.lfgSend(p); else if (a1 === 'leave') this.on_lfg(p, { op: 'leave' }); else this.on_lfg(p, { op: 'join', id: a1, role: a2 }); } // the group finder queue (living bots A.7)
+    else if (cmd === '/p' || cmd === '/party') { const t = text.slice(cmd.length).trim(); if (!t) return; if (!p.party) return this.err(p, 'You are not in a party.'); if (!this.chatOk(p)) return; for (const q of this.partyMembers(p)) if (!q.bot) q.session.send({ t: 'ev', list: [{ k: 'pchat', from: p.name, cls: p.cls, text: t, links }] }); this.botHearParty?.(p, t); }
     else if (cmd === '/dismiss') this.dismissCompanion(p, false, arg);
     else if (cmd === '/comp') { const [, order, who] = text.split(/\s+/); this.on_compOrder(p, { order, name: who }); }
     else if (EMOTES[cmd.slice(1)]) this.emote(p, cmd.slice(1));
@@ -654,8 +664,8 @@ export class World {
       const yes = rand() < 0.75;
       setTimeout(() => {
         if (!p.guild || !this.players.has(p.id)) return;
-        if (yes) { (p.guild.bots ||= []).push(q.name); this.guildSay(p, q.name, q.cls, ['Glad to join! Count me in.', 'A guild? Gladly. Where do I sign?', 'Happy to ride under your banner.'][RI(0, 2)], true, undefined, true); this.pushSelf(p); }
-        else this.broadcast({ k: 'chat', from: q.name, bot: 1, cls: q.cls, text: 'Thanks, but I like to wander alone.' });
+        if (yes) { (p.guild.bots ||= []).push(q.name); this.botSay(q, 'guild', 'guild_join_yes', { to: p, must: 1, slots: { guild: p.guild.name } }); this.pushSelf(p); }
+        else this.botSay(q, 'whisper', 'guild_join_no', { to: p, must: 1 }); // (a no is said to the one who asked, not the whole valley)
       }, 1500);
       return this.msg(p, `You invite ${q.name} to <${p.guild.name}>.`, '#7aff9a');
     }
@@ -696,7 +706,7 @@ export class World {
   guildGreet(p) {
     if (!p.guild || !this.players.has(p.id)) return;
     const bots = this.guildBots(p.guild.name);
-    if (bots.length) { const b = bots[RI(0, bots.length - 1)]; this.guildSay(p, b.name, b.cls, [`Welcome back, ${p.name}!`, `There you are, ${p.name}.`, `Evening, ${p.name}!`][RI(0, 2)], true, undefined, true); }
+    if (bots.length) { const b = bots[RI(0, bots.length - 1)]; this.botSay(b, 'guild', 'guild_greet', { to: p, slots: { name: p.name } }); }
   }
   tickGuilds(dt) {
     this.gchatT = (this.gchatT ?? R(240, 480)) - dt;
@@ -705,7 +715,7 @@ export class World {
     const names = new Set([...this.players.values()].filter((q) => !q.bot && q.guild).map((q) => q.guild.name));
     for (const name of names) {
       const bots = this.guildBots(name), lead = this.guildMembersOnline(name)[0];
-      if (bots.length && lead) { const b = bots[RI(0, bots.length - 1)]; this.guildSay(lead, b.name, b.cls, GUILD_LINES[RI(0, GUILD_LINES.length - 1)], true, undefined, true); }
+      if (bots.length && lead) { const b = bots[RI(0, bots.length - 1)]; this.botSay(b, 'guild', 'guild_ambient', { to: lead, slots: { guild: name } }); }
     }
   }
 
@@ -1346,8 +1356,9 @@ export class World {
   findPlayer(name) { const n = String(name).toLowerCase(); return [...this.players.values()].find((q) => !q.bot && q.name.toLowerCase() === n) || null; }
   partyOf(p) { return p?.party ? this.parties.get(p.party) || null : null; }
   partyMembers(p) { const P = this.partyOf(p); return P ? P.members.map((id) => this.players.get(id)).filter(Boolean) : [p]; }
-  invite(p, name) {
+  invite(p, name, id) {
     const q = this.findPlayer(name);
+    if (!q) { const n = String(name || '').toLowerCase(), b = id ? this.players.get(id) : [...this.players.values()].find((x) => x.bot && x.wander && x.name.toLowerCase() === n); if (b?.bot && b.wander) return this.inviteBot(p, b); } // a bot (living bots A.3)
     if (!q || q === p) return this.err(p, 'No one by that name is in the valley.');
     if (q.held) return this.err(p, `${q.name} is away (their connection dropped).`);
     if (!this.allow(p, 'invite', 0.5, 4)) return this.err(p, 'Wait a moment before inviting again.');
@@ -1363,6 +1374,7 @@ export class World {
     const inv = q.invite; q.invite = null;
     const p = inv && this.time - inv.t < 60 ? this.players.get(inv.from) : null;
     if (!p) return;
+    if (inv.bot) return this.botInviteAnswer(q, p, !!m.accept); // an invite a bot sent (living bots A.2)
     if (!m.accept) { this.msg(p, `${q.name} declines your invitation.`, '#7ab0ff'); return; }
     if (this.joinParty(p, q)) for (const r of this.partyMembers(p)) if (!r.bot) this.msg(r, `${q.name} joins the party.`, '#7ab0ff');
   }
@@ -1496,7 +1508,9 @@ export class World {
       g.lv.push(m.level); groups.set(sp, g);
     }
     // each ground is tagged with its area: a wanderer only ever moves on to grounds in the area it stands in (no walks over the sea)
-    this.grounds = [...groups.values()].map((g) => ({ x: g.x, z: g.z, r: g.r, area: areaOf(g.x, g.z), lvl: g.lv.reduce((a, b) => a + b, 0) / g.lv.length }));
+    this.grounds = [...groups.entries()].map(([sp, g]) => ({ x: g.x, z: g.z, r: g.r, area: areaOf(g.x, g.z), lvl: g.lv.reduce((a, b) => a + b, 0) / g.lv.length, sps: [sp] }));
+    // living bots (B.1): the saved roster logs its bots in (shared/botmind.js); io.bots === false keeps the old 14 wanderers
+    if (this.io.bots !== false) { this.rosterStart(); return; }
     for (const W of WANDERERS) {
       const gs = this.huntGrounds(W.lvl, 'valley');
       const g = gs[RI(0, gs.length - 1)];
@@ -1512,6 +1526,11 @@ export class World {
     return gs;
   }
   tickWanderer(b, dt) {
+    if (b.ai.party && this.botPartyTick(b, dt)) return; if (b.mind && this.mindTick(b, dt)) return; // living bots (A.4, B.3)
+    return this.wanderLegacy(b, dt);
+  }
+  // the wanderer of v120 (io.bots === false, and any wanderer without a mind)
+  wanderLegacy(b, dt) {
     const A = b.ai;
     const real = () => [...this.players.values()].some((q) => !q.bot);
     if (b.dead) {
@@ -1526,12 +1545,12 @@ export class World {
     }
     if (A.duelReply && this.time > A.duelReply.t) {
       const r = A.duelReply, p = this.players.get(r.from); A.duelReply = null;
-      if (p && r.yes && this.time > (A.duelCool || 0)) { this.broadcast({ k: 'chat', from: b.name, bot: 1, cls: b.cls, text: DUEL_YES[RI(0, DUEL_YES.length - 1)] }); this.startDuel(p, b); }
-      else if (p) this.broadcast({ k: 'chat', from: b.name, bot: 1, cls: b.cls, text: DUEL_NO[RI(0, DUEL_NO.length - 1)] });
+      if (p && r.yes && this.time > (A.duelCool || 0)) { this.botSay(b, 'world', 'duel_yes', { to: p, must: 1 }); this.startDuel(p, b); }
+      else if (p) this.botSay(b, 'world', 'duel_no', { to: p, must: 1 });
     }
     if (A.reply && this.time > A.replyT) { const r = A.reply; A.reply = null; b.speed = 0; this.broadcast({ k: 'emote', id: b.id, e: r.e, text: `${b.name} ${EMOTES[r.e]} at ${r.to}.` }); A.pause = 3; }
     A.chatT -= dt;
-    if (A.chatT <= 0) { A.chatT = R(300, 720); if (real()) { const WL = WANDERER_LINES_AREA[areaOf(b.x, b.z)] || WANDERER_LINES; this.broadcast({ k: 'chat', from: b.name, bot: 1, cls: b.cls, text: WL[RI(0, WL.length - 1)] }); } }
+    if (A.chatT <= 0) { A.chatT = R(300, 720); if (real()) this.botAmbient(b); } // living bots C: a true line about where it is, within the chat budgets (shared/botchat.js)
     if (this.time > A.moveOn && !b.target) { const gs = this.huntGrounds(b.level, areaOf(b.x, b.z)); if (gs.length) { A.ground = gs[RI(0, gs.length - 1)]; A.wp = null; } A.moveOn = this.time + R(200, 480); }
     const G0 = A.ground;
     const inCombat = this.time - b.combatT < 5;
@@ -1596,9 +1615,10 @@ export class World {
     const d = Math.hypot(goal.x - b.x, goal.z - b.z);
     if (d > stopAt) {
       const sp = CLASSES[b.cls].speed * mul;
-      const step = Math.min(d - stopAt, sp * this.lastDt);
+      const step = Math.min(d - stopAt, sp * this.lastDt), ox = b.x, oz = b.z;
       b.x += ((goal.x - b.x) / d) * step; b.z += ((goal.z - b.z) / d) * step;
       if (b.x >= DUNGEON_MIN_X) [b.x, b.z] = dungeonPush(b.x, b.z, 0.4); else [b.x, b.z] = housePush(b.x, b.z, 0.4);
+      if (b.x < DUNGEON_MIN_X && worldGap(b.x, b.z) > -0.6) { b.x = ox; b.z = oz; } // never off the walkable edge (living bots B.5)
       b.y = walkHeight(b.x, b.z);
       b.ry = Math.atan2(goal.x - b.x, goal.z - b.z);
       b.speed = sp; b.eating = 0;
@@ -1607,7 +1627,7 @@ export class World {
 
   // companions wear sensible kit for their level so they keep up
   botGear(b) {
-    const L = b.level, budget = 3 + L * 1.6;
+    const L = b.level, budget = (3 + L * 1.6) * (1 + (b.gearBonus || 0)); // a living bot's cleared runs add up to 15% (B.4)
     const given = this.players.get(b.owner)?.compGear?.[b.cls] || {};
     // v120: armour 7.5 per budget point (was 3), so a bot in its two armour pieces keeps about the damage reduction of a hero in a full set under the level-scaled armour formula
     // a bot tank (Knight or Warden) gets BOT_TANK_HP times the health on them, about a geared hero tank's health (v120 review
@@ -1667,7 +1687,7 @@ export class World {
     return {
       have: this.musterParty(p).map((q) => ({ name: q.name, cls: q.cls, role: MUSTER.roles[q.cls], you: q === p })),
       need: this.musterNeed(p).map((cls) => ({ name: MUSTER.volunteers[cls], cls, role: MUSTER.roles[cls] })),
-      cost: MUSTER.cost(p.level), alone: humans.length <= 1,
+      cost: MUSTER.cost(p.level), alone: humans.length <= 1, queue: this.lfgView(p), lead: !p.party || this.partyOf(p)?.leader === p.id, // (the group finder queue, living bots A.7)
       list: DUNGEONS.filter((D) => !D.open).map((D) => { const lo = parseInt(D.level, 10); return { id: D.id, name: D.name, level: D.level, raid: !!D.raid, ok: p.level >= lo - 2 }; }),
     };
   }
@@ -1721,6 +1741,12 @@ export class World {
       else if ((b.lfgT = (b.lfgT || 0) + dt) > 4) { this.sendHome(b); if (!this.myBots(o).some((q) => q.lfg)) { this.msg(o, 'Your volunteers head back to Sunmere.', '#7ab0ff'); this.sendParty(o); } return; }
     }
     if (b.level !== o.level) { b.level = o.level; this.botGear(b); }
+    this.botFollow(b, o, dt);
+  }
+  // follow o and fight at its side: companions, volunteers, and (roster) bots of the valley in a party with a human (living
+  // bots A.4). A roster bot does not jump to its leader in the open world under BOT_PARTY.run m: it runs; further, or across
+  // areas, it is "on its way" (hidden, b.away) for a few seconds and then appears next to them. In a dungeon it catches up at once.
+  botFollow(b, o, dt, roster) {
     const split = areaOf(o.x, o.z) !== areaOf(b.x, b.z) || (o.x >= DUNGEON_MIN_X && dungeonAt(o.x, o.z) !== dungeonAt(b.x, b.z));
     if (b.dead) {
       b.reviveT = b.reviveT || this.time + 14;
@@ -1734,11 +1760,15 @@ export class World {
     const dO = dist(b, o);
     const H = b.ai.stance === 'hold' ? b.ai.hold : null;
     if (H && (split || dO > 90)) { b.ai.stance = 'assist'; b.ai.hold = null; }
-    if ((dO > 45 && !H) || split) { // catch up after travel, death or a door
+    const inD = o.x >= DUNGEON_MIN_X || b.x >= DUNGEON_MIN_X;
+    if (roster ? split || dO > (inD ? 45 : BOT_PARTY.run) : (dO > 45 && !H) || split) { // catch up after travel, death or a door
+      if (roster && !inD) { if (!b.away) { b.away = true; b.awayT = this.time + R(BOT_PARTY.away[0], BOT_PARTY.away[1]); b.target = null; b.cast = null; b.speed = 0; return; } if (this.time < b.awayT) return; }
+      b.away = false;
       b.x = o.x + R(-2, 2); b.z = o.z + R(-2, 2); if (b.x >= DUNGEON_MIN_X) [b.x, b.z] = dungeonPush(b.x, b.z, 0.4);
       b.y = walkHeight(b.x, b.z); b.target = null; b.cast = null; b.speed = 0;
       return;
     }
+    if (b.away) b.away = false; // (the leader came back into reach)
     b.ai.t -= dt;
     if (b.ai.t <= 0) { b.ai.t = 0.25; b.target = b.ai.stance === 'passive' ? null : this.botPickTarget(b, o, H); }
     const ride = !H && !!o.mounted && !b.target && this.time - b.combatT > 5;
@@ -2305,7 +2335,7 @@ export class World {
     for (const c of [...contributors]) for (const q of this.partyMembers(c)) if (!contributors.includes(q) && !q.dead && !q.held && dist(q, m) < 80) contributors.push(q);
     if (m.sp.event) { const ev = this.wev.find((e) => e.def.id === m.sp.event); if (ev?.live) for (const p of contributors) ev.live.fought.add(p.id); }
     for (const p of contributors) {
-      if (p.bot) continue;
+      if (p.bot) { if (p.mind) this.botKillCredit(p, m); continue; } // a living bot earns its own XP and quest credit (B.4)
       this.achAdd(p, 'kills'); this.achAdd(p, 'kill:' + m.kind);
       if (m.def.elite) this.achAdd(p, 'elites');
       if (m.def.rare) this.achAdd(p, 'rares');
@@ -2711,9 +2741,14 @@ export class World {
       p.rareSeen ||= {};
       if (this.time < (p.rareSeen[m.id] || 0)) continue;
       p.rareSeen[m.id] = this.time + 600;
-      const who = WANDERERS[RI(0, WANDERERS.length - 1)].name;
-      const line = [`Careful, ${m.def.name} is about, just over there!`, `I just saw ${m.def.name} rumbling about nearby. Rare one, that.`, `${m.def.name}! Heads up, it is close.`][RI(0, 2)];
-      p.session.send({ t: 'ev', list: [{ k: 'rare', id: m.id, x: +m.x.toFixed(1), z: +m.z.toFixed(1), name: m.def.name }, { k: 'chat', from: who, bot: 1, cls: 'ranger', text: line }] });
+      p.session.send({ t: 'ev', list: [{ k: 'rare', id: m.id, x: +m.x.toFixed(1), z: +m.z.toFixed(1), name: m.def.name }] });
+      // the word comes from an adventurer really near (living bots C.10 rare_seen), or as before from one of the valley's
+      // (feel review v122: the word at most once per rare per 30 min, and one word per player per 5 min; the ping stays)
+      p.rareSaid ||= {};
+      if (this.time < (p.rareSaid[m.id] || 0) || this.time < (p.rareSaid._any || 0)) continue;
+      p.rareSaid[m.id] = this.time + 1800; p.rareSaid._any = this.time + 300;
+      let who = null; for (const q of this.players.values()) if (q.bot && q.wander && !q.away && !q.dead && dist(q, m) < 60) { who = q; break; }
+      this.botSay(who || { name: WANDERERS[RI(0, WANDERERS.length - 1)].name, cls: 'ranger', bot: true, wander: true, far: true }, 'world', 'rare_seen', { only: p, to: p, slots: { mob: m.def.name } });
     }
   }
   inHub(p) { return CARAVANS.some((c) => Math.hypot(p.x - c.x, p.z - c.z) < RESTED.hubR) || Math.hypot(p.x, p.z) < 40; }
@@ -3135,6 +3170,7 @@ export class World {
     this.lastDt = dt;
     if (this.claims?.size) for (const c of [...this.claims.values()]) if (this.time > c.end) this.settleClaim(c);
     this.tickGuilds(dt);
+    this.mindTickAll(dt); this.botInviteTick(dt); this.lfgTick(dt); this.botChatTick(dt); // living bots (each throttles itself)
     for (const p of this.players.values()) this.tickPlayer(p, dt);
     if (this.tiers) this.tickMobsTiered(dt, this.tiers); else this.tickMobsNear(dt);
     this.tickEvents();
@@ -3159,16 +3195,21 @@ export class World {
   }
 
   // mobs far from every player and adventurer think at 2 Hz instead of 20 (nobody can see them; timers use the world clock)
+  // living bots (B.6): bots are weak anchors. A mob with no human within 130 m but a full-detail bot within 60 m thinks at
+  // 4 Hz (the rule tickMobsTiered uses offline); coarse and away bots do not count at all
   tickMobsNear(dt) {
-    const anchors = [];
-    for (const p of this.players.values()) if (!p.dead) anchors.push(p);
+    const anchors = this._anchH || (this._anchH = []), weak = this._anchB || (this._anchB = []);
+    anchors.length = 0; weak.length = 0;
+    for (const p of this.players.values()) { if (p.dead || p.away) continue; if (!p.bot) anchors.push(p); else if (!p.mind || p.mind.lod !== 'coarse') weak.push(p); }
     for (const m of this.mobs.values()) {
       if (m.dead || m.state === 'chase') { this.tickMob(m, dt); continue; }
       let near = false;
       for (const p of anchors) { const dx = p.x - m.x, dz = p.z - m.z; if (dx * dx + dz * dz < 130 * 130) { near = true; break; } }
       if (near) { if (m.sleepAcc) { this.tickMob(m, m.sleepAcc + dt); m.sleepAcc = 0; } else this.tickMob(m, dt); continue; }
+      let step = 0.5;
+      for (const p of weak) { const dx = p.x - m.x, dz = p.z - m.z; if (dx * dx + dz * dz < 60 * 60) { step = 0.25; break; } }
       m.sleepAcc = (m.sleepAcc || 0) + dt;
-      if (m.sleepAcc >= 0.5) { this.tickMob(m, Math.min(m.sleepAcc, 1)); m.sleepAcc = 0; }
+      if (m.sleepAcc >= step) { this.tickMob(m, Math.min(m.sleepAcc, 1)); m.sleepAcc = 0; }
     }
   }
 
@@ -3180,7 +3221,7 @@ export class World {
   tickMobsTiered(dt, T) {
     const real = this._tierReal || (this._tierReal = []), bots = this._tierBots || (this._tierBots = []);
     real.length = 0; bots.length = 0;
-    for (const p of this.players.values()) if (!p.dead) (p.bot ? bots : real).push(p);
+    for (const p of this.players.values()) if (!p.dead && !p.away && !(p.bot && p.mind?.lod === 'coarse')) (p.bot ? bots : real).push(p); // (coarse bots never wake mobs: living bots B.6)
     const far = 1 / Math.max(0.5, T.farHz || 2);
     for (const m of this.mobs.values()) {
       let d2 = Infinity;
@@ -3590,7 +3631,7 @@ export class World {
       if (p.bot) continue;
       const list = [];
       for (const q of this.players.values()) {
-        if (dist2(p, q) > VIEW * VIEW) continue;
+        if (q.away || dist2(p, q) > VIEW * VIEW) continue; // (a living bot away on a crossing or a run is hidden: B.3)
         list.push({ id: q.id, ty: 'p', n: q.name, b: q.bot ? 1 : undefined, v: q.cv || undefined, ti: q.botRole ? '<' + q.botRole + '>' : q.title ? achTitle(q.title) : undefined, c: q.cls, l: q.level, x: +q.x.toFixed(2), y: +q.y.toFixed(2), z: +q.z.toFixed(2), r: +q.ry.toFixed(2), s: +q.speed.toFixed(1), a: q.air ? 1 : 0, h: q.hp / q.maxHp, d: q.dead ? 1 : 0, t: q.target, e: q.eating ? 1 : 0, mt: q.mounted ? 1 : undefined, si: q.sit ? 1 : undefined, mp: q.mounted && q.paint && q.paint !== 'brass' ? q.paint : undefined, mk: q.mounted && q.runaboutMk >= 2 ? q.runaboutMk : undefined, mc: q.crawler ? (mountKind(q) === 'crawler' ? 1 : 0) : undefined, g: (q.bot ? gtags.get(q.name) : q.guild?.name) || undefined, pt: q.pet || undefined, ...(() => { const L = wornLook(q); return { wt: L.wt || undefined, oh: L.oh || undefined, wq: L.wq >= 2 ? L.wq : undefined, wu: q.equip?.weapon ? this.heatShown(q, q.equip.weapon) : undefined, ou: q.equip?.offhand ? this.heatShown(q, q.equip.offhand) : undefined, ar: L.sh || undefined, ck: L.ck || undefined, gr: L.gr || undefined }; })() });
       }
       for (const m of this.mobs.values()) {
@@ -3608,4 +3649,4 @@ export class World {
 }
 
 // playing together: whispers, say, who, friends, inspect, player trade (shared/social.js)
-Object.assign(World.prototype, SOCIAL_METHODS);
+Object.assign(World.prototype, SOCIAL_METHODS, BOT_MIND_METHODS, BOT_SOCIAL_METHODS, BOT_CHAT_METHODS, BOT_MEMORY_METHODS);

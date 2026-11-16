@@ -5,6 +5,17 @@ import { IS_APP, IS_WEB, IS_MOBILE, bgState, BG_EVENT } from '../engine/platform
 import { SETTINGS, FPS_EVENT } from '../engine/settings.js';
 import { QUALITY } from '../engine/globals.js';
 
+// living bots (docs/ai/living_bots_design.md B.6): how many bots the offline world keeps about (desktop 12, phone 8, Battery saver 6)
+export const botsCfg = () => ({ roster: 16, maxActive: IS_MOBILE ? (SETTINGS.battery ? 6 : 8) : 12, minOnline: IS_MOBILE ? (SETTINGS.battery ? 4 : 5) : 6 });
+
+// living bots C.11: the player's bot-chat options for the server (sent after the welcome and on every change); the
+// server skips a hidden channel altogether, so no bot line (and no local-AI call) is made for it
+export function botPrefsMsg() {
+  const C = SETTINGS.botChat || {}, hide = {};
+  for (const ch of ['world', 'say', 'whisper', 'guild', 'party']) hide[ch] = C[ch] === 0 || C[ch] === false ? 1 : 0;
+  return { t: 'botPrefs', hide, inv: SETTINGS.botInvites !== false, wh: SETTINGS.botWhispers !== false };
+}
+
 export function wsUrl() {
   const s = String(SETTINGS.server || '').trim();
   if (s) return /^wss?:\/\//.test(s) ? s.replace(/\/?$/, '').replace(/(\/ws)?$/, '/ws') : 'ws://' + s.replace(/\/+$/, '') + '/ws';
@@ -58,7 +69,7 @@ export async function connect(onMsg, opts = {}) {
       if (sync) flush(); else later();
     },
   };
-  const world = new World(store);
+  const world = new World({ ...store, bots: botsCfg() });
   // E2: far mobs think at coarser rates on this thread (2 Hz, 1 Hz under Battery saver or while minimised / hidden)
   const farHz = () => (QUALITY.simFarHz || (SETTINGS.battery ? 1 : 2));
   world.tiers = { farHz: farHz() };
@@ -115,7 +126,7 @@ async function workerWorld(onMsg) {
       else if (d.t === 'ready') { clearTimeout(to); resolve(true); }
       else if (d.t === 'err') { clearTimeout(to); reject(new Error(d.e)); }
     };
-    worker.postMessage({ t: 'init', saves, farHz: farHzNow() });
+    worker.postMessage({ t: 'init', saves, farHz: farHzNow(), bots: botsCfg() });
   }).catch((e) => { worker.terminate(); throw e; });
   if (!ok) return null;
   worker.onerror = (e) => console.error('[sim worker]', e.message || e);

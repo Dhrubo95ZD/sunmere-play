@@ -986,7 +986,7 @@ export function repairCost(g) {
 // A friendly bout between two players (or a player and one of the valley's adventurers): no one dies, the loser
 // is left on 1 health, and no gear is worn.
 export const DUEL = { range: 40, time: 120, countdown: 3, scale: 0.6 };
-export const DUEL_YES = ['You are on. Best of luck!', 'A friendly bout? Gladly.', 'Alright, show me what you have.', 'First to yield buys the bread.'];
+export const DUEL_YES = ['You are on. Fight well!', 'A friendly bout? Gladly.', 'Alright, show me what you have.', 'First to yield, no hard feelings.'];
 export const DUEL_NO = ['Not now, friend. I am catching my breath.', 'Maybe later, I have machines to break.', 'Another time!'];
 
 // ============================================================================ THE POST
