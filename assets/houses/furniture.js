@@ -1,7 +1,8 @@
 // Furniture: every piece is built around an item {x, z, ry, w, d, h} in house-local space. Item space has its width
 // along x, its depth along z and its front toward +z (into the room); ry turns it like three.js rotation.y.
 // Content rules: no bottles, goblets or tapped kegs (storage is crocks, jars, bowls and plain barrels); no instruments,
-// pictures, mirrors or text (books and ledgers are blank, papers are plain); nothing animal-like; no crossed members
+// mirrors or text (books and ledgers are blank, papers are plain); pictures are landscapes only (LF.3: hills, fields, no sun,
+// no figures); nothing animal-like; no crossed members
 // (chair backs and racks use upright slats ending at a rail, loom threads stop at the cloth, hafts end at their bar).
 import * as THREE from 'three';
 import { box, cyl, lathe, lumpy, sphere, cone } from '../kit.js';
@@ -159,11 +160,47 @@ export function sacks(b, it, r, _accent, c = '#c8b088') {
 export function rug(b, it, r) {
   const { w, d } = it, base = pick(r, ['#8a3a2a', '#4a5a8a', '#5e7a4e', '#a8843a', '#6a4a3a']), band = pick(r, ['#e0d0a8', '#d8c8a0', '#3a3a3c']);
   ib(b, 'cloth', it, -w / 2, 0, -d / 2, w / 2, 0.02, d / 2, base);
-  // a border and plain stripes only (no medallions, stars or crosses)
-  ib(b, 'cloth', it, -w / 2 + 0.06, 0.02, -d / 2 + 0.06, w / 2 - 0.06, 0.036, -d / 2 + 0.14, band);
-  ib(b, 'cloth', it, -w / 2 + 0.06, 0.02, d / 2 - 0.14, w / 2 - 0.06, 0.036, d / 2 - 0.06, band);
-  const n = Math.max(1, Math.round(w / 0.6));
-  for (let i = 0; i < n; i++) { const x = -w / 2 + 0.3 + (i * (w - 0.6)) / Math.max(1, n - 1); ib(b, 'cloth', it, x - 0.04, 0.02, -d / 2 + 0.22, x + 0.04, 0.036, d / 2 - 0.22, shade(band, 0.9)); }
+  // (LF.3) plain stripes only, every one running the same way (across the rug's length: no border frame, no grid, no
+  // medallions, stars or crosses): a wide band near each end, then thin lines in two shades between them, and a pale
+  // fringe on the two ends
+  const S = (x0, x1, c, y = 0.034) => ib(b, 'cloth', it, x0, 0.02, -d / 2 + 0.03, x1, y, d / 2 - 0.03, c);
+  for (const s of [-1, 1]) { S(s > 0 ? w / 2 - 0.24 : -w / 2 + 0.12, s > 0 ? w / 2 - 0.12 : -w / 2 + 0.24, band); ib(b, 'cloth', it, s > 0 ? w / 2 : -w / 2 - 0.05, 0, -d / 2 + 0.04, s > 0 ? w / 2 + 0.05 : -w / 2, 0.012, d / 2 - 0.04, '#e8dcc0'); }
+  const n = Math.max(1, Math.round((w - 0.7) / 0.22));
+  for (let i = 0; i < n; i++) { const x = -w / 2 + 0.35 + ((i + 0.5) * (w - 0.7)) / n; S(x - 0.025, x + 0.025, i % 2 ? shade(band, 0.85) : shade(base, 1.35)); }
+}
+// (LF.3) a framed landscape on a wall: item space as everywhere (x along the wall, +z out into the room, the wall's
+// surface at z = 0), the picture w x h with its middle at height yc. Sky shading to a pale horizon, a far range, rolling
+// hills with a few round-topped trees, a near field; a plain four-bar frame. No sun, no figures, no buildings with
+// crosses: hills and trees only. r draws its shapes (a client-only stream, so nothing else moves)
+export function landscape(b, it, r, w, h, yc) {
+  const fw = 0.045, iw = w - 2 * fw, ih = h - 2 * fw, y0 = yc - ih / 2, frame = pick(r, ['#5a3e28', '#6a4a30', '#3e2e22']);
+  // the frame: two long bars, two short ones between them (a plain rectangle)
+  ib(b, 'wood', it, -w / 2, yc - h / 2, 0, w / 2, yc - h / 2 + fw, 0.035, frame);
+  ib(b, 'wood', it, -w / 2, yc + h / 2 - fw, 0, w / 2, yc + h / 2, 0.035, frame);
+  for (const s of [-1, 1]) ib(b, 'wood', it, s > 0 ? w / 2 - fw : -w / 2, yc - h / 2 + fw, 0, s > 0 ? w / 2 : -w / 2 + fw, yc + h / 2 - fw, 0.035, frame);
+  // the sky: blue at the top to a warm pale horizon (vertex colours by height)
+  const top = pick(r, [[0.55, 0.68, 0.8], [0.6, 0.7, 0.78], [0.66, 0.72, 0.8]]), hor = [0.93, 0.88, 0.76];
+  b.add(box(iw, ih, 0.012), 'cloth', { p: at(it, 0, yc, 0.012), r: [0, it.ry, 0], uv: 'box', c: (x, y) => { const k = Math.min(1, Math.max(0, (y - y0) / ih)); return new THREE.Color().setRGB(hor[0] + (top[0] - hor[0]) * k, hor[1] + (top[1] - hor[1]) * k, hor[2] + (top[2] - hor[2]) * k, THREE.SRGBColorSpace); } });
+  // a ridge line across the canvas: n points between lo and hi (fractions of the canvas height), smoothed
+  const ridge = (lo, hi, n, rough) => { const p = []; let v = between(r, lo, hi); for (let i = 0; i <= n; i++) { v = Math.min(hi, Math.max(lo, v + (r() - 0.5) * rough)); p.push(v); } return p; };
+  const layer = (pts, c, z) => {
+    const sh = new THREE.Shape(), n = pts.length - 1;
+    sh.moveTo(-iw / 2, y0);
+    for (let i = 0; i <= n; i++) sh.lineTo(-iw / 2 + (i / n) * iw, y0 + pts[i] * ih);
+    sh.lineTo(iw / 2, y0);
+    b.add(new THREE.ShapeGeometry(sh), 'cloth', { p: at(it, 0, 0, z), r: [0, it.ry, 0], uv: 'box', c });
+  };
+  const far = ridge(0.42, 0.68, 7, 0.22), mid = ridge(0.26, 0.42, 9, 0.08), near = ridge(0.08, 0.2, 6, 0.06);
+  layer(far, pick(r, ['#8a98ac', '#9aa4b4', '#8494a8']), 0.0245);
+  layer(mid, pick(r, ['#6e8e58', '#7a9660', '#688a5a']), 0.026);
+  // a few trees on the hills: a short trunk and a round crown (low spheres flattened against the canvas)
+  const nt = 2 + Math.floor(r() * 3);
+  for (let i = 0; i < nt; i++) {
+    const t = between(r, 0.1, 0.9), k = Math.min(mid.length - 1, Math.round(t * (mid.length - 1))), x = -iw / 2 + t * iw, yb = y0 + mid[k] * ih - 0.004, s = between(r, 0.025, 0.04);
+    ib(b, 'wood', it, x - 0.004, yb, 0.026, x + 0.004, yb + s, 0.029, '#4a3a2a');
+    b.add(sphere(s, 6, 4), 'cloth', { p: at(it, x, yb + s * 1.6, 0.0275), r: [0, it.ry, 0], s: [1, 1.1, 0.12], c: pick(r, ['#3e5e38', '#4a6a3a', '#56703e']) });
+  }
+  layer(near, pick(r, ['#a89a58', '#8e9a4e', '#b0a060']), 0.0285);
 }
 // bunches of drying herbs hung from a ceiling joist
 export function herbs(b, it, r, y = 2.52) {

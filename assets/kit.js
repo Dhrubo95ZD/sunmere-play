@@ -334,6 +334,7 @@ export class Builder {
     geo.setAttribute('wind', new THREE.BufferAttribute(wnd, 4));
     if (!this.parts.has(matName)) this.parts.set(matName, []);
     this.parts.get(matName).push(geo);
+    if (matName === 'glassWarm') { const pn = paneOf(geo); if (pn) (this.panes ||= []).push(pn); }
     return geo;
   }
 
@@ -345,6 +346,7 @@ export class Builder {
       if (!this.parts.has(mat)) this.parts.set(mat, []);
       this.parts.get(mat).push(c);
     }
+    for (const pn of other.panes || []) (this.panes ||= []).push(movePane(pn, m));
   }
 
   geometries() {
@@ -378,8 +380,43 @@ export class Builder {
     // phones: the source parts are merged now; drop them so a builder kept alive by a closure does not hold a second
     // copy of everything it built (hundreds of MB across the dungeons). The desktop keeps them as before.
     if (IS_MOBILE) this.parts = new Map();
+    if (this.panes) g.userData.panes = this.panes; // (LF.1) the window glow on the wall round each lit pane (world.js)
     return g;
   }
+}
+
+// (LF.1) a warm window pane as the world's window glow needs it: centre c, outward-or-inward normal n (level), tangent t,
+// half-width w along t and its bottom and top y (all in the builder's space). Panes that lie flat (a counter's glass top)
+// or are tiny (a lamp's glass) are not windows: null
+const _pa = new THREE.Vector3(), _pb = new THREE.Vector3(), _pc = new THREE.Vector3(), _pn = new THREE.Vector3();
+export function paneOf(geo) {
+  const p = geo.attributes.position, n = p.count;
+  let best = 0; const N = new THREE.Vector3();
+  for (let i = 0; i + 2 < n; i += 3) {
+    _pa.fromBufferAttribute(p, i); _pb.fromBufferAttribute(p, i + 1); _pc.fromBufferAttribute(p, i + 2);
+    _pn.subVectors(_pb, _pa).cross(_pc.sub(_pa));
+    const a = _pn.length();
+    if (a > best * 1.001) { best = a; N.copy(_pn).divideScalar(a); }
+  }
+  if (!best || Math.abs(N.y) > 0.3) return null;
+  N.y = 0; N.normalize();
+  const tx = -N.z, tz = N.x;
+  let t0 = Infinity, t1 = -Infinity, y0 = Infinity, y1 = -Infinity, cx = 0, cz = 0;
+  for (let i = 0; i < n; i++) {
+    const x = p.getX(i), y = p.getY(i), z = p.getZ(i), t = x * tx + z * tz;
+    if (t < t0) t0 = t; if (t > t1) t1 = t; if (y < y0) y0 = y; if (y > y1) y1 = y; cx += x; cz += z;
+  }
+  const w = (t1 - t0) / 2;
+  if (w * 2 * (y1 - y0) < 0.12) return null;
+  return { c: [cx / n, (y0 + y1) / 2, cz / n], n: [N.x, N.z], w, h: (y1 - y0) / 2 };
+}
+// the same pane under a transform (a builder merged into another, a placed group: world.js)
+const _mv = new THREE.Vector3(), _md = new THREE.Vector3();
+export function movePane(pn, m) {
+  _mv.set(pn.c[0], pn.c[1], pn.c[2]).applyMatrix4(m);
+  _md.set(-pn.n[1], 0, pn.n[0]).transformDirection(m);
+  const e = m.elements, sx = Math.hypot(e[0], e[1], e[2]), sy = Math.hypot(e[4], e[5], e[6]);
+  return { c: [_mv.x, _mv.y, _mv.z], n: [_md.z, -_md.x], w: pn.w * sx, h: pn.h * sy, shut: pn.shut };
 }
 
 export function depthFor(mat) {

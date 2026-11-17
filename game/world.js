@@ -28,7 +28,7 @@ import { createLake, createSea, createWaterfall, createStream, createChannels } 
 import { createGrass } from '../engine/grass.js';
 import { Scatter } from './scatter.js';
 import * as trees from '../assets/trees.js';
-import { Builder } from '../assets/kit.js';
+import { Builder, movePane } from '../assets/kit.js';
 import * as B from '../assets/buildings.js';
 import * as P from '../assets/props.js';
 import { assemble, swingFocus } from '../assets/dynamic.js';
@@ -59,6 +59,7 @@ const HOUSE = {
   CUT_EASE: 0.35,
 };
 const _cutHead = new THREE.Vector3();
+const _lampAmber = new THREE.Color(0xff9440); // (judge) street lamps' light leans amber, so the grass under them reads warm, not lime
 const toLocal = (S, x, z) => { const c = Math.cos(S.rot), s = Math.sin(S.rot), dx = x - S.x, dz = z - S.z; return [dx * c - dz * s, dx * s + dz * c]; };
 
 const VARIANTS = {
@@ -542,6 +543,7 @@ export class World {
       }
     });
     this.buildLightPools();
+    this.buildWindowGlows();
     this.baseSpots = this.spots;
     this.spots = this.baseSpots.concat(this.houseSpots);
   }
@@ -556,16 +558,91 @@ export class World {
     const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace;
     const geo = new THREE.PlaneGeometry(1, 1); geo.rotateX(-Math.PI / 2);
     const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0, toneMapped: false });
+    // (LF.1) only fires flicker: a fire's pool is marked by a y scale of 2 in its instance matrix (the flat quad ignores it)
+    mat.onBeforeCompile = (sh) => {
+      sh.uniforms.uTime = G.time;
+      sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nuniform float uTime;').replace('#include <color_vertex>', `#include <color_vertex>
+        #if defined(USE_INSTANCING) && defined(USE_INSTANCING_COLOR)
+        if (length(instanceMatrix[1].xyz) > 1.5) { float ph = instanceMatrix[3].x * 0.37 + instanceMatrix[3].z * 0.61;
+          vColor.rgb *= 0.86 + 0.09 * sin(uTime * 9.0 + ph) * sin(uTime * 5.3 + ph * 1.7) + 0.05 * sin(uTime * 13.0 + ph); }
+        #endif`);
+    };
+    mat.customProgramCacheKey = () => 'lfPool';
     const list = this.spots.filter((s) => s.y - this.terrain.height(s.x, s.z) < 7);
     const m = new THREE.InstancedMesh(geo, mat, Math.max(1, list.length));
     const M = new THREE.Matrix4(), c = new THREE.Color();
     list.forEach((s, i) => {
       const gy = this.terrain.height(s.x, s.z), r = s.fire ? 4.5 : 3.4;
-      M.makeScale(r * 2, 1, r * 2).setPosition(s.x, gy + 0.06, s.z); m.setMatrixAt(i, M);
-      m.setColorAt(i, c.setHex(s.color).multiplyScalar(s.fire ? 0.2 : 0.14));
+      M.makeScale(r * 2, s.fire ? 2 : 1, r * 2).setPosition(s.x, gy + 0.06, s.z); m.setMatrixAt(i, M);
+      m.setColorAt(i, c.setHex(s.color).lerp(_lampAmber, s.fire ? 0 : 0.4).multiplyScalar(s.fire ? 0.22 : 0.17)); // (judge: lamp pools amber, not lime on the grass)
     });
     m.count = list.length; m.renderOrder = 16; m.frustumCulled = false;
     this.pools = m; this.group.add(m);
+  }
+
+  // (LF.1) a warm glow on the wall round every lit window pane (the built houses' glassWarm panes, the CGTrader shells' dark
+  // window cells), strongest under the sill and fading down the wall: one instanced additive draw, faded in with the
+  // lamps behind the glass (G.winLit). Rebuilt with the light spots and when a settlement's shells finish loading
+  buildWindowGlows() {
+    this._winDirty = false;
+    if (this.winGlow) { this.group.remove(this.winGlow); this.winGlow.geometry.dispose(); }
+    const panes = [];
+    (this.areaGroups[this.area] || this.valleyGroup).traverse((o) => {
+      if (!o.userData.panes) return;
+      for (const pn of o.userData.panes) { const w = movePane(pn, o.matrixWorld); if (w.c[0] < 700) panes.push(w); }
+    });
+    if (!this._winMat) {
+      // the glow's shape: brightest at the pane (upper middle), spilling down the wall below the sill and a little to the sides
+      const cv = document.createElement('canvas'); cv.width = 64; cv.height = 128;
+      const x = cv.getContext('2d'), img = x.createImageData(64, 128);
+      for (let j = 0; j < 128; j++) for (let i = 0; i < 64; i++) {
+        const u = (i + 0.5) / 64 - 0.5, v = (j + 0.5) / 128; // v 0 at the top
+        const dy = v < 0.3 ? (0.3 - v) / 0.3 : (v - 0.3) / 0.7; // 0 at the pane's middle, 1 at the top and bottom edges
+        const a = Math.max(0, 1 - Math.hypot(u / 0.5, dy)) ** 1.6;
+        const k = (j * 64 + i) * 4; img.data[k] = img.data[k + 1] = img.data[k + 2] = 255; img.data[k + 3] = Math.round(255 * a);
+      }
+      x.putImageData(img, 0, 0);
+      const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace;
+      this._winMat = new THREE.MeshBasicMaterial({ map: tex, color: 0xffa04a, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0, side: THREE.DoubleSide, toneMapped: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -4 });
+      // a window of a house that is cut open (CGT/built walls taken down to the cut line) loses its glow with the wall
+      this._winMat.onBeforeCompile = (sh) => {
+        Object.assign(sh.uniforms, { cutA: G.cutA, cutR: G.cutR, cutH: G.cutH });
+        sh.vertexShader = sh.vertexShader.replace('#include <common>', `#include <common>
+          uniform vec4 cutA[${CUT_SLOTS}]; uniform vec4 cutR[${CUT_SLOTS}]; uniform vec4 cutH[${CUT_SLOTS}];`).replace('#include <begin_vertex>', `#include <begin_vertex>
+          #ifdef USE_INSTANCING
+          { vec3 ic = instanceMatrix[3].xyz;
+            for (int k = 0; k < ${CUT_SLOTS}; k++) { vec4 A = cutA[k]; if (A.w < 0.5) continue;
+              float c = cos(A.z), s = sin(A.z); vec2 d = ic.xz - A.xy, l = vec2(d.x * c - d.y * s, d.x * s + d.y * c); vec4 R = cutR[k];
+              if (l.x > R.x - 0.6 && l.x < R.z + 0.6 && l.y > R.y - 0.6 && l.y < R.w + 0.6 && ic.y > cutH[k].x - 0.6) transformed = vec3(0.0); } }
+          #endif
+          vHole = aHole;`).replace('#include <common>', `#include <common>
+          attribute vec4 aHole; varying vec4 vHole;`);
+        // a closed shutter: no glow on the shutter itself (the quad lies in its plane and, with the polygon offset, would
+        // light the leaves up as a lit window with a seam and straps across it, a grid; phones showed it), only round it
+        sh.fragmentShader = sh.fragmentShader.replace('#include <common>', `#include <common>
+          varying vec4 vHole;`).replace('#include <map_fragment>', `#include <map_fragment>
+          #ifdef USE_MAP
+          if (vHole.w > 0.5) { float hd = max(abs(vMapUv.x - 0.5) - vHole.x, max(vHole.y - vMapUv.y, vMapUv.y - vHole.z)); diffuseColor.a *= smoothstep(-0.015, 0.012, hd); }
+          #endif`);
+      };
+      this._winMat.customProgramCacheKey = () => 'lfWin2';
+    }
+    if (!panes.length) { this.winGlow = null; return; }
+    const geo = new THREE.PlaneGeometry(1, 1), hole = new Float32Array(panes.length * 4);
+    geo.setAttribute('aHole', new THREE.InstancedBufferAttribute(hole, 4));
+    const m = new THREE.InstancedMesh(geo, this._winMat, panes.length), M = new THREE.Matrix4(), q = new THREE.Quaternion(), up = new THREE.Vector3(0, 1, 0), P = new THREE.Vector3(), S = new THREE.Vector3(), C = new THREE.Color();
+    panes.forEach((pn, i) => {
+      // the quad stands in the pane's plane: from 1.7 x the pane's height below its middle to 0.8 x above, 1.8 x as wide
+      const w = pn.w * 2 * 1.8 + 0.5, hTop = pn.h * 1.8 + 0.2, hBot = pn.h * 1.0 + 1.5;
+      // (a closed shutter's rectangle in the quad's uv: half width, bottom, top; the shader leaves it dark)
+      if (pn.shut) hole.set([pn.w / w, (hBot - pn.h) / (hTop + hBot), (hBot + pn.h) / (hTop + hBot), 1], i * 4);
+      q.setFromAxisAngle(up, Math.atan2(pn.n[0], pn.n[1]));
+      P.set(pn.c[0], pn.c[1] + (hTop - hBot) / 2, pn.c[2]);
+      M.compose(P, q, S.set(w, hTop + hBot, 1)); m.setMatrixAt(i, M);
+      m.setColorAt(i, C.setScalar(pn.shut ? 0.55 : 1)); // (closed shutters: only what leaks round them)
+    });
+    m.renderOrder = 15; m.frustumCulled = true; m.computeBoundingSphere(); m.castShadow = m.receiveShadow = false;
+    this.winGlow = m; this.group.add(m);
   }
 
   // hand the pooled point lights to the best sources in `want` (sorted, best first; each an object that stays the same
@@ -603,7 +680,10 @@ export class World {
     if (!this.spots) { this.collectLightSpots(); for (const sl of this.poolSlots) { sl.src = null; sl.w = 0; sl.out = false; } }
     const dt = this.poolDt(t);
     const night = this.night, cand = [], hid = this.house?.id;
-    if (this.pools) this.pools.material.opacity = Math.min(1, night * 1.2) * (0.92 + 0.05 * Math.sin(t * 2.3) + 0.03 * Math.sin(t * 5.7));
+    // (LF.1: steady; only the fires' pools flicker, per instance in their shader)
+    if (this.pools) this.pools.material.opacity = Math.min(1, night * 1.2);
+    if (this._winDirty) this.buildWindowGlows();
+    if (this.winGlow) { this.winGlow.material.opacity = 0.7 * G.winLit.value; /* (judge: 0.5 read faint on the walls by night) */ this.winGlow.visible = G.winLit.value > 0.01; }
     const air = (G.airLamps.length = 0, G.airLamps);
     for (const s of this.spots) {
       const d = (s.x - focus.x) ** 2 + (s.z - focus.z) ** 2;
@@ -645,9 +725,10 @@ export class World {
       const w = sl.w * sl.w * (3 - 2 * sl.w) * on;
       l.position.set(s.x, s.y, s.z); l.color.setHex(s.color);
       // house hearths burn steady (a slow 0.5 Hz swell of 5%, no flicker); the lamps of your house light the room by day too
-      if (s.fire) { l.distance = 10 * s.k; l.decay = 1.6; l.intensity = w * 7 * s.k * (s.house ? 1 + 0.05 * Math.sin(t * Math.PI + i) : 0.85 + 0.15 * Math.sin(t * 13 + i) * Math.sin(t * 7.3 + i * 2)); }
-      else if (s.house) { l.distance = 8; l.decay = 1.5; l.intensity = w * 4 * Math.max(mine ? 0.75 : 0, night); }
-      else { l.distance = 11; l.decay = 1.5; l.intensity = w * 5 * night * (0.93 + 0.04 * Math.sin(t * 3.1 + i * 1.7) + 0.03 * Math.sin(t * 8.3 + i)); }
+      if (s.fire) { l.distance = (s.house ? 7 : 10) * s.k; l.decay = 1.6; l.intensity = w * 7 * s.k * (s.house ? 1 + 0.05 * Math.sin(t * Math.PI + i) : 0.85 + 0.15 * Math.sin(t * 13 + i) * Math.sin(t * 7.3 + i * 2)); }
+      else if (s.house) { l.distance = 6; l.decay = 1.6; // (judge: 6 m, so a room's lamp no longer lights the yard round the house)
+        l.intensity = w * 4 * Math.max(mine ? 0.75 : 0, night); }
+      else { l.color.lerp(_lampAmber, 0.4); l.distance = 11; l.decay = 1.5; l.intensity = w * 5 * night; } // (LF.1) lamps burn steady: only fires flicker
     });
   }
 
@@ -867,7 +948,7 @@ export class World {
     this.updateHouses(focus, dt, t);
     this.grass.userData.setFocus(focus.x, focus.z);
     this.waterfall.userData.update(dt, t);
-    if (this.indoor) { this.updateDungeon(dt, t, focus); return; }
+    if (this.indoor) { if (this.winGlow) this.winGlow.visible = false; /* (LF review: the last area's window glow, left lit) */ this.updateDungeon(dt, t, focus); return; }
     this.updateLights(t, focus);
     if (this.shafts) { const k = (1 - this.night) * (1 - (this.rain || 0)) * (1 - 0.7 * (this.sand || 0)); this.shafts.visible = k > 0.08; if (this.shafts.material?.uniforms?.uStrength) this.shafts.material.uniforms.uStrength.value = k; }
     (this.area === 'reach' ? this.reachScatter : this.area === 'rime' ? this.rimeScatter : this.area === 'heights' ? this.heightsScatter : this.area === 'tidewater' ? this.tidewaterScatter : this.area === 'rainward' ? this.rainwardScatter : this.area === 'weald' ? this.wealdScatter : this.scatter).update(dt, t, focus, 70);
@@ -982,7 +1063,7 @@ export class World {
       kids.forEach((o, i) => { const id = res.lanterns[i].house; if (!id || o.position.distanceToSquared(new THREE.Vector3().fromArray(res.lanterns[i].p)) > 1e-4) return; if (!this.houseSmokes.has(id)) this.houseSmokes.set(id, []); this.houseSmokes.get(id).push(o); }); }
     parent.add(shell, detail);
     // (v109) the CGTrader models of the shelled houses (houses/cgt.js), instanced, in the shell (cut-away, camera bump)
-    if (specs.some((S) => S.shell) && cgtEnabled()) shellGroup(specs).then((o) => { if (!o) return; o.traverse((m) => { m.userData.houseGroup = group; }); shell.add(o); });
+    if (specs.some((S) => S.shell) && cgtEnabled()) shellGroup(specs).then((o) => { if (!o) return; o.traverse((m) => { m.userData.houseGroup = group; }); shell.add(o); this._winDirty = true; });
     this.dyn.push(shell); // the camera bumps on the shells (not on the detail)
     for (const S of specs) for (const b of S.walls) this.boxes.push({ x: b.x, z: b.z, hw: b.hw, hd: b.hd, rot: b.rot, house: S.id });
     for (const c of res.circles) this.scatter.colliders.push({ x: c.x, z: c.z, r: c.r, house: c.house });

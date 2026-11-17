@@ -335,6 +335,41 @@ export function patchWorld(material, { wind = false, fade = false, cloud = true,
   return material;
 }
 
+// (LF.2) plaster grain for the bought house shells (CGTrader models: flat palette-atlas colours with no surface detail).
+// On the rich path only (textures.js RICH_MATS, the desktop presets): their steep faces take the game's own plaster
+// normals and roughness, projected along the wall in world space (0.3 tiles a metre, the built houses' scale), fading out
+// on roofs and floors. Two texture reads per fragment; the phones never get it. Chains any earlier onBeforeCompile
+export function patchWallDetail(material, { scale = 0.3, strength = 1.0 } = {}) {
+  if (!T.RICH_MATS) return material;
+  const tex = T.plasterTex();
+  if (!tex.normalMap || !tex.roughnessMap) return material;
+  const pre = material.onBeforeCompile, key0 = material.customProgramCacheKey;
+  material.onBeforeCompile = (sh, r) => {
+    if (pre) pre(sh, r);
+    sh.uniforms.uDetN = { value: tex.normalMap };
+    sh.uniforms.uDetR = { value: tex.roughnessMap };
+    sh.fragmentShader = sh.fragmentShader
+      .replace('#include <common>', '#include <common>\nuniform sampler2D uDetN;\nuniform sampler2D uDetR;')
+      .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
+  {
+    vec3 nW = inverseTransformDirection(normal, viewMatrix);
+    float wW = 1.0 - smoothstep(0.3, 0.55, abs(nW.y));
+    if (wW > 0.0) {
+      vec3 tW = normalize(cross(vec3(0.0, 1.0, 0.0), nW) + vec3(1e-4, 0.0, 0.0));
+      vec3 bW = cross(nW, tW);
+      vec2 dUv = vec2(dot(vWPos, tW), vWPos.y) * ${scale.toFixed(3)};
+      vec3 dn = texture2D(uDetN, dUv).xyz * 2.0 - 1.0;
+      nW = normalize(nW + (tW * dn.x + bW * dn.y) * ${strength.toFixed(3)} * wW);
+      normal = normalize((viewMatrix * vec4(nW, 0.0)).xyz);
+      roughnessFactor *= mix(1.0, texture2D(uDetR, dUv).g, wW);
+    }
+  }`);
+  };
+  material.customProgramCacheKey = () => (key0 ? key0() : '') + 'D';
+  material.needsUpdate = true;
+  return material;
+}
+
 // ---- upgrade heat and the Prismatic sheen (plan C). Physical only: the steel glows on the blackbody ramp (+7 dull red
 // seams, +8 cherry with a straw temper tint, +9 bright orange with temper bands, +10 a yellow-white core with a cherry
 // rim) and a Prismatic piece carries a thin-film oxide sheen in its specular reflection only (straw, bronze, peacock,
@@ -517,6 +552,7 @@ function std(key, o) {
     color: o.color ?? 0xffffff,
     map: o.tex?.map ?? null,
     normalMap: o.tex?.normalMap ?? null,
+    roughnessMap: o.tex?.roughnessMap ?? null, // (LF.2: the building textures on the desktop presets, textures.js RICH_MATS)
     roughness: o.rough ?? 0.88,
     metalness: o.metal ?? 0,
     vertexColors: true,

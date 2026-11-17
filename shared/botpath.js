@@ -1,12 +1,12 @@
 // Living bots, part B.5 (docs/ai/living_bots_design.md): paths for bots, not straight lines. Owner: Builder B.
-// Wraps the quest walk's PathGrid (client/game/pathfind.js, read-only here: it has no imports, so it loads in node, in the
+// Wraps the quest walk's PathGrid (shared/pathfind.js, read-only here: it has no imports, so it loads in node, in the
 // page and in the sim worker) with a cell test built from the shared terrain only: the walkable edge (worldGap), the area,
 // houses (their walls are thin walls, their rooms blocked), slopes and water (wading only as a last resort).
 // CPU rules (B.6): at most one search per tick for all bots together (a queue); a search may test at most TEST_CAP cells it
 // has never seen (it gives up and is retried later: the cells it did test stay known, so the retry gets further); the grid
 // is baked a little at a time while no search is waiting; finished paths are cached per (area, start cell, goal cell) for
 // 10 minutes. Under 25 m with no house in the way a bot walks straight.
-import { PathGrid, outdoorTest, outdoorEdge, planOutdoor } from '../client/game/pathfind.js';
+import { PathGrid, outdoorTest, outdoorEdge, planOutdoor } from './pathfind.js';
 import { walkHeight, waterAt, worldGap, areaOf, roadDist, WORLD, AREA_BY_ID } from './terrain.js';
 import { houseAt, housePush, houseCrosses } from './houses.js';
 

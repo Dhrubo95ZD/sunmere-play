@@ -35,9 +35,15 @@ export const CAM = {
   FREE_MIN: 2.0, FREE_MAX: 60, // desktop free zoom range (touchcam.js sets rig.freeMin / freeMax for phones)
   FREE_PITCH_MIN: 0.06, FREE_PITCH_MAX: 1.45, // radians: just over the ground .. ~83 degrees, near top-down
   FREE_PITCH_RATE: 0.0045, // radians per right-drag pixel (desktop)
+  // Horizon camera (SETTINGS.horizonCam, off by default; LF.4): a low close view behind the hero with the skyline in it.
+  // The zoom curve's pitches drop and stay low further out (HZ_CURVE); turning it on eases in to HZ_DIST behind the hero.
+  // Zoom, hand tilt, houses and the touch presets work as before on the lower curve; the Free camera overrides it.
+  HZ_DIST: 6, HZ_PITCH_CLOSE: 4, HZ_PITCH_FAR: 30, HZ_CURVE: 1.6, HZ_LOOK: 0.2, HZ_EASE: 0.6,
 };
 // is the Free camera option on (read every frame, so the Options toggle applies at once)
 export const freeCam = () => !!SETTINGS.freeCam;
+// is the Horizon camera option on (and not overridden by the Free camera)
+export const horizonCam = () => !!SETTINGS.horizonCam && !freeCam();
 
 export class CameraRig {
   constructor(camera, dom) {
@@ -69,6 +75,8 @@ export class CameraRig {
     this.houseK = 0; this._inHouse = false; this._houseDist = null; // house mode: 0 outside .. 1 inside (eased)
     // free camera: its own zoom range and a hand-set pitch (freePitch eases to freePitchTarget; null = take the current view)
     this.freeMin = CAM.FREE_MIN; this.freeMax = CAM.FREE_MAX; this.freePitch = null; this.freePitchTarget = null; this._pitchNow = D2R(52); this._free = false;
+    // horizon camera: hzK eases 0..1 while it applies; _hzOn is the option (its rising edge brings the view in); _showcase: the login view
+    this.hzK = 0; this._hzOn = false; this._showcase = false;
     dom.addEventListener('wheel', (e) => {
       const px = e.deltaY * (e.deltaMode === 1 ? 33 : e.deltaMode === 2 ? 400 : 1);
       this.zoomBy(Math.exp(clamp(px, -240, 240) * CAM.STEP));
@@ -135,8 +143,12 @@ export class CameraRig {
   }
   // the pitch the normal zoom curve gives at a distance (outside a house, no hand tilt)
   curvePitch(dist = this.distTarget) {
-    const t = this.zoomT(dist);
-    return lerp(Math.min(this.closePitch, this.pitch), this.pitch, Math.pow(t, 0.85));
+    return this.pitchAt(this.zoomT(dist), this.closePitch, this.pitch, smooth(this.hzK));
+  }
+  // the zoom curve: close..far pitch at zoom t, bent low and kept low for longer by the horizon camera (hz 0..1)
+  pitchAt(t, closeP, farP, hz = 0) {
+    if (hz > 0) { closeP = lerp(closeP, D2R(CAM.HZ_PITCH_CLOSE), hz); farP = lerp(farP, D2R(CAM.HZ_PITCH_FAR), hz); }
+    return lerp(Math.min(closeP, farP), farP, lerp(Math.pow(t, 0.85), Math.pow(t, CAM.HZ_CURVE), hz));
   }
   // Reset camera: in behind the hero (followYaw, set by game.js each frame), at a distance, with the curve's pitch
   resetView(dist = CAM.DEFAULT) {
@@ -156,6 +168,7 @@ export class CameraRig {
   touchZoom(k) { if (k > 0) this.zoomBy(1 / k); }
   // the login showcase holds a fixed low angle; entering the world returns to the zoom curve at the default distance
   setShowcase(on) {
+    this._showcase = !!on;
     if (on) { this.pitch = this.closePitch = 0.3; return; }
     this.pitch = D2R(52); this.closePitch = D2R(CAM.PITCH_CLOSE); this.distTarget = CAM.DEFAULT; this.tiltTarget = 0;
   }
@@ -297,6 +310,17 @@ export class CameraRig {
     const hk = smooth(this.houseK);
     const free = freeCam(), zMin = this.zMin(), zMax = this.zMax();
     if (free !== this._free) { this._free = free; this.freePitch = this.freePitchTarget = free ? this._pitchNow : null; if (!free) this.distTarget = clamp(this.distTarget, this.minDist, this.maxDist); }
+    // horizon camera: switching it on (or entering the world with it on) brings the view in low behind the hero
+    const hzOn = horizonCam() && !this._showcase;
+    if (hzOn !== this._hzOn) {
+      this._hzOn = hzOn;
+      if (hzOn && !this.sceneFocus) {
+        this.distTarget = clamp(CAM.HZ_DIST, this.houseMin(), this.houseMax()); this.tiltTarget = 0;
+        let d = this.followYaw - this.yawTarget; d = Math.atan2(Math.sin(d), Math.cos(d)); this.yawTarget += d;
+      }
+    }
+    this.hzK = clamp(this.hzK + (hzOn && !this.sceneFocus ? 1 : -1) * dt / CAM.HZ_EASE, 0, 1);
+    const hz = smooth(this.hzK);
     const maxEff = lerp(zMax, Math.min(zMax, CAM.HOUSE_MAX), hk);
     // zoom eased in log space (each notch takes the same time, near or far)
     const ld = Math.log(this.dist), lt = Math.log(clamp(this.distTarget, lerp(zMin, Math.max(zMin, CAM.HOUSE_MIN), hk), maxEff));
@@ -323,8 +347,10 @@ export class CameraRig {
     this.frameDist += (fw - this.frameDist) * (1 - Math.exp(-dt * (fw < this.frameDist ? 6 : 2.5)));
     const t = this.zoomT(this.frameDist), s = smooth(t);
     // pitch: low and cinematic close in, rising toward the high tactical view; a hand tilt on top (less of it close in)
-    const farP = lerp(this.pitch, D2R(CAM.HOUSE_PITCH), hk), closeP = lerp(this.closePitch, D2R(CAM.HOUSE_CLOSE), hk);
-    let pitch = lerp(Math.min(closeP, farP), farP, Math.pow(t, 0.85));
+    // (the horizon camera bends the outdoor curve low; a house still tilts the view down into the room)
+    const hzOut = hz * (1 - hk);
+    const farP = lerp(lerp(this.pitch, D2R(CAM.HZ_PITCH_FAR), hzOut), D2R(CAM.HOUSE_PITCH), hk), closeP = lerp(lerp(this.closePitch, D2R(CAM.HZ_PITCH_CLOSE), hzOut), D2R(CAM.HOUSE_CLOSE), hk);
+    let pitch = lerp(Math.min(closeP, farP), farP, lerp(Math.pow(t, 0.85), Math.pow(t, CAM.HZ_CURVE), hzOut));
     if (free) {
       // the free camera: the hand-set pitch (eased), still pulled toward the house view indoors
       if (this.freePitchTarget == null) this.freePitchTarget = this._pitchNow;
@@ -341,7 +367,7 @@ export class CameraRig {
     const lead = this.sceneFocus ? 0 : smooth(clamp((t - 0.45) / 0.55, 0, 1)) * 1.4 * clamp((this.pitch - 0.3) / 0.3, 0, 1); // not on the login showcase
     const sh = this.sceneFocus ? 0 : CAM.SHOULDER * (1 - smooth(clamp((this.frameDist - this.minDist) / 5.5, 0, 1)));
     const fx = -Math.sin(this.yaw), fz = -Math.cos(this.yaw); // camera forward on the ground
-    _look.set(this.focus.x + fx * lead - fz * sh, this.focus.y + lerp(CAM.LOOK_CLOSE, CAM.LOOK_FAR, s), this.focus.z + fz * lead + fx * sh);
+    _look.set(this.focus.x + fx * lead - fz * sh, this.focus.y + lerp(CAM.LOOK_CLOSE, CAM.LOOK_FAR, s) + CAM.HZ_LOOK * hz * (1 - hk), this.focus.z + fz * lead + fx * sh);
     // collision, every other frame on desktop, every third on phones (the last hit is held in between).
     // Blocked right behind the hero (back to a wall, under eaves), the camera first tries to rise over the obstacle:
     // a few steeper angles are tested and the lowest clear one is eased in (colTilt), then it pulls in along that line.

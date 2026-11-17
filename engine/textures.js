@@ -2,6 +2,14 @@
 // colour (sRGB) plus an optional height layer that is turned into a normal map.
 import * as THREE from 'three';
 import { mulberry32, hash2 } from '/sunmere-play/shared/noise.js';
+import { QUALITY } from './globals.js';
+
+// (LF.2, 17 Nov 2026) the rich material path: the building textures (stone, plaster, planks, shingles, thatch, cobbles)
+// also get a roughness map painted from their height layer, so worn proud faces catch a soft sheen from the sun and the
+// lamps while mortar, gaps and straw stay matte. The desktop presets only: the phones (and Battery saver) keep the cheap
+// path, one texture fewer per fragment and no extra canvas at load. ?lf2=0 turns it off (before / after, bench)
+let _lf2 = true; try { _lf2 = new URLSearchParams(location.search).get('lf2') !== '0'; } catch { /* no location */ }
+export const RICH_MATS = _lf2 && !QUALITY.mobile && !QUALITY.battery;
 
 // ---------- colour helpers ----------
 export function hex(h) {
@@ -120,6 +128,29 @@ class Painter {
     if (repeat) t.wrapS = t.wrapT = THREE.RepeatWrapping;
     t.anisotropy = 8;
     t.generateMipmaps = mips;
+    t.needsUpdate = true;
+    return t;
+  }
+  // (LF.2) a roughness map from the height layer (three reads green): rough (hi) in the low ground (mortar, gaps,
+  // cracks), smoother (lo) on the proud, worn faces between h0 and h1, with a little mottling. Null on the cheap path
+  roughMap(lo, hi, h0 = 0.25, h1 = 0.8, mottle = 0.06, seed = 5) {
+    if (!this.hx || !RICH_MATS) return null;
+    const { w, h } = this;
+    const src = this.hx.getImageData(0, 0, w, h).data;
+    const c = document.createElement('canvas');
+    c.width = w; c.height = h;
+    const ctx = c.getContext('2d');
+    const out = ctx.createImageData(w, h);
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      const i = (y * w + x) * 4;
+      const t = sstep(h0, h1, src[i] / 255);
+      const r = clamp01(hi + (lo - hi) * t + (hash2(x >> 2, y >> 2, seed) - 0.5) * mottle);
+      out.data[i] = out.data[i + 1] = out.data[i + 2] = r * 255; out.data[i + 3] = 255;
+    }
+    ctx.putImageData(out, 0, 0);
+    const t = new THREE.CanvasTexture(c);
+    t.wrapS = t.wrapT = THREE.RepeatWrapping;
+    t.anisotropy = 8;
     t.needsUpdate = true;
     return t;
   }
@@ -368,7 +399,7 @@ export function flagstoneTex() {
   return cached('flagstone', () => {
     const p = new Painter(1024, 1024, 63, { height: true });
     voronoiStones(p, 11, 0.022, [hex('#8e887a'), hex('#857f72'), hex('#948d7e'), hex('#7d776b'), hex('#8a8476'), hex('#918a7b')], 63, { round: 0.25, moss: 0.04, mortar: '#3a352d' });
-    return { map: p.texture(), normalMap: p.normalMap(3) };
+    return { map: p.texture(), normalMap: p.normalMap(3), roughnessMap: p.roughMap(0.8, 1, 0.4, 0.75) };
   });
 }
 
@@ -377,7 +408,7 @@ export function cobbleTex() {
     const p = new Painter(1024, 1024, 51, { height: true });
     // finer, calmer cobbles: more and smaller stones, a narrow dark mortar, a tight tint range, only a hint of moss
     voronoiStones(p, 28, 0.042, [hex('#a59d8d'), hex('#9b9384'), hex('#aca391'), hex('#968e7f'), hex('#a29786'), hex('#a99e8b'), hex('#9e9585')], 51, { moss: 0.25, mortar: '#3e372e' });
-    return { map: p.texture(), normalMap: p.normalMap(4) };
+    return { map: p.texture(), normalMap: p.normalMap(4), roughnessMap: p.roughMap(0.76, 1, 0.4, 0.8) };
   });
 }
 
@@ -421,7 +452,9 @@ export function planksTex(key = 'wood', { base = '#8a5a32', boards = 6, vertical
       c = mix(c, shade(dark, 0.6), cut);
       const gap = sstep(0.035, 0.0, Math.min(fu, 1 - fu));
       c = mix(c, shade(dark, 0.45), gap);
-      const hgt = (1 - gap) * (1 - cut) * (0.6 + 0.3 * (1 - Math.pow(grain, 4))) + 0.1 * sstep(0.2, 0, fu);
+      // (LF.2) the grain raised in the height too (open dark lines, fine streaks), each board slightly cupped (edges up)
+      // and its gap and end cut sunk deep, so the planks read as boards up close
+      const hgt = (1 - gap) * (1 - cut) * (0.56 + 0.26 * (1 - Math.pow(grain, 4)) - fine * 0.1 + 0.07 * (1 - Math.sin(fu * Math.PI))) + 0.1 * sstep(0.2, 0, fu);
       return [...c, hgt];
     });
     // knots
@@ -436,7 +469,7 @@ export function planksTex(key = 'wood', { base = '#8a5a32', boards = 6, vertical
       p.blob(x, y, 3, 3, 0, hex('#3a3430'), 1, 255);
       p.blob(x - 1, y - 1, 1.2, 1.2, 0, hex('#9a948a'), 1);
     }
-    return { map: p.texture(), normalMap: p.normalMap(3) };
+    return { map: p.texture(), normalMap: p.normalMap(3), roughnessMap: p.roughMap(0.8, 1, 0.3, 0.75) };
   });
 }
 
@@ -450,7 +483,9 @@ export function stoneBrickTex(key = 'stone', { base = '#b8ae9c', rows = 8, morta
     for (let r = 0; r < rows; r++) {
       const bricks = [];
       let x = r % 2 ? -0.5 / (3 * block) : 0;
-      while (x < 1) { const w = (p.r(0.7, 1.3) / (3 * block)); bricks.push([x, Math.min(x + w, 1 + 0.0001), p.r(0.85, 1.12), p.r(0, 1)]); x += w; }
+      // (LF.2) each block also gets its own face: set proud or back (4), tilted a little each way (5, 6), and a quarter of
+      // them a hairline crack (7 angle, 8 offset, 9 half-length; 7 < 0: none), so the courses read as cut blocks
+      while (x < 1) { const w = (p.r(0.7, 1.3) / (3 * block)); bricks.push([x, Math.min(x + w, 1 + 0.0001), p.r(0.85, 1.12), p.r(0, 1), p.r(-0.1, 0.1), p.r(-0.5, 0.5), p.r(-0.5, 0.5), p.r() < 0.25 ? p.r(0, Math.PI) : -1, p.r(-0.15, 0.15), p.r(0.15, 0.4)]); x += w; }
       // close the row seamlessly
       bricks[bricks.length - 1][1] = 1 + (bricks[0][0] < 0 ? bricks[0][0] : 0);
       rowBricks.push(bricks);
@@ -466,9 +501,16 @@ export function stoneBrickTex(key = 'stone', { base = '#b8ae9c', rows = 8, morta
       const e = Math.min(ex, ey);
       const n = pfbm(u, v, 8, 4, 31);
       const chip = pfbm(u, v, 24, 2, 41);
-      const g = 0.07 + chip * 0.05;
+      const g = 0.06 + chip * 0.08; // (LF.2: more uneven, hand-dressed arrises)
       const inside = sstep(g, g + 0.04, e);
-      let c = shade(b0, b[2]);
+      // (LF.2) a hairline crack across some blocks, in row-height units
+      let crack = 0;
+      if (b[7] >= 0) {
+        const X = (fu - 0.5) * (b[1] - b[0]) / rh, Y = fv - 0.5, ca = Math.cos(b[7]), sa = Math.sin(b[7]);
+        const d = Math.abs(X * sa - Y * ca - b[8]), al = Math.abs(X * ca + Y * sa);
+        crack = sstep(0.03, 0.008, d) * sstep(b[9], b[9] * 0.6, al) * inside;
+      }
+      let c = shade(b0, b[2] * (1 - b[6] * 0.12 - b[5] * 0.06 + b[4] * 0.4)); // a tilted or proud face catches the light its own way
       c = mix(c, dark, n * 0.35);
       // painted top-left light on every block
       c = mix(c, light, sstep(0.3, 0.05, fv) * sstep(g + 0.1, g, e) * 0.0 + sstep(0.25, 0.0, ey) * (fv < 0.5 ? 0.5 : 0) + sstep(0.2, 0, ex) * (fu < 0.5 ? 0.25 : 0));
@@ -477,9 +519,12 @@ export function stoneBrickTex(key = 'stone', { base = '#b8ae9c', rows = 8, morta
       mc = mix(mc, mossC, sstep(0.55, 0.75, pfbm(u, v, 5, 3, 77)) * moss * 1.6);
       c = mix(mc, c, inside);
       if (moss > 0) c = mix(c, mossC, sstep(0.7, 0.85, pfbm(u, v, 4, 3, 78)) * moss * sstep(0.4, 1, fv) * inside);
-      return [...c, inside * (0.6 + 0.4 * sstep(0, 0.3, e)) * (0.85 + n * 0.15)];
+      c = mix(c, shade(mort, 0.7), crack * 0.65);
+      // (LF.2) a crisp chamfer down into the mortar and a flat, slightly tilted, pitted face (was one soft round swell)
+      const face = 0.66 + b[4] + b[5] * (fu - 0.5) * 0.35 + b[6] * (fv - 0.5) * 0.35 + (n - 0.5) * 0.16 + (chip - 0.5) * 0.08;
+      return [...c, inside * (0.3 + 0.7 * sstep(g, g + 0.12, e)) * face * (1 - crack * 0.6)];
     });
-    return { map: p.texture(), normalMap: p.normalMap(4) };
+    return { map: p.texture(), normalMap: p.normalMap(4), roughnessMap: p.roughMap(0.8, 1, 0.3, 0.6) };
   });
 }
 
@@ -505,9 +550,11 @@ export function shinglesTex(key = 'slate', { base = '#3e5c9a', rows = 10, round 
       c = mix(c, shade(c, 0.85), n * 0.5);
       // overlap shadow from the row below's top (this is the next row)
       if (!inTile) c = mix(shade(b0, 0.45), dark, 0.5);
-      return [...c, inTile ? 0.3 + 0.6 * fv : 0.15];
+      // (LF.2) each tile its own thickness and a chipped, bevelled lower edge
+      const chipE = pfbm(u, v, 32, 2, 7), lip = sstep(bottom, bottom - 0.08 - chipE * 0.06, fv);
+      return [...c, inTile ? (0.26 + 0.6 * fv + (t - 1) * 0.5) * (0.55 + 0.45 * lip) + n * 0.06 : 0.12];
     });
-    return { map: p.texture(), normalMap: p.normalMap(4) };
+    return { map: p.texture(), normalMap: p.normalMap(4), roughnessMap: p.roughMap(0.7, 1, 0.3, 0.75) };
   });
 }
 
@@ -537,7 +584,7 @@ export function mossRoofTex() {
       p.blob(x, y, r, r * 0.8, 0, p.pick([moss, mossL, mossD]), 0.9, 200);
       p.blob(x - r * 0.3, y - r * 0.35, r * 0.4, r * 0.3, 0, mix(mossL, [255, 255, 200], 0.4), 0.7, 240);
     }
-    return { map: p.texture(), normalMap: p.normalMap(3) };
+    return { map: p.texture(), normalMap: p.normalMap(3), roughnessMap: p.roughMap(0.85, 1, 0.3, 0.8) };
   });
 }
 
@@ -578,7 +625,7 @@ export function thatchTex() {
       c = mix(c, shade(c, 0.88), n * 0.4);
       return [...c, h];
     });
-    return { map: p.texture(), normalMap: p.normalMap(3.5) };
+    return { map: p.texture(), normalMap: p.normalMap(3.5), roughnessMap: p.roughMap(0.86, 1, 0.3, 0.8) };
   });
 }
 
@@ -609,12 +656,24 @@ export function plasterTex() {
     const b0 = hex('#e9dcc0'), dark = hex('#c9b693'), warm = hex('#f4ead2');
     p.pixels((u, v) => {
       const n = pfbm(u, v, 5, 5, 3), m = pfbm(u, v, 14, 2, 4);
+      // (LF.2) trowel sweeps: the soft contour bands of a slow noise, each a low ridge with a slightly lighter crest
+      const tw = pfbm(u, v, 3, 3, 91) * 5, tr = tw - Math.floor(tw), ridge = sstep(0.0, 0.2, tr) * sstep(0.5, 0.2, tr);
       let c = mix(dark, b0, sstep(0.2, 0.6, n));
       c = mix(c, warm, sstep(0.6, 0.8, n) * 0.6);
       c = mix(c, shade(c, 0.93), m * 0.4);
-      return [...c, n * 0.5 + m * 0.2];
+      c = mix(c, warm, ridge * 0.07);
+      return [...c, n * 0.45 + m * 0.2 + ridge * 0.06];
     });
-    return { map: p.texture(), normalMap: p.normalMap(1.5) };
+    // (LF.2) a few fine hairline cracks, wandering, sunk in the height
+    for (let i = 0; i < 7; i++) {
+      let x = p.r(0, S), y = p.r(0, S), a = p.r(0.9, 2.2);
+      for (let k = 0; k < 6; k++) {
+        const nx = x + Math.cos(a) * 9, ny = y + Math.sin(a) * 9;
+        p.line(x, y, nx, ny, 1, shade(dark, 0.72), 0.55, 30);
+        x = nx; y = ny; a += p.r(-0.6, 0.6);
+      }
+    }
+    return { map: p.texture(), normalMap: p.normalMap(1.8), roughnessMap: p.roughMap(0.88, 1, 0.2, 0.6) };
   });
 }
 

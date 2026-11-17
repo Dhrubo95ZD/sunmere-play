@@ -14,9 +14,12 @@
 // The same pieces and the same random draws either way, so the layout never changes.
 import { Builder } from '../kit.js';
 import { houseRng, WALL_T, DOOR_W, DOOR_H, WALL_H, PART_GAP } from '/sunmere-play/shared/houses.js';
-import { HT, U, faceOf, FACES, fbox, bx, openingsOn, doorFace, doorT, wallBand, shade, pick, between, clamp, lerp } from './parts.js';
+import { HT, U, faceOf, FACES, fbox, fp, bx, openingsOn, doorFace, doorT, wallBand, shade, pick, between, clamp, lerp } from './parts.js';
 import * as Fu from './furniture.js';
 
+// (LF.3) ?lf3=0 in the URL leaves out the look pass (rugs by bed and hearth, the pictures, the baked lamp light and the
+// floor sheet): for A/B shots and benches
+const LF3 = !(typeof location !== 'undefined' && /[?&]lf3=0\b/.test(location.search));
 const CELL = 0.05;
 // grid of the inner rect; 1 = taken
 class Grid {
@@ -214,7 +217,16 @@ export function buildInteriorLocal(S, { props = false } = {}) {
   const [linMat, linC] = LINING[S.style] || LINING.sunmere;
   const topY = Math.min(S.wallTop, WALL_H);
   // floors, one per room and under each partition
-  for (const R of S.rooms) { const [m, c] = floorMat(S, R); bx(b, m, R.x0, -0.03, R.z0, R.x1, 0, R.z1, c); }
+  // (LF.3: the walked-on face is a sheet cut in ~0.5 m cells over the slab, so the baked lamp light and dark corners
+  // (bakeLight) have vertices to shade; the box UVs run on across the cells, so the boards look the same)
+  for (const R of S.rooms) {
+    const [m, c] = floorMat(S, R), w = R.x1 - R.x0, d = R.z1 - R.z0;
+    if (!LF3) { bx(b, m, R.x0, -0.03, R.z0, R.x1, 0, R.z1, c); continue; }
+    bx(b, m, R.x0, -0.03, R.z0, R.x1, -0.002, R.z1, c);
+    const fg = new Fu.THREE.PlaneGeometry(w, d, Math.max(1, Math.round(w / 0.5)), Math.max(1, Math.round(d / 0.5)));
+    fg.rotateX(-Math.PI / 2); fg.translate((R.x0 + R.x1) / 2, 0, (R.z0 + R.z1) / 2);
+    b.add(fg, m, { uv: 'box', c });
+  }
   for (const P of S.parts) bx(b, floorMat(S, S.rooms[0])[0], P.x0, -0.03, P.z0, P.x1, -0.001, P.z1, '#c8b090');
   // the lining on every outer wall (cut round the openings), with a skirting board; the side faces stop short of the
   // corners so no two lining faces overlap
@@ -459,9 +471,97 @@ export function buildInteriorLocal(S, { props = false } = {}) {
     }
     lit.add(R);
   }
+  // (LF.3) rugs by the bed and the hearth, landscapes on the walls, then the lamp light and dark corners baked in
+  // (client-only random streams 11 and 12: the layout above never moves)
+  if (LF3) lookExtras(b, S, out, { hearth, roomOf, r2: houseRng(S.seed, 11) });
+  if (LF3) bakeLight([b, ...out.props.map((P) => P.fb)], S, out);
   out.reserve = { corridors: corr, doorZone: S.doorZone, approach };
   void main;
   return out;
+}
+// ------------------------------------------------------------------ LF.3 look: rugs, pictures, lamp light
+// rugs (no collision) beside the bed and before the hearth, where they touch no piece, no door zone and no lamp stand;
+// up to two framed landscapes on the outer walls at eye height, clear of windows, the door, the hearth and anything over
+// 1 m standing under them. (The wall pictures sit in the wall band, so the cut-away takes them with the wall: they show
+// from the doorway and through the windows. The breast's picture, wallHearth, stays.)
+function lookExtras(b, S, out, { hearth, roomOf, r2 }) {
+  const I = S.inner, items = out.items.slice();
+  const clearRug = (Rr, R) => R && Rr.x0 > R.x0 + 0.05 && Rr.x1 < R.x1 - 0.05 && Rr.z0 > R.z0 + 0.05 && Rr.z1 < R.z1 - 0.05 &&
+    !items.some((it) => overlap(it.rect, Rr)) && !overlap(S.doorZone, Rr) && !(hearth && overlap(grow(hearth, 0.05), Rr)) &&
+    !out.circles.some((c) => inR(Rr, c.x, c.z, c.r)) && !out.lamps.some((l) => inR(Rr, l.p[0], l.p[2], 0.2));
+  const rugAt = (key, it) => {
+    const along = Math.abs(Math.cos(it.ry)) > 0.5, Rr = rectAt(it.x, it.z, along ? it.w : it.d, along ? it.d : it.w);
+    if (!clearRug(Rr, roomOf(it.x, it.z))) return false;
+    Fu.rug(b, it, r2);
+    const e = { key, rect: Rr, x: it.x, z: it.z, ry: it.ry, w: it.w, d: it.d, h: 0.04, room: roomOf(it.x, it.z)?.kind || null };
+    out.items.push(e); items.push(e);
+    return true;
+  };
+  // beside the bed (its long side faces the sleeper: item +z)
+  const bed = out.items.find((it) => it.key === 'bed');
+  if (bed) for (const dz of [0.42, 0.55, 0.7]) { const p = Fu.at(bed, 0, 0, bed.d / 2 + dz); if (rugAt('rug', { x: p[0], z: p[2], ry: bed.ry, w: 1.3, d: 0.62 })) break; }
+  // before the wall hearth, past its hearthstone (a longhouse's pit gets none: people sit round it)
+  if (hearth && !hearth.pit) {
+    const s = hearth.s, face = s > 0 ? hearth.x0 : hearth.x1, z = (hearth.z0 + hearth.z1) / 2;
+    for (const off of [0.9, 1.0, 1.15]) if (rugAt('rug', { x: face - s * off, z, ry: Math.PI / 2, w: 1.4, d: 0.66 })) break;
+  }
+  // the wall pictures
+  let pics = 0;
+  const onFace = (R, f) => (f === 'front' ? Math.abs(R.z1 - I.z1) < 1e-3 : f === 'back' ? Math.abs(R.z0 - I.z0) < 1e-3 : f === 'left' ? Math.abs(R.x0 - I.x0) < 1e-3 : Math.abs(R.x1 - I.x1) < 1e-3);
+  for (const R of S.rooms) {
+    if (pics >= 2 || S.arch === 'works' || S.arch === 'smithy') break;
+    let done = false;
+    for (const f of FACES) {
+      if (done || !onFace(R, f)) continue;
+      const F = faceOf(S, f), lo = F.tan[0] ? R.x0 : R.z0, hi = F.tan[0] ? R.x1 : R.z1, opens = openingsOn(S, f);
+      const pw = between(r2, 0.62, 0.8), ph = pw * between(r2, 0.6, 0.7), yc = 1.52;
+      for (const tf of [0.5, 0.32, 0.68]) {
+        const t = lerp(lo, hi, tf);
+        if (t - pw / 2 < lo + 0.2 || t + pw / 2 > hi - 0.2) continue;
+        if (opens.some((o) => o.t0 < t + pw / 2 + 0.12 && o.t1 > t - pw / 2 - 0.12 && o.y1 > yc - ph / 2 - 0.1 && o.y0 < yc + ph / 2 + 0.1)) continue;
+        const A = fp(F, t - pw / 2, 0, U.lining), B = fp(F, t + pw / 2, 0, U.lining - 0.75);
+        const Rr = { x0: Math.min(A[0], B[0]), z0: Math.min(A[2], B[2]), x1: Math.max(A[0], B[0]), z1: Math.max(A[2], B[2]) };
+        if (out.items.some((it) => it.h > 1.0 && overlap(it.rect, Rr))) continue;
+        if (out.lamps.some((l) => l.p[1] > 0.9 && inR(Rr, l.p[0], l.p[2], 0.3))) continue;
+        if (hearth && overlap(grow(hearth, 0.25), Rr)) continue;
+        const P = fp(F, t, 0, U.lining);
+        Fu.landscape(b, { x: P[0], z: P[2], ry: Math.atan2(-F.n[0], -F.n[1]) }, r2, pw, ph, yc);
+        pics++; done = true; break;
+      }
+    }
+  }
+}
+// the room's light, baked into the vertex colours (free at draw time, every quality): warm and full near each lamp and
+// fire (lights count only in their own room), dimmer away from them, and darker again in the corners and along the
+// walls, so a room reads lamp-lit with dark corners by day and night alike. The glowing glass and flames are left as
+// they are
+const NO_BAKE = new Set(['glowYellow', 'glassWarm', 'doorWarm', 'fire']);
+function bakeLight(builders, S, out) {
+  const I = S.inner, roomOf = (x, z) => S.rooms.find((R) => inR(R, x, z)) || null;
+  const L = [...out.lamps.map((l) => ({ p: l.p, k: 1, R: 3.2 })), ...out.fires.map((f) => ({ p: [f.p[0], f.p[1] + 0.35, f.p[2]], k: 1.25, R: 4.4 }))]
+    .map((l) => ({ ...l, room: roomOf(l.p[0], l.p[2]) }));
+  const sst = (a, c, v) => { const t = clamp((v - a) / (c - a), 0, 1); return t * t * (3 - 2 * t); };
+  for (const bd of builders) for (const [mat, list] of bd.parts) {
+    if (NO_BAKE.has(mat) || mat.startsWith('glow')) continue;
+    for (const geo of list) {
+      const p = geo.attributes.position, col = geo.attributes.color;
+      if (!col) continue;
+      for (let i = 0; i < p.count; i++) {
+        const x = p.getX(i), y = p.getY(i), z = p.getZ(i), R = roomOf(x, z);
+        const kx = sst(0, 1.1, Math.max(0, Math.min(x - I.x0, I.x1 - x))), kz = sst(0, 1.1, Math.max(0, Math.min(z - I.z0, I.z1 - z)));
+        const occ = 1 - 0.26 * (1 - kx) * (1 - kz) - 0.07 * (2 - kx - kz);
+        let lit = 0;
+        for (const l of L) {
+          if (R && l.room && l.room !== R) continue;
+          const q = ((x - l.p[0]) ** 2 + (y - l.p[1]) ** 2 + (z - l.p[2]) ** 2) / (l.R * l.R);
+          if (q < 1) lit += l.k * (1 - q) * (1 - q);
+        }
+        lit = Math.min(1.2, lit);
+        const m = occ * (0.76 + 0.32 * lit);
+        col.setXYZ(i, col.getX(i) * m * (1 + 0.07 * lit), col.getY(i) * m, col.getZ(i) * m * (1 - 0.1 * lit));
+      }
+    }
+  }
 }
 const overlap = (A, B) => A.x0 < B.x1 && A.x1 > B.x0 && A.z0 < B.z1 && A.z1 > B.z0;
 // circles inside a footprint: radius half the short side, centres spread along the long side
@@ -501,6 +601,13 @@ function wallHearth(b0, it, r, S, topY, out, asProp = null, flush = false) {
   b.add(new Fu.THREE.LatheGeometry([[0.001, 0], [0.12, 0.01], [0.15, 0.1], [0.13, 0.2], [0.001, 0.2]].map(([x, y]) => new Fu.THREE.Vector2(x, y)), 8), 'iron', { p: Fu.at(it, 0, mouthH - 0.62, 0), c: '#3a3634' });
   // (v108) the stone cap on the breast, 4 cm proud all round (the breast stops at HEARTH_TOP)
   Fu.ib(b0, 'stoneLarge', it, -w / 2 - 0.04, topY, -d / 2, w / 2 + 0.04, topY + 0.08, (asProp ? -d / 2 + H.upper : d / 2 - 0.03) + 0.04, '#e0d8c8');
+  // (LF.3) a small framed landscape on the breast over the mantel: on the breast's face, inside the cut's kept rect
+  // (houses/index.js cutKeep, 0.6 m in from the outer wall), so it stays when the house is open. Not over an oven or forge
+  if (!flush && LF3) {
+    // (over the ready-made hearth it hangs a little proud, its foot over the model's stone above the mantel)
+    const y0 = asProp ? H.top - 0.14 : mouthH + 0.34, y1 = topY - 0.04;
+    if (y1 - y0 > 0.18) { const pf = Fu.at(it, 0, 0, d / 2 - (asProp ? 0 : 0.03)), h = y1 - y0; Fu.landscape(b0, { x: pf[0], z: pf[2], ry: it.ry }, houseRng(S.seed, 12), Math.min(w - 0.3, h * 1.6), h, (y0 + y1) / 2); }
+  }
   const fp0 = Fu.at(it, 0, 0.13, -d / 2 + 0.2); // (in the model's firebox too)
   out.fires.push({ p: fp0, scale: 0.42, light: true });
 }

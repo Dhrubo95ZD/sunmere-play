@@ -1,7 +1,7 @@
 // A light grid path finder for the quest walk (v109): a coarse grid (2 m cells) over one outdoor area or one dungeon,
 // filled lazily (a cell is only tested when the search first reaches it, then cached), searched with A* over the eight
 // neighbours (no cutting a blocked corner), and smoothed by string pulling (a waypoint is dropped when the walker can go
-// straight past it). It has no imports, so the node test (tools/tests/questwalktest.mjs) loads it as it is.
+// straight past it). It has no imports, so the node test (tools/tests/questwalktest.mjs and shared/botpath.js) loads it as it is.
 //
 // new PathGrid({ minX, minZ, maxX, maxZ, cell, test, edge })
 //   test(x, z) -> 0 blocked | -1 water (wading, used only as a last resort) | cost >= 1 (1 = plain ground)

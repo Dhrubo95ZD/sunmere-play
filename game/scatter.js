@@ -4,7 +4,7 @@
 // batch is split into a casting and a non-casting part and the shadow pass only culls and draws the casting one.
 // Opaque batches are not depth-sorted per instance (sortObjects off: it cost a sort per pass for little overdraw saved).
 import * as THREE from 'three';
-import { depthFor } from '../assets/kit.js';
+import { depthFor, movePane } from '../assets/kit.js';
 import { hangingLantern, glowSprite } from '../assets/dynamic.js';
 import { SHADOW_LAYER, packProxyPositions } from './layers.js';
 import { IS_MOBILE } from '../engine/platform.js';
@@ -38,6 +38,8 @@ export class Scatter {
     const pf = this.prefabs.get(key);
     this.placements.push({ key, m, cast: pf.height * scale >= SMALL_CASTER });
     if (pf.res.collider) this.colliders.push({ x, z, r: pf.res.collider.r * scale });
+    // (LF.1) its warm window panes, for the world's window glow
+    for (const pn of pf.res.builder.panes || []) (this.group.userData.panes ||= []).push(movePane(pn, m));
     // live objects: hanging lanterns, glows
     for (const l of pf.res.lanterns || []) {
       const h = hangingLantern(l.color, l.len * scale, scale);

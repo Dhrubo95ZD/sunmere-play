@@ -1,6 +1,17 @@
 // What's new: shown once after an update (newest first). Bump `v` on the first entry whenever something is added.
 export const CHANGELOG = [
   {
+    v: 125, date: '17 November 2026', title: 'Lamplight',
+    items: [
+      ['Fixed: phone app and play link', 'Since the Living Adventurers update the phone app and the browser play link could not load the world. That is fixed, and a new check makes sure it cannot happen again.'],
+      ['Nights', 'Nights are a deeper blue, and the light is warm where it matters: windows glow on the house walls at dusk and night, street lamps throw amber pools on the cobbles, and only real fires flicker.'],
+      ['Lamp-lit homes', 'Step inside a house and it is lit by its own lamps and hearth, with dark corners, striped rugs, beds and landscape pictures on the walls.'],
+      ['Stone and timber', 'Stone blocks look cut, with bevelled edges and the odd crack; planks show their grain and gaps; roof tiles and plaster have more depth. On the desktop, worn stone and wood catch a soft sheen.'],
+      ['Horizon camera', 'A new option in Options: a low camera close behind your hero that shows the land ahead, and every area now has distant hills and mountains on its skyline instead of flat fog.'],
+      ['Brass frames', 'The minimap and the player and target frames now sit in brass frames. The potion slot moves above the third skill row from level 42, so it never covers a skill.'],
+    ],
+  },
+  {
     v: 124, date: '17 November 2026', title: 'The Russet Weald',
     items: [
       ['Part Fifteen begins', 'Chapter 49, When the Count Comes Round: Kamal has drawn the thirteenth wind engine, and the oak it needs grows over the ridge. Clear and rewind the Makers’ old ropeway at the head of the Slip and ride its car over the ridge, out of the rain and down into the autumn wood.'],

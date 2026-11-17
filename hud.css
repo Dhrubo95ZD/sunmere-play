@@ -2473,3 +2473,47 @@ html.phone .hud .minimap .on-badge { font-size: 20px; line-height: 26px; padding
 .actionbars .potslot.drag { box-shadow: inset 0 0 0 2px #071018, 0 0 0 2px #ffe8a088, 0 4px 10px #0009; }
 .actionbars .potslot.drop { box-shadow: inset 0 0 0 2px #071018, 0 0 0 3px #ffe8a0, 0 0 14px #ffd06088; }
 .actionbars .potslot .pcnt { position: absolute; right: 3px; bottom: 1px; font: 700 12px var(--font-body); color: #fff; text-shadow: 0 0 2px #000, 0 0 2px #000; }
+
+/* ---- LF.5 brass frames (17 Nov 2026): the minimap and the player / target unit frames sit in cast brass, bevelled and
+   lit from above, with plain L-shaped corner plates and square studs (no rays, stars, crosses or ring emblems). Static
+   CSS only: no images, no animation, so phones pay nothing per frame. */
+.hud { --lf-brass: linear-gradient(180deg, #f4dd9c 0%, #d2ae62 20%, #94733a 52%, #b99650 76%, #5a421c 100%);
+  --lf-brass-h: linear-gradient(90deg, #6a4e22, #c9a45a 30%, #f0d690 50%, #c9a45a 70%, #6a4e22);
+  --lf-stud: linear-gradient(135deg, #fff0bc, #c9a45a 45%, #5a421c);
+  --lf-cut: polygon(8px 0, calc(100% - 8px) 0, 100% 8px, 100% calc(100% - 8px), calc(100% - 8px) 100%, 8px 100%, 0 calc(100% - 8px), 0 8px); }
+/* corner plates: an L of two bars in each corner and a square stud inside it */
+.hud .minimap::after, .hud .unit::after {
+  content: ''; position: absolute; pointer-events: none;
+  --l: 24px; --t: 5px; --s: 6px; --o: 9px;
+  background:
+    var(--lf-stud) left var(--o) top var(--o) / var(--s) var(--s), var(--lf-stud) right var(--o) top var(--o) / var(--s) var(--s),
+    var(--lf-stud) left var(--o) bottom var(--o) / var(--s) var(--s), var(--lf-stud) right var(--o) bottom var(--o) / var(--s) var(--s),
+    var(--lf-brass-h) left top / var(--l) var(--t), var(--lf-brass) left top / var(--t) var(--l),
+    var(--lf-brass-h) right top / var(--l) var(--t), var(--lf-brass) right top / var(--t) var(--l),
+    var(--lf-brass-h) left bottom / var(--l) var(--t), var(--lf-brass) left bottom / var(--t) var(--l),
+    var(--lf-brass-h) right bottom / var(--l) var(--t), var(--lf-brass) right bottom / var(--t) var(--l);
+  background-repeat: no-repeat;
+  filter: drop-shadow(0 1px 1px #000c);
+}
+/* minimap: a brass bezel round the square plate, a bevelled brass ring on the map, a brass-capped name plate */
+.minimap::before {
+  border: 4px solid transparent; border-image: var(--lf-brass) 1;
+  background: var(--grain), var(--metal);
+  box-shadow: inset 0 0 0 1px #2a1c0c, inset 0 0 0 3px #1a262e, inset 0 0 0 4px #a48b5099, inset 0 0 14px #000c;
+  left: -4px; right: -4px; height: 218px; /* plus the 4px rim: the same outer height as before, so the notes under it keep their place */
+}
+.hud .minimap::after { z-index: -1; left: -4px; right: -4px; top: 23px; height: 226px; clip-path: var(--lf-cut); }
+.minimap canvas { border-width: 5px; border-style: solid; border-color: #ecd08a #a07e40 #5e4520 #b8944e;
+  box-shadow: 0 0 0 1px #1a1208, 0 0 0 2px #f0d69055, 0 6px 16px #0009; }
+.zone-name { position: relative; border: 1px solid #6a4e22; border-radius: 1px;
+  box-shadow: inset 4px 0 0 #b8944e, inset -4px 0 0 #b8944e, inset 0 1px 0 #f0d69088, inset 0 -1px 0 #0009, 0 2px 4px #0008; }
+/* unit frames: the brass rim sits just outside the plate, the plate's own edge stays as the inner line */
+.hud .unit::before { content: ''; position: absolute; inset: -4px; pointer-events: none; border: 3px solid transparent;
+  border-image: var(--lf-brass) 1; clip-path: polygon(6px 0, calc(100% - 6px) 0, 100% 6px, 100% calc(100% - 6px), calc(100% - 6px) 100%, 6px 100%, 0 calc(100% - 6px), 0 6px);
+  box-shadow: inset 0 0 0 1px #1a1208; }
+.hud .unit::after { inset: -4px; --l: 20px; --t: 4px; --s: 5px; --o: 7px; clip-path: var(--lf-cut); }
+.unit .portrait { border-color: #ecd08a #a07e40 #5e4520 #b8944e; border-width: 3px; box-shadow: inset 0 0 0 2px #080f16, 0 0 0 1px #1a1208; }
+.unit.elite::before { border-image: linear-gradient(180deg, #fff2c0, #e8c26a 30%, #a07e40 60%, #f0d690) 1; }
+@media (max-height: 400px) { html.phone .hud .minimap::before { height: 206px; } html.phone .hud .minimap::after { height: 214px; } }
+/* level 42+: the third skill row's tab sits above the bars' top right and can reach the left end, so the potion slot rises above it */
+.actionbars .potslot.over3 { bottom: calc(100% + 66px); }

@@ -3,7 +3,7 @@
 //  - where to: ui.questTargets() (the same points the map and minimap mark): the hand-in NPC when the quest is complete,
 //    else the nearest objective area; a target across the sea, up the lift or in a dungeon you are not in gives the
 //    pier, the lift keeper or the dungeon door instead (the walk stops there, and picks up again on the far side).
-//  - how: a 2 m grid A* per outdoor area or dungeon, filled lazily and cached (game/pathfind.js), round the shared house
+//  - how: a 2 m grid A* per outdoor area or dungeon, filled lazily and cached (shared/pathfind.js), round the shared house
 //    walls and the client's static colliders (trees, rocks, buildings), in and out of houses by their doors.
 //  - moving: steer() hands game.js a direction, which it walks exactly like a held key (the same collisions, the same
 //    position updates to the server), at the mount's speed when riding. A key, the stick, a click on the ground or on
@@ -13,7 +13,7 @@
 //    the tracked quest's route when you walk yourself. Never a cross, star or plus: plain soft ovals.
 import * as THREE from 'three';
 import { SETTINGS } from '../engine/settings.js';
-import { PathGrid, outdoorTest, outdoorEdge, planOutdoor } from './pathfind.js';
+import { PathGrid, outdoorTest, outdoorEdge, planOutdoor } from '/sunmere-play/shared/pathfind.js';
 import { walkHeight, waterAt, worldGap, areaOf, roadDist, groundAt, WORLD, AREA_BY_ID } from '/sunmere-play/shared/terrain.js';
 import { houseAt, housePush, houseCrosses } from '/sunmere-play/shared/houses.js';
 import { dungeonAt, isFloor, CELL, DUNGEON_MIN_X } from '/sunmere-play/shared/dungeons.js';

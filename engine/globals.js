@@ -44,6 +44,8 @@ export const G = {
   cloudAmount: { value: 0.3 },
   // 0 by day, 1 at the dark of night (lantern glows burn brighter)
   night: { value: 0 },
+  // (LF.1) 0 by day, 1 once the lamps behind the windows are lit (game.js eases it in with the dusk, as the warm glass)
+  winLit: { value: 0 },
   // 0 dry .. 1 soaked: the ground darkens and turns glossy while it rains, drying off slowly afterwards
   wet: { value: 0 },
   // lamps and fires lighting the air this frame ({ x, y, z, w: strength, c: Color }), from the world's light pool

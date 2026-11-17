@@ -44,7 +44,9 @@ varying vec4 vCol;
 void main() {
   vUv = uv;
   // iPh < 0: the owner drives the opacity itself (it wrote material.opacity), so no flicker or night boost on top
-  float fl = iPh < 0.0 ? 1.0 : (0.88 + 0.08 * sin(uTime * 3.1 + iPh) + 0.04 * sin(uTime * 7.7 + iPh)) * (1.0 + 0.9 * uNight);
+  // (LF.1) only fires flicker: an orange glow (green well under red) breathes, a lamp's yellow-white one burns steady
+  float fk = 1.0 - smoothstep(0.55, 0.7, iCol.g / max(iCol.r, 0.001));
+  float fl = iPh < 0.0 ? 1.0 : (0.88 + fk * (0.08 * sin(uTime * 3.1 + iPh) + 0.04 * sin(uTime * 7.7 + iPh)) + 0.06 * (1.0 - fk)) * (1.0 + 0.9 * uNight);
   vCol = vec4(iCol.rgb, iCol.a * fl);
   vec4 mvPosition = viewMatrix * vec4(iPos, 1.0);
   mvPosition.xy += position.xy * iSize;

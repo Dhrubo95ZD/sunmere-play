@@ -146,11 +146,12 @@ const GradeShader = {
     shadowTint: { value: new THREE.Vector3(-0.012, 0.004, 0.03) },
     lightTint: { value: new THREE.Vector3(0.014, 0.006, -0.01) },
     sharpen: { value: 0 },
+    satHi: { value: 0 }, // (LF.1) saturation given back to the bright pixels (the lamp-lit pools and windows keep their warmth by night)
     res: G.resolution,
   },
   vertexShader: /* glsl */ `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }`,
   fragmentShader: /* glsl */ `
-    uniform sampler2D tDiffuse; uniform float saturation, contrast, warmth, vignette, lift;
+    uniform sampler2D tDiffuse; uniform float saturation, contrast, warmth, vignette, lift, satHi;
     uniform vec3 shadowTint, lightTint;
     uniform float sharpen; uniform vec2 res;
     varying vec2 vUv;
@@ -166,7 +167,7 @@ const GradeShader = {
         c.rgb = clamp(c.rgb + (c.rgb - (n + s + e + w) * 0.25) * sharpen * 2.0 * sqrt(amp), mn, mx);
       }
       float l = dot(c.rgb, vec3(0.299, 0.587, 0.114));
-      c.rgb = mix(vec3(l), c.rgb, saturation);
+      c.rgb = mix(vec3(l), c.rgb, saturation + satHi * smoothstep(0.2, 0.55, l));
       c.rgb = (c.rgb - 0.42) * contrast + 0.42;
       // split toning: cool, deep shadows and warm, golden highlights
       float sh = 1.0 - smoothstep(0.0, 0.45, l), hi = smoothstep(0.35, 0.95, l);
@@ -185,9 +186,9 @@ const GradeShader = {
 const _cdir = new THREE.Vector3(), _cfoc = new THREE.Vector3();
 const _rainFog = new THREE.Color('#7c868e'), _sandFog = new THREE.Color('#d0ad78'), _snowFog = new THREE.Color('#c4ccd8');
 const _pourFog = new THREE.Color('#6e7a74'); // (the Rainward Gorge's downpours: a grey-green wall of rain)
-const _dusk = new THREE.Color('#ffa456'), _moon = new THREE.Color('#9fb4e8'), _nightFill = new THREE.Color('#4a5f9a'), _nightSky = new THREE.Color('#33456e'), _nightGround = new THREE.Color('#16161c');
+const _dusk = new THREE.Color('#ffa456'), _moon = new THREE.Color('#90a9ea'), _nightFill = new THREE.Color('#42599e'), _nightSky = new THREE.Color('#2a3f72'), _nightGround = new THREE.Color('#16161c');
 // twilight air: golden amber at dusk, a soft peach-gold at dawn (never rose: with the night blue laid over it, rose went magenta)
-const _duskFog = new THREE.Color('#d6a462'), _dawnFog = new THREE.Color('#e4c49a'), _twFog = new THREE.Color(), _nightFog = new THREE.Color('#1c2438'), _nightZen = new THREE.Color('#0a1022');
+const _duskFog = new THREE.Color('#d6a462'), _dawnFog = new THREE.Color('#e4c49a'), _twFog = new THREE.Color(), _nightFog = new THREE.Color('#18223c'), _nightZen = new THREE.Color('#0a1022');
 export class Engine {
   constructor(canvas) {
     const r = (this.renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance', stencil: false }));
@@ -422,16 +423,16 @@ export class Engine {
     this._squall = squall;
     this.sun.intensity = B.sun * (1 - 0.42 * rain - 0.4 * sand - 0.25 * snow - 0.35 * blizzard) * (1 - 0.3 * squall) * (1 - 0.35 * pour) * (1 - 0.91 * night);
     this.sun.color.copy(B.sunC).lerp(_dusk, tw * (0.6 - 0.25 * this._dawn)).lerp(_moon, nk);
-    this.fill.intensity = B.fill * (1 - 0.25 * rain) * (1 - 0.5 * night);
+    this.fill.intensity = B.fill * (1 - 0.25 * rain) * (1 - 0.5 * night - 0.12 * nk); // (LF.1: a deeper blue night, the lamps doing the warm work)
     this.fill.color.copy(B.fillC).lerp(_nightFill, nk);
-    this.hemi.intensity = B.hemi * (1 + 0.9 * rain + 0.2 * sand) * (1 - 0.5 * night);
+    this.hemi.intensity = B.hemi * (1 + 0.9 * rain + 0.2 * sand) * (1 - 0.5 * night - 0.16 * nk);
     this.hemi.color.copy(B.hemiS).lerp(_nightSky, nk); this.hemi.groundColor.copy(B.hemiG).lerp(_nightGround, nk);
     const fc = B.fog.clone().lerp(_rainFog, rain * 0.8).lerp(_pourFog, pour * 0.5).lerp(_snowFog, Math.min(1, snow * 0.6 + blizzard * 0.35 + squall * 0.4)).lerp(_sandFog, sand * 0.85).lerp(_twFog, tw * (0.45 + 0.15 * this._dawn)).lerp(_nightFog, nk * 0.9);
     this._nk = nk;
     this.scene.fog.color.copy(fc); this.scene.background.copy(fc);
     this.scene.fog.near = B.near * (1 - 0.45 * rain - 0.65 * sand - 0.35 * snow) * (1 - 0.6 * blizzard) * (1 - 0.6 * squall) * (1 - 0.25 * pour) * (1 - 0.15 * night);
     this.scene.fog.far = B.far * (1 - 0.4 * rain - 0.55 * sand - 0.3 * snow) * (1 - 0.55 * blizzard) * (1 - 0.6 * squall) * (1 - 0.25 * pour) * (1 - 0.15 * night);
-    this.scene.environmentIntensity = B.env * (1 + 0.25 * rain) * (1 - 0.78 * night);
+    this.scene.environmentIntensity = B.env * (1 + 0.25 * rain) * (1 - 0.78 * night - 0.08 * nk);
     const u = this.sky.material.uniforms;
     if (u.zenith.value === B.zen || !this._skyOwn) { u.zenith.value = B.zen.clone(); u.horizon.value = B.hor.clone(); this._skyOwn = true; }
     u.zenith.value.copy(B.zen).lerp(_nightZen, nk); u.horizon.value.copy(B.hor).lerp(_twFog, tw * 0.5).lerp(_nightFog, nk);
@@ -552,7 +553,7 @@ export class Engine {
     for (let i = 0; i < n; i++) { const l = L[i]; A.lamps[i].set(l.x, l.y, l.z, l.w); _lampAvg.r += l.c.r * l.w; _lampAvg.g += l.c.g * l.w; _lampAvg.b += l.c.b * l.w; wsum += l.w; }
     vu.uLampN.value = n;
     if (wsum > 1e-4) cu.uLampCol.value.setRGB(_lampAvg.r / wsum, _lampAvg.g / wsum, _lampAvg.b / wsum);
-    cu.uLampK.value = this._indoor ? 0.1 : 0.12 * (0.35 + 0.65 * night);
+    cu.uLampK.value = this._indoor ? 0.1 : 0.12 * (0.35 + 0.45 * night); // (judge: less lamp haze by night, so the pools read as pools, not yellow fog)
     // the sun on screen: glare and soft round ghosts when it is in view (and the sky around it is), a warm veil when close
     const cam = this.camera;
     cam.getWorldDirection(_fwd);
@@ -754,7 +755,7 @@ export class Engine {
     // the house lift (setHouseLight), eased linearly over 0.4 s
     { const w = this._houseWant || 0, k = this._houseK || 0; this._houseK = w > k ? Math.min(w, k + dt / 0.4) : Math.max(w, k - dt / 0.4); }
     // moonlight drains colour: the grade cools and desaturates by night (outdoors only; dungeons keep their own look)
-    { const nk = this._indoor ? 0 : this._nk || 0, gu = this.grade.uniforms; gu.saturation.value = 1.1 - 0.32 * nk; gu.shadowTint.value.set(-0.012 - 0.01 * nk, 0.004, 0.03 + 0.025 * nk); }
+    { const nk = this._indoor ? 0 : this._nk || 0, gu = this.grade.uniforms; gu.saturation.value = 1.1 - 0.64 * nk; gu.satHi.value = 0.6 * nk; gu.vignette.value = 0.2 + 0.1 * nk; gu.shadowTint.value.set(-0.012 - 0.02 * nk, 0.004 - 0.002 * nk, 0.03 + 0.055 * nk); gu.lift.value = 0.006 + 0.018 * nk; } // (judge: the grass greys to moonlit blue-grey, the darks lift to a blue haze, not black)
     this.updateAtmos();
     // the house cut-away faces the camera that is about to draw (camera forward on the ground)
     if (G.cutOn.value > 0.5) { this.camera.getWorldDirection(_fwd); if (Math.hypot(_fwd.x, _fwd.z) > 1e-4) G.cutDir.value.set(_fwd.x, _fwd.z).normalize(); }

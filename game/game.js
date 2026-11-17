@@ -18,6 +18,7 @@ import { Engine } from '../engine/renderer.js';
 import { G, QUALITY } from '../engine/globals.js';
 import { World } from './world.js';
 import { CameraRig } from './camera.js';
+import { createHorizon } from './horizon.js';
 import { TargetFX } from './targetfx.js';
 import { FX } from './fx.js';
 import { SFX } from './sfx.js';
@@ -128,6 +129,8 @@ export async function startGame() {
   // the camera's collision copies as children)
   engine.useShadowProxies(world.shadowProxies || [], true);
   world.freezeWorld();
+  // LF.4 distant hills and mountains past every outdoor area's edge (a child of the sky dome; ?horizon=0 leaves them off)
+  if (!/[?&]horizon=0/.test(location.search)) engine.sky.add(createHorizon(engine, world));
   engine.scene.add(world.group);
   // F3: every area's geometry goes on the GPU and every program the world needs is built behind the loading screen (in
   // parallel where the driver can), so the first look at an area or dungeon does not stall (phones: and the slimmed
@@ -962,6 +965,7 @@ export async function startGame() {
     // (lit 0 until the night value passes 0.12, full by 0.6) up to the same 2.75 glow at night as before
     const glass = getMat('glassWarm'), lit = D ? 1 : Math.min(1, Math.max(0, (night - 0.12) / 0.48)), litS = lit * lit * (3 - 2 * lit);
     glass.emissiveIntensity = D ? 1.35 : 2.75 * litS;
+    G.winLit.value = D ? 0 : litS; // (LF.1) the CGTrader shells' window panes and the window glow on the walls below them
     { const C = (game._glassC ||= [glass.color.clone().setHex(0x30363c), glass.color.clone().setHex(0xffc860)]); glass.color.lerpColors(C[0], C[1], litS); }
     rain.userData.set(local.pos, weather.rain, G.windDir.value, pour);
     // the island's ash falls through the snow flakes, grey and slower; the valley's snow stays white

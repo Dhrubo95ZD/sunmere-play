@@ -2159,11 +2159,16 @@ export class UI {
   freeCamHtml() {
     const how = IS_TOUCH ? 'Drag up and down to tilt from low to straight down, pinch to zoom out to 60 m. The camera button by the map resets the view.' : 'Hold the right mouse button and drag up and down to tilt from low to straight down; the wheel zooms out to 60 m.';
     return `<label class="opt chk o-free"><input type="checkbox" class="o-freecam" ${SETTINGS.freeCam ? 'checked' : ''}> Free camera: it never turns on its own, and zooms and tilts further</label>
-      <div class="o-note">${how} <a class="o-camreset">Reset camera</a></div>`;
+      <div class="o-note">${how} <a class="o-camreset">Reset camera</a></div>
+      <label class="opt chk o-hz"><input type="checkbox" class="o-hzcam" ${SETTINGS.horizonCam ? 'checked' : ''}> Horizon camera: a low view close behind your hero, with the hills on the skyline</label>
+      <div class="o-note">Zoom still works; the Free camera takes over while it is on.</div>`;
   }
   bindFreeCam(w) {
     const box = w.querySelector('.o-freecam');
     if (box) box.onchange = () => { SETTINGS.freeCam = box.checked; saveSettings(); if (IS_TOUCH) touchSettingsChanged(); this.g.sfx?.play('ui'); };
+    // Horizon camera (SETTINGS.horizonCam, LF.4; camera.js reads it each frame): turning it on brings the view in low behind the hero
+    const hz = w.querySelector('.o-hzcam');
+    if (hz) hz.onchange = () => { SETTINGS.horizonCam = hz.checked; saveSettings(); this.g.sfx?.play('ui'); };
     w.querySelectorAll('.o-camreset').forEach((a) => (a.onclick = () => { if (this.g.touchcam?.resetView) this.g.touchcam.resetView(); else this.g.rig?.resetView(); this.g.sfx?.play('ui'); }));
   }
 
@@ -3537,6 +3542,8 @@ export class UI {
     if (this._rowLvl !== this.you.level) {
       this._rowLvl = this.you.level;
       for (const r of ['.row2', '.row3']) { const row = $(r, this.root); if (row) row.classList.toggle('all-locked', !this.slots.some((sl) => sl.el.parentElement === row && sl.s.lvl <= this.you.level)); }
+      // the potion slot sits above the third row's tab once that row shows (levels 42 and up), never on its first skill
+      if (this.pot) { const r3 = $('.row3', this.root); this.pot.el.classList.toggle('over3', !!r3 && !r3.classList.contains('all-locked') && r3.children.length > 0); }
     }
     // cast bar
     const cb = $('.castbar', this.root);
