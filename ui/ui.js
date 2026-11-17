@@ -724,6 +724,44 @@ export class UI {
     if (!R.on) return `<div class="rides-box ${R.won ? 'won' : 'lost'}">${head}<div class="rides-g">${R.won ? 'Every ride is clear! Open the Woodwrights’ chest at the camp.' : 'The gale dropped with rides still blocked.'}</div><div class="rides-marks">${marks}</div></div>`;
     return `<div class="rides-box">${head}<div class="rides-marks">${marks}</div><div class="rides-g">- Rides clear: ${n}/${R.cl.length}${down ? ` (${down} blocked now)` : ''}</div><div class="rides-g">- Machines broken: ${R.br}</div><div class="rides-g">- The gale drops in ${mm}</div><div class="rides-g you">- Your part: ${R.you[0]} trunk${R.you[0] === 1 ? '' : 's'}, ${R.you[1]} machine${R.you[1] === 1 ? '' : 's'}${R.n ? ` · ${R.n} helping` : ''}</div></div>`;
   }
+  // LF.6 the Ram Engine (ev 'ram', shared/ramEngine.js): its state near the yard road, ten times a second while it runs
+  // (every two seconds while it stands); the tracker is redrawn at most once a second, or at once when something changes
+  setRam(ev) {
+    const now = performance.now();
+    this.ram = { ...ev, at: now };
+    const key = [ev.on, ev.end, ev.g.join(), ev.boss, ev.sh, ev.n, ev.dr].join('|');
+    if (key !== this._ramKey || now - (this._ramT || 0) > 1000) { this._ramKey = key; this._ramT = now; this.renderTracker(); }
+    clearTimeout(this.ramHide); this.ramHide = setTimeout(() => this.renderTracker(), 4000); // (out of hearing: the box goes)
+  }
+  // a run starts: its banner card (once a run)
+  ramStart() {
+    const now = performance.now();
+    if (this.scene || now - (this.ramCardAt || -1e9) < 300000 || !LOADING.has('harrow')) return;
+    this.ramCardAt = now;
+    this.bigCard({ art: 'harrow', top: 'Open event', title: 'The Ram Engine', sub: 'Drive it down the yard road, load its ram and break the Wall-Layer’s gates', secs: 6 });
+  }
+  ramNow() {
+    const R = this.ram;
+    if (!R || performance.now() - R.at > 3500) return null;
+    if (R.end && performance.now() - R.at > 3000) return null;
+    return R;
+  }
+  ramLine(R) {
+    const s = Math.max(0, Math.round((R.on ? R.left : R.next) - (performance.now() - R.at) / 1000)), mm = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+    if (!R.on) return R.end ? `<b>The Ram Engine</b> ${R.won ? 'won!' : 'over'}` : `<b>The Ram Engine</b> next run in ${mm}`;
+    const gd = R.g.filter((h) => h <= 0).length;
+    return `<b>The Ram Engine</b> ${gd}/${R.g.length} gates · ${mm}`;
+  }
+  ramHtml(R) {
+    const s = Math.max(0, Math.round((R.on ? R.left : R.next) - (performance.now() - R.at) / 1000)), mm = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+    const head = '<div class="rides-h">The Ram Engine</div>';
+    if (R.end) return `<div class="rides-box ram-box ${R.won ? 'won' : 'lost'}">${head}<div class="rides-g">${R.won ? 'The Wall-Layer is broken! Open Yusuf’s chest by the engine’s park.' : 'The run is over: the Wall-Layer still stands.'}</div></div>`;
+    if (!R.on) return `<div class="rides-box ram-box idle">${head}<div class="rides-g">- The crew raises steam on the world clock: the next run starts in ${mm}</div></div>`;
+    const marks = R.g.map((h, i) => `<i class="${h <= 0 ? 'ok' : h < R.gm[i] ? 'dn' : ''}"></i>`).join('') + `<i class="${R.boss ? 'dn' : ''}"></i>`;
+    const y = R.you || [0, 0, 0, 0, 0], part = [y[0] >= 5 ? `${y[0]} m driven` : '', y[1] ? `${y[1]} loaded` : '', y[2] ? `${y[2]} struck` : '', y[3] ? `${y[3]} repairs` : '', y[4] ? `${y[4]} machines` : ''].filter(Boolean).join(', ') || 'none yet';
+    const gi = R.g.findIndex((h) => h > 0), what = gi >= 0 ? `Gate ${gi + 1} of ${R.g.length}: ${R.g[gi]}/${R.gm[gi]} left` : R.boss ? 'Break the Wall-Layer' : 'Both gates are down';
+    return `<div class="rides-box ram-box">${head}<div class="rides-marks">${marks}</div><div class="rides-g">- ${what}</div><div class="rides-g">- Engine frame ${Math.round((100 * R.hp) / R.mh)}%${R.stall ? ' (stalled: repair it!)' : ''} · steam ${R.st} · weights ${R.w}</div><div class="rides-g">- ${R.dr ? `${R.dn}${R.db ? ' (bot)' : ''} at the levers` : 'The levers are free'}</div><div class="rides-g">- Time left ${mm}${R.br ? ` · ${R.br} menders broken` : ''}</div><div class="rides-g you">- Your part: ${part}${R.n ? ` · ${R.n} helping` : ''}</div></div>`;
+  }
   renderTracker() {
     const box = $('.quest-tracker', this.root);
     const q = this.you?.quests || {};
@@ -763,6 +801,11 @@ export class UI {
     { const R = this.ridesNow(), html = R ? this.ridesHtml(R) : ''; if (html) box.insertAdjacentHTML('afterbegin', html);
       let pill = $('.rides-pill', this.root);
       if (R && IS_TOUCH) { if (!pill) { pill = el('div', 'rides-pill', ''); (this.hud || this.root).appendChild(pill); } pill.innerHTML = this.ridesLine(R); }
+      else pill?.remove(); }
+    // LF.6 the Ram Engine: its tally (or its next run) at the top of the tracker near the yard road, a pill on phones
+    { const R = this.ramNow(), html = R ? this.ramHtml(R) : ''; if (html) box.insertAdjacentHTML('afterbegin', html);
+      let pill = $('.ram-pill', this.root);
+      if (R && IS_TOUCH && (R.on || R.end)) { if (!pill) { pill = el('div', 'ram-pill', ''); (this.hud || this.root).appendChild(pill); } pill.innerHTML = this.ramLine(R); }
       else pill?.remove(); }
     // "Travelling to: ..." with a way to stop, at the top of the tracker (and pinned under the quest pill on phones)
     if (walking) box.insertAdjacentHTML('afterbegin', `<div class="qw-note"><span>Travelling to: <b>${QUESTS[walking]?.name || ''}</b></span><button class="qw-stop">Stop</button></div>`);
@@ -911,6 +954,7 @@ export class UI {
     else if (it?.node) text = (it.node.item === 'c37_block' ? 'Chip out ' : 'Gather ') + (ITEMS[it.node.item]?.name || 'Mosscap');
     else if (it?.salvage) text = waterKind(it.salvage.x, it.salvage.z) === 'sea' ? 'Cast your fishing line' : 'Cast your salvage hook';
     else if (it?.sail) text = it.label;
+    else if (it?.ram) text = it.label; // the Ram Engine's walk-up actions (game/ramEvent.js)
     else if (it?.ty === 'n') text = this.windows.dialog?.isConnected && this.windows.dialog._npc === it.id ? '' : `Talk to ${it.name}`; // (not while you are already talking)
     else if (it?.ty === 'm') text = 'Loot';
     if (text !== this._prompt) { this._prompt = text; $('.pt', el2).textContent = text; el2.classList.toggle('hidden', !text); }

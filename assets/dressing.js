@@ -79,10 +79,10 @@ export function fountain(seed = 1) {
   // central pedestal with two bowls
   b.add(lathe([[0.55, 0.4], [0.5, 0.6], [0.3, 0.75], [0.26, 1.4], [0.34, 1.55], [0.001, 1.56]], 18), 'stoneLarge', { c: '#fff8ec', uv: 'box' });
   b.add(lathe([[0.001, 1.5], [0.4, 1.52], [1.0, 1.7], [1.08, 1.85], [1.0, 1.88], [0.95, 1.76], [0.001, 1.7]], 24), 'stone', { c: '#fff4e8', uv: 'box' });
-  b.add(torus(1.05, 0.035, 5, 32), 'gold', { p: [0, 1.85, 0], r: [PI / 2, 0, 0], c: 0xffffff });
+  b.add(torus(1.05, 0.035, 5, 32), 'stone', { p: [0, 1.85, 0], r: [PI / 2, 0, 0], c: '#e8dccb' }); // (review) stone, not a gold ring round a gold ball (a halo from above)
   b.add(lathe([[0.18, 1.86], [0.14, 2.3], [0.2, 2.45], [0.001, 2.46]], 14), 'stoneLarge', { c: 0xffffff, uv: 'box' });
   b.add(lathe([[0.001, 2.4], [0.2, 2.42], [0.48, 2.55], [0.5, 2.65], [0.45, 2.66], [0.001, 2.58]], 18), 'stone', { c: '#fff4e8', uv: 'box' });
-  b.add(sphere(0.12, 12, 10), 'gold', { p: [0, 2.78, 0], c: 0xffffff });
+  b.add(sphere(0.12, 12, 10), 'stoneLarge', { p: [0, 2.78, 0], s: [1, 0.6, 1], c: '#fff8ec' });
   // flower ring around the plinth
   for (let i = 0; i < 14; i++) { const a = (i / 14) * PI * 2; addTuft(b, i % 3 === 0 ? 'lavender' : 'flowers', [Math.cos(a) * 3.85, 0.05, Math.sin(a) * 3.85], 0.7, 0.45, a, 0xffffff, 2); }
   const dyn = [];
@@ -164,12 +164,13 @@ export function barn(seed = 4) {
     const s = new THREE.Shape(); s.moveTo(-w / 2, 0); s.lineTo(w / 2, 0); s.lineTo(0, H); s.closePath();
     b.add(new THREE.ExtrudeGeometry(s, { depth: 0.2, bevelEnabled: false }), 'wood', { p: [0, 0.3 + wallH, z - 0.1], c: '#d8604a', uv: 'box' });
   }
-  // big double doors with white trim braces (one diagonal per leaf)
+  // big double doors with white trim braces (one diagonal per leaf, both leaning the same way: RF.5, mirrored they met
+  // in the middle as a big X)
   for (const sx of [-1, 1]) {
     b.add(box(1.6, 3.0, 0.1), 'wood', { p: [sx * 0.85, 1.8, d / 2 + 0.06], c: '#c8503a', us: 0.8 });
     b.add(box(1.7, 0.12, 0.12), 'plaster', { p: [sx * 0.85, 3.25, d / 2 + 0.12], c: '#fff8f0' });
     b.add(box(1.7, 0.12, 0.12), 'plaster', { p: [sx * 0.85, 0.35, d / 2 + 0.12], c: '#fff8f0' });
-    b.add(box(0.12, 3.4, 0.12), 'plaster', { p: [sx * 0.85, 1.8, d / 2 + 0.12], r: [0, 0, sx * 0.48], c: '#fff8f0' });
+    b.add(box(0.12, 3.4, 0.12), 'plaster', { p: [sx * 0.85, 1.8, d / 2 + 0.12], r: [0, 0, 0.48], c: '#fff8f0' });
   }
   // hay loft with hay spilling out
   b.add(box(1.5, 1.3, 0.1), 'woodDark', { p: [0, 0.3 + wallH + 1.0, d / 2 + 0.08], c: '#3a2a1a' });
@@ -186,7 +187,9 @@ export function wheatField(seed = 7, w = 10, d = 8) {
     b.add(box(w, 0.06, 0.55), 'dirtPlain', { p: [0, 0.0, z], c: '#7a5a34' });
     for (let x = -w / 2 + 0.3; x < w / 2; x += 0.42) {
       const h = b.r(0.95, 1.2), tint = b.r(0.85, 1.1);
-      addTuft(b, 'wheat', [x + b.r(-0.1, 0.1), 0, z + b.r(-0.08, 0.08)], 0.85, h, b.r(0, 3), [tint, tint * 0.97, tint * 0.9], 3);
+      // (RF.5) two parallel cards along the row: random turns criss-crossed into a lattice of X's from above
+      const ox = x + b.r(-0.1, 0.1), oz = z + b.r(-0.08, 0.08), ry = b.r(-0.06, 0.06);
+      for (const dz of [-0.12, 0.12]) addTuft(b, 'wheat', [ox, 0, oz + dz], 0.85, h, ry, [tint, tint * 0.97, tint * 0.9], 1);
     }
   }
   return { builder: b };
@@ -246,14 +249,17 @@ export function stump(seed = 10) {
   const b = new Builder(seed);
   b.add(lathe([[0.62, 0], [0.5, 0.15], [0.45, 0.5], [0.45, 0.7], [0.001, 0.7]], 14), 'bark', { c: 0xffffff, uv: 'box' });
   b.add(cyl(0.44, 0.44, 0.02, 14), 'woodLight', { p: [0, 0.71, 0], c: '#f0d8b0' });
-  for (const r of [0.15, 0.28, 0.38]) b.add(torus(r, 0.01, 4, 20), 'woodDark', { p: [0, 0.72, 0], r: [PI / 2, 0, 0], c: '#8a6a40' });
-  for (let i = 0; i < 4; i++) { const a = i * 1.6; b.add(tube([V3(Math.cos(a) * 0.4, 0.2, Math.sin(a) * 0.4), V3(Math.cos(a) * 0.9, -0.15, Math.sin(a) * 0.9)], 0.1, 6, 3, { capEnd: false }), 'bark', { uv: 'keep', c: 0xffffff }); }
+  // (RF.5) a plain cut top (growth rings drew rings round a disc from above) and three roots at uneven angles (four
+  // roots at right angles drew a '+')
+  for (const a of [0.4, 2.5, 4.3]) { b.add(tube([V3(Math.cos(a) * 0.4, 0.2, Math.sin(a) * 0.4), V3(Math.cos(a) * 0.9, -0.15, Math.sin(a) * 0.9)], 0.1, 6, 3, { capEnd: false }), 'bark', { uv: 'keep', c: 0xffffff }); }
   return { builder: b, collider: { r: 0.6 } };
 }
 
 export function reeds(seed = 11) {
   const b = new Builder(seed);
-  for (let i = 0; i < 9; i++) addTuft(b, 'reed', [b.r(-1, 1), 0, b.r(-0.8, 0.8)], 0.7, b.r(1.2, 1.8), b.r(0, 3), 0xffffff, 2);
+  // (review) every clump faces nearly the same way: random facings let neighbouring clumps cross as X shapes from above
+  const ry = b.r(0, 3);
+  for (let i = 0; i < 9; i++) addTuft(b, 'reed', [b.r(-1, 1), 0, b.r(-0.8, 0.8)], 0.7, b.r(1.2, 1.8), ry + b.r(-0.2, 0.2), 0xffffff, 2);
   for (let i = 0; i < 6; i++) {
     const x = b.r(-0.9, 0.9), z = b.r(-0.7, 0.7), h = b.r(1.4, 1.9);
     b.add(cyl(0.012, 0.015, h, 4), 'leather', { p: [x, h / 2, z], c: '#6a8a3a', w: [0, 0.05, 0.02, 0] });
@@ -269,7 +275,7 @@ export function lilyPads(seed = 12) {
     const g = new THREE.CircleGeometry(r, 14, 0.3, PI * 2 - 0.6);
     g.rotateX(-PI / 2);
     b.add(g, 'leather', { p: [b.r(-1.6, 1.6), 0.03, b.r(-1.6, 1.6)], r: [0, b.r(0, 6), 0], c: '#5a8a3a' });
-    if (i % 3 === 0) { const x = b.r(-1.4, 1.4), z = b.r(-1.4, 1.4); for (let k = 0; k < 6; k++) b.add(sphere(0.06, 6, 4), 'cloth', { p: [x + Math.cos(k) * 0.06, 0.08, z + Math.sin(k) * 0.06], s: [1, 0.6, 1.4], r: [0, k, 0], c: '#ffd0e0' }); }
+    if (i % 3 === 0) { const x = b.r(-1.4, 1.4), z = b.r(-1.4, 1.4); for (let k = 0; k < 2; k++) b.add(sphere(0.07, 6, 4), 'cloth', { p: [x + k * 0.09, 0.08, z + k * 0.05], s: [1, 0.6, 1.2], c: '#ffd0e0' }); } // (RF.5) a plain bud pair, no six-petal ring
   }
   return { builder: b };
 }
@@ -280,9 +286,10 @@ export function lilyPads(seed = 12) {
 export function dryBush(seed = 13) {
   const b = new Builder(seed);
   for (let i = 0; i < 12; i++) {
-    const a = b.r(0, 6.28), L = b.r(0.5, 0.95);
-    const p1 = V3(Math.cos(a) * L * 0.5, L * 0.5, Math.sin(a) * L * 0.5), p2 = V3(Math.cos(a + b.r(-0.4, 0.4)) * L, L * b.r(0.5, 0.9), Math.sin(a) * L);
-    b.add(tube([V3(0, 0, 0), p1, p2], (t) => 0.03 * (1 - t) + 0.006, 4, 6), 'barkPalm', { uv: 'keep', c: '#b8a080', w: (x, y) => [0, 0.03 * y, 0, 0] });
+    // (RF.5) twigs rise from their own scattered bases, mostly upright: twelve twigs from one centre drew a starburst
+    const a = b.r(0, 6.28), L = b.r(0.5, 0.95), o = V3(b.r(-0.4, 0.4), 0, b.r(-0.4, 0.4)), k = b.r(0.15, 0.3);
+    const p1 = o.clone().add(V3(Math.cos(a) * L * k * 0.5, L * 0.5, Math.sin(a) * L * k * 0.5)), p2 = o.clone().add(V3(Math.cos(a + b.r(-0.4, 0.4)) * L * k, L * b.r(0.7, 1.0), Math.sin(a) * L * k));
+    b.add(tube([o, p1, p2], (t) => 0.03 * (1 - t) + 0.006, 4, 6), 'barkPalm', { uv: 'keep', c: '#b8a080', w: (x, y) => [0, 0.03 * y, 0, 0] });
   }
   addTuft(b, 'grassCard', [0, 0, 0], 0.9, 0.55, 0, '#e8d890', 3);
   return { builder: b };
@@ -353,13 +360,15 @@ export function weaponRack(seed = 17) {
 
 export function raiderBanner(seed = 18) {
   const b = new Builder(seed);
-  b.add(cyl(0.06, 0.08, 4.2, 8), 'woodDark', { p: [0, 2.1, 0], c: 0xffffff });
+  // (RF.5) the pole stops at the hanging bar (a T): run on above the bar it drew a cross from the side
+  b.add(cyl(0.06, 0.08, 4.04, 8), 'woodDark', { p: [0, 2.02, 0], c: 0xffffff });
   b.add(cyl(0.035, 0.035, 1.0, 6), 'woodDark', { p: [0, 4.0, 0], r: [0, 0, PI / 2], c: 0xffffff });
   const g = card(0.9, 1.8, 4, 8);
   const p = g.attributes.position;
   for (let i = 0; i < p.count; i++) { const y = p.getY(i); if (y < -0.6) p.setY(i, y + Math.sin(p.getX(i) * 9) * 0.12); }
   b.add(g, 'bannerRed', { p: [0, 3.05, 0.03], uv: 'keep', c: '#c8a8a0', w: (x, y) => [0, 0.02, 0, 0.14 * sstep(3.95, 2.2, y)] });
-  for (let i = 0; i < 3; i++) b.add(rbox(0.35, 0.12, 0.35, 0.02), 'stoneDark', { p: [Math.cos(i * 2.1) * 0.3, 0.06, Math.sin(i * 2.1) * 0.3], c: 0xffffff });
+  // (review) the footing stones lie in a row under the bar: set round the pole they made a + with the bar from straight above
+  for (let i = 0; i < 3; i++) b.add(rbox(0.35, 0.12, 0.35, 0.02), 'stoneDark', { p: [(i - 1) * 0.37, 0.06, 0], c: 0xffffff });
   return { builder: b, collider: { r: 0.4 } };
 }
 
@@ -371,7 +380,7 @@ export function scrapHeap(seed = 19) {
   b.add(lumpy(sphere(1.6, 14, 10), 0.35, 1.2, seed, { flatBottom: 0 }), 'iron', { p: [0, 0, 0], s: [1.2, 0.55, 1], c: '#8a7a70', uv: 'box' });
   for (let i = 0; i < 6; i++) {
     const r0 = b.r(0.3, 0.7);
-    b.add(gear(Math.round(8 + r0 * 12), r0, r0 * 1.2, 0.08, { hole: r0 * 0.2, spokes: 0 }), i % 2 ? 'copper' : 'brass', { p: [b.r(-1.2, 1.2), b.r(0.4, 0.9), b.r(-0.9, 0.9)], r: [b.r(-1, 1), b.r(0, 3), b.r(-1, 1)], c: '#c8a890' });
+    b.add(gear(Math.max(24, Math.round(8 + r0 * 12)), r0, r0 * 1.2, 0.08, { hole: r0 * 0.2, spokes: 0 }), i % 2 ? 'copper' : 'brass', { p: [b.r(-1.2, 1.2), b.r(0.4, 0.9), b.r(-0.9, 0.9)], r: [b.r(-1, 1), b.r(0, 3), b.r(-1, 1)], c: '#c8a890' });
   }
   for (let i = 0; i < 5; i++) b.add(rbox(b.r(0.5, 1.0), 0.06, b.r(0.4, 0.8), 0.02), 'iron', { p: [b.r(-1.4, 1.4), b.r(0.3, 0.8), b.r(-1, 1)], r: [b.r(-0.8, 0.8), b.r(0, 3), b.r(-0.8, 0.8)], c: '#a89888' });
   for (let i = 0; i < 3; i++) b.add(cyl(0.12, 0.12, b.r(1.2, 2), 10), 'copper', { p: [b.r(-1, 1), b.r(0.4, 0.8), b.r(-0.8, 0.8)], r: [b.r(-1.4, 1.4), b.r(0, 3), b.r(-1.4, 1.4)], c: '#c89070' });

@@ -426,6 +426,8 @@ export const BOT_MIND_METHODS = {
     const ev = L >= RIDES.minLevel && !!this.ridesTarget?.(b);
     if (boss) add((ev ? 0.6 : 2) * like('world bosses', 1.5), () => ({ kind: 'worldboss', id: boss.id, label: `fighting ${boss.def.name}`, stale: 600 }));
     if (ev) add(2.2 * like('world bosses', 1.5), () => ({ kind: 'event', ev: 'rides', label: 'clearing the rides in the gale', stale: 300 }));
+    // the Ram Engine on the Harrow Coast while its run is on (shared/ramEngine.js): load it, repair it, fight its menders, or drive
+    if (this.ramWants?.(b)) add(2.4 * like('world bosses', 1.5), () => ({ kind: 'event', ev: 'ram', label: 'working the Ram Engine', stale: 300 }));
     const cr = this.goalCraft(b); if (cr) add(0.6 * like('crafting') * (cr.station === 'cook' ? like('cooking') : 1), () => cr);
     const ga = this.goalGather(b); if (ga) add(0.35 * like('gathering', 3), () => ga);
     if (this.time > (b.mind.runCool || 0)) { const d = this.goalDungeon(b); if (d) add(0.5 * like('dungeons'), () => d); }
@@ -532,6 +534,8 @@ export const BOT_MIND_METHODS = {
       // Clear the Rides started while it was at the boss: off to the trunks unless the boss is on it now (it chooses again)
       if (m.target !== b.id && b.level >= RIDES.minLevel && this.ridesTarget?.(b)) { g.done = true; return; }
       g.G = { x: m.x, z: m.z, r: 30, sps: [m.sp] }; g.fight = (x) => x.id === g.id; g.boss = true;
+    } else if (g.kind === 'event' && g.ev === 'ram') {
+      this.ramBotCheck(b, g); // the Ram Engine: its part at the levers, the piles, the frame or the fight (shared/ramEngine.js)
     } else if (g.kind === 'event') {
       // Clear the Rides: the nearest trunk still across a ride, cut with whoever is there (shared/rides.js)
       const m = this.ridesTarget?.(b);
@@ -583,6 +587,7 @@ export const BOT_MIND_METHODS = {
       if (b.gold > g0) this.botRemember?.(b, 'sold', { gold: b.gold - g0 });
       g.done = true;
     } else if (g.kind === 'rest') { if (!g.idle) { g.idle = this.time + R(...BOTS_MIND.restMin); b.sit = rand() < 0.5; } g.dest = null; }
+    else if (g.kind === 'event' && g.ev === 'ram') this.ramBotArrive(b, g); // (the Ram Engine: at the levers, a pile, the engine's side)
     else if (g.kind === 'travel') this.mindAway(b, 'travel', R(...BOTS_MIND.travelAway), { hop: g.hop });
     else if (g.kind === 'dungeon') this.mindRunArrive(b, g);
     else if (g.kind === 'logoff') this.mindLogoff(b);

@@ -558,20 +558,18 @@ export class FX {
     }, () => { this.scene.remove(m); m.geometry.dispose(); m.material.dispose(); });
   }
 
-  // telegraph: a red circle on the ground that fills from the middle out, then the hit lands
+  // telegraph: a red circle on the ground that glows stronger and pulses faster as the hit nears, then the hit lands.
+  // (RF.5: one plain filled circle with its rim; the old growing inner disc inside a separate ring read as a disc inside a
+  // ring, like a target or an emblem, from straight above)
   telegraph(pos, radius, dur, color = '#ff3a20') {
     const y = this.ground(pos) + 0.12;
-    const mk = (opacity) => new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: this.telegraphTex(), color, transparent: true, depthWrite: false, opacity, blending: THREE.AdditiveBlending }));
-    const edge = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: this.ringTex, color, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
-    const fill = mk(0.5), base = mk(0.16);
-    for (const m of [edge, fill, base]) { m.rotation.x = -Math.PI / 2; m.position.set(pos.x, y, pos.z); m.renderOrder = 16; this.scene.add(m); }
-    edge.scale.set(radius * 2.05, radius * 2.05, 1); base.scale.set(radius * 2, radius * 2, 1);
+    const area = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: this.telegraphTex(), color, transparent: true, depthWrite: false, opacity: 0.16, blending: THREE.AdditiveBlending }));
+    area.rotation.x = -Math.PI / 2; area.position.set(pos.x, y, pos.z); area.renderOrder = 16; this.scene.add(area);
+    area.scale.set(radius * 2, radius * 2, 1);
     this.after(dur, (k, t) => {
-      const f = Math.max(0.05, k);
-      fill.scale.set(radius * 2 * f, radius * 2 * f, 1);
-      edge.material.opacity = 0.55 + 0.45 * Math.sin(t * 14);
-      fill.material.opacity = 0.35 + 0.3 * k;
-    }, () => { for (const m of [edge, fill, base]) { this.scene.remove(m); m.geometry.dispose(); m.material.dispose(); } });
+      const ph = t * (6 + 14 * k);
+      area.material.opacity = (0.2 + 0.5 * k) * (0.8 + 0.2 * Math.sin(ph));
+    }, () => { this.scene.remove(area); area.geometry.dispose(); area.material.dispose(); });
   }
   telegraphTex() {
     if (this._tTex) return this._tTex;

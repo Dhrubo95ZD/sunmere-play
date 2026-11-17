@@ -59,11 +59,13 @@ function standardTree(seed, scale = 1) {
   const greyC = (x, y) => { const k = 0.82 + 0.18 * Math.min(1, y / 3); return [k, k, k * 0.98]; };
   b.add(tube(pts, (t) => r0 * (1 + 0.45 * Math.pow(Math.max(0, 1 - t / 0.12), 2)) * (1 - 0.42 * t), 12, 14), 'barkGrey', { uv: 'keep', c: greyC, w: tw });
   const top = pts[3], canopyC = V3(top.x, H + 3.2 * scale, top.z), clusters = [];
-  const nL = 3 + (seed % 2), a0 = b.r(0, 6.28);
+  // (RF.5) three limbs at uneven angles, rising steeply with a short reach: the crowns are cut away round the hero, and four
+  // long limbs at near right angles drew a big X (a cross) on the ground's view from straight above
+  const nL = 3, a0 = b.r(0, 6.28), steps = [0, 2.0, 4.15];
   for (let i = 0; i < nL; i++) {
-    const a = a0 + i * (2 * PI / nL) + b.r(-0.5, 0.5), d = V3(Math.cos(a), 0, Math.sin(a)), L = b.r(3.0, 4.2) * scale;
-    const st = pts[2].clone().lerp(top, b.r(0.1, 0.9));
-    const lp = [st, st.clone().addScaledVector(d, L * 0.4).add(V3(0, L * 0.55, 0)), st.clone().addScaledVector(d, L).add(V3(0, L * 0.85, 0))];
+    const a = a0 + steps[i] + b.r(-0.25, 0.25), d = V3(Math.cos(a), 0, Math.sin(a)), L = b.r(3.0, 4.2) * scale;
+    const st = pts[2].clone().lerp(top, 0.2 + i * 0.3 + b.r(-0.08, 0.08));
+    const lp = [st, st.clone().addScaledVector(d, L * 0.25).add(V3(0, L * 0.6, 0)), st.clone().addScaledVector(d, L * 0.6).add(V3(0, L * 0.95, 0))];
     b.add(tube(lp, (t) => r0 * 0.38 * (1 - 0.65 * t), 8, 8), 'barkGrey', { uv: 'keep', c: greyC, w: tw });
     clusters.push({ c: lp[2].clone().add(V3(0, 0.6, 0)), R: b.r(2.0, 2.5) * scale }, { c: lp[1].clone().add(V3(0, 0.8, 0)), R: b.r(1.5, 1.9) * scale });
   }

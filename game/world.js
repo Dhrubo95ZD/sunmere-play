@@ -43,6 +43,7 @@ import { freezeStatic } from './freeze.js';
 import { buildShadowProxies } from './layers.js';
 import { cutDepthMaterial } from '../engine/materials.js';
 import { cgtEnabled, shellGroup } from '../assets/houses/cgt.js';
+import { buildRamYard } from './ramLayout.js';
 
 // Enterable houses (houses spec §6, WP3). Each settlement group's houses are built by the house builders (WP2) into one
 // merged shell and one detail object in its area group; spec.walls go into this.boxes exactly as given (world boxes, never
@@ -175,6 +176,7 @@ export class World {
       ...DUNGEONS.map((D) => ({ x: D.door.x, z: D.door.z, r: 9 }))];
     onProgress(0.62, 'Raising the village...');
     this.buildSettlements();
+    buildRamYard(this); // LF.6 the Ram Engine's yard, road, piles and engine on the Harrow Coast (before the scatter: kept clear)
     this.populate();
     this.valleyGroup.add(this.scatter.build());
     this.colliders = this.scatter.colliders;

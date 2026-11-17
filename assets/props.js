@@ -52,7 +52,13 @@ export function well(seed = 4) {
   b.add(cyl(0.74, 0.74, 0.05, 20), 'wellWater', { p: [0, 0.4, 0], c: 0xffffff });
   for (const sx of [-1, 1]) b.add(box(0.16, 1.9, 0.16), 'beam', { p: [sx * 0.85, 1.6, 0], c: 0xffffff });
   b.add(cyl(0.07, 0.07, 1.9, 8), 'beam', { p: [0, 2.2, 0], r: [0, 0, PI / 2], c: 0xffffff });
-  b.add(new THREE.ConeGeometry(1.35, 0.9, 4, 1, false), 'shingleWood', { p: [0, 3.0, 0], r: [0, PI / 4, 0], c: 0xffffff });
+  // (RF.1) a straight gable roof: the ridge runs along the axle, two flat pitches and closed gable ends, so from straight
+  // above it is a plain rectangle with one ridge line (the old four-sided pyramid drew an X of hip lines)
+  const rw = 1.0, rh = 0.62, rl = 2.4, rs = Math.hypot(rw, rh), ra = Math.atan2(rh, rw);
+  for (const sz of [-1, 1]) b.add(box(rl, 0.08, rs + 0.12), 'shingleWood', { p: [0, 2.55 + rh / 2, sz * rw / 2], r: [sz * ra, 0, 0], c: 0xffffff });
+  const gab = new THREE.Shape(); gab.moveTo(-rw, 0); gab.lineTo(rw, 0); gab.lineTo(0, rh); gab.closePath();
+  for (const sx of [-1, 1]) b.add(new THREE.ShapeGeometry(gab), 'beam', { p: [sx * 1.0, 2.55, 0], r: [0, sx * PI / 2, 0], c: 0xffffff });
+  b.add(box(rl + 0.1, 0.1, 0.1), 'beam', { p: [0, 2.55 + rh + 0.03, 0], c: 0xffffff });
   b.add(cyl(0.012, 0.012, 1.3, 4), 'leather', { p: [0, 1.55, 0], c: '#c8b890' });
   b.add(lathe([[0.001, 0], [0.13, 0], [0.15, 0.22], [0.001, 0.22]], 10), 'wood', { p: [0, 0.85, 0], c: 0xffffff });
   return { builder: b, collider: { r: 1.05 } };
@@ -92,7 +98,7 @@ export function wheatField(seed = 7, w = 10, d = 8) {
   const b = new Builder(seed);
   for (let z = -d / 2; z < d / 2; z += 0.9) {
     b.add(box(w, 0.12, 0.5), 'cobble', { p: [0, 0.02, z], c: '#8a6a40', us: 0.6 });
-    for (let x = -w / 2 + 0.4; x < w / 2; x += 0.55) addTuft(b, 'grassCard', [x + b.r(-0.1, 0.1), 0, z], 0.6, b.r(0.75, 1.0), b.r(0, 3), '#ffe890', 2);
+    for (let x = -w / 2 + 0.4; x < w / 2; x += 0.55) { const ox = x + b.r(-0.1, 0.1), hh = b.r(0.75, 1.0), ry = b.r(-0.06, 0.06); for (const dz of [-0.1, 0.1]) addTuft(b, 'grassCard', [ox, 0, z + dz], 0.6, hh, ry, '#ffe890', 1); } // (RF.5) parallel cards along the row, never criss-crossed
   }
   // a low fence at the edge
   return { builder: b };
@@ -118,9 +124,9 @@ export function waystone(seed = 9) {
   const g = lumpy(ico(0.8, 2), 0.12, 1.6, seed, { flatBottom: -0.5 });
   g.scale(0.9, 1.6, 0.7);
   b.add(g, 'rock', { p: [0, 0.75, 0], uv: 'box', c: (x, y, z, nx, ny) => { const m = sstep(0.6, 0.95, ny) * 0.6; return [1 - m * 0.15, 1 + m * 0.5, 1 - m * 0.45]; } });
-  // carved diamond inlay glowing faintly
+  // a plain brass way-marker plate (adversarial review: the glowing inlay read as a magic rune stone)
   b.add(rbox(0.36, 0.36, 0.06, 0.02), 'gold', { p: [0, 1.2, 0.5], r: [0, 0, PI / 4], c: 0xffffff });
-  b.add(rbox(0.18, 0.18, 0.07, 0.01), 'glowYellow', { p: [0, 1.2, 0.52], r: [0, 0, PI / 4], c: 0xffffff });
+  b.add(rbox(0.18, 0.18, 0.07, 0.01), 'iron', { p: [0, 1.2, 0.52], r: [0, 0, PI / 4], c: '#5a4a38' });
   for (let i = 0; i < 4; i++) addRock(b, [Math.cos(i * 1.7) * 1.0, 0, Math.sin(i * 1.7) * 0.9], [0.3, 0.2, 0.3], seed + i);
   addTuft(b, 'lavender', [0.7, 0, 0.6], 0.8, 0.6, 0);
   return { builder: b, collider: { r: 0.8 } };
@@ -140,7 +146,7 @@ export function giantMushrooms(seed = 11) {
     const s = [1.6, 1.1, 0.8][i], x = [0, 1.1, -0.9][i], z = [0, 0.6, 0.7][i];
     b.add(cyl(0.12 * s, 0.18 * s, 1.0 * s, 10), 'plaster', { p: [x, 0.5 * s, z], c: '#f8f0e0' });
     b.add(lathe([[0.001, 0], [0.65 * s, 0.02], [0.6 * s, 0.22 * s], [0.38 * s, 0.4 * s], [0.001, 0.46 * s]], 18), 'cloth', { p: [x, 0.95 * s, z], c: '#e8783a' });
-    for (let k = 0; k < 6; k++) { const a = k * 1.05 + i; b.add(sphere(0.06 * s, 6, 5), 'plaster', { p: [x + Math.cos(a) * 0.35 * s, 1.18 * s, z + Math.sin(a) * 0.35 * s], s: [1, 0.5, 1], c: '#fff8e8' }); }
+    for (let k = 0; k < 5; k++) { const a = b.r(0, 6.28), d = b.r(0.1, 0.36); b.add(sphere(0.06 * s, 6, 5), 'plaster', { p: [x + Math.cos(a) * d * s, (1.4 - 0.15 * d / 0.38) * s, z + Math.sin(a) * d * s], s: [1, 0.5, 1], c: '#fff8e8' }); } // (RF.5) spots scattered, not a ring round the cap's centre
   }
   return { builder: b, collider: { r: 0.8 } };
 }
@@ -164,7 +170,7 @@ export function raiderTent(seed = 13, big = 1, col = ['#8a3a2a', '#6a2a1e', '#a8
     b.add(box(sl * 0.06, 0.07, L + 0.04), 'cloth', { p: [sx * (W - sl * 0.03 * Math.cos(slope)), 0.05 + sl * 0.03 * Math.sin(slope), 0], r: [0, 0, sx * -slope], c: '#e8d8b4' }); // cream hem
   }
   // patched panels on the canvas
-  for (let i = 0; i < 3; i++) { const sx = i % 2 ? 1 : -1, t = b.r(0.3, 0.7), z = b.r(-L * 0.35, L * 0.35); b.add(box(sl * 0.22, 0.06, 0.6 * big), 'cloth', { p: [sx * W * (1 - t), H * t + 0.03, z], r: [0, 0, sx * -slope], c: i % 2 ? col[1] : col[2] }); }
+  for (let i = 0; i < 3; i++) { const sx = i % 2 ? 1 : -1, t = b.r(0.3, 0.7), z = (i - 1) * L * 0.3 + b.r(-L * 0.05, L * 0.05); /* (review) apart along the ridge: two overlapping patches drew a stepped cross */ b.add(box(sl * 0.22, 0.06, 0.6 * big), 'cloth', { p: [sx * W * (1 - t), H * t + 0.03, z], r: [0, 0, sx * -slope], c: i % 2 ? col[1] : col[2] }); }
   // the end walls: the back closed, the front a dark open door with one flap tied back
   const tri = new THREE.Shape(); tri.moveTo(-W, 0); tri.lineTo(W, 0); tri.lineTo(0, H); tri.closePath();
   b.add(new THREE.ShapeGeometry(tri), 'cloth', { p: [0, 0, -L / 2], r: [0, PI, 0], c: col[1] });
@@ -225,8 +231,9 @@ function crateMini(b, x, z) { b.add(rbox(0.6, 0.6, 0.6, 0.03), 'woodDark', { p: 
 
 export function campfire(seed = 14) {
   const b = new Builder(seed);
-  // uneven, gapped stone ring and three logs side by side: no even ring, cross or radiating spokes from above (content rules)
-  for (let i = 0; i < 9; i++) { if (i === 6) continue; const a = (i / 9) * PI * 2 + b.r(-0.22, 0.22), rr = b.r(0.6, 0.82); addRock(b, [Math.cos(a) * rr, 0, Math.sin(a) * rr], [b.r(0.16, 0.26), b.r(0.12, 0.18), b.r(0.15, 0.24)], seed + i, { moss: 0 }); }
+  // (RF.5) two short straight rows of stones either side of the fire and three logs side by side: a ring of stones round
+  // the glowing fire read as a disc inside a ring from above; no ring, cross or radiating spokes
+  for (let i = 0; i < 8; i++) { const sz = i < 4 ? -1 : 1, x = -0.75 + (i % 4) * 0.5 + b.r(-0.08, 0.08); addRock(b, [x, 0, sz * b.r(0.62, 0.72)], [b.r(0.16, 0.26), b.r(0.12, 0.18), b.r(0.15, 0.24)], seed + i, { moss: 0 }); }
   for (const [x, z, ry, rz] of [[-0.06, -0.16, 0.3, 0.1], [0.0, 0.0, 0.38, 0.18], [0.06, 0.16, 0.24, 0.08]]) /* three logs laid side by side, never crossed */ b.add(cyl(0.06, 0.07, b.r(0.7, 0.95), 6), 'beam', { p: [x, 0.14, z], r: [PI / 2, ry + b.r(-0.2, 0.2), rz], c: '#4a2a14' });
   // (no spit: its crossbar over the logs drew a cross from above)
   return { builder: b, collider: { r: 0.8 }, fires: [{ p: [0, 0.12, 0], scale: 0.9 }] };

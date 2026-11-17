@@ -465,7 +465,7 @@ export function archeryTarget(seed = 1) {
   for (const [x, z, a, c] of [[-0.45, 0.25, 0.25, 0], [0.45, 0.25, -0.25, 0], [0, -0.6, 0, 1]]) b.add(cyl(0.05, 0.06, 2.2, 8), 'woodDark', { p: [x, 1.0, z], r: [c ? -0.42 : 0.12, 0, a], c: 0xffffff });
   for (const [x, y] of [[0.12, 0.08], [-0.25, -0.18], [0.3, 0.32]]) {
     b.add(cyl(0.01, 0.01, 0.5, 5), 'wood', { p: [x, 1.3 + y, 0.42], r: [PI / 2 - 0.15, 0, 0], c: 0xffffff });
-    for (let k = 0; k < 2; k++) b.add(box(0.002, 0.08, 0.04), 'cloth', { p: [x, 1.3 + y + 0.03, 0.64], r: [0, k * PI / 2, 0], c: '#e8e0c8' });
+    b.add(box(0.002, 0.08, 0.04), 'cloth', { p: [x, 1.3 + y + 0.03, 0.64], c: '#e8e0c8' }); // (RF.5) one flight, not two crossed
   }
   res.colliders.push({ r: 0.7 });
   res.builder = b;

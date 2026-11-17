@@ -1,6 +1,15 @@
 // What's new: shown once after an update (newest first). Bump `v` on the first entry whenever something is added.
 export const CHANGELOG = [
   {
+    v: 126, date: '17 November 2026', title: 'The Ram Engine',
+    items: [
+      ['The Ram Engine', 'A new open event on the Harrow Coast below Harrowmouth (levels 28 to 30). A rogue machine, the Wall-Layer, has walled itself into an old Makers’ yard. Every half hour the yard crew raises steam in the Makers’ ram engine, and anyone nearby can work it together, no group needed.'],
+      ['Drive, load, strike', 'One hero takes the levers and drives the engine down the yard road (W S A D, or the stick on phones). Others carry ram weights and coal to it, because the ram only strikes when it is loaded. Everyone else fights off the Yard Menders and repairs the engine. Break both gates, then ram the Wall-Layer itself.'],
+      ['Fair shares', 'Everyone who drives, loads, strikes, repairs or fights at the engine gets a share in Yard-Engineer Yusuf’s chest when the yard falls. Standing by earns nothing, a hero who goes idle at the levers hands them on, and adventurers pitch in when players are few.'],
+      ['Cleaner from above', 'A sweep of the whole world from straight above. Well and watchtower roofs are now plain gables, grass, reeds and plants never cross into stars, the daylight shafts are soft haze, glowing plants and the waystone glow are gone, tree stumps lost their rings, and barn doors, banner posts, woodpiles, the foundry chimneys and many small props were tidied.'],
+    ],
+  },
+  {
     v: 125, date: '17 November 2026', title: 'Lamplight',
     items: [
       ['Fixed: phone app and play link', 'Since the Living Adventurers update the phone app and the browser play link could not load the world. That is fixed, and a new check makes sure it cannot happen again.'],

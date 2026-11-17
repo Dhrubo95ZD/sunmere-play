@@ -10,7 +10,8 @@ import { buildHaulTrain } from '../assets/haulWagon.js';
 const PI = Math.PI;
 
 function build(kind, seed) {
-  if (kind === 'ridgefire') kind = 'beacon'; // the ridge fires are the same stone braziers
+  if (kind === 'ridgefire') kind = 'beacon';
+  if (kind === 'ramchest') kind = 'rideschest'; // (LF.6 Yard-Engineer Yusuf's chest for the Ram Engine: the same plain square chest) // the ridge fires are the same stone braziers
   if (kind === 'rowbrake' || kind === 'rowice' || kind === 'farbrake') kind = 'engbrake'; // the Engine Rows' other brakes (Chapters 38-39)
   const a = new Builder(seed), d = new Builder(seed + 1); // a: untouched, d: done
   const dyn = { a: [], d: [] };
@@ -504,8 +505,8 @@ export class QuestObjects {
     for (const qid of Object.keys(you.done || {})) { const Q = QUESTS[qid]; if (Q?.goal.use) doneKinds.add(Q.goal.use); }
     const pages = new Set(you.ledger || []), achC = this.achC || {};
     for (const o of this.list) {
-      o.done = o.kind === 'rideschest' ? !you.ridesOwed : o.kind === 'page' ? pages.has(o.id) : o.kind === 'drawing' ? !!achC['drw:' + o.id] : used.has(o.id) || doneKinds.has(o.kind);
-      o.need = !o.done && (o.kind === 'rideschest' || o.kind === 'page' || o.kind === 'drawing' || needKinds.has(o.kind));
+      o.done = o.kind === 'ramchest' ? !you.ramOwed : o.kind === 'rideschest' ? !you.ridesOwed : o.kind === 'page' ? pages.has(o.id) : o.kind === 'drawing' ? !!achC['drw:' + o.id] : used.has(o.id) || doneKinds.has(o.kind);
+      o.need = !o.done && (o.kind === 'rideschest' || o.kind === 'ramchest' || o.kind === 'page' || o.kind === 'drawing' || needKinds.has(o.kind));
       o.ga.visible = !o.done; o.gd.visible = o.done;
       o.spark.visible = o.need;
     }
@@ -519,7 +520,7 @@ export class QuestObjects {
     const p = o.root.position.clone().setY(o.root.position.y + 0.8);
     if (o.kind === 'cache') { fx.emit('shards', p, { n: 18, color: '#c8a878' }); fx.emit('dust', p, { n: 8 }); sfx?.play('thud'); }
     else if (o.kind === 'keg') { fx.emit('smoke', p, { n: 6, size: 0.6 }); sfx?.play('ui'); }
-    else if (o.kind === 'rideschest') { fx.emit('motes', p, { n: 18, color: '#ffe08a' }); fx.emit('dust', p, { n: 6, color: '#c8a878' }); sfx?.play('ui'); }
+    else if (o.kind === 'rideschest' || o.kind === 'ramchest') { fx.emit('motes', p, { n: 18, color: '#ffe08a' }); fx.emit('dust', p, { n: 6, color: '#c8a878' }); sfx?.play('ui'); }
     else if (o.kind === 'notes' || o.kind === 'page') { fx.emit('motes', p, { n: 14, color: '#fff4d0' }); sfx?.play('ui'); }
     else if (o.kind === 'valve') { fx.emit('smoke', p.setY(p.y + 0.6), { n: 10, color: '#e8e4e0', size: 0.8 }); sfx?.play('clang'); }
     else if (o.kind === 'warbanner') { fx.emit('dust', p, { n: 10 }); sfx?.play('thud'); }

@@ -70,13 +70,17 @@ export function addRock(b, p, scale, seed, { mat = 'rock', moss = 0.6, tint = '#
   });
 }
 
-// crossed grass/plant cards with flutter at the top
+// grass/plant cards with flutter at the top. (RF.2) The cards never cross: crossed cards through one centre drew a '+'
+// (two cards) or a six-pointed asterisk (three) from straight above. Two cards stand side by side, slightly splayed and
+// apart; three or more stand round an open triangle (polygon), each pushed out far enough that their ends never meet.
 export function addTuft(b, mat, p, w, h, rot = 0, tint = 0xffffff, n = 3) {
   const tt = rgb(tint);
   for (let i = 0; i < n; i++) {
-    const a = rot + (i / n) * Math.PI;
+    let a = rot, ox = 0, oz = 0;
+    if (n === 2) { a = rot + (i ? 0.3 : -0.3); const d = (i ? 1 : -1) * 0.2 * w; ox = Math.sin(rot) * d; oz = Math.cos(rot) * d; }
+    else if (n > 2) { a = rot + (i / n) * Math.PI * 2; const d = (0.58 * w) / Math.tan(Math.PI / n); ox = Math.sin(a) * d; oz = Math.cos(a) * d; }
     b.add(card(w, h, 1, 2), mat, {
-      p: [p[0], p[1] + h / 2 - 0.02, p[2]], r: [0, a, 0], uv: 'keep',
+      p: [p[0] + ox, p[1] + h / 2 - 0.02, p[2] + oz], r: [0, a, 0], uv: 'keep',
       normals: (geo) => { const nr = geo.attributes.normal; for (let k = 0; k < nr.count; k++) nr.setXYZ(k, 0, 1, 0); },
       c: (x, y) => { const k = lerp(0.55, 1.05, sstep(p[1], p[1] + h, y)); return [tt[0] * k, tt[1] * k, tt[2] * k]; },
       w: (x, y) => { const k = sstep(p[1], p[1] + h, y); return [0, k * 0.06, k * 0.05, 0]; },
@@ -290,13 +294,15 @@ export function crystalCluster(b, p, scale, mat = 'crystalPurple', seed = 1, n =
   for (let i = 0; i < n; i++) {
     const h = scale * rng.r(0.5, 1.2) * (i === 0 ? 1.4 : 1);
     const rad = scale * rng.r(0.09, 0.16) * (i === 0 ? 1.3 : 1);
-    const tilt = i === 0 ? rng.r(-0.1, 0.1) : rng.r(0.3, 0.75);
+    // (RF.5) an upright offset clump: each prism leans a little its own way (prisms leaning out round one centre drew a
+    // starburst from straight above)
+    const tilt = i === 0 ? rng.r(-0.08, 0.08) : rng.r(0.05, 0.2);
     const a = rng.r(0, Math.PI * 2);
     const g = cyl(rad, rad, h, 6, 1);
     g.translate(0, h / 2, 0);
     const tip = cone(rad, rad * 2.2, 6);
     tip.translate(0, h + rad * 1.1, 0);
-    const off = i === 0 ? [0, 0] : [Math.cos(a) * scale * 0.12, Math.sin(a) * scale * 0.12];
+    const off = i === 0 ? [0, 0] : [rng.r(-0.3, 0.3) * scale, rng.r(-0.3, 0.3) * scale];
     const o = {
       p: [p[0] + off[0], p[1] - 0.05, p[2] + off[1]], r: [Math.sin(a) * tilt, a, Math.cos(a) * tilt], order: 'YXZ', flat: true,
       c: (x, y, z, nx, ny) => { const k = 0.8 + ny * 0.3 + Math.abs(nx) * 0.1; return [k, k, k]; },
@@ -340,12 +346,10 @@ export function lilac(seed = 1, { scale = 1 } = {}) {
     const sway = (p) => [amp(p.y), 0.09 * sstep(0.3, 3, Math.hypot(p.x - top.x, p.z - top.z)), 0, 0];
     leafCluster(b, 'leafLilac', cl.c, cl.R, Math.round(7 + cl.R * 3.5), { canopyC, tintLo: '#8a7a9a', tintHi: '#ffffff', yLo: H, yHi: H + 3.5 * scale, wind: sway, size: 1.45, upBias: 0.9, core: 'coreLilac' });
   }
-  // fallen blossoms + crystals
-  crystalCluster(b, [1.2 * scale, 0, 0.8 * scale], 0.9 * scale, 'crystalPurple', seed * 3 + 1, 6);
-  crystalCluster(b, [-1.0 * scale, 0, 1.1 * scale], 0.6 * scale, 'crystalPurple', seed * 3 + 2, 4);
-  crystalCluster(b, [0.2 * scale, 0, -1.3 * scale], 0.5 * scale, 'crystalPurple', seed * 3 + 3, 3);
+  // (RF.4) plain flowers at its feet: no glowing purple crystals, no glow (they read as magic)
+  for (const [fx, fz, k] of [[1.2, 0.8, 'lavender'], [-1.0, 1.1, 'flowers'], [0.2, -1.3, 'lavender'], [1.5, -0.4, 'flowers']]) addTuft(b, k, [fx * scale, 0, fz * scale], 0.6, 0.45, fx + fz, 0xffffff, 2);
   for (let i = 0; i < 2; i++) addRock(b, [b.r(-1.6, 1.6), 0, b.r(-1.6, 1.6)], [0.4, 0.3, 0.45], seed * 5 + i, { moss: 0.3 });
-  return { builder: b, collider: { r: 0.7 * scale }, height: H + 3 * scale, glows: [{ p: [1.2 * scale, 0.7 * scale, 0.8 * scale], color: 0xb070ff, size: 2.4 }] };
+  return { builder: b, collider: { r: 0.7 * scale }, height: H + 3 * scale };
 }
 
 // ======================================================================
@@ -421,16 +425,19 @@ export function palm(seed = 1, { scale = 1 } = {}) {
     const a = (i / 4) * Math.PI * 2 + 0.4;
     b.add(lumpy(ico(0.16 * scale, 1), 0.02, 6, seed + i), 'woodDark', { p: [top.x + Math.cos(a) * 0.28 * scale, top.y - 0.15 * scale, top.z + Math.sin(a) * 0.28 * scale], uv: 'box', c: '#8a6a3a', w: [amp(H), 0.01, 0, 0] });
   }
-  const nF = 10;
-  for (let i = 0; i < nF; i++) {
-    const a = (i / nF) * Math.PI * 2 + b.r(-0.2, 0.2);
+  // (RF.6) the fronds hang in two lobes to two sides, side by side within each lobe (a wind-leaning crown): ten fronds
+  // spread evenly round the crown drew a ten-pointed star, and three lobes still read as a three-armed burst from above
+  const a0 = b.r(0, Math.PI * 2);
+  for (let i = 0; i < 9; i++) {
+    const g = i < 5 ? 0 : 1, j = g ? i - 7 : i - 2, ga = a0 + g * (Math.PI * 0.82) + b.r(-0.12, 0.12);
+    const a = ga + j * 0.12, side = V3(-Math.sin(ga), 0, Math.cos(ga)).multiplyScalar(j * 0.2 * scale);
     const dir = V3(Math.cos(a), b.r(-0.05, 0.25), Math.sin(a)).normalize();
-    frond(b, top.clone().add(V3(0, 0.25 * scale, 0)), dir, b.r(3.0, 3.8) * scale, 1.0 * scale, b.r(0.55, 0.9), seed + i, amp);
+    frond(b, top.clone().add(V3(0, 0.25 * scale, 0)).add(side), dir, b.r(3.0, 3.8) * scale, 1.0 * scale, b.r(0.55, 0.9), seed + i, amp);
   }
-  // young upright fronds
+  // young upright fronds, leaning the same way as the first lobe
   for (let i = 0; i < 3; i++) {
-    const a = b.r(0, 6.28);
-    frond(b, top.clone().add(V3(0, 0.3 * scale, 0)), V3(Math.cos(a) * 0.4, 1, Math.sin(a) * 0.4).normalize(), 1.9 * scale, 0.6 * scale, 0.2, seed + 20 + i, amp);
+    const a = a0 + (i - 1) * 0.3, sd = V3(-Math.sin(a0), 0, Math.cos(a0)).multiplyScalar((i - 1) * 0.15 * scale);
+    frond(b, top.clone().add(V3(0, 0.3 * scale, 0)).add(sd), V3(Math.cos(a) * 0.4, 1, Math.sin(a) * 0.4).normalize(), 1.9 * scale, 0.6 * scale, 0.2, seed + 20 + i, amp);
   }
   // sand mound, rocks, dry grass
   addRock(b, [0.9 * scale, 0, 0.6 * scale], [0.55, 0.4, 0.5], seed * 3, { mat: 'rockSand', moss: 0, tint: '#ffffff' });
@@ -458,14 +465,7 @@ export function glowbark(seed = 1, { scale = 1 } = {}) {
     }
     b.add(tube(pts, (t) => lerp(0.28, 0.14, t) * scale * (1 + 0.7 * Math.pow(Math.max(0, 1 - t / 0.14), 2)), 8, 26), 'barkGold', { uv: 'keep', c: bark, w: (x, y) => [amp(y), 0, 0, 0] });
   }
-  // luminous sap vein spiralling up the trunk
-  const vein = [];
-  for (let i = 0; i <= 14; i++) {
-    const t = i / 14, a = t * Math.PI * 3.2;
-    const rr = 0.42 * scale * (1 - t * 0.45) + 0.05;
-    vein.push(V3(Math.cos(a) * rr + Math.sin(t * 2) * 0.4 * scale, t * H * 0.85 + 0.05, Math.sin(a) * rr));
-  }
-  b.add(tube(vein, 0.035 * scale, 5, 40), 'glowGreen', { uv: 'keep', c: 0xffffff, w: (x, y) => [amp(y), 0, 0, 0] });
+  // (RF.4) no glowing sap vein, glowing crystals or glow round the tree (they read as magic): a plain gold-leaved tree
   roots(b, 'barkGold', 6, 0.42 * scale, H, bark, seed, { spread: 1.7 * scale, thick: 0.25 * scale });
   const top = V3(Math.sin(2) * 0.4 * scale, H, 0);
   const canopyC = top.clone().add(V3(0, 1.7 * scale, 0));
@@ -485,12 +485,12 @@ export function glowbark(seed = 1, { scale = 1 } = {}) {
     const sway = (p) => [amp(p.y), 0.09 * sstep(0.3, 3, Math.hypot(p.x - top.x, p.z - top.z)), 0, 0];
     leafCluster(b, 'leafGlow', cl.c, cl.R, Math.round(7 + cl.R * 3.5), { canopyC, tintLo: '#b0aa80', tintHi: '#ffffff', yLo: H, yHi: H + 3.5 * scale, wind: sway, size: 1.45, upBias: 0.9, core: 'coreGlow' });
   }
-  crystalCluster(b, [1.0 * scale, 0, -0.9 * scale], 0.55 * scale, 'crystalGreen', seed + 1, 4);
+  addRock(b, [1.0 * scale, 0, -0.9 * scale], [0.45, 0.32, 0.4], seed * 7 + 1, { moss: 0.5 });
   for (let i = 0; i < 6; i++) {
     const a = b.r(0, 6.28), d = b.r(1.0, 2.6) * scale;
     addTuft(b, i % 2 ? 'grassCard' : 'lavender', [Math.cos(a) * d, 0, Math.sin(a) * d], b.r(0.6, 0.9), b.r(0.45, 0.7), b.r(0, 3));
   }
-  return { builder: b, collider: { r: 0.6 * scale }, height: H + 3.5 * scale, lanterns, glows: [{ p: [0, 1.4, 0], color: 0x9ae86a, size: 3.0 }, { p: [canopyC.x, canopyC.y, canopyC.z], color: 0xfff0a0, size: 7.0, intensity: 0.35 }] };
+  return { builder: b, collider: { r: 0.6 * scale }, height: H + 3.5 * scale, lanterns };
 }
 
 // ======================================================================
@@ -519,8 +519,12 @@ export function bush(seed = 1, { kind = 'green', scale = 1 } = {}) {
 export function fernPlant(seed = 1, { scale = 1 } = {}) {
   const b = new Builder(seed * 29 + 3);
   const n = 7;
+  // (RF.2) fronds rise from their own offset bases in a row and lean the same way (within ~15 degrees): seven fronds from
+  // one centre drew a seven-pointed star from straight above
+  const a0 = b.r(0, Math.PI * 2);
   for (let i = 0; i < n; i++) {
-    const a = (i / n) * Math.PI * 2 + b.r(-0.2, 0.2);
+    const a = a0 + b.r(-0.25, 0.25), s0 = (i - (n - 1) / 2) * 0.17 * scale, f0 = b.r(-0.3, 0.1) * scale;
+    const bx = -Math.sin(a0) * s0 + Math.cos(a0) * f0, bz = Math.cos(a0) * s0 + Math.sin(a0) * f0;
     const L = b.r(0.9, 1.25) * scale;
     const dir = V3(Math.cos(a), 0, Math.sin(a));
     // arched frond: a card bent along its length
@@ -535,10 +539,10 @@ export function fernPlant(seed = 1, { scale = 1 } = {}) {
     g.computeVertexNormals();
     const q = new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI / 2 + 0.25, -a, 0, 'YXZ'));
     b.add(g, 'fern', {
-      q, p: [0, 0.05, 0], uv: 'keep',
+      q, p: [bx, 0.05, bz], uv: 'keep',
       normals: (geo) => { const nr = geo.attributes.normal; for (let k = 0; k < nr.count; k++) nr.setXYZ(k, 0, 1, 0); },
-      c: (x, y, z) => { const k = 0.65 + sstep(0, L, Math.hypot(x, z)) * 0.45; return [k, k, k]; },
-      w: (x, y, z) => { const d = sstep(0, L, Math.hypot(x, z)); return [0, 0.06 * d, 0.03 * d, 0]; },
+      c: (x, y, z) => { const k = 0.65 + sstep(0, L, Math.hypot(x - bx, z - bz)) * 0.45; return [k, k, k]; },
+      w: (x, y, z) => { const d = sstep(0, L, Math.hypot(x - bx, z - bz)); return [0, 0.06 * d, 0.03 * d, 0]; },
     });
   }
   return { builder: b, collider: null, height: 0.8 * scale };

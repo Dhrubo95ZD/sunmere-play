@@ -114,7 +114,9 @@ export function woodPile(seed = 1) {
   b.add(cyl(0.29, 0.29, 0.02, 12), 'woodLight', { p: [1.6, 0.51, 0.4], c: '#e8c898' });
   b.add(cyl(0.022, 0.025, 0.55, 6), 'wood', { p: [1.55, 0.7, 0.42], r: [0.2, 0, -0.5], c: 0xffffff });
   b.add(box(0.05, 0.14, 0.2), 'iron', { p: [1.68, 0.56, 0.45], r: [0.2, 0, -0.5], c: '#9098a0' });
-  for (let i = 0; i < 4; i++) b.add(box(0.1, 0.08, 0.35), 'woodLight', { p: [1.2 + b.r(-0.3, 0.6), 0.04, 0.9 + b.r(-0.2, 0.3)], r: [0, b.r(0, 3), 0], c: '#d8b888' });
+  // (review) the split pieces lie side by side, nearly parallel: scattered at random angles two of them crossed as an X
+  const sy = b.r(0, 3);
+  for (let i = 0; i < 4; i++) b.add(box(0.1, 0.08, 0.35), 'woodLight', { p: [1.0 + i * 0.2, 0.04, 0.95 + b.r(-0.08, 0.08)], r: [0, sy + b.r(-0.15, 0.15), 0], c: '#d8b888' });
   return { builder: b, collider: { r: 1.1 } };
 }
 
@@ -123,7 +125,7 @@ export function flowerTub(seed = 1) {
   const b = new Builder(seed);
   b.add(lathe([[0.001, 0], [0.34, 0], [0.4, 0.42], [0.001, 0.42]], 14), 'wood', { uv: 'box', us: 1.4, c: '#c8a070' });
   b.add(torus(0.38, 0.018, 5, 18), 'iron', { p: [0, 0.3, 0], r: [PI / 2, 0, 0], c: 0xffffff });
-  for (let i = 0; i < 4; i++) addTuft(b, i % 2 ? 'flowers' : 'lavender', [Math.cos(i * 1.6) * 0.15, 0.38, Math.sin(i * 1.6) * 0.15], 0.5, 0.42, i, 0xffffff, 2);
+  for (let i = 0; i < 4; i++) addTuft(b, i % 2 ? 'flowers' : 'lavender', [Math.cos(i * 1.6) * 0.15, 0.38, Math.sin(i * 1.6) * 0.15], 0.5, 0.42, 0.4, 0xffffff, 2); // (review) parallel clumps (rotations 0-3 crossed as X shapes from above)
   return { builder: b, collider: { r: 0.4 } };
 }
 export function planterBox(seed = 1, len = 1.8) {
@@ -229,7 +231,9 @@ export function puddle(seed = 1) {
   const b = new Builder(seed);
   const sx = b.r(0.7, 1.2), sz = b.r(0.45, 0.8);
   b.add(cyl(1, 1, 0.02, 20), 'dirtPlain', { p: [0, 0.015, 0], s: [sx * 1.25, 1, sz * 1.25], uv: 'box', c: '#5a4430' });
-  b.add(lumpy(cyl(1, 1, 0.02, 20), 0.12, 2, seed), 'wellWater', { p: [0, 0.03, 0], s: [sx, 1, sz], c: '#c8d0d8' });
+  // (review) the lumpy noise sank the water's middle under the mud: from above it read as a disc inside a ring (a target);
+  // squash its height so the water is one plain patch
+  b.add(lumpy(cyl(1, 1, 0.02, 20), 0.12, 2, seed), 'wellWater', { p: [0, 0.04, 0], s: [sx, 0.12, sz], c: '#c8d0d8' });
   return { builder: b };
 }
 

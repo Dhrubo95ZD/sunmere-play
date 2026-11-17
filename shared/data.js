@@ -5135,6 +5135,23 @@ OBJECTS.push({ id: 'o_wd_rideschest', kind: 'rideschest', x: WEALD.camp.x - 1.5,
 OBJECT_KINDS.rideschest = { prompt: 'Open the Woodwrights’ chest', goal: 'Woodwrights’ chest opened', done: 'opened' };
 // ============================================================================ end of P15.3 WEALD MACHINES
 
+// ============================================================================ LF.6 THE RAM ENGINE (shared/ramEngine.js)
+// An open event on the Harrow Coast south of Harrowmouth (28-30): the Makers' tracked ram engine against the Wall-Layer's
+// yard. The two machines below come only from the event (evOnly: never in SPAWNS); Yard-Engineer Yusuf keeps the engine's
+// park, and his chest pays the shares of a won run.
+Object.assign(MOBS, {
+  // a squat tracked mason engine with a square hod and a short square tamping arm: it batters the ram engine's frame
+  yardmender: { name: 'Yard Mender', model: 'driller', variant: 1, lvl: [29, 31], hp: 860, dmg: [20, 31], speed: 3.4, aggro: 12, range: 2.6, swing: 2.2, xp: 460, loot: 'guildMach', radius: 1.1, evOnly: 'ram' },
+  // the rogue machine that walled the old yard in: it stands in its pit behind the inner gate and lays course on course
+  walllayer: { name: 'The Wall-Layer', model: 'crusher', lvl: [31, 31], hp: 9800, dmg: [30, 45], speed: 0, aggro: 16, range: 5.2, swing: 2.6, xp: 3400, loot: 'yardforeman', radius: 2.7, elite: true, boss: true, evOnly: 'ram',
+    abilities: [{ kind: 'circles', every: 10, n: 3, r: 3.2, delay: 1.9, dmg: 1.4, text: 'The Wall-Layer flings dressed stone blocks over its courses!' }, { kind: 'nova', every: 15, r: 6.5, delay: 2.1, dmg: 1.6, text: 'The Wall-Layer slams its tamping beam down. Get clear!' }, { kind: 'enrage', at: 0.3, text: 'The Wall-Layer’s boiler roars!' }] },
+});
+NPCS.push({ id: 'n_hc_yusuf', name: 'Yard-Engineer Yusuf', title: 'The Ram Engine', look: 'villager', v: 1, x: 346.5, z: 121, ry: 1.2,
+  greet: 'The Wall-Layer has bricked itself into the old Makers’ yard and lays a new course every night. When my crew raises steam, the Ram Engine is anyone’s: one at the levers, the rest carrying ram weights and coal from the piles, mending its frame and keeping the menders off it.' });
+OBJECTS.push({ id: 'o_hm_ramchest', kind: 'ramchest', x: 349.5, z: 118.5, ry: 0.2 });
+OBJECT_KINDS.ramchest = { prompt: 'Open Yard-Engineer Yusuf’s chest', goal: 'Yusuf’s chest opened', done: 'opened' };
+// ============================================================================ end of LF.6
+
 // ============================================================================ PAINTED ITEM ICONS
 // every everyday item (food, tonics, materials, quest items, junk) with its own painted icon uses it instead of the shared drawing
 for (const [id, it] of Object.entries(ITEMS)) if (!it.stats && ITEM_ART.has(id)) { it.iconShared = it.icon; it.icon = 'i_' + id; }

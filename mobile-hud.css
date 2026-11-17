@@ -281,3 +281,16 @@ html.mobile.touch .hud .unit::before { inset: -3px; border-width: 2px; clip-path
 html.mobile.touch .hud .unit::after { inset: -3px; --l: 12px; --t: 3px; --s: 4px; --o: 5px; filter: none;
   clip-path: polygon(4px 0, calc(100% - 4px) 0, 100% 4px, 100% calc(100% - 4px), calc(100% - 4px) 100%, 4px 100%, 0 calc(100% - 4px), 0 4px); }
 html.mobile.touch .hud .unit .portrait { border-width: 1px; box-shadow: none; }
+/* LF.6 the Ram Engine on phones: the panel between the unit frame and the stick, big buttons; the event pill at the top */
+html.mobile.touch .hud .ram-panel { left: calc(var(--sl) + 8px); top: calc(var(--st) + var(--hu) * 96px); width: 214px; padding: 6px 8px; font-size: 11px; }
+html.mobile.touch .hud .ram-panel .rp-bar { height: 12px; margin: 2px 0; }
+html.mobile.touch .hud .ram-panel .rp-bar span { font-size: 10px; line-height: 12px; }
+html.mobile.touch .hud .ram-panel .rp-s { margin: 2px 0 4px; }
+html.mobile.touch .hud .ram-panel button { min-height: 34px; font-size: 12px; padding: 4px 6px; }
+html.mobile.touch .hud .ram-panel .rp-drive .rp-strike { min-height: 40px; }
+html.mobile.touch .hud .ram-pill { display: block; position: absolute; left: 50%; transform: translateX(-50%); top: calc(var(--st) + 6px); z-index: 5; pointer-events: none; padding: 4px 10px; border-radius: 12px; background: rgba(70,52,20,.85); color: #f6e8d4; font-size: 12px; white-space: nowrap; border: 1px solid #c8a050; }
+html.mobile.touch .hud .ram-panel .rp-drive { grid-template-columns: repeat(4, 1fr); }
+html.mobile.touch .hud .ram-panel .rp-drive [data-h="t-1"] { order: 1; } html.mobile.touch .hud .ram-panel .rp-drive [data-h="f1"] { order: 2; }
+html.mobile.touch .hud .ram-panel .rp-drive [data-h="f-1"] { order: 3; grid-column: auto; } html.mobile.touch .hud .ram-panel .rp-drive [data-h="t1"] { order: 4; }
+html.mobile.touch .hud .ram-panel .rp-drive .rp-strike { order: 5; grid-column: 1 / 5; }
+html.mobile.touch .hud .ram-panel .rp-drive button { padding: 4px 2px; font-size: 11px; }

@@ -30,10 +30,13 @@ export function createGrass(terrain) {
   // D11: a tuft is three crossed cards of 3 bending segments (18 triangles); the phone presets (QUALITY.grassLod) use two
   // crossed cards of 2 segments (8 triangles), less than half the vertex and overdraw work on the tiled GPU
   const lite = QUALITY.grassLod ?? !!QUALITY.mobile;
-  const a = new THREE.PlaneGeometry(1.0, 0.8, 1, lite ? 2 : 3); a.translate(0, 0.4, 0);
-  const b = a.clone(); b.rotateY(Math.PI / 2);
-  const c2 = a.clone(); c2.rotateY(Math.PI / 4);
-  const base = mergeGeometries(lite ? [a, b] : [a, b, c2]);
+  // (RF.2) the cards never cross: crossed through one centre they drew a '+' or an asterisk from straight above. Three
+  // cards stand round an open triangle (ends apart); the phone's two stand side by side, splayed a little. Same triangles.
+  const card = () => new THREE.PlaneGeometry(1.0, 0.8, 1, lite ? 2 : 3).translate(0, 0.4, 0);
+  const parts = lite
+    ? [card().rotateY(-0.3).translate(0, 0, -0.2), card().rotateY(0.3).translate(0, 0, 0.2)]
+    : [0, 1, 2].map((i) => card().translate(0, 0, 0.335).rotateY((i * 2 * Math.PI) / 3));
+  const base = mergeGeometries(parts);
   const geo = new THREE.InstancedBufferGeometry();
   geo.index = base.index;
   for (const k of ['position', 'normal', 'uv']) geo.setAttribute(k, base.attributes[k]);

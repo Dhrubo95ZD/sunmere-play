@@ -1,11 +1,12 @@
-// Sun shafts: soft additive beams slanting down along the sun direction through gaps in the canopy.
-// Each beam is a camera-facing ribbon around its own axis (so it reads as a volume from any angle),
-// brightens and dims as cloud shadows drift over it, and carries slow dust streaks.
+// Sun haze: soft additive patches of lit air in the gaps in the canopy (RF.3: these were long slanting beams with
+// streaks, which read as rays; now each is a short, wide oval of warm haze with no streaks and no hard edges).
+// Each patch is a camera-facing card leaning along the sun (so it reads as a volume from any angle) and
+// brightens and dims as cloud shadows drift over it.
 import * as THREE from 'three';
 import { G } from './globals.js';
 
 export function createShafts(spots, sunDir) {
-  const base = new THREE.PlaneGeometry(1, 1, 1, 6);
+  const base = new THREE.PlaneGeometry(1, 1, 1, 2); // (RF.3) a smooth oval needs no long strip
   base.translate(0, 0.5, 0);
   const geo = new THREE.InstancedBufferGeometry();
   geo.index = base.index;
@@ -41,13 +42,13 @@ export function createShafts(spots, sunDir) {
       varying vec2 vUv; varying float vInt; varying float vSeed;
       void main() {
         vec3 axis = normalize(uSun);
-        vec3 mid = iPos + axis * iSize.y * 0.5;
+        float L = min(iSize.y, iSize.x * 1.5); // short: a patch, never a long beam
+        vec3 mid = iPos + axis * L * 0.5;
         vec3 toCam = normalize(cameraPosition - mid);
         vec3 side = cross(axis, toCam);
         float facing = length(side);
         side /= max(facing, 1e-3);
-        float widen = mix(0.75, 1.5, position.y);
-        vec3 wp = iPos + axis * (position.y * iSize.y) + side * position.x * iSize.x * widen;
+        vec3 wp = iPos + axis * (position.y * L) + side * position.x * iSize.x * 1.6;
         // slight sway with the canopy
         wp.xz += vec2(sin(uTime * 0.6 + iSize.w), cos(uTime * 0.5 + iSize.w * 1.3)) * 0.25 * position.y;
         vec4 mv = viewMatrix * vec4(wp, 1.0);
@@ -65,15 +66,12 @@ export function createShafts(spots, sunDir) {
       float h1(float x) { return fract(sin(x * 127.1) * 43758.5453); }
       float vn(float x) { float i = floor(x), f = fract(x); f = f * f * (3.0 - 2.0 * f); return mix(h1(i), h1(i + 1.0), f); }
       void main() {
-        float u = vUv.x, v = vUv.y;
-        float across = sin(u * 3.14159);
-        across *= across;
-        float along = smoothstep(0.0, 0.16, v) * (1.0 - smoothstep(0.42, 1.0, v));
-        // streaks of light: thin and thick bands drifting slowly across the beam
-        float st = vn(u * 9.0 + vSeed + uTime * 0.07) * 0.6 + vn(u * 23.0 - vSeed - uTime * 0.11) * 0.4;
-        float a = across * along * (0.45 + 0.75 * st) * vInt * uStrength;
-        vec3 c = mix(uColor, vec3(1.0, 0.96, 0.85), v * 0.4);
-        gl_FragColor = vec4(c * a * 0.3, 1.0);
+        // a soft oval: a smooth falloff from the middle in every direction, no bands, streaks or edges
+        vec2 q = (vUv - vec2(0.5, 0.42)) * vec2(2.0, 2.2);
+        float r2 = dot(q, q);
+        float a = exp(-r2 * 2.6) * (1.0 - smoothstep(0.75, 1.0, r2)) * (0.85 + 0.15 * vn(vSeed + uTime * 0.05)) * vInt * uStrength;
+        vec3 c = mix(uColor, vec3(1.0, 0.96, 0.85), 0.3);
+        gl_FragColor = vec4(c * a * 0.26, 1.0);
       }
     `,
   });

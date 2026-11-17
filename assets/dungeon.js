@@ -415,7 +415,7 @@ function dressStorm(D, b, { r, rng, isFloorL, addDyn, col, torches }) {
 // ----------------------------------------------------------------------------------------- light shafts
 // Daylight falling through gaps in the Deepway roof. Each shaft is two ribbons that turn to face the camera around
 // the beam's own (slightly tilted) axis, the second turned 60 degrees for depth, with soft edges across and along,
-// slow dust streaks and a fade when the camera looks down the beam. A soft-edged pool lights the floor and a few
+// no streaks (RF.3), and a fade when the camera looks down the beam. A soft-edged pool lights the floor and a few
 // dust motes drift inside. All shafts share three draw calls.
 const SHAFT_TILT = new THREE.Vector3(Math.sin(0.17), 1, Math.sin(0.17) * 0.45).normalize(); // ~10 deg off vertical
 function shaftField(group, cap) {
@@ -457,8 +457,8 @@ function shaftField(group, cap) {
         float across = sin(u * 3.14159); across *= across;
         // brightest 1-3 m above the floor, thinning into the dark above
         float along = smoothstep(0.0, 0.1, v) * mix(1.0, 0.18, smoothstep(0.3, 0.95, v)) * (1.0 - smoothstep(0.9, 1.0, v));
-        float st = vn(u * 7.0 + vSeed + uTime * 0.05 + v * 1.5) * 0.6 + vn(u * 19.0 - vSeed - uTime * 0.08) * 0.4;
-        float a = across * along * (0.55 + 0.6 * st) * vInt;
+        // (RF.3) one even soft glow across the column, slowly breathing: the streak bands read as rays
+        float a = across * along * (0.8 + 0.12 * vn(vSeed + uTime * 0.05)) * vInt;
         vec3 c = mix(vec3(1.0, 0.93, 0.78), vec3(1.0, 0.97, 0.9), v);
         gl_FragColor = vec4(c * a * 0.16, 1.0);
       }`,
@@ -1015,7 +1015,7 @@ function dressFoundry(D, b, { r, rng, isFloorL, torch, addDyn, col, placeRes, gr
   // wall gears in the cog works, a few still turning
   for (const [x, z, R, spin] of [[12.6, 22, 2.2, 0.3], [12.6, 32, 1.4, -0.5], [39.4, 20, 1.6, 0.4], [28, 14.6, 2.4, 0], [84.6, 30, 1.8, -0.35], [111.4, 24, 2.0, 0.25]]) {
     const g = new Builder(Math.round(x * z));
-    g.add(gear(Math.round(R * 10), R, R + 0.25, 0.25, { hole: 0, spokes: 0 }), 'dBrass', { c: x > 60 ? '#c8a080' : 0xffffff });
+    g.add(gear(Math.max(24, Math.round(R * 10)), R, R + 0.25, 0.25, { hole: 0, spokes: 0 }), 'dBrass', { c: x > 60 ? '#c8a080' : 0xffffff });
     g.add(cyl(0.3, 0.3, 0.5, 12), 'dIron', { r: [PI / 2, 0, 0], c: 0xffffff });
     const o = g.build();
     const ax = z < 16 ? 'z' : 'x';

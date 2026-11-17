@@ -438,10 +438,11 @@ export function plazaPlanters() {
 export function bannerPost(seed = 1) {
   const b = new Builder(seed), res = newRes();
   b.add(rbox(0.6, 0.35, 0.6, 0.05), 'stoneLarge', { p: [0, 0.15, 0], uv: 'box', c: PALE });
-  b.add(cyl(0.06, 0.075, 5.6, 10), 'woodDark', { p: [0, 2.95, 0], c: 0xffffff });
-  for (const y of [0.45, 5.4]) b.add(torus(0.085, 0.022, 6, 12), 'gold', { p: [0, y, 0], r: [PI / 2, 0, 0], c: 0xffffff });
+  // (RF.5) the pole stops at the hanging bar (a T, never a cross): the pole and its gold knob ran on above the bar and
+  // drew a cross from the side
+  b.add(cyl(0.06, 0.075, 5.35, 10), 'woodDark', { p: [0, 2.825, 0], c: 0xffffff });
+  for (const y of [0.45, 5.3]) b.add(torus(0.085, 0.022, 6, 12), 'gold', { p: [0, y, 0], r: [PI / 2, 0, 0], c: 0xffffff });
   b.add(cyl(0.035, 0.035, 1.3, 8), 'gold', { p: [0, 5.45, 0.0], r: [0, 0, PI / 2], c: 0xffffff });
-  b.add(sphere(0.1, 10, 8), 'gold', { p: [0, 5.85, 0], c: 0xffffff });
   b.add(card(1.1, 2.8, 3, 9), 'bannerSun', { p: [0, 3.95, 0.04], uv: 'keep', c: 0xffffff, w: (xx, yy) => [0, 0.02, 0, 0.14 * Math.min(1, Math.max(0, (5.4 - yy) / 2.8))] });
   res.colliders.push({ r: 0.35 });
   res.builder = b;

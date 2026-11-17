@@ -284,7 +284,7 @@ export function bazaar(seed = 3) {
   // goods: vases, carpet roll, books, crates
   for (let i = 0; i < 3; i++) {
     const x = -2.4 + i * 0.6;
-    b.add(lathe([[0.001, 0], [0.18, 0.02], [0.28, 0.25], [0.22, 0.5], [0.12, 0.62], [0.14, 0.7], [0.001, 0.7]], 14), 'cloth', { p: [x, 0, d / 2 + 1.0], c: i === 1 ? '#3a5a9a' : '#c8803a' });
+    b.add(lathe([[0.001, 0], [0.18, 0.02], [0.28, 0.25], [0.22, 0.5], [0.12, 0.62], [0.14, 0.7], [0.001, 0.7]], 14), 'cloth', { p: [x, 0, d / 2 + 1.0], c: ['#3a7a6a', '#3a5a9a', '#e0d8c0'][i] }); // (review) glazed jars, no amber (amber jars read as wine)
     b.add(torus(0.25, 0.02, 5, 16), 'gold', { p: [x, 0.28, d / 2 + 1.0], r: [PI / 2, 0, 0], c: 0xffffff });
   }
   b.add(cyl(0.18, 0.18, 1.4, 12), 'carpetRed', { p: [2.3, 0.18, d / 2 + 1.2], r: [0, 0.3, PI / 2], c: 0xffffff });
@@ -392,7 +392,7 @@ export function treehouse(seed = 5) {
   bannerPole(b, 2.2, 2.4, 3.4, 'bannerLeaf', py + 0.15);
   res.colliders = [{ x: 0, z: 0, r: 1.9 }];
   res.lanterns = [{ p: [2.6, py + 3.2, 1.2], len: 0.9, color: 'green' }, { p: [-2.4, py + 3.6, -1.4], len: 1.1, color: 'yellow' }, { p: [1.0, py + 4.0, -2.8], len: 1.0, color: 'green' }];
-  res.glows = [{ p: [2.4, 0.6, 2.2], color: 0x40e0d0, size: 2.2 }];
+  res.glows = []; // (review) no teal glow round the crystals at the tree's foot (read as magic)
   return res;
 }
 import { bbCard as bbCardLocal } from './kit.js';
@@ -409,10 +409,11 @@ export function watchtower(seed = 6) {
   for (const [x, z, r] of [[0, -1.12, 0], [0, 1.12, 0], [-1.12, 0, PI / 2], [1.12, 0, PI / 2]]) b.add(box(2.6, 0.12, 0.12), 'beam', { p: [x, 2.6, z], r: [0, r, 0.72], c: 0xffffff });
   b.add(box(3.0, 0.2, 3.0), 'wood', { p: [0, H, 0], c: '#e8d0a8' });
   for (const [x, z, r] of [[0, -1.45, 0], [0, 1.45, 0], [-1.45, 0, PI / 2], [1.45, 0, PI / 2]]) b.add(box(3.0, 0.8, 0.1), 'wood', { p: [x, H + 0.5, z], r: [0, r, 0], c: '#e0c8a0' });
-  for (const [x, z] of [[-1.4, -1.4], [1.4, -1.4], [-1.4, 1.4], [1.4, 1.4]]) b.add(box(0.14, 2.2, 0.14), 'beam', { p: [x, H + 1.1, z], c: 0xffffff });
-  // a low flat-topped canopy roof: a shallow hipped slab with a flat square top (never a point)
-  b.add(cyl(1.5, 2.6, 0.5, 4), 'cloth', { p: [0, H + 2.45, 0], r: [0, PI / 4, 0], c: '#efe2c4' });
-  b.add(box(2.2, 0.12, 2.2), 'wood', { p: [0, H + 2.74, 0], c: '#e0c8a0' });
+  for (const [x, z] of [[-1.4, -1.4], [1.4, -1.4], [-1.4, 1.4], [1.4, 1.4]]) { const ph = z < 0 ? 2.6 : 2.2; b.add(box(0.14, ph, 0.14), 'beam', { p: [x, H + ph / 2, z], c: 0xffffff }); } // (RF.5) back posts up to the single pitch
+  // (RF.5) a single-pitch canopy roof: one flat sloping slab on a timber rim, from above a plain square (the old hipped
+  // slab's four corner hips drew an X round its flat top from straight above)
+  b.add(box(3.5, 0.14, 3.5), 'cloth', { p: [0, H + 2.42, 0], r: [0.14, 0, 0], c: '#efe2c4' });
+  b.add(box(3.6, 0.1, 0.12), 'wood', { p: [0, H + 2.42 - 0.25, 1.74], r: [0.14, 0, 0], c: '#e0c8a0' });
   // ladder
   for (let i = 0; i < 10; i++) b.add(box(0.6, 0.06, 0.06), 'woodDark', { p: [1.6, 0.4 + i * 0.6, 0], c: 0xffffff });
   for (const sz of [-0.3, 0.3]) b.add(box(0.07, H, 0.07), 'woodDark', { p: [1.62, H / 2, sz], c: 0xffffff });
@@ -425,8 +426,8 @@ export function watchtower(seed = 6) {
   }
   b.add(box(1.8, 0.04, 1.2), 'carpetRed', { p: [4.9, 0.03, 1.4], c: 0xffffff, uv: 'keep', us: [1, 1] });
   // campfire ring
-  // uneven, gapped stones and three logs side by side: no even ring or crossed logs from above (content rules)
-  for (let i = 0; i < 8; i++) { if (i === 5) continue; const a = (i / 8) * PI * 2 + b.r(-0.25, 0.25), rr = b.r(0.55, 0.75); addRock(b, [-2.6 + Math.cos(a) * rr, 0, 3.0 + Math.sin(a) * rr], [b.r(0.15, 0.24), 0.15, b.r(0.14, 0.22)], i + 3, { mat: 'rock', moss: 0 }); }
+  // (RF.5) two short straight rows of stones either side and three logs side by side: no ring round the fire, no crossed logs
+  for (let i = 0; i < 6; i++) { const sx = i < 3 ? -1 : 1; addRock(b, [-2.6 + sx * b.r(0.6, 0.68), 0, 3.0 - 0.5 + (i % 3) * 0.5 + b.r(-0.06, 0.06)], [b.r(0.15, 0.24), 0.15, b.r(0.14, 0.22)], i + 3, { mat: 'rock', moss: 0 }); }
   for (const dz of [-0.15, 0, 0.15]) b.add(cyl(0.06, 0.06, 0.8, 6), 'beam', { p: [-2.6, 0.12, 3.0 + dz], r: [0, 0, PI / 2 + dz], c: '#5a3a20' });
   // crates and sandstone wall segments
   crate(b, 3.0, 0, -1.6, 0.9, 0.3);
@@ -478,18 +479,20 @@ export function foundryRuins(seed = 8) {
   b.add(box(8, 6, 6), 'stoneDark', { p: [0, 3, -8], c: '#c8907a' });
   b.add(box(8.4, 0.4, 6.4), 'iron', { p: [0, 6.1, -8], c: 0xffffff });
   const smokes = [];
-  for (const sx of [-2.5, 2.5]) {
-    b.add(cyl(0.9, 1.2, 12, 14), 'stoneDark', { p: [sx, 6 + 6, -9], c: '#b87a62' });
-    for (const y of [8, 11, 14]) b.add(torus(1.05, 0.08, 6, 20), 'iron', { p: [sx, y, -9], r: [PI / 2, 0, 0], c: 0xffffff });
-    smokes.push({ p: [sx, 18.2, -9], opts: { rate: 5, life: 5, size: 2.4, rise: 2.4, color: 0x3a3632, opacity: 0.55, spread: 0.6 } });
+  // (review) square stacks of different heights, one set back: two equal round stacks with iron hoops read from straight
+  // above as a pair of ringed discs (two eyes) over the glowing mouth, a face
+  for (const [sx, sz, H] of [[-2.5, -9.4, 12], [2.5, -8.2, 9.5]]) {
+    b.add(cyl(0.9, 1.2, H, 4), 'stoneDark', { p: [sx, 6 + H / 2, sz], r: [0, PI / 4, 0], c: '#b87a62' });
+    for (const y of [8, 6 + H * 0.75]) { const r = 1.28 - (0.3 * (y - 6)) / H; b.add(cyl(r, r, 0.16, 4), 'iron', { p: [sx, y, sz], r: [0, PI / 4, 0], c: 0xffffff }); }
+    smokes.push({ p: [sx, 6 + H + 0.2, sz], opts: { rate: 5, life: 5, size: 2.4, rise: 2.4, color: 0x3a3632, opacity: 0.55, spread: 0.6 } });
   }
   // glowing furnace mouth
   b.add(extrude(arcShape(2.8, 2.6, 1.4), 0.3, 0.05, 14), 'fire', { p: [0, 0, -4.9], c: 0xffffff });
   for (let i = 0; i < 5; i++) b.add(box(0.12, 2.4, 0.2), 'iron', { p: [-1.0 + i * 0.5, 1.2, -4.7], c: 0xffffff });
   // giant gears half buried + pipes
   b.add(gear(24, 2.6, 3.1, 0.5, { hole: 0, spokes: 0 }), 'copper', { p: [-7, 2.2, -2], r: [0.15, 0.4, 0.1], c: '#c8a080' });
-  b.add(gear(16, 1.6, 1.95, 0.4, { hole: 0, spokes: 0 }), 'brass', { p: [7.5, 1.4, 3], r: [-0.3, -0.6, 0.2], c: '#c8a080' });
-  b.add(gear(12, 1.0, 1.25, 0.3, { hole: 0.2 }), 'iron', { p: [-4, 0.4, 6], r: [PI / 2 - 0.2, 0, 0.3], c: 0xffffff });
+  b.add(gear(28, 1.6, 1.8, 0.4, { hole: 0, spokes: 0 }), 'brass', { p: [7.5, 1.4, 3], r: [-0.3, -0.6, 0.2], c: '#c8a080' });
+  b.add(gear(24, 1.0, 1.12, 0.3, { hole: 0 }), 'iron', { p: [-4, 0.4, 6], r: [PI / 2 - 0.2, 0, 0.3], c: 0xffffff });
   const pipe = (pts, r) => b.add(tube(pts.map((p) => V3(...p)), r, 10, 30), 'copper', { uv: 'keep', c: '#d0a080' });
   pipe([[4, 5.5, -5], [6, 5.5, -3], [8, 3, -1], [9, 0.5, 0]], 0.3);
   pipe([[-4, 4, -5], [-6, 4.5, -5.5], [-9, 3.5, -6], [-11, 1, -5]], 0.25);

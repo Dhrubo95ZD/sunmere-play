@@ -191,12 +191,13 @@ export function flowerBox(ctx, F, o, color) {
   const n = Math.max(2, Math.round((t1 - t0) / 0.3));
   for (let i = 0; i < n; i++) tuft(b, 'flowers', fp(F, t0 + ((i + 0.5) / n) * (t1 - t0), y0 - 0.13, 0.31), 0.34, 0.3, i * 1.7);
 }
-// two crossed plant cards (the game's usual tuft; flat from above, never a star: only two cards at right angles)
+// two plant cards side by side, slightly splayed and apart (RF.2: two cards crossed at right angles drew a '+' from
+// straight above; these never touch, so from above they are two short separate strokes)
 export function tuft(b, mat, p, w, h, rot = 0, tint = 0xffffff) {
   for (let i = 0; i < 2; i++) {
-    const g = new THREE.PlaneGeometry(w, h, 1, 1);
+    const g = new THREE.PlaneGeometry(w, h, 1, 1), d = (i ? 1 : -1) * 0.2 * w;
     b.add(g, mat, {
-      p: [p[0], p[1] + h / 2 - 0.02, p[2]], r: [0, rot + (i * PI) / 2, 0], uv: 'keep', c: tint,
+      p: [p[0] + Math.sin(rot) * d, p[1] + h / 2 - 0.02, p[2] + Math.cos(rot) * d], r: [0, rot + (i ? 0.3 : -0.3), 0], uv: 'keep', c: tint,
       normals: (geo) => { const nr = geo.attributes.normal; for (let k = 0; k < nr.count; k++) nr.setXYZ(k, 0, 1, 0); },
       w: (x, y) => { const k = clamp((y - p[1]) / h, 0, 1); return [0, k * 0.04, k * 0.04, 0]; },
     });

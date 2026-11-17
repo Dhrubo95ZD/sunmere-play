@@ -46,6 +46,7 @@ import { IS_TOUCH, IS_MOBILE } from '../engine/platform.js';
 import { slimStatic, pickCopies } from '../engine/slim.js';
 import { initTouch } from '../ui/touch.js';
 import { LOADING } from '../ui/loading/manifest.js';
+import { createRamEvent } from './ramEvent.js';
 
 const wait = () => new Promise((r) => setTimeout(r, 0));
 const V = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
@@ -184,6 +185,9 @@ export async function startGame() {
   // v109 the quest walk: a click on a quest in the tracker or the log walks you there, with a faint trail ahead (questwalk.js)
   const qwalk = new QuestWalk({ scene: engine.scene, world, ui, game, heightAt, busy: () => !!(crossing || ui.scene) });
   game.qwalk = qwalk;
+  // LF.6 the Ram Engine on the Harrow Coast: the engine's pose, the gates, the panel, the walk-up actions (ramEvent.js)
+  const ramc = createRamEvent({ game, world, ui, fx, sfx, entities, rig });
+  game.ram = ramc;
   game.questWalk = (qid) => { game.autoRun = false; moveTo = null; interactTarget = null; return qwalk.start(qid); };
   game.questWalkStop = () => qwalk.stop('manual');
   let local = null; // local EntityView
@@ -484,6 +488,9 @@ export async function startGame() {
       case 'slam': { const v = entities.get(ev.id); if (v) { fx.impact('earth', v.pos.clone(), { r: ev.r }); fx.decal('crack', v.pos.clone(), ev.r * 0.6, 6); rig.addShake(0.6); } break; }
       case 'node': { const n = game.nodes.get(ev.id); if (n) { n.ready = ev.ready; n.mesh.visible = ev.ready; } break; }
       case 'valley': game.valleyStage = ev.stage; world?.setValleyStage?.(ev.stage); break;
+      case 'ram': ramc.onEv(ev); break; // LF.6 the Ram Engine's state and tally (shared/ramEngine.js)
+      case 'ramload': { const v = entities.get(ev.id); if (v) { fx.emit('dust', v.pos.clone().setY(v.pos.y + 1), { n: 8, color: ev.kind === 'coal' ? '#3a3632' : '#8a8a86' }); if (ev.id === me) sfx.play('thud'); } break; }
+      case 'ramfix': { const v = entities.get(ev.id); if (v) fx.emit('sparks', v.pos.clone().setY(v.pos.y + 1.1), { n: 8, color: '#ffd090' }); break; }
       case 'rides': world.wealdCleared = ev.cl.map((c) => c > 0); ui.setRides?.(ev); break; // P15.3 Clear the Rides: the zone-wide tally (shared/rides.js)
       case 'wake': {
         // the First Engine rising: a short scene the first time each day, if you are down in the Deepway to see it
@@ -553,6 +560,7 @@ export async function startGame() {
     if (act === 'fwd' || act === 'back') game.autoRun = false;
     if (act === 'hideui') { ui.root.classList.toggle('ui-hidden'); return; }
     if (act === 'target') { e.preventDefault(); tabTarget(); return; }
+    if (act === 'jump' && ramc.driving()) { ramc.strike(); e.preventDefault(); return; } // (at the Ram Engine's levers Space strikes the ram)
     if (act === 'jump' && onGround && !local.dead) { jump(); e.preventDefault(); }
     if (act === 'interact') { const it = game.nearInteract; if (it) doInteract(it); return; }
     if (act === 'recall') { game.send({ t: 'recall' }); return; }
@@ -614,7 +622,7 @@ export async function startGame() {
       return hit ? 'hit' : pickNode() ? 'node' : null;
     },
     interact() { const it = game.nearInteract; if (it) { doInteract(it); return true; } return false; },
-    jump, ride,
+    jump: () => (ramc.driving() ? ramc.strike() : jump()), ride, // (at the Ram Engine's levers the jump button strikes the ram)
     autorun() { game.autoRun = !game.autoRun; return game.autoRun; },
     nextTarget() { tabTarget(); },
     clearTarget() { game.setTarget(null); },
@@ -631,6 +639,7 @@ export async function startGame() {
     }
     if (it.salvage) { game.send({ t: 'salvage' }); return; }
     if (it.sail) { game.send({ t: 'sail', npc: it.sail }); sfx.play('ui'); return; }
+    if (it.ram) { ramc.act(it.ram, it.pile); return; } // the Ram Engine: levers, piles, load, repair
     if (it.qobj) { game.send({ t: 'useobj', id: it.qobj.id }); local.ry = Math.atan2(it.qobj.x - local.pos.x, it.qobj.z - local.pos.z); return; }
     if (it.node) game.send({ t: 'gather', id: it.node.id });
     else if (it.ty === 'n') { game.send({ t: 'npc', id: it.id }); local.ry = Math.atan2(it.pos.x - local.pos.x, it.pos.z - local.pos.z); }
@@ -651,6 +660,8 @@ export async function startGame() {
     for (const dr of world.doors || []) { const d = Math.hypot(dr.x - local.pos.x, dr.z - local.pos.z); if (d < Math.min(bd + 0.5, 4.5)) { bd = d; best = { door: dr }; } }
     // the foot of the steam ship's gangway in Harrowmouth: board for the Cinder Reach (once Chapter 29 has put you aboard)
     if (game.you?.done?.m_c29_aboard) for (const gw of GANGWAYS) { const d = Math.hypot(gw.x - local.pos.x, gw.z - local.pos.z); if (d < Math.min(bd, 2.6)) { bd = d; best = { sail: gw.npc, label: gw.label }; } }
+    // the Ram Engine's walk-up actions while its run is on (at its levers: step down, always)
+    { const r = ramc.interact(local.pos); if (r && (r.d === 0 || r.d < Math.min(bd + 0.2, 3.4))) { bd = r.d; best = r; } }
     // nothing else at hand: by the water with a salvage hook, offer a cast
     if (!best && !local.salvage && game.you?.bag?.some((b) => b.id === 'hook' || b.id === 'fishline') && !game.you.mounted) {
       game._wT = (game._wT || 0) + 1;
@@ -795,7 +806,15 @@ export async function startGame() {
     // ---- movement
     const { fwd, right } = rig.axes();
     const dir = V();
-    if (!dead && document.activeElement?.tagName !== 'INPUT') {
+    // at the Ram Engine's levers the keys and the stick drive the engine, not the hero (W S forward and back, A D turn)
+    const ramDrv = ramc.driving();
+    let ramIn = null;
+    if (ramDrv) {
+      const k = (a, b) => keys.has(keyFor(a)) || keys.has(b), st = touch?.stick, sOn = st && st.mag > 0.12;
+      ramIn = document.activeElement?.tagName === 'INPUT' ? { f: 0, t: 0 } : { f: (k('fwd', 'ArrowUp') ? 1 : 0) - (k('back', 'ArrowDown') ? 1 : 0) + (sOn ? -st.y : 0), t: (k('right', 'ArrowRight') ? 1 : 0) - (k('left', 'ArrowLeft') ? 1 : 0) + (sOn ? st.x : 0) };
+      game.autoRun = false; moveTo = null; interactTarget = null; if (qwalk.active) qwalk.stop('manual');
+    }
+    if (!dead && !ramDrv && document.activeElement?.tagName !== 'INPUT') {
       if (keys.has(keyFor('fwd')) || keys.has('ArrowUp')) dir.add(fwd);
       if (keys.has(keyFor('back')) || keys.has('ArrowDown')) dir.sub(fwd);
       if (keys.has(keyFor('right')) || keys.has('ArrowRight')) dir.add(right);
@@ -877,6 +896,9 @@ export async function startGame() {
     }
     townsfolk.collide(local.pos, 0.45); // villagers stand firm: the player slides round them
     world.collide(local.pos, 0.45); // and never gets pushed into a wall by one
+    ramc.update(dt, local, ramIn); // the Ram Engine's pose, gates and panel; at its levers the hero stands behind its frame
+    ramc.collide(local.pos);
+    if (ramDrv) { const s2 = ramc.seat(); local.pos.x = s2.x; local.pos.z = s2.z; local.ry = s2.ry; }
     if (local.pos.x < 700 && ox < 700) [local.pos.x, local.pos.z] = clampWorld(local.pos.x, local.pos.z, ox, oz, 5);
     // no riding into a house (the server would put you back): stop at the door and say why, now and then
     if (y?.mounted && local.pos.x < 700 && houseAt(local.pos.x, local.pos.z, false) && !houseAt(ox, oz, false)) {
@@ -916,7 +938,7 @@ export async function startGame() {
     entities.update(dt);
     for (const n of game.nodes.values()) if (n.mesh.visible && n.mesh.position.distanceToSquared(local.pos) < 4900) n.mesh.userData.update(dt, G.time.value);
     // click-to-move and walking up to something: the view drifts in behind the hero
-    rig.followK = (moveTo || interactTarget || qwalk.active) && speed > 0 ? 0.9 : 0; rig.followYaw = local.ry + Math.PI;
+    rig.followK = ((moveTo || interactTarget || qwalk.active) && speed > 0) || (ramDrv && Math.abs(ramc.pose.v) > 0.1) ? 0.9 : 0; rig.followYaw = (ramDrv ? ramc.pose.ry : local.ry) + Math.PI;
     rig.update(dtRaw, local.pos);
     // what the mouse is over (desktop): a faint ring and rim, and a hand cursor
     if (!touch && !rig.rightDown) { game._hovT = (game._hovT || 0) + 1; if (game._hovT % 3 === 0) { const hv = pickEntity(); game.hover = hv && hv !== local ? hv : null; canvas.style.cursor = game.hover ? 'pointer' : ''; } }

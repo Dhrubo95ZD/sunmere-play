@@ -10,6 +10,7 @@ import { setTideClock, tideState } from './tidewater.js';
 import { rainState } from './rainward.js';
 import { galeState } from './weald.js';
 import { RIDES_METHODS } from './rides.js';
+import { RAM_METHODS } from './ramEngine.js';
 import { houseSpec, houseAt, housePush, houseCrosses, houseTalkOk } from './houses.js';
 import { rollGear, gearValue, CLASS_WEIGHT, offhandLook, wornLook, shoulderLook, cloakLook, GEMS, UPG, upOf, canUpgrade, upgradeCost, upgraded, gearName, salvageYield, rollNamed, migrateGear, migrateEntry, migratePlayer, GEAR_V, TEMPER, newTemper, temperInfo, BILLET, ENGINE_CORE, RARITY_SRC, WEAPON_TYPES, OFFHAND_TYPES, unsocketFee } from './items.js';
 import { ACHIEVEMENTS, ACH_BY_ID, ACH_BY_COUNTER, DUNGEON_BOSSES, achTitle, achDone } from './achievements.js';
@@ -183,7 +184,7 @@ export class World {
     p.guild = saved && saved.cls === cls && saved.guild || null;
     p.friends = saved && saved.cls === cls ? this.loadFriends(saved) : [];
     p.ringWeek = saved && saved.cls === cls && saved.ringWeek || null;
-    p.botPrefs = saved && saved.cls === cls && saved.botPrefs || null; p.lfgRole = saved && saved.cls === cls && saved.lfgRole || null; p.ridesOwed = saved && saved.cls === cls && saved.ridesOwed || null; // (P15.3: a Clear the Rides share not yet taken from the chest)
+    p.botPrefs = saved && saved.cls === cls && saved.botPrefs || null; p.lfgRole = saved && saved.cls === cls && saved.lfgRole || null; p.ridesOwed = saved && saved.cls === cls && saved.ridesOwed || null; p.ramOwed = saved && saved.cls === cls && saved.ramOwed || null; // (P15.3: a Clear the Rides share not yet taken from the chest)
     p.compGear = saved && saved.cls === cls && saved.compGear || {};
     p.looks = saved && saved.cls === cls && saved.looks || [];
     p.wlook = saved && saved.cls === cls && saved.wlook || null;
@@ -232,7 +233,7 @@ export class World {
   }
 
   savePlayer(p) {
-    this.io.save(p.name, { cls: p.cls, level: p.level, xp: p.xp, gold: p.gold, bag: p.bag, equip: p.equip, quests: p.quests, done: p.done, picks: p.picks || {}, spares: p.spares || {}, lgear: p.lgear || null, raidLock: p.raidLock || null, x: p.x, z: p.z, visited: p.visited, talents: p.talents, ach: p.ach, title: p.title, companions: this.myBots(p).filter((b) => !b.lfg).map((b) => b.cls), runabout: !!p.runabout, rep: p.rep || {}, daily: p.daily || {}, bank: p.bank || [], paint: p.paint || 'brass', pets: p.pets || {}, pet: p.pet || null, cv: p.cv || 0, arenaBest: p.arenaBest || 0, bagSize: p.bagSize || BAG_BASE, bagV: BAG_V, rested: Math.round(p.rested || 0), savedAt: Date.now(), savedHub: this.inHub(p), home: p.home || 'village', looks: p.looks || [], wlook: p.wlook || null, ohlooks: p.ohlooks || [], ohlook: p.ohlook || null, shines: p.shines || [], wshine: p.wshine || null, shlooks: p.shlooks || [], shlook: p.shlook || null, cklooks: p.cklooks || [], cklook: p.cklook || null, homeDeco: p.homeDeco || {}, homePos: p.homePos || {}, compGear: p.compGear || {}, ringWeek: p.ringWeek || null, guild: p.guild || null, ledger: p.ledger || [], prof: p.prof || {}, bounty: p.bounty || null, lo: p.lo || 0, loadouts: this.loadouts(p), runaboutMk: p.runaboutMk || 1, crawler: !!p.crawler, mountKind: p.mountKind || 'runabout', recallReady: p.recallReady || 0, mail: p.mail || [], buyOrders: p.buyOrders || [], wo: p.wo || null, gearV: p.gearV || GEAR_V, temper: p.temper || newTemper(), heats: p.heats || [], wheat: p.wheat ?? null, friends: p.friends || [], botPrefs: p.botPrefs || null, lfgRole: p.lfgRole || null, ridesOwed: p.ridesOwed || null });
+    this.io.save(p.name, { cls: p.cls, level: p.level, xp: p.xp, gold: p.gold, bag: p.bag, equip: p.equip, quests: p.quests, done: p.done, picks: p.picks || {}, spares: p.spares || {}, lgear: p.lgear || null, raidLock: p.raidLock || null, x: p.x, z: p.z, visited: p.visited, talents: p.talents, ach: p.ach, title: p.title, companions: this.myBots(p).filter((b) => !b.lfg).map((b) => b.cls), runabout: !!p.runabout, rep: p.rep || {}, daily: p.daily || {}, bank: p.bank || [], paint: p.paint || 'brass', pets: p.pets || {}, pet: p.pet || null, cv: p.cv || 0, arenaBest: p.arenaBest || 0, bagSize: p.bagSize || BAG_BASE, bagV: BAG_V, rested: Math.round(p.rested || 0), savedAt: Date.now(), savedHub: this.inHub(p), home: p.home || 'village', looks: p.looks || [], wlook: p.wlook || null, ohlooks: p.ohlooks || [], ohlook: p.ohlook || null, shines: p.shines || [], wshine: p.wshine || null, shlooks: p.shlooks || [], shlook: p.shlook || null, cklooks: p.cklooks || [], cklook: p.cklook || null, homeDeco: p.homeDeco || {}, homePos: p.homePos || {}, compGear: p.compGear || {}, ringWeek: p.ringWeek || null, guild: p.guild || null, ledger: p.ledger || [], prof: p.prof || {}, bounty: p.bounty || null, lo: p.lo || 0, loadouts: this.loadouts(p), runaboutMk: p.runaboutMk || 1, crawler: !!p.crawler, mountKind: p.mountKind || 'runabout', recallReady: p.recallReady || 0, mail: p.mail || [], buyOrders: p.buyOrders || [], wo: p.wo || null, gearV: p.gearV || GEAR_V, temper: p.temper || newTemper(), heats: p.heats || [], wheat: p.wheat ?? null, friends: p.friends || [], botPrefs: p.botPrefs || null, lfgRole: p.lfgRole || null, ridesOwed: p.ridesOwed || null, ramOwed: p.ramOwed || null });
   }
 
   // plan A7: every place a character keeps gear, moved to the gearV 2 shape (bs/tq/up; rf n -> up n). Idempotent. The
@@ -282,7 +283,7 @@ export class World {
       hp: p.hp, maxHp: p.maxHp, res: p.res, maxRes: p.maxRes, bag: p.bag, equip: p.equip, quests: p.quests, done: p.done,
       stats: p.stats, power: Math.round(p.power), armorPct: p.armorPct, cds: p.cds, gcd: p.gcd, dead: p.dead, grave: p.dead ? this.graveName(p) : null, x: p.x, z: p.z,
       buffs: p.buffs.map((b) => ({ name: b.name, icon: b.icon, t: b.t, dur: b.dur, debuff: !!b.debuff })), absorb: Math.round(p.absorb),
-      duel: p.duel ? { with: p.duel.with, start: p.duel.start, end: p.duel.end } : null, mailNew: (p.mail || []).filter((m) => !m.read).length, bagSize: this.bagMax(p), rested: Math.round(p.rested || 0), home: CARAVANS.find((c) => c.id === p.home)?.name || 'Sunmere Village', recallReady: p.recallReady || 0, recalling: !!p.recall, looks: p.looks || [], wlook: p.wlook || null, ohlooks: p.ohlooks || [], ohlook: p.ohlook || null, shines: p.shines || [], wshine: p.wshine || null, shlooks: p.shlooks || [], shlook: p.shlook || null, cklooks: p.cklooks || [], cklook: p.cklook || null, heats: p.heats || [], wheat: p.wheat ?? null, temper: this.temperState(p), homeDeco: p.homeDeco || {}, homePos: p.homePos || {}, buyback: (p.buyback || []).map((b) => ({ it: b.it, value: b.value })), compGear: p.compGear || {}, comps: this.myBots(p).filter((b) => !b.escort).map((b) => ({ id: b.id, name: b.name, cls: b.cls, power: Math.round(b.power), hp: b.maxHp, armor: Math.round(b.armorPct * 100) })), guild: p.guild ? { name: p.guild.name, rank: p.guild.rank, roster: this.guildRoster(p) } : null, ledger: p.ledger || [], ridesOwed: p.ridesOwed?.k || 0, prof: p.prof || {}, lo: p.lo || 0, loadouts: this.loadouts(p), lgear: (p.lgear || [null, null]).map((g) => (g ? Object.keys(g).length : 0)), runaboutMk: p.runaboutMk || 1, runabout: !!p.runabout, crawler: !!p.crawler, mountKind: mountKind(p), mounted: !!p.mounted, paint: p.paint || 'brass', pets: p.pets || {}, pet: p.pet || null, rep: p.rep || {}, daily: p.daily || {}, today: this.today(),
+      duel: p.duel ? { with: p.duel.with, start: p.duel.start, end: p.duel.end } : null, mailNew: (p.mail || []).filter((m) => !m.read).length, bagSize: this.bagMax(p), rested: Math.round(p.rested || 0), home: CARAVANS.find((c) => c.id === p.home)?.name || 'Sunmere Village', recallReady: p.recallReady || 0, recalling: !!p.recall, looks: p.looks || [], wlook: p.wlook || null, ohlooks: p.ohlooks || [], ohlook: p.ohlook || null, shines: p.shines || [], wshine: p.wshine || null, shlooks: p.shlooks || [], shlook: p.shlook || null, cklooks: p.cklooks || [], cklook: p.cklook || null, heats: p.heats || [], wheat: p.wheat ?? null, temper: this.temperState(p), homeDeco: p.homeDeco || {}, homePos: p.homePos || {}, buyback: (p.buyback || []).map((b) => ({ it: b.it, value: b.value })), compGear: p.compGear || {}, comps: this.myBots(p).filter((b) => !b.escort).map((b) => ({ id: b.id, name: b.name, cls: b.cls, power: Math.round(b.power), hp: b.maxHp, armor: Math.round(b.armorPct * 100) })), guild: p.guild ? { name: p.guild.name, rank: p.guild.rank, roster: this.guildRoster(p) } : null, ledger: p.ledger || [], ridesOwed: p.ridesOwed?.k || 0, ramOwed: p.ramOwed?.k || 0, prof: p.prof || {}, lo: p.lo || 0, loadouts: this.loadouts(p), lgear: (p.lgear || [null, null]).map((g) => (g ? Object.keys(g).length : 0)), runaboutMk: p.runaboutMk || 1, runabout: !!p.runabout, crawler: !!p.crawler, mountKind: mountKind(p), mounted: !!p.mounted, paint: p.paint || 'brass', pets: p.pets || {}, pet: p.pet || null, rep: p.rep || {}, daily: p.daily || {}, today: this.today(),
       talents: p.talents, talentPts: talentPoints(p.level) - totalSpent(p.talents), speedMul: 1 + (p.tal?.speed || 0), crit: 0.1 + (p.tal?.crit || 0), dodge: p.tal?.dodge || 0, hastePct: p.hastePct || 0, title: p.title || '',
       mods: Object.fromEntries(['dmg', 'critDmg', 'heal', 'leech', 'cdr', 'thorns', 'regen', 'hp', 'armor', 'haste', 'crit', 'dodge', 'speed', 'absorb'].filter((k) => typeof p.tal?.[k] === 'number' && p.tal[k]).map((k) => [k, p.tal[k]])),
     };
@@ -298,6 +299,7 @@ export class World {
   // ------------------------------------------------------------------ client messages
   on_pos(p, m) {
     if (p.dead) return;
+    if (this.ram?.E?.dr === p.id) return; // at the Ram Engine's levers: the engine carries you (shared/ramEngine.js)
     const nx = Number(m.x), nz = Number(m.z);
     if (!isFinite(nx) || !isFinite(nz)) return;
     const d = Math.hypot(nx - p.x, nz - p.z);
@@ -391,6 +393,7 @@ export class World {
     else if (cmd === '/dismiss') this.dismissCompanion(p, false, arg);
     else if (cmd === '/comp') { const [, order, who] = text.split(/\s+/); this.on_compOrder(p, { order, name: who }); }
     else if (EMOTES[cmd.slice(1)]) this.emote(p, cmd.slice(1));
+    else if (cmd === '/ram') this.ramNow(arg); // test option (LF.6): the world clock on to the Ram Engine's next run ('/ram end': to just before this run's end)
     else if (cmd === '/gale') this.ridesGaleNow(arg, p); // test option (P15.3): the world clock on to the Russet Weald's next gale ('/gale' its start, '/gale down' or '/gale <n>' its first or n-th trunk down, '/gale cut' the trunk nearest you cut clear)
     else if (cmd === '/event') { const ev = this.wev.find((e) => e.def.id === arg) || this.wev[0]; if (!ev.live) ev.next = this.time; }
     else if (cmd === '/dungeon' && DUNGEON_BY_ID[arg]) { const D = DUNGEON_BY_ID[arg]; this.teleport(p, D.startW[0], D.startW[1]); this.checkReach(p); }
@@ -2336,6 +2339,7 @@ export class World {
     // (a held character, its connection dropped and waiting for a reconnect, earns nothing: no risk-free leech by unplugging)
     const contributors = [...m.threat.keys()].map((id) => this.players.get(id)).filter((q) => q && !q.held);
     for (const c of [...contributors]) for (const q of this.partyMembers(c)) if (!contributors.includes(q) && !q.dead && !q.held && dist(q, m) < 80) contributors.push(q);
+    this.ramKill(m, contributors); // the Ram Engine: a machine of the event counts for those at work near the engine (shared/ramEngine.js)
     this.ridesKill(m, contributors); // Clear the Rides: a trunk is everyone's who is near it, no party needed; machines count to the tally
     if (m.sp.event) { const ev = this.wev.find((e) => e.def.id === m.sp.event); if (ev?.live) for (const p of contributors) ev.live.fought.add(p.id); }
     for (const p of contributors) {
@@ -3103,6 +3107,7 @@ export class World {
     const o = OBJECTS.find((x) => x.id === m.id);
     if (!o) return;
     if (Math.hypot(p.x - o.x, p.z - o.z) > 4.5) return this.err(p, 'Too far away.');
+    if (o.kind === 'ramchest') return this.ramChest(p, o); // Yard-Engineer Yusuf's chest (shared/ramEngine.js)
     if (o.kind === 'rideschest') return this.ridesChest(p, o); // the Woodwrights' chest (shared/rides.js)
     if (o.kind === 'drawing') {
       if (p.ach.c['drw:' + o.id]) return this.err(p, 'You have already taken up this drawing.');
@@ -3180,6 +3185,7 @@ export class World {
     for (const p of this.players.values()) this.tickPlayer(p, dt);
     if (this.tiers) this.tickMobsTiered(dt, this.tiers); else this.tickMobsNear(dt);
     this.tickEvents();
+    this.tickRam(dt); // the Ram Engine on the Harrow Coast, on the world clock (shared/ramEngine.js)
     this.tickRides(dt); // the Russet Weald's "Clear the Rides" while the gale blows (shared/rides.js)
     for (let i = this.aoes.length - 1; i >= 0; i--) {
       const a = this.aoes[i];
@@ -3445,6 +3451,8 @@ export class World {
       if (d >= 1 && m.leashT > 25) { m.x = m.home.x; m.z = m.home.z; m.leashT = 0; m.state = 'idle'; }
       else if (d < 1) { m.state = 'idle'; m.leashT = 0; }
       else { const sp = def.speed * 1.5; m.x += ((m.home.x - m.x) / d) * Math.min(d, sp * dt); m.z += ((m.home.z - m.z) / d) * Math.min(d, sp * dt); m.ry = Math.atan2(m.home.x - m.x, m.home.z - m.z); m.speed = sp; }
+    } else if (m.sp.ram && this.ramMob(m, dt)) {
+      // the Ram Engine's machines: a Yard Mender with nobody to fight batters the engine; the Wall-Layer stands in its pit
     } else if (m.sp.path) {
       // patrol: walk the road from end to end and back. A spawn with a floodPath walks that one instead while the tide is
       // in at Tidewater Sound (the Great Dredge: across the mud flats at ebb, along their outer edge at flood); a spawn with a rainPath walks that one while it pours in the Rainward Gorge (the Hill Leveller:
@@ -3659,4 +3667,4 @@ export class World {
 }
 
 // playing together: whispers, say, who, friends, inspect, player trade (shared/social.js)
-Object.assign(World.prototype, SOCIAL_METHODS, BOT_MIND_METHODS, BOT_SOCIAL_METHODS, BOT_CHAT_METHODS, BOT_MEMORY_METHODS, RIDES_METHODS);
+Object.assign(World.prototype, SOCIAL_METHODS, BOT_MIND_METHODS, BOT_SOCIAL_METHODS, BOT_CHAT_METHODS, BOT_MEMORY_METHODS, RIDES_METHODS, RAM_METHODS);

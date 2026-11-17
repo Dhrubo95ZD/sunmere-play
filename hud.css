@@ -2517,3 +2517,32 @@ html.phone .hud .minimap .on-badge { font-size: 20px; line-height: 26px; padding
 @media (max-height: 400px) { html.phone .hud .minimap::before { height: 206px; } html.phone .hud .minimap::after { height: 214px; } }
 /* level 42+: the third skill row's tab sits above the bars' top right and can reach the left end, so the potion slot rises above it */
 .actionbars .potslot.over3 { bottom: calc(100% + 66px); }
+/* LF.6 the Ram Engine (client/game/ramEvent.js): a small brass-rimmed panel at the left, its buttons, and the tracker box */
+.ram-panel { position: absolute; left: 12px; top: 38%; width: 232px; padding: 8px 10px 9px; border-radius: 6px; z-index: 4; pointer-events: auto; color: #efe4cc; font-size: 12px;
+  background: linear-gradient(180deg, rgba(36,28,20,.92), rgba(22,18,14,.9)); border: 1px solid #a07e40; box-shadow: inset 0 0 0 1px #2a1e10, 0 2px 10px rgba(0,0,0,.5); }
+.ram-panel.hidden { display: none; }
+.ram-panel .rp-h { font-weight: 700; color: #f2d48a; font-size: 13px; margin-bottom: 5px; display: flex; justify-content: space-between; }
+.ram-panel .rp-t { color: #d8c8a8; font-weight: 400; }
+.ram-panel .rp-bar { position: relative; height: 14px; margin: 3px 0; background: #1a1410; border: 1px solid #5a4630; border-radius: 3px; overflow: hidden; }
+.ram-panel .rp-bar i { position: absolute; left: 0; top: 0; bottom: 0; background: linear-gradient(180deg, #b8643a, #7a3a20); }
+.ram-panel .rp-st i { background: linear-gradient(180deg, #c8c0b0, #807a70); }
+.ram-panel .rp-bar span { position: relative; padding-left: 5px; font-size: 11px; line-height: 14px; text-shadow: 0 1px 1px #000; }
+.ram-panel .rp-w { margin: 4px 0 2px; }
+.ram-panel .rp-w b { display: inline-flex; gap: 3px; margin-left: 6px; vertical-align: middle; }
+.ram-panel .rp-w i { width: 14px; height: 9px; background: #2a2622; border: 1px solid #6a5a44; }
+.ram-panel .rp-w i.on { background: #6a6a6e; border-color: #b0a080; }
+.ram-panel .rp-s { color: #d8ccb4; line-height: 1.35; margin: 3px 0 6px; }
+.ram-panel .rp-s b { color: #8aef7a; font-weight: 600; }
+.ram-panel button { font: inherit; color: #f4e8cc; background: linear-gradient(180deg, #4a3a28, #2e2418); border: 1px solid #8a6a3a; border-radius: 4px; padding: 4px 6px; cursor: pointer; }
+.ram-panel button:hover { border-color: #e0b860; }
+.ram-panel button.on { background: linear-gradient(180deg, #6a5232, #4a3a22); border-color: #f0c870; }
+.ram-panel .rp-drive { display: none; grid-template-columns: 1fr 1fr 1fr; gap: 4px; margin-bottom: 5px; }
+.ram-panel.drv .rp-drive { display: grid; }
+.ram-panel .rp-drive [data-h="f-1"] { grid-column: 2; }
+.ram-panel .rp-drive .rp-strike { grid-column: 1 / 4; font-weight: 700; color: #ffd8a0; }
+.ram-panel .rp-drive .rp-strike.ready { border-color: #8aef7a; color: #c8ffb8; box-shadow: 0 0 6px rgba(138,239,122,.45); }
+.ram-panel .rp-acts { display: flex; flex-direction: column; gap: 4px; }
+.ram-panel .rp-keys { margin-top: 6px; font-size: 10.5px; color: #a89878; }
+.rides-box.ram-box { border-left-color: #c8a050; background: linear-gradient(90deg, rgba(90,66,30,.62), rgba(90,66,30,.08)); }
+.rides-box.ram-box.idle { opacity: .85; }
+.ram-pill { display: none; }
