@@ -1,6 +1,14 @@
 // What's new: shown once after an update (newest first). Bump `v` on the first entry whenever something is added.
 export const CHANGELOG = [
   {
+    v: 123, date: '17 November 2026', title: 'Potion Slot',
+    items: [
+      ['Potion slot', 'The desktop app and the browser now have a potion slot just above the left end of your action bar, on its own key (comma by default; change it in Options under Keys). Press it or click it to drink.'],
+      ['Pick what goes in', 'Drag any potion or food from your bags onto the slot to keep it there. Left empty, or once that one runs out, it uses your best healing potion by itself. Right-click the slot to go back to that.'],
+      ['At a glance', 'The slot shows how many you have left and the cooldown after each drink. On phones the potion and food buttons work as before.'],
+    ],
+  },
+  {
     v: 122, date: '16 November 2026', title: 'Living Adventurers',
     items: [
       ['Adventurers who play', 'The adventurers you meet now play the game for themselves: they take quests, hunt, gather and craft, level up and move on to new lands, and come and go through the day like other players. They still show (bot) after their names.'],

@@ -553,6 +553,7 @@ export async function startGame() {
     if (act === 'zoomIn' || e.code === 'NumpadAdd') { ui.miniZoom(1); return; }
     if (act === 'zoomOut' || e.code === 'NumpadSubtract') { ui.miniZoom(-1); return; }
     if (act === 'ride') { ride(); return; }
+    if (act === 'potion') { ui.usePotion?.(); return; }
     const win = ['char', 'bags', 'quests', 'skills', 'talents', 'ach', 'journal', 'options', 'map', 'help', 'meter', 'loot'].includes(act) ? act : null;
     if (win) { ui.toggle(win); return; }
     const sx = act && act.match(/^skill(\d+)$/);

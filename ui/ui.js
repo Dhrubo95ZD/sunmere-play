@@ -443,6 +443,78 @@ export class UI {
       row.appendChild(b);
       this.slots.push({ s, el: b, cd: $('.cd', b), cdt: $('.cdt', b), lock: $('.lock', b) });
     });
+    this.buildPotionSlot();
+  }
+
+  // the potion slot (desktop and browser; phones have their own potion and food buttons): just above the left end of the
+  // bars, on its own key (, by default). Drag a consumable from the bags onto it to keep that one there
+  // (SETTINGS.potion); empty or used up, it picks the best healing potion in the bags by itself. Right-click clears it.
+  buildPotionSlot() {
+    if (IS_TOUCH || this.pot) return;
+    const bars = $('.actionbars', this.root);
+    if (!bars) return;
+    const b = el('div', 'slot potslot empty');
+    b.innerHTML = '<img alt=""><div class="cd"></div><span class="key"></span><span class="cdt"></span><span class="pcnt"></span>';
+    bars.appendChild(b);
+    this.pot = { el: b, img: $('img', b), cd: $('.cd', b), cdt: $('.cdt', b), cnt: $('.pcnt', b), key: $('.key', b), id: null };
+    b.addEventListener('click', () => this.usePotion());
+    b.addEventListener('contextmenu', (e) => { e.preventDefault(); if (SETTINGS.potion) { SETTINGS.potion = null; saveSettings(); this.hideTip(); } });
+    b.addEventListener('mouseenter', (e) => this.showTip(e, this.potionTip()));
+    b.addEventListener('mouseleave', () => this.hideTip());
+    b.addEventListener('dragover', (e) => { if (e.dataTransfer?.types?.includes('text/sunmere-use')) { e.preventDefault(); b.classList.add('drop'); } });
+    b.addEventListener('dragleave', () => b.classList.remove('drop'));
+    b.addEventListener('drop', (e) => {
+      e.preventDefault(); b.classList.remove('drop');
+      const id = e.dataTransfer.getData('text/sunmere-use');
+      if (id && ITEMS[id]?.slot === 'use') { SETTINGS.potion = id; saveSettings(); this.pot.id = null; this.hideTip(); }
+    });
+  }
+  // what the slot holds now: the chosen item if any are left in the bags, else the best healing potion
+  potionPick() {
+    const y = this.you, bag = y?.bag || [];
+    const lvlOk = (d) => !d.lvl || d.lvl <= (y.level || 1);
+    if (SETTINGS.potion) {
+      let n = 0, i = -1;
+      bag.forEach((it, k) => { if (it?.id === SETTINGS.potion && !it.gear) { n += it.n || 1; if (i < 0) i = k; } });
+      const d = ITEMS[SETTINGS.potion];
+      if (d) return { i, id: SETTINGS.potion, d, n, chosen: true, ok: i >= 0 && lvlOk(d) };
+    }
+    let best = null, bv = -1;
+    bag.forEach((it, k) => {
+      const d = itemDef(it), us = d?.use;
+      if (!us || it.gear || d.slot !== 'use' || us.food || !(us.heal || us.res) || !lvlOk(d)) return;
+      const v = (us.heal || 0) + (us.res || 0) * 0.5;
+      if (v > bv) { bv = v; best = { i: k, id: it.id, d, n: 0, ok: true }; }
+    });
+    if (best) bag.forEach((it) => { if (it?.id === best.id && !it.gear) best.n += it.n || 1; });
+    return best;
+  }
+  usePotion() {
+    const p = this.potionPick();
+    if (!p || !p.ok) { this.error(p ? `You have no ${p.d.name} left.` : 'You have no potion. Drag one from your bags onto the potion slot.'); return; }
+    this.g.send({ t: 'use', slot: p.i }); this.g.sfx?.play('ui');
+  }
+  potionTip() {
+    const p = this.potionPick(), k = keyLabel(keyFor('potion')) || 'no key';
+    const head = `<div class="tt-name">Potion slot <span class="tt-sub">(${k})</span></div>`;
+    const how = `<div class="tt-desc">Drag a potion or food from your bags here to keep it in the slot.${SETTINGS.potion ? ' Right-click to go back to your best potion.' : ' Empty, it uses your best healing potion.'}</div>`;
+    return p ? head + this.itemTip({ id: p.id, n: p.n }, false) + how : head + how;
+  }
+  updatePotionSlot(now) {
+    const P = this.pot;
+    if (!P || !this.you) return;
+    const p = this.potionPick(), id = p?.id || null;
+    if (P.id !== id) { P.id = id; if (id) P.img.src = icon(p.d.icon || 'potion', '#3a3226', 64); else P.img.removeAttribute('src'); }
+    P.el.classList.toggle('empty', !p);
+    P.el.classList.toggle('nores', !!p && (!p.ok || p.n <= 0));
+    P.el.classList.toggle('chosen', !!p?.chosen);
+    const n = p ? p.n : 0, nt = n > 1 ? String(n) : '';
+    if (P.cnt.textContent !== nt) P.cnt.textContent = nt;
+    const kl = keyLabel(keyFor('potion')) || '';
+    if (P.key.textContent !== kl) P.key.textContent = kl;
+    const end = id ? this.you.cds?.['item:' + id] || 0 : 0, left = end - now;
+    if (left > 0) { P.cd.style.background = `conic-gradient(rgba(0,0,0,0.72) ${Math.min(1, left / 30) * 360}deg, transparent 0)`; P.cdt.textContent = left > 1.5 ? Math.ceil(left) : ''; }
+    else if (P.cdt.textContent || P.cd.style.background !== 'none') { P.cd.style.background = 'none'; P.cdt.textContent = ''; }
   }
 
   skillTip(s) {
@@ -1212,6 +1284,12 @@ export class UI {
         e.addEventListener('mouseenter', (ev) => this.showTip(ev, this.itemTip(it)));
         e.addEventListener('mouseleave', () => this.hideTip());
         e.addEventListener('click', (ev) => { if (ev.shiftKey) { ev.preventDefault(); this.linkItem(it); } });
+        // consumables drag onto the potion slot (desktop and browser)
+        if (!IS_TOUCH && !it.gear && ITEMS[it.id]?.slot === 'use') {
+          e.draggable = true;
+          e.addEventListener('dragstart', (ev) => { this.hideTip(); ev.dataTransfer.setData('text/sunmere-use', it.id); ev.dataTransfer.effectAllowed = 'copy'; this.pot?.el.classList.add('drag'); });
+          e.addEventListener('dragend', () => this.pot?.el.classList.remove('drag', 'drop'));
+        }
         e.addEventListener('contextmenu', (ev) => {
           ev.preventDefault(); this.hideTip();
           if (this.storeOpen) return this.g.send({ t: 'deposit', slot: i });
@@ -3396,6 +3474,7 @@ export class UI {
       sl.el.classList.toggle('nores', !locked && res < skillCost(s, this.tmods));
       sl.el.classList.toggle('pressed', g.pressedSkill === s.id);
     }
+    this.updatePotionSlot(now);
     // bar rows whose skills are all still locked stay out of the way until the first one unlocks
     if (this._rowLvl !== this.you.level) {
       this._rowLvl = this.you.level;
