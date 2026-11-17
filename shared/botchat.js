@@ -13,6 +13,7 @@ import { zoneAt, areaOf } from './terrain.js';
 import { AREA_BY_ID } from './areas.js';
 import { tideState } from './tidewater.js';
 import { rainState } from './rainward.js';
+import { galeState } from './weald.js';
 import { filterLine, FEMALE_NAMES } from './botfilter.js';
 import { classify, ruleLine, styleLine, typoLine, whereIs, questWhere, fallbackPersona, className, lineHash } from './botlines.js';
 import { extractTold } from './botmemory.js';
@@ -491,6 +492,7 @@ export const BOT_CHAT_METHODS = {
     const v = rnd();
     if (area === 'tidewater') { const T = tideState(this.time); intent = 'ambient_place'; weather = T.ebb ? 'the tide is out' : T.flood ? 'the tide is in' : ''; if (v < 0.5 && (T.ebb || T.flood)) intent = T.ebb ? 'ambient_tidewater_low' : 'ambient_tidewater_high'; }
     else if (area === 'rainward') { const S = rainState(this.time); const wet = !!S?.pouring; weather = wet ? 'it is pouring' : S?.dry ? 'the rain has stopped' : ''; if (v < 0.5 && (wet || S?.dry)) intent = wet ? 'ambient_rainward_wet' : 'ambient_rainward_dry'; }
+    else if (area === 'weald') { const S = galeState(this.time); weather = S.blowing ? 'the gale is up' : S.calm ? 'the wood is still' : ''; if (v < 0.5 && (S.blowing || S.calm)) intent = S.blowing ? 'ambient_weald_gale' : 'ambient_weald_calm'; }
     else if (['reach', 'rime', 'heights', 'valley'].includes(area) && v < 0.4) intent = 'ambient_' + area;
     return this.botSay(b, 'world', intent, { slots: { weather } });
   },

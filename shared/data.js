@@ -17,6 +17,7 @@ import { RIME } from './rime.js';
 import { HEIGHTS } from './heights.js';
 import { TIDEWATER } from './tidewater.js';
 import { RAINWARD } from './rainward.js';
+import { WEALD } from './weald.js';
 import { ITEM_ART } from './itemArt.js';
 const PI2 = Math.PI * 2;
 
@@ -4928,6 +4929,211 @@ PAINTS.seedterrace = { name: 'Seed Terrace', body: '#3e5a32', paint: true, trim:
 // the Main Story ran (applyStory) before Yasin was placed: give him his story quests
 for (const [id, Q] of Object.entries(QUESTS)) if (Q.msq) { const g = NPCS.find((n) => n.id === Q.giver); if (g && !(g.quests ||= []).includes(id)) g.quests.push(id); }
 // ============================================================================ end of P14.4 CHAPTERS 46-47
+// ============================================================================ PART FIFTEEN: THE RUSSET WEALD (P15.2)
+// an old autumn hardwood forest over the ridge above the Rainward Gorge's Slip, on the dry side of the range, with its own
+// terrain box (shared/weald.js, registered in shared/areas.js) and a gale that comes and goes on the world clock. Reached by
+// the Makers' ropeway from the head of the Slip (the route comes with P15.1); the Woodwrights live in a camp by the ropeway's
+// lower station and cut what they can by hand. These are the zone's people as placeholders for the story: no quests, no
+// route, no shop yet (the shed master keeps the reputation, P15.6).
+NPCS.push(
+  { id: 'n_wd_saeed', name: 'Ropeman Saeed', title: 'The Ropeway Foot', look: 'villager', v: 3, x: WEALD.station.keeper.x, z: WEALD.station.keeper.z, ry: WEALD.station.keeper.ry, quests: [],
+    greet: 'The rope comes down off the ridge to this pad. The car has hung at the top station since before my father was born. I keep the sheaves greased anyway.' },
+  { id: 'n_wd_ridwan', name: 'Shed Master Ridwan', title: 'The Woodwrights', look: 'villager', v: 6, x: WEALD.qm.x, z: WEALD.qm.z, ry: WEALD.qm.ry, quests: [],
+    greet: 'Six of us, and a wood cut for six hundred. We fell by hand what the engine leaves standing. The sheds we cannot open at all.' },
+  { id: 'n_wd_imran', name: 'Sawyer Imran', title: 'The Saw Pits', look: 'villager', v: 1, x: 452.5, z: -3381.5, ry: -1.2, quests: [],
+    greet: 'One man on top of the log, one man in the pit, and the saw between them. Slow work, but every board comes off straight.' },
+  { id: 'n_wd_thabit', name: 'Stackman Thabit', title: 'The Long Sheds', look: 'villager', v: 5, x: 536.5, z: -3466, ry: 3.0, quests: [],
+    greet: 'Twenty winters in the dry, the Makers said, and the oak will hold a windshaft. The louvres have been jammed shut for a lifetime. The damp has had it all that while.' },
+  { id: 'n_wd_basim', name: 'Feller Basim', title: 'The Standards', look: 'villager', v: 2, x: 606, z: -3470, ry: 2.2, quests: [],
+    greet: 'See the posts across the rides? When the gale gets up, stand clear of them. The half-cut standards come down along those lines and nowhere else.' },
+  { id: 'n_cv_weald', name: 'Caravan Master Habib', title: 'Caravans', look: 'villager', v: 4, x: WEALD.caravan.x, z: WEALD.caravan.z - 2, ry: 0.3, caravan: 'weald',
+    greet: 'No caravan comes over the ridge, only the rope. I keep the post for the camp, and I can set your compass here.' },
+);
+// the wood's caravan stop has no routes (the only way off is the ropeway), but it can be the Homeward Compass's home
+CARAVANS.push({ id: 'weald', name: 'Woodwrights’ Camp', x: WEALD.caravan.x, z: WEALD.caravan.z, zone: 'ropewayfoot' });
+GRAVEYARDS.push({ x: WEALD.grave.x, z: WEALD.grave.z });
+// what wanderers say in the wood (the valley's lines are about the valley)
+WANDERER_LINES_AREA.weald = ['Quiet in here. Just the leaves.', 'When the gale gets up, keep off the marked lines across the rides.',
+  'Those sheds go on for a quarter mile. All shut.', 'Mind the hollows in the morning. The mist sits in them like water.',
+  'Every ride runs dead straight, as if laid out with a line.', 'Shed Master Ridwan could use another pair of hands.'];
+// ============================================================================ end of P15.2 THE RUSSET WEALD
+
+// ============================================================================ P15.1 CHAPTER 49 "WHEN THE COUNT COMES ROUND" (story text in story.js)
+// The ropeway: the Makers' upper station stands on the slope at the head of the Rainward Gorge's Slip (ROPEWAY.slip: a square
+// timber frame on straight posts over the solid bull wheel, the winding drum in front of it, the rope climbing north over
+// the cliff and the ridge on square trestle towers), clear of the Hill Leveller's beats, the mud lanes and the cutting's
+// pad. Wheelman Luqman keeps it. You clear the station (o_rgstation1-3), gather the car's rope clamps the slips carried
+// down across the Slip (questOnly nodes rgclamp0-7, item c49_clamp) and wind the drum (o_rgwind1, kind rgwind: a Makers'
+// rope machine wound to work, as the haulier was). Once Luqman has the brake (m_c49_rope) he sends you over the ridge in the
+// car (SAIL.to.weald, kind 'rope': a fade-teleport ride like the ship, the lift and the haul road, sent as ev 'rope'), and
+// Ropeman Saeed at the Russet Weald's lower station sends you back (SAIL.to.slip). At the Ropeway Foot you clear the gale's
+// limbs off the station ride (o_wdlimb1-3), gather the felling wedges the gale scattered round the camp (wdwedge nodes,
+// item c49_wedge), and the Woodwrights show you the Long Sheds. Rewards item level 94-95, one per slot. The level cap goes
+// 65 -> 70 with this part (shared/classes.js). The Woodwrights' own side quests at the Ropeway Foot follow (q_wd_*: open
+// to players and roster bots alike once the ropeway has carried them over).
+export const ROPEWAY = { slip: { pad: { x: 656.5, z: -3016, s: 4.5 }, keeper: { x: 651.5, z: -3009.5, ry: 1.9 }, landing: { x: 652.5, z: -3006 }, gauge: 2.6 } };
+NPCS.push(
+  { id: 'n_rg_luqman', name: 'Wheelman Luqman', title: 'The Ropeway Station', look: 'villager', v: 5, x: ROPEWAY.slip.keeper.x, z: ROPEWAY.slip.keeper.z, ry: ROPEWAY.slip.keeper.ry, quests: [],
+    greet: 'My father climbed up here every spring to look at the rope, and so do I. It has not moved in my lifetime. It is still sound, mind.' },
+);
+SAIL.to.weald = { x: WEALD.station.landing.x, z: WEALD.station.landing.z, name: 'the Russet Weald', kind: 'rope', need: 'm_c49_rope', notReady: 'The rope is not wound yet.',
+  say: 'The car climbs the rope over the head of the Slip and up the cliff into the cloud. Over the ridge the rain falls away, and the rope runs down over a dry wood in autumn to the station at its foot.' };
+// (the way back needs nothing more: anyone who is in the wood can get home)
+SAIL.to.slip = { x: ROPEWAY.slip.landing.x, z: ROPEWAY.slip.landing.z, name: 'the Slip', kind: 'rope',
+  say: 'The car climbs out of the wood and over the ridge, down through the cloud and the rain to the station at the head of the Slip.' };
+{ const L = NPCS.find((n) => n.id === 'n_rg_luqman'); L.sail = 'weald'; L.sails = ['weald']; L.rope = true; }
+{ const S = NPCS.find((n) => n.id === 'n_wd_saeed'); S.sail = 'slip'; S.sails = ['slip']; S.rope = true; }
+{
+  const R = (name, slot, lvl, art, haste = false) => {
+    const g = gear(name, slot, 4, lvl, haste);
+    if (slot === 'weapon') { g.wtype = art; g.icon = `w_${art}~3`; }
+    else if (slot === 'trinket') g.icon = 't_trinket~3';
+    else if (slot === 'back') g.icon = 'a_back~3';
+    else { g.weight = art; g.icon = `a_${art}_${slot}~3`; }
+    return g;
+  };
+  Object.assign(ITEMS, {
+    c49_clamp: { name: 'Rope Clamp', slot: 'quest', icon: 'scrap', q: 1, stack: 20, desc: 'A square iron clamp off the Makers’ ropeway car, its bolt still in it. A slip carried it down the hill. Luqman wants it back on the car.' },
+    c49_wedge: { name: 'Felling Wedge', slot: 'quest', icon: 'scrap', q: 1, stack: 20, desc: 'A plain iron wedge, its head flattened by a lifetime of the maul. The gale scattered the Woodwrights’ wedges out of their box.' },
+    r_c49_gloves: R('Station-Clearer’s Gauntlets', 'hands', 94, 'plate'),
+    r_c49_boots: R('Ridge-Walker Boots', 'feet', 94, 'mail'),
+    r_c49_legs: R('Wheelman’s Breeches', 'legs', 94, 'cloth'),
+    r_c49_hood: R('Rope-Car Coif', 'head', 94, 'mail'),
+    r_c49_coat: R('Ropeway Foot Cuirass', 'chest', 95, 'plate'),
+    r_c49_axe: R('Woodwright’s Felling Axe', 'weapon', 95, 'axe'),
+    r_c49_charm: { ...R('Rope Clamp Keepsake', 'trinket', 95, null, true), desc: 'A square iron washer off a ropeway clamp, worn bright on one face by the rope.' },
+    r_c49_mantle: R('Mantle of the Count', 'shoulders', 95, 'cloth'),
+    r_c49_cloak: R('Copper-Leaf Cloak', 'back', 95),
+  });
+  // the upper station's three heaps of slip mud and fallen roof timber, the winding drum in front of the station, and the
+  // gale's limbs along the Weald's station ride (lying along the ride, never across it)
+  OBJECT_KINDS.rgstation = { prompt: 'Clear the mud and fallen timber off the station', goal: 'Station cleared', done: 'cleared' };
+  OBJECT_KINDS.rgwind = { prompt: 'Knock out the chocks and wind the drum', goal: 'Winding drum wound', done: 'wound' };
+  OBJECT_KINDS.wdlimb = { prompt: 'Saw the fallen limb into lengths and stack it', goal: 'Limbs cleared off the ride', done: 'cleared' };
+  OBJECTS.push(
+    { id: 'o_rgstation1', kind: 'rgstation', x: 651.5, z: -3018.5, ry: 0.3 },
+    { id: 'o_rgstation2', kind: 'rgstation', x: 658.8, z: -3014.5, ry: Math.PI / 2 },
+    { id: 'o_rgstation3', kind: 'rgstation', x: 654.2, z: -3017.8, ry: 0 },
+    { id: 'o_rgwind1', kind: 'rgwind', x: 656.5, z: -3010.5, ry: 0 },
+    { id: 'o_wdlimb1', kind: 'wdlimb', x: 419.8, z: -3374, ry: Math.PI / 2 },
+    { id: 'o_wdlimb2', kind: 'wdlimb', x: 416.2, z: -3390, ry: Math.PI / 2 },
+    { id: 'o_wdlimb3', kind: 'wdlimb', x: 419.8, z: -3425, ry: Math.PI / 2 },
+  );
+  // the rope clamps, carried down across the Slip between the mud lanes (off the lanes, the haul road and the machines'
+  // packs, and well clear of the Hill Leveller); the felling wedges round the Woodwrights' camp (off the square and the rides)
+  NODES.push(...[[597, -2996], [606, -2995], [617, -2993], [626, -2998], [638, -3004], [640, -3020], [617, -3030], [622, -3020]].map(([x, z], i) => ({ id: 'rgclamp' + i, item: 'c49_clamp', x, z, questOnly: true })));
+  NODES.push(...[[429, -3420], [427, -3392], [463, -3392], [465, -3418], [446, -3388], [470, -3405], [446, -3424], [424, -3430]].map(([x, z], i) => ({ id: 'wdwedge' + i, item: 'c49_wedge', x, z, questOnly: true })));
+}
+// the Main Story ran (applyStory) before the Slip's wheelman and the Woodwrights were placed: give them their story quests
+for (const [id, Q] of Object.entries(QUESTS)) if (Q.msq) { const g = NPCS.find((n) => n.id === Q.giver); if (g && !(g.quests ||= []).includes(id)) g.quests.push(id); }
+// The Woodwrights' side quests at the Ropeway Foot (level 66-67, after the ropeway's first ride, q_c49_ride): the boughs the gale threw
+// along the main ride (o_wdbough1-3), the split billets it scattered round the saw pits (wdbillet nodes), the logs waiting
+// beside the pits (o_wdlog1-2), and a walk up to the Standards. Plain side quests, so roster bots take them too.
+{
+  ITEMS.wd_billet = { name: 'Split Billet', slot: 'quest', icon: 'scrap', q: 1, stack: 20, desc: 'A length of oak split along the grain for the camp’s fire, thrown off the stack by the gale.' };
+  OBJECT_KINDS.wdbough = { prompt: 'Saw the bough into lengths and stack it', goal: 'Boughs cleared off the main ride', done: 'cleared' };
+  OBJECT_KINDS.wdlog = { prompt: 'Roll the log onto the skids by the pit', goal: 'Logs rolled to the pits', done: 'rolled' };
+  OBJECTS.push(
+    { id: 'o_wdbough1', kind: 'wdbough', x: 430, z: -3451.6, ry: 0 },
+    { id: 'o_wdbough2', kind: 'wdbough', x: 441, z: -3448.4, ry: 0 },
+    { id: 'o_wdbough3', kind: 'wdbough', x: 461, z: -3451.6, ry: 0 },
+    { id: 'o_wdlog1', kind: 'wdlog', x: 436, z: -3372, ry: 0 },
+    { id: 'o_wdlog2', kind: 'wdlog', x: 456, z: -3372, ry: 0 },
+  );
+  NODES.push(...[[406, -3380], [408, -3415], [406, -3430], [430, -3365], [460, -3365], [468, -3385], [466, -3432], [432, -3440]].map(([x, z], i) => ({ id: 'wdbillet' + i, item: 'wd_billet', x, z, questOnly: true })));
+  const side = (id, giver, turnin, lvl, pre, goal, xp, gold, name, text, done) => { QUESTS[id] = { name, giver, turnin, lvl, pre, goal, xp, gold, rewards: [], text, done }; NPCS.find((n) => n.id === giver).quests.push(id); };
+  side('q_wd_boughs', 'n_wd_saeed', 'n_wd_saeed', 66, 'q_c49_ride', { use: 'wdbough', n: 3 }, 12000, 4600, 'Boughs on the Main Ride',
+    'The gale before last threw three great boughs down along the main ride, west of the first north ride. Saw each one into lengths and stack them at the ride’s edge, so a cart can get by.',
+    'Clear to the north ride. Every gale it is the same: we cut, it throws, we cut again.');
+  side('q_wd_billets', 'n_wd_ridwan', 'n_wd_ridwan', 66, 'q_c49_ride', { gather: 'wd_billet', n: 6 }, 12000, 4600, 'Split Billets',
+    'We split the fire oak by the saw pits and stack it to dry. The gale took the stack apart and threw the billets all round the camp. Bring six back before the damp gets into them.',
+    'Six. Split along the grain, as my father taught me. They will burn clean by the end of the week.');
+  side('q_wd_logs', 'n_wd_imran', 'n_wd_imran', 66, 'q_c49_ride', { use: 'wdlog', n: 2 }, 12500, 4700, 'Logs for the Pits',
+    'Two logs lie beside the saw pits waiting for the skids. Roll each one up onto its skids so Basim and I can lift it over the pit in the morning. Mind your feet.',
+    'Both on the skids. Two days of sawing, those, and every board straight.');
+  side('q_wd_standards', 'n_wd_imran', 'n_wd_basim', 67, 'm_c49_count', { reach: 'standards' }, 12500, 4700, 'The Standards',
+    'Basim fells up on the Standards, where the great oaks stand. Walk up the main ride to him and see the high wood for yourself, and keep off the marked lines across the rides if the gale gets up.',
+    'You came up the ride? Then you saw the posts. Every pair marks where a half-cut standard will come down when the gale gets up. The engine left them like that, a lifetime of them.');
+}
+// ============================================================================ end of P15.1 CHAPTER 49
+
+// ============================================================================ PART FIFTEEN: the Russet Weald's machines (P15.3)
+// three regions west to east: the Ropeway Foot 65-66, the Long Sheds 67-68, the Standards 69-70 (models in
+// client/assets/wealdMachines.js). The Makers' forest engines, still working the wood to the count they lost: bark strippers
+// and stump grinders at the Ropeway Foot, log forwarders and stack cranes round the Long Sheds, fellers and ride wardens in
+// the high wood. Packs stand on walkable ground off the rides and the fall lines, clear of the sheds and the log decks, 35 m
+// or more from the camp's centre and 25 m (past the pack's edge) from every NPC, the ropeway's station and landing, the
+// graveyard, the caravan stop, the lofts' pad (the Drying Lofts' door) and the great ride's pad (the Great Ride's door). The
+// Great Forwarder works the south ride at x 560: at its foot while the wood is calm, and while the gale blows up the ride to
+// the fall line that crosses it, dragging the thrown standard off the ride onto a new log deck (shared/rides.js). Stats and
+// spawns via IM() (the Rime Steps' helper) with their own loot table, on the v120 curve (docs/ai/balance_v120.md). The
+// Fallen Standard is the "Clear the Rides" event's trunk (shared/rides.js): an inert target, never spawned from SPAWNS.
+Object.assign(ITEMS, {
+  wealdiron: { name: 'Leaf-Packed Iron', slot: 'junk', icon: 'gear', q: 0, stack: 20, price: 50, desc: 'A plate off a forest engine, its every seam packed with old copper leaf.' },
+  wd_oakoffcut: { name: 'Seasoned Oak Offcut', slot: 'junk', icon: 'gear', q: 1, stack: 20, price: 90, desc: 'A sound end of shed oak, sawn off a trunk cleared from the rides. The Woodwrights pay for help in what they have.' },
+  wd_fellergrip: gear('Leaning Feller’s Clamp-Plate Gauntlets', 'hands', 4, 94),
+  wd_stackerhelm: gear('Damp-Bound Stacker’s Louvre Helm', 'head', 4, 95),
+  wd_forwarderheart: { ...gear('The Great Forwarder’s Bunk Pin', 'trinket', 4, 96, true), desc: 'The iron pin off the Great Forwarder’s front bunk. Worn bright where a lifetime of trunks rode over it.' },
+  wd_forwarderplate: gear('Loader-Beam Legplates', 'legs', 4, 96),
+  wd_forwarderaxe: { ...gear('Stake-Iron War Axe', 'weapon', 4, 96), wtype: 'axe' },
+});
+{
+  const WM = (name, model, variant, lvl, hp, dmg, xp, extra = {}) => IM(name, model, variant, lvl, hp, dmg, xp, { loot: 'wealdMach', ...extra });
+  Object.assign(MOBS, {
+    barkstripper: WM('Bark Stripper', 'barkstripper', 0, [65, 66], 11600, [98, 128], 3850, { speed: 3.2, range: 3.4, radius: 1.4 }),
+    stumpgrinder: WM('Stump Grinder', 'stumpgrinder', 0, [65, 66], 11800, [98, 130], 3880, { speed: 3.0, range: 3.8, swing: 2.5, radius: 1.3 }),
+    logforwarder: WM('Log Forwarder', 'logforwarder', 0, [67, 68], 12400, [102, 134], 4000, { speed: 3.0, range: 3.8, swing: 2.6, radius: 1.8 }),
+    stackcrane: WM('Stack Crane', 'stackcrane', 0, [67, 68], 12600, [102, 136], 4050, { speed: 2.8, range: 3.6, swing: 2.6, radius: 1.7 }),
+    bronzecrane: WM('Old Bronze Stack Crane', 'stackcrane', 1, [67, 68], 12900, [104, 136], 4100, { speed: 2.8, range: 3.6, swing: 2.6, radius: 1.7 }),
+    feller: WM('Feller', 'feller', 0, [69, 70], 13300, [106, 140], 4250, { speed: 3.0, range: 4.0, swing: 2.5, radius: 1.6 }),
+    ridewarden: WM('Ride Warden', 'ridewarden', 0, [69, 70], 13500, [106, 142], 4300, { range: 3.4, radius: 1.3 }),
+    oldridewarden: WM('Old Bronze Ride Warden', 'ridewarden', 1, [69, 70], 30000, [116, 152], 4400, { range: 3.4, radius: 1.3, elite: true,
+      abilities: [{ kind: 'nova', every: 14, r: 5, delay: 1.7, dmg: 1.3, text: 'The Old Bronze Ride Warden drives its blade board flat into the ride!' }] }),
+    dampstacker: WM('The Damp-Bound Stacker', 'stackcrane', 1, [68, 68], 60000, [110, 144], 10200, { elite: true, rare: true, loot: 'rareWeald1', speed: 2.8, range: 3.8, swing: 2.6, radius: 1.9,
+      abilities: [{ kind: 'circles', every: 10, n: 4, r: 2.8, delay: 1.8, dmg: 1.3, text: 'The Damp-Bound Stacker swings its sodden load and drops it, block by block!' }] }),
+    leaningfeller: WM('The Leaning Feller', 'feller', 1, [70, 70], 66000, [116, 152], 10800, { elite: true, rare: true, loot: 'rareWeald2', speed: 2.8, range: 4.2, radius: 1.9,
+      abilities: [{ kind: 'nova', every: 12, r: 6, delay: 1.8, dmg: 1.5, text: 'The Leaning Feller swings its saw bar round in a full flat sweep!' }] }),
+    greatforwarder: { name: 'The Great Forwarder', model: 'greatforwarder', lvl: [70, 70], hp: 215000, dmg: [112, 148], speed: 1.8, aggro: 12, range: 8, swing: 3.0, xp: 40000, loot: 'greatforwarder', radius: 5.5, elite: true, boss: true, world: true,
+      notice: 'is working the south ride in the Russet Weald, and when the gale throws the standards down it drags them off the rides', yell: 'grinds up the ride with its bunks full of oak!',
+      abilities: [{ kind: 'circles', every: 9, n: 6, r: 3.6, delay: 2.0, dmg: 1.4, text: 'The Great Forwarder tips its bunks and trunks roll down across the ride!' },
+        { kind: 'nova', every: 17, r: 11, delay: 2.4, dmg: 1.7, text: 'The Great Forwarder drops its loader beam, and the ride shakes for metres round it!' },
+        { kind: 'adds', at: 0.5, mob: 'logforwarder', n: 3, text: 'Log forwarders come down the ride to load the Great Forwarder’s bunks!' },
+        { kind: 'enrage', at: 0.2, text: 'The Great Forwarder races its engine and drives its full load at you!' }] },
+    // the "Clear the Rides" trunk (shared/rides.js): a thrown standard lying across a ride, cut clear by anyone near it
+    fallenstandard: { name: 'Fallen Standard', model: 'fallenstandard', lvl: [65, 70], hp: 24000, dmg: [1, 1], speed: 0, aggro: 0, range: 1, swing: 9, xp: 4000, radius: 1.2, passive: true, inert: true },
+  });
+}
+Object.assign(LOOT_TABLES, {
+  wealdMach: { gold: [46, 70], items: [['wealdiron', 0.45], ['bronzecog', 0.2], ['draught', 0.12]], gear: 0.4 },
+  rareWeald1: { gold: [360, 440], items: [['wd_stackerhelm', 1]], gear: 1, gearQ: 3 },
+  rareWeald2: { gold: [360, 440], items: [['wd_fellergrip', 1]], gear: 1, gearQ: 3 },
+  greatforwarder: { gold: [600, 800], items: [['wd_forwarderheart', 0.35], ['wd_forwarderplate', 0.35], ['wd_forwarderaxe', 0.3], ['tonic', 1], ['wealdiron', 1]], gear: 1, gearQ: 4, gearN: 2 },
+});
+SPAWNS.push(
+  // the Ropeway Foot (65-66): strippers and grinders in the young coppice either side of the first north ride
+  { mob: 'barkstripper', x: 418, z: -3473, r: 4, n: 3 }, { mob: 'barkstripper', x: 421, z: -3503, r: 4, n: 3 }, { mob: 'barkstripper', x: 436, z: -3533, r: 4, n: 3 },
+  { mob: 'barkstripper', x: 463, z: -3329, r: 3, n: 2 },
+  { mob: 'stumpgrinder', x: 463, z: -3503, r: 4, n: 3 }, { mob: 'stumpgrinder', x: 463, z: -3539, r: 4, n: 3 }, { mob: 'stumpgrinder', x: 436, z: -3560, r: 4, n: 3 },
+  { mob: 'stumpgrinder', x: 409, z: -3569, r: 3, n: 2 },
+  // the Long Sheds (67-68): forwarders on the strip south of the main ride, cranes north of the sheds, the Damp-Bound Stacker
+  { mob: 'logforwarder', x: 499, z: -3428, r: 4, n: 3 }, { mob: 'logforwarder', x: 532, z: -3437, r: 4, n: 2 }, { mob: 'logforwarder', x: 529, z: -3404, r: 4, n: 3 },
+  { mob: 'logforwarder', x: 493, z: -3371, r: 4, n: 3 }, { mob: 'logforwarder', x: 532, z: -3359, r: 4, n: 3 },
+  { mob: 'stackcrane', x: 502, z: -3530, r: 4, n: 3 }, { mob: 'stackcrane', x: 568, z: -3521, r: 4, n: 3 }, { mob: 'stackcrane', x: 520, z: -3335, r: 3, n: 2 },
+  { mob: 'bronzecrane', x: 550, z: -3566, r: 3, n: 2 }, { mob: 'bronzecrane', x: 487, z: -3341, r: 3, n: 2 },
+  { mob: 'dampstacker', x: 512, z: -3552, r: 1, n: 1 },
+  // the Standards (69-70): fellers in the high wood, wardens on the slopes south of the main ride, the Leaning Feller
+  { mob: 'feller', x: 595, z: -3569, r: 3, n: 2 }, { mob: 'feller', x: 643, z: -3518, r: 4, n: 3 }, { mob: 'feller', x: 628, z: -3494, r: 4, n: 3 },
+  { mob: 'feller', x: 646, z: -3566, r: 3, n: 2 },
+  { mob: 'ridewarden', x: 649, z: -3377, r: 4, n: 3 }, { mob: 'ridewarden', x: 631, z: -3410, r: 4, n: 3 }, { mob: 'ridewarden', x: 601, z: -3362, r: 4, n: 3 },
+  { mob: 'oldridewarden', x: 628, z: -3344, r: 3, n: 2 }, { mob: 'oldridewarden', x: 598, z: -3395, r: 3, n: 2 },
+  { mob: 'leaningfeller', x: 600, z: -3530, r: 1, n: 1 },
+  // the Great Forwarder: at the foot of the south ride while it is calm, up the ride to the fall line across it in the gale
+  { mob: 'greatforwarder', path: [[560, -3372], [560, -3360], [560, -3348]], galePath: [[560, -3418], [560, -3404], [560, -3390]], r: 2, n: 1, world: true },
+);
+// the Woodwrights' chest for "Clear the Rides" (shared/rides.js): at the camp, opened by those owed a share
+OBJECTS.push({ id: 'o_wd_rideschest', kind: 'rideschest', x: WEALD.camp.x - 1.5, z: WEALD.camp.z - 6, ry: 0.3 });
+OBJECT_KINDS.rideschest = { prompt: 'Open the Woodwrights’ chest', goal: 'Woodwrights’ chest opened', done: 'opened' };
+// ============================================================================ end of P15.3 WEALD MACHINES
 
 // ============================================================================ PAINTED ITEM ICONS
 // every everyday item (food, tonics, materials, quest items, junk) with its own painted icon uses it instead of the shared drawing

@@ -229,6 +229,7 @@ export const ACHIEVEMENTS = [
   A('rHillLeveller', 'Combat', 'Levelled at Last', 'Defeat the Hill Leveller on the Slip in the Rainward Gorge.', { c: 'kill:hillleveller', n: 1 }, { pts: 10 }),
   A('rainwardGorge', 'Quests', 'The Rainward Gorge', 'Finish Part Fourteen of the Main Story: stop the Terrace Engine so the hill holds, send the first load of young poles down the haul road and up the lift, and lay out a nursery of your own.', { c: 'quest:m_c48_after', n: 1 }, { title: 'of the Rainward Gorge', pts: 25 }),
   A('gorgeAll', 'Quests', 'Keeper of the Gorge', 'Do everything Part Fourteen asks: finish its story, set the drains running and the hill draining, and stop the Adit Driver, the Terrace Engine and the Hill Leveller.', { req: ['rainwardGorge', 'haulRoad', 'drainsRun', 'bedsDry', 'rDrainAdits', 'rUpperCutting', 'rHillLeveller'] }, { title: 'Keeper of the Gorge', pts: 50 }),
+  A('ropeRide', 'Quests', 'Over the Ridge', 'Finish Chapter 49 of the Main Story: wind the Makers’ ropeway at the head of the Slip, ride it over the ridge into the Russet Weald, and meet the Woodwrights.', { c: 'quest:m_c49_count', n: 1 }, { pts: 25 }),
 ];
 
 export const ACH_BY_ID = Object.fromEntries(ACHIEVEMENTS.map((a) => [a.id, a]));

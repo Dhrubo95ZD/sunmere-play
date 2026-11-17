@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import { CLASSES, SKILLS, SKILL_BY_ID, xpForLevel, LEVEL_CAP } from '/sunmere-play/shared/classes.js';
 import { shownName } from '/sunmere-play/shared/social.js';
 import { ITEMS, QUESTS, MOBS, NPCS, QUALITY, QUALITY_NAME, PRISMATIC_STOPS, HOME_DECO, HOME_TROPHIES, HOME_SPOTS, HOME_MOVABLE, BAG_BASE } from '/sunmere-play/shared/data.js';
-import { ZONES, zoneAt, WORLD, REACH, RIME, HEIGHTS, TIDEWATER, RAINWARD, AREA_BY_ID, areaOf, waterKind } from '/sunmere-play/shared/terrain.js';
+import { ZONES, zoneAt, WORLD, REACH, RIME, HEIGHTS, TIDEWATER, RAINWARD, WEALD, AREA_BY_ID, areaOf, waterKind } from '/sunmere-play/shared/terrain.js';
 // the maps cover the world rectangle (not centred on the village any more)
 const _plPos = new THREE.Vector3(), _plDir = new THREE.Vector3(); // nameplate occlusion rays
 const MAP = { x0: WORLD.minX, z0: WORLD.minZ, w: WORLD.maxX - WORLD.minX, h: WORLD.maxZ - WORLD.minZ };
@@ -18,7 +18,9 @@ const HMAP = { x0: HEIGHTS.minX, z0: HEIGHTS.minZ, w: HEIGHTS.maxX - HEIGHTS.min
 const TMAP = { x0: TIDEWATER.minX, z0: TIDEWATER.minZ, w: TIDEWATER.maxX - TIDEWATER.minX, h: TIDEWATER.maxZ - TIDEWATER.minZ };
 // ... and the Rainward Gorge (the haul road's head at its west end stands for the pier)
 const GMAP = { x0: RAINWARD.minX, z0: RAINWARD.minZ, w: RAINWARD.maxX - RAINWARD.minX, h: RAINWARD.maxZ - RAINWARD.minZ };
-const AMAP = { reach: RMAP, rime: RIMAP, heights: HMAP, tidewater: TMAP, rainward: GMAP };
+// ... and the Russet Weald (the ropeway's lower station stands for the pier)
+const WMAP = { x0: WEALD.minX, z0: WEALD.minZ, w: WEALD.maxX - WEALD.minX, h: WEALD.maxZ - WEALD.minZ };
+const AMAP = { reach: RMAP, rime: RIMAP, heights: HMAP, tidewater: TMAP, rainward: GMAP, weald: WMAP };
 // each area's map: its sea colour, what the pier's label says (at: where it goes, the pier's head by default), and any other
 // way off (more: [x, z, label])
 const LIFT_FOOT = HEIGHTS.rimeLift.foot;
@@ -27,17 +29,20 @@ const AMAP_LOOK = {
   rime: { sea: '#2a4a5a', ship: (you) => 'Ship to the Cinder Reach / Harrowmouth' + (you?.done?.m_c41_chart ? ' / Tidewater Sound' : ''), more: (you) => [LIFT_FOOT.x, LIFT_FOOT.z, you?.done?.m_c36_keep ? 'Lift to the Windward Heights' : 'The lift (not running yet)'] },
   heights: { sea: '#dfe6ee', ship: () => 'Lift down to the Dam Crown', at: () => [HEIGHTS.lift.x0 + 6, HEIGHTS.lift.z1 + 10] },
   tidewater: { sea: '#3c5a5c', ship: () => 'Ship to the Rime Steps / Harrowmouth', at: () => [TIDEWATER.quay.x0 - 30, TIDEWATER.quay.z1 + 4], more: (you) => [HAUL_ROAD.stand.x, HAUL_ROAD.stand.z, you?.done?.m_c45_haulier ? 'Haul road to the Rainward Gorge' : 'The haul road (not running yet)'] },
-  rainward: { sea: '#3e4a44', ship: () => 'Haul road down to the Tide Mills', at: () => [RAINWARD.road.pad.x - 20, RAINWARD.road.pad.z + 12] },
+  rainward: { sea: '#3e4a44', ship: () => 'Haul road down to the Tide Mills', at: () => [RAINWARD.road.pad.x - 20, RAINWARD.road.pad.z + 12], more: (you) => [ROPEWAY.slip.pad.x, ROPEWAY.slip.pad.z, you?.done?.m_c49_rope ? 'Ropeway over the ridge to the Russet Weald' : 'The ropeway (not running yet)'] },
+  weald: { sea: '#4a3c30', ship: () => 'Ropeway over the ridge to the Slip', at: () => [WEALD.station.pad.x - 20, WEALD.station.pad.z - 14] },
 };
 // crossing points: quest targets across the sea point here (Haroun's gangway in Harrowmouth, each island pier's harbour master)
 // (the Windward Heights are reached only by the lift: from the Heights every other area is down it, at Ghazi's landing, and
 // from the Rime Steps a target on the Heights points at Mansur at the lift's foot)
-const SAIL_FROM = { valley: [444, 80.6], reach: [REACH.harbour.x, REACH.harbour.z], rime: [RIME.harbour.x, RIME.harbour.z], heights: [HEIGHTS.lift.keeper.x, HEIGHTS.lift.keeper.z], tidewater: [TIDEWATER.harbour.x, TIDEWATER.harbour.z], rainward: [RAINWARD.road.keeper.x, RAINWARD.road.keeper.z] };
+const SAIL_FROM = { valley: [444, 80.6], reach: [REACH.harbour.x, REACH.harbour.z], rime: [RIME.harbour.x, RIME.harbour.z], heights: [HEIGHTS.lift.keeper.x, HEIGHTS.lift.keeper.z], tidewater: [TIDEWATER.harbour.x, TIDEWATER.harbour.z], rainward: [RAINWARD.road.keeper.x, RAINWARD.road.keeper.z], weald: [WEALD.station.keeper.x, WEALD.station.keeper.z] };
 // (the Rainward Gorge is reached only by the haul road: from the Sound a target in the gorge points at the waggoner on the
 // haulier's stand between the Tide Mills)
-const LIFT_FROM = { rime: { heights: [HEIGHTS.rimeLift.keeper.x, HEIGHTS.rimeLift.keeper.z] }, tidewater: { rainward: [HAUL_ROAD.keeper.x, HAUL_ROAD.keeper.z] } };
-const SAIL_LINE = { reach: 'Sail to the Cinder Reach.', valley: 'Sail home to Harrowmouth.', rime: 'Sail north to the Rime Steps.', heights: 'Ride the lift up to the Windward Heights.', rimelift: 'Ride the lift down to the Dam Crown.', tidewater: 'Sail round the cold cape to Tidewater Sound.', rainward: 'Ride the wagon up the haul road to the Rainward Gorge.', tidemills: 'Ride the wagon down the haul road to the Tide Mills.' };
-const NEED_CH = { m_c29_aboard: 'Main Story, Chapter 29', m_c32_cold: 'Main Story, Chapter 32', m_c33_refit: 'Main Story, Chapter 33', m_c36_keep: 'Main Story, Chapter 36', m_c41_chart: 'Main Story, Chapter 41', m_c45_haulier: 'Main Story, Chapter 45' };
+// (the Russet Weald is reached only by the ropeway: from the gorge a target in the wood points at the wheelman at the upper
+// station, and from the Sound at the waggoner, as for the gorge)
+const LIFT_FROM = { rime: { heights: [HEIGHTS.rimeLift.keeper.x, HEIGHTS.rimeLift.keeper.z] }, tidewater: { rainward: [HAUL_ROAD.keeper.x, HAUL_ROAD.keeper.z], weald: [HAUL_ROAD.keeper.x, HAUL_ROAD.keeper.z] }, rainward: { weald: [ROPEWAY.slip.keeper.x, ROPEWAY.slip.keeper.z] } };
+const SAIL_LINE = { reach: 'Sail to the Cinder Reach.', valley: 'Sail home to Harrowmouth.', rime: 'Sail north to the Rime Steps.', heights: 'Ride the lift up to the Windward Heights.', rimelift: 'Ride the lift down to the Dam Crown.', tidewater: 'Sail round the cold cape to Tidewater Sound.', rainward: 'Ride the wagon up the haul road to the Rainward Gorge.', tidemills: 'Ride the wagon down the haul road to the Tide Mills.', weald: 'Ride the car over the ridge to the Russet Weald.', slip: 'Ride the car back over the ridge to the Slip.' };
+const NEED_CH = { m_c29_aboard: 'Main Story, Chapter 29', m_c32_cold: 'Main Story, Chapter 32', m_c33_refit: 'Main Story, Chapter 33', m_c36_keep: 'Main Story, Chapter 36', m_c41_chart: 'Main Story, Chapter 41', m_c45_haulier: 'Main Story, Chapter 45', m_c49_rope: 'Main Story, Chapter 49' };
 const MAP_PX = Math.round(MAP.w); // world map width in pixels (1 px per metre)
 import { DUNGEONS, DUNGEON_AREAS, areaCenter, dungeonAt, cellFloor, CELL } from '/sunmere-play/shared/dungeons.js';
 import { OBJECT_KINDS, SPAWNS, LOOT_TABLES, NODES, OBJECTS, COMPANIONS, FACTIONS, REP_RANKS, repRank, factionOfZone, SETS, RECIPES, STATION_NAME, PAINTS, PETS, ESCORTS, repairCost, TRADE, tradeFair, PROF_NAME, PROF_MAX, profColor, LEDGER } from '/sunmere-play/shared/data.js';
@@ -61,7 +66,7 @@ import { STORY, STORY_PARTS, STORY_NEXT, MSQ_ORDER, storyAt } from '/sunmere-pla
 import { LEGENDARIES, TEMPEST, tempestMods } from '/sunmere-play/shared/data.js';
 import { ARMORY, ARMORY_SRC, ARMORY_TOTAL, ARMORY_ROLLED, armoryBest } from '/sunmere-play/shared/armory.js';
 import { VENDORS } from '/sunmere-play/shared/data.js';
-import { HAUL_ROAD } from '/sunmere-play/shared/data.js';
+import { HAUL_ROAD, ROPEWAY } from '/sunmere-play/shared/data.js';
 import { IS_TOUCH, IS_APP, IS_WEB, IS_MOBILE, exitGame } from '../engine/platform.js';
 // phones and tablets: the full-screen sheet styles (client/mobile-panels.css, all scoped to html.touch / html.phone), loaded
 // after hud.css unless index.html already links them; and the mobile nameplate rules (ui/mobileplates.js), loaded when present
@@ -658,7 +663,7 @@ export class UI {
     $('.death', this.root).classList.toggle('hidden', !this.you.dead);
     if (this.you.dead && this.windows.pickup?.isConnected) { this.windows.pickup.remove(); this.windows.pickup = null; } // no looting while dead
     $('.hud', this.root)?.classList.toggle('is-dead', !!this.you.dead); // toasts move clear of the death panel
-    if (this.you.dead) { const P = this.g.playerPos?.(), b = $('.death .respawn', this.root), a = P && areaOf(P.x, P.z), t = this.you.grave === 'the entrance' ? 'Return to the entrance' : a === 'reach' ? 'Return to Ashfall Landing' : a === 'rime' ? 'Return to the Icefall Landing' : a === 'heights' ? 'Return to the Windward Camp' : a === 'tidewater' ? 'Return to the Tidewrights’ Camp' : a === 'rainward' ? 'Return to the Seedwrights’ Camp' : this.you.grave ? `Return to ${this.you.grave}` : 'Return to Sunmere'; if (b && b.textContent !== t) b.textContent = t; }
+    if (this.you.dead) { const P = this.g.playerPos?.(), b = $('.death .respawn', this.root), a = P && areaOf(P.x, P.z), t = this.you.grave === 'the entrance' ? 'Return to the entrance' : a === 'reach' ? 'Return to Ashfall Landing' : a === 'rime' ? 'Return to the Icefall Landing' : a === 'heights' ? 'Return to the Windward Camp' : a === 'tidewater' ? 'Return to the Tidewrights’ Camp' : a === 'rainward' ? 'Return to the Seedwrights’ Camp' : a === 'weald' ? 'Return to the Woodwrights’ Camp' : this.you.grave ? `Return to ${this.you.grave}` : 'Return to Sunmere'; if (b && b.textContent !== t) b.textContent = t; }
   }
   renderBuffs(box, buffs = []) {
     box.innerHTML = buffs.slice(0, 10).map((b) => `<div class="buff ${b.debuff ? 'debuff' : ''}" title="${b.name}"><img src="${SKILL_BY_NAME[b.name] ? skillIcon(SKILL_BY_NAME[b.name]) : buffArt(b) || icon(b.icon || 'flask', b.debuff ? '#7a2a2a' : '#2a4a7a', 32)}"><span>${Math.ceil(b.t)}</span></div>`).join('');
@@ -686,6 +691,38 @@ export class UI {
       : S.state === 'offer' ? `- Speak with ${npcName(Q.giver)} (${npcPlace(Q.giver)})`
       : `- Reach level ${Q.lvl - 2} to continue (side quests, dungeons and bounties all help)`;
     return `<div class="msq-box ${S.state}" title="Open the Main Story">${head}<div class="msq-n">${Q.name}</div><div class="msq-g">${line}${S.state === 'ready' ? ' <b>(Complete)</b>' : ''}</div></div>`;
+  }
+  // the Russet Weald's "Clear the Rides" tally (ev 'rides', shared/rides.js): kept while it runs and for a little after
+  setRides(ev) {
+    // the first word of a gale's event: its painted banner (the galeride painting), once a gale
+    const now = performance.now();
+    if (ev.on && !this.scene && !(this.rides?.on && now - this.rides.at < 12000) && !(now - (this.ridesCardAt || -1e9) < 300000) && LOADING.has('galeride')) {
+      this.ridesCardAt = now;
+      this.bigCard({ art: 'galeride', top: 'Open event', title: 'Clear the Rides', sub: 'The gale is up: cut the fallen standards clear before it drops', secs: 6 });
+    }
+    this.rides = { ...ev, at: now };
+    clearTimeout(this.ridesHide);
+    if (!ev.on) this.ridesHide = setTimeout(() => this.renderTracker(), 15000);
+    this.renderTracker();
+  }
+  ridesNow() {
+    const R = this.rides;
+    if (!R || this.g.world?.area !== 'weald') return null;
+    if (!R.on && performance.now() - R.at > 14500) return null;
+    if (R.on && performance.now() - R.at > 12000) return null; // (no word for a while: out of the wood or the event gone)
+    return R;
+  }
+  ridesLine(R) {
+    const n = R.cl.filter((c) => c > 0).length, left = Math.max(0, Math.round(R.left - (performance.now() - R.at) / 1000));
+    return R.on ? `<b>Clear the Rides</b> ${n}/${R.cl.length} clear · ${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}` : `<b>Clear the Rides</b> ${R.won ? 'won!' : 'over'}`;
+  }
+  ridesHtml(R) {
+    const n = R.cl.filter((c) => c > 0).length, down = R.dn.filter((d, i) => d && !R.cl[i]).length;
+    const left = Math.max(0, Math.round(R.left - (performance.now() - R.at) / 1000)), mm = `${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`;
+    const marks = R.cl.map((c, i) => `<i class="${c ? 'ok' : R.dn[i] ? 'dn' : ''}"></i>`).join('');
+    const head = `<div class="rides-h">Clear the Rides</div>`;
+    if (!R.on) return `<div class="rides-box ${R.won ? 'won' : 'lost'}">${head}<div class="rides-g">${R.won ? 'Every ride is clear! Open the Woodwrights’ chest at the camp.' : 'The gale dropped with rides still blocked.'}</div><div class="rides-marks">${marks}</div></div>`;
+    return `<div class="rides-box">${head}<div class="rides-marks">${marks}</div><div class="rides-g">- Rides clear: ${n}/${R.cl.length}${down ? ` (${down} blocked now)` : ''}</div><div class="rides-g">- Machines broken: ${R.br}</div><div class="rides-g">- The gale drops in ${mm}</div><div class="rides-g you">- Your part: ${R.you[0]} trunk${R.you[0] === 1 ? '' : 's'}, ${R.you[1]} machine${R.you[1] === 1 ? '' : 's'}${R.n ? ` · ${R.n} helping` : ''}</div></div>`;
   }
   renderTracker() {
     const box = $('.quest-tracker', this.root);
@@ -722,6 +759,11 @@ export class UI {
       mb.onclick = () => (canWalk ? walk(sid, openStory) : openStory());
       mb.oncontextmenu = (ev) => { ev.preventDefault(); openStory(); };
     }
+    // P15.3 Clear the Rides: the zone-wide tally at the very top of the tracker (and a small pill at the top on phones)
+    { const R = this.ridesNow(), html = R ? this.ridesHtml(R) : ''; if (html) box.insertAdjacentHTML('afterbegin', html);
+      let pill = $('.rides-pill', this.root);
+      if (R && IS_TOUCH) { if (!pill) { pill = el('div', 'rides-pill', ''); (this.hud || this.root).appendChild(pill); } pill.innerHTML = this.ridesLine(R); }
+      else pill?.remove(); }
     // "Travelling to: ..." with a way to stop, at the top of the tracker (and pinned under the quest pill on phones)
     if (walking) box.insertAdjacentHTML('afterbegin', `<div class="qw-note"><span>Travelling to: <b>${QUESTS[walking]?.name || ''}</b></span><button class="qw-stop">Stop</button></div>`);
     let pin = $('.qw-pin', this.root);
@@ -2619,7 +2661,7 @@ export class UI {
       if (d.repShop) opts.push(`<div class="dopt vendor" data-s="1"><b>$</b> ${d.repShop.mark ? 'Trade Makers\u2019 Marks for gear.' : `Show me the stores of ${/^the /i.test(FACTIONS[d.repShop.faction].name) ? FACTIONS[d.repShop.faction].name.replace(/^The /, 'the ') : 'the ' + FACTIONS[d.repShop.faction].name}.`}</div>`);
       // one line per port the man sails to (his default first); a port still shut is greyed with the chapter that opens it
       // (a liftwright's routes are kind 'lift': ridden, not sailed, and only waiting on their own chapter)
-      if (d.sail) for (const R of d.sail.routes || [{ to: d.sail.to, ok: d.sail.ok, need: 'm_c29_aboard' }]) { const haul = R.kind === 'haul' || d.sail.haul, lift = !haul && (R.kind === 'lift' || d.sail.lift), line = SAIL_LINE[R.to] || (haul ? `Ride the haul road to ${R.name}.` : lift ? `Ride the lift to ${R.name}.` : `Sail to ${R.name}.`); opts.push(R.ok ? `<div class="dopt travel" data-sl="1" data-to="${R.to}"><b>&gt;</b> ${line}</div>` : `<div class="dopt travel muted"><b>&gt;</b> ${haul ? `${line} The haulier is not wound yet.` : lift ? `${line} The lift is not running yet.` : R.need === 'm_c29_aboard' ? 'The ship is not ready to sail yet.' : `${line} The ship is not ready for that voyage yet.`} <span style="float:right;opacity:.8">${NEED_CH[R.need] || 'Main Story'}</span></div>`); }
+      if (d.sail) for (const R of d.sail.routes || [{ to: d.sail.to, ok: d.sail.ok, need: 'm_c29_aboard' }]) { const rope = R.kind === 'rope' || (!d.sail.haul && d.sail.rope), haul = !rope && (R.kind === 'haul' || d.sail.haul), lift = !haul && !rope && (R.kind === 'lift' || d.sail.lift), line = SAIL_LINE[R.to] || (rope ? `Ride the ropeway to ${R.name}.` : haul ? `Ride the haul road to ${R.name}.` : lift ? `Ride the lift to ${R.name}.` : `Sail to ${R.name}.`); opts.push(R.ok ? `<div class="dopt travel" data-sl="1" data-to="${R.to}"><b>&gt;</b> ${line}</div>` : `<div class="dopt travel muted"><b>&gt;</b> ${rope ? `${line} The rope is not wound yet.` : haul ? `${line} The haulier is not wound yet.` : lift ? `${line} The lift is not running yet.` : R.need === 'm_c29_aboard' ? 'The ship is not ready to sail yet.' : `${line} The ship is not ready for that voyage yet.`} <span style="float:right;opacity:.8">${NEED_CH[R.need] || 'Main Story'}</span></div>`); }
       if (d.runabout) opts.push('<div class="dopt travel" data-r="1"><b>+</b> Tell me about the runabouts.</div>');
       if (d.muster) opts.push('<div class="dopt travel" data-mu="1"><b>&gt;</b> Find me a group for a dungeon.</div>');
       if (d.homeshop) opts.push('<div class="dopt travel" data-hs="1"><b>+</b> Furnish my homestead.</div>');
@@ -3121,12 +3163,13 @@ export class UI {
   buildMinimapBase() {
     this.mapBase = this.paintBase(this.g.world.terrain);
     this.areaBase = {};
-    const RT = this.g.world.reachTerrain, IT = this.g.world.rimeTerrain, HT = this.g.world.heightsTerrain, TT = this.g.world.tidewaterTerrain, GT = this.g.world.rainwardTerrain;
+    const RT = this.g.world.reachTerrain, IT = this.g.world.rimeTerrain, HT = this.g.world.heightsTerrain, TT = this.g.world.tidewaterTerrain, GT = this.g.world.rainwardTerrain, WT = this.g.world.wealdTerrain;
     if (RT) this.reachBase = this.areaBase.reach = this.paintBase(RT, 'reach');
     if (IT) this.areaBase.rime = this.paintBase(IT, 'rime');
     if (HT) this.areaBase.heights = this.paintBase(HT, 'heights');
     if (TT) this.areaBase.tidewater = this.paintBase(TT, 'tidewater');
     if (GT) this.areaBase.rainward = this.paintBase(GT, 'rainward');
+    if (WT) this.areaBase.weald = this.paintBase(WT, 'weald');
   }
   // one pixel per terrain cell, painted from the splat maps with hill shading; the island in black sand, ash, basalt and soot
   paintBase(T, isle = false) {
@@ -3151,6 +3194,21 @@ export class UI {
         r += (146 - r) * cob; g += (148 - g) * cob; b += (152 - b) * cob;
         r += (170 - r) * lush; g += (206 - g) * lush; b += (230 - b) * lush;
         if (h < HEIGHTS.cloud + 6) { const n = Math.sin(wx * 0.07 + wz * 0.03) * Math.sin(wz * 0.05 - wx * 0.02); r = 220 + n * 10; g = 228 + n * 9; b = 238 + n * 7; }
+        const sh = (T.height(wx - 2, wz - 2) - T.height(wx + 2, wz + 2)) * 0.05, k2 = 1 + Math.max(-0.35, Math.min(0.35, sh));
+        img.data[k] = r * k2; img.data[k + 1] = g * k2; img.data[k + 2] = b * k2; img.data[k + 3] = 255;
+        continue;
+      }
+      if (isle === 'weald') {
+        // copper leaf litter, gold litter under the standards and the coppice, moss in the hollows, the rides' trodden earth,
+        // pale sawdust, the Makers' stone, the grey banks
+        const cob = B[k + 1] / 255;
+        r = 150; g = 92; b = 50;
+        r += (170 - r) * forest; g += (122 - g) * forest; b += (52 - b) * forest;
+        r += (90 - r) * lush; g += (104 - g) * lush; b += (58 - b) * lush;
+        r += (120 - r) * rock; g += (116 - g) * rock; b += (108 - b) * rock;
+        r += (126 - r) * path; g += (98 - g) * path; b += (72 - b) * path;
+        r += (214 - r) * sand; g += (196 - g) * sand; b += (156 - b) * sand;
+        r += (156 - r) * cob; g += (154 - g) * cob; b += (146 - b) * cob;
         const sh = (T.height(wx - 2, wz - 2) - T.height(wx + 2, wz + 2)) * 0.05, k2 = 1 + Math.max(-0.35, Math.min(0.35, sh));
         img.data[k] = r * k2; img.data[k + 1] = g * k2; img.data[k + 2] = b * k2; img.data[k + 3] = 255;
         continue;

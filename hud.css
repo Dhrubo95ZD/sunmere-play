@@ -2450,6 +2450,18 @@ i.on-ci { border: 0; width: 8px; height: 8px; margin: 0 6px; }
 .on-sep { margin: 4px 2px 1px; font-size: 11px; color: var(--metal-muted); border-top: 1px solid #ffffff14; padding-top: 3px; }
 .on-empty { margin: 8px; color: var(--metal-muted); }
 html.phone .hud .minimap .on-badge { font-size: 20px; line-height: 26px; padding: 3px 10px; }
+/* P15.3 Clear the Rides: the Russet Weald's open event tally (ui.js ridesHtml), at the top of the quest tracker */
+.rides-box { margin: 0 0 10px; padding: 6px 8px 7px; border-radius: 6px; background: linear-gradient(90deg, rgba(120,58,16,.6), rgba(120,58,16,.08)); border-left: 3px solid #e08a3a; }
+.rides-box.won { border-left-color: #7adf6a; background: linear-gradient(90deg, rgba(40,90,30,.6), rgba(40,90,30,.08)); }
+.rides-box.lost { border-left-color: #9a9a9a; background: linear-gradient(90deg, rgba(60,60,60,.55), rgba(60,60,60,.08)); }
+.rides-h { font-weight: bold; color: #ffc070; font-size: 13px; }
+.rides-g { font-size: 12px; color: #f0e6d8; }
+.rides-g.you { color: #ffe08a; }
+.rides-marks { display: flex; gap: 3px; margin: 3px 0 2px; }
+.rides-marks i { width: 14px; height: 6px; border-radius: 1px; background: rgba(255,255,255,.18); }
+.rides-marks i.dn { background: #e0702a; }
+.rides-marks i.ok { background: #7adf6a; }
+.rides-pill { display: none; }
 
 /* the potion slot (desktop and browser): just above the left end of the action bars, on its own key; drag a consumable onto it */
 .actionbars .potslot { position: absolute; left: -2px; bottom: calc(100% + 6px); width: 48px; height: 48px; border: 2px solid #a08a58; border-radius: 6px;

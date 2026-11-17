@@ -11,7 +11,7 @@
 // Content rules hold here as everywhere: no magic or spiritual words, nothing a player could take as worship.
 
 export const STORY_TITLE = 'The Engines of Sunmere';
-export const STORY_PARTS = { 1: 'The Engines of Sunmere', 2: 'Storm over the Highreach', 3: 'The Brass Concord', 4: 'Over the Pass', 5: 'The Iron Tide', 6: 'The Glass Waste', 7: 'The Long Quiet', 8: 'The Deepway', 9: 'The Drawing Office', 10: 'The Far Shore', 11: 'The Long Road North', 12: 'The Windward Heights', 13: 'The Tidewater Yards', 14: 'The Rainward Gorge' };
+export const STORY_PARTS = { 1: 'The Engines of Sunmere', 2: 'Storm over the Highreach', 3: 'The Brass Concord', 4: 'Over the Pass', 5: 'The Iron Tide', 6: 'The Glass Waste', 7: 'The Long Quiet', 8: 'The Deepway', 9: 'The Drawing Office', 10: 'The Far Shore', 11: 'The Long Road North', 12: 'The Windward Heights', 13: 'The Tidewater Yards', 14: 'The Rainward Gorge', 15: 'The Russet Weald' };
 
 // art: a painting in /ui/loading/<art>.webp shown on the chapter's title card and in the journal
 export const STORY = [
@@ -357,7 +357,7 @@ export const STORY = [
     ['m_c44_rope', 'Wasim laid the first new lift rope on the Makers’ walk, the full length of it in one piece.'],
     ['m_c44_after', 'The rope went round the cold cape on the ship and onto Mansur’s drum, and the cage went up on it to the Heights. The valley keeps the Makers’ works, and now it makes them too: a rope off their walk, a row in their ground, for whoever comes after.'],
   ] },
-  { id: 'c45', part: 14, name: 'By the Haul Road Each Spring', art: 'haulroad', blurb: 'Three young poles stand in the valley’s new row on the headland, and they are all the young poles there are. Kamal wants shelter rows on the Heights and board timber for a thirteenth wind engine, and the Tidewrights’ yard book says where the Makers’ poles came from: up the Rainward Gorge, by the haul road each spring.', steps: [
+  { id: 'c45', part: 14, name: 'By the Haul Road Each Spring', art: 'gorgeroad', blurb: 'Three young poles stand in the valley’s new row on the headland, and they are all the young poles there are. Kamal wants shelter rows on the Heights and board timber for a thirteenth wind engine, and the Tidewrights’ yard book says where the Makers’ poles came from: up the Rainward Gorge, by the haul road each spring.', steps: [
     ['m_c45_letter', 'Mansur gave you a letter Kamal sent down the lift, and you carried it round the cold cape to Talib: Kamal asks for young timber, shelter rows against the drifts on the Heights and board timber for a thirteenth wind engine, the first the valley means to draw and build itself.'],
     ['m_c45_rows', 'Talib sent you to Qasim at the new row, who showed you the bare ground under the old rows: a handful of poles seed themselves each year, and the three in the new row are all there are.'],
     ['m_c45_book', 'Qasim sent you to the Tide Mills, where Raed and Hisham found the line in the yard book: Poles, from the Seed Terraces up the Rainward Gorge, by the haul road each spring.'],
@@ -371,7 +371,7 @@ export const STORY = [
     ['q_c45_shelf', 'You dug the mud off the beds on the shelf across the river, where the young poles furthest on are growing.'],
     ['m_c45_spring', 'Bedman Mahir showed you the Seed Terraces, step on step of level beds, and the hill above them moving: the Makers’ drain adits have choked, and every heavy rain brings the hill down over the beds and the road.'],
   ] },
-  { id: 'c46', part: 14, name: 'The Drains', art: 'drains', blurb: 'The Makers never let the rain gather in the Rainward Gorge’s hill. Channels along the back of every step, drains down the stair lanes and stone adits into the hill carried it all away. Now the grates are choked, the channels broken, and every heavy rain stays in the hill until the hill moves.', steps: [
+  { id: 'c46', part: 14, name: 'The Drains', art: 'channelheads', blurb: 'The Makers never let the rain gather in the Rainward Gorge’s hill. Channels along the back of every step, drains down the stair lanes and stone adits into the hill carried it all away. Now the grates are choked, the channels broken, and every heavy rain stays in the hill until the hill moves.', steps: [
     ['m_c46_drains', 'Mahir sent you up the stair lanes to Drainman Mukhtar at the adit pads behind the top steps, who has kept the drains alone since his father died.'],
     ['q_c46_grates', 'You lifted the four choked grates where the steps’ channels drop into the stair lanes’ drains and dug the mud out of the sumps under them.'],
     ['q_c46_borers', 'You broke the drain borers boring new holes into the steps to an old plan, letting the water down into the beds instead of out of the hill.'],
@@ -380,7 +380,7 @@ export const STORY = [
     ['q_c46_channel', 'You set the lining stones back at the three channel heads behind the top steps, and the channels ran along the steps and down the lanes again.'],
     ['m_c46_choked', 'The channels ran and the grates drank, and still nothing came out of the three adits: Mukhtar found them choked deep inside the hill.'],
   ] },
-  { id: 'c47', part: 14, name: 'Beds Under the Mud', art: 'drains', blurb: 'The channels run again, but the adits that should carry the water out of the hill are choked inside, and the last rain brought the hill down over the beds. Something in the adits is still boring, and still packing them with spoil.', steps: [
+  { id: 'c47', part: 14, name: 'Beds Under the Mud', art: 'aditmouth', blurb: 'The channels run again, but the adits that should carry the water out of the hill are choked inside, and the last rain brought the hill down over the beds. Something in the adits is still boring, and still packing them with spoil.', steps: [
     ['m_c47_beds', 'Mukhtar sent you back down to Mahir, who showed you the beds the last rain buried on the steps.'],
     ['q_c47_beds', 'You dug four beds out from under the mud on the steps and lifted the seedlings clear.'],
     ['q_c47_cutters', 'You broke the terrace cutters undercutting the steps, cutting new terraces to an old plan under the ones the Seedwrights keep.'],
@@ -391,7 +391,7 @@ export const STORY = [
     ['q_c47_adits', 'With four companions you went into the Drain Adits, past the Spoil Tipper and the Sump Ram, and stopped the Adit Driver in the Collector.'],
     ['m_c47_dry', 'Water ran clear out of all three adits, and the hill began to drain. But at the head of the gorge the hill still slides, where the Makers’ Terrace Engine cuts on to its old plan.'],
   ] },
-  { id: 'c48', part: 14, name: 'The Hill Holds', art: 'haulroad', blurb: 'The drains run again, and still the hill above the Seed Terraces moves. Up at the head of the gorge the Makers’ Terrace Engine is still cutting the hill away to a plan set down a lifetime ago, undercutting every step below it.', steps: [
+  { id: 'c48', part: 14, name: 'The Hill Holds', art: 'firstpoles', blurb: 'The drains run again, and still the hill above the Seed Terraces moves. Up at the head of the gorge the Makers’ Terrace Engine is still cutting the hill away to a plan set down a lifetime ago, undercutting every step below it.', steps: [
     ['m_c48_head', 'Mahir sent you up the gorge to Slipwatch Ghalib at the Slip: the drains run, and the hill still moves, because at the head of the gorge the Makers’ Terrace Engine is still cutting.'],
     ['q_c48_wardens', 'You broke the slope wardens staking out the Terrace Engine’s next terrace across the Slip.'],
     ['q_c48_plates', 'You took the bronze plan plates off the gorge’s machines, the steps of the old cutting plan they still carried.'],
@@ -405,9 +405,24 @@ export const STORY = [
     ['q_c48_nursery', 'On the headland, in the lane beside the valley’s new row, you laid out three nursery beds with seed from the gorge, straight and level like the Makers’.'],
     ['m_c48_after', 'The poles went round the cold cape on the ship and up Mansur’s lift to the Heights, where Kamal set out the first shelter row against the drifts. The hill holds, and the valley grows its own poles now, a Makers’ work copied in its own ground.'],
   ] },
+  { id: 'c49', part: 15, name: 'When the Count Comes Round', art: 'ropecrossing', blurb: 'Kamal has drawn the thirteenth wind engine, the first the valley means to build itself, and the drawing stops at the windshaft and the brake wheel. The Makers made those of oak seasoned twenty winters, and the valley has no oak that old, nor any seasoned at all. Cutwatch Yaqub’s cutting book says where the Makers’ oak came from: over the ridge, by the rope.', steps: [
+    ['m_c49_drawing', 'Kamal showed you his drawing of the thirteenth wind engine, five boards on the valley’s own hill, stopped at the windshaft and the brake wheel: the Makers made those of oak seasoned twenty winters, and the valley has none. On the last page of his cutting book Cutwatch Yaqub found the line: Oak, from the Long Sheds over the ridge, by the rope, when the count comes round.'],
+    ['m_c49_page', 'Yaqub found the ropeway’s page in the cutting book: the Makers’ upper station at the head of the Slip, its winding drum, and the car that carried the oak over the ridge. He sent you down the gorge to Kareem for men and ropes.'],
+    ['m_c49_crew', 'Kareem brought the Seedwrights up the haul road with ropes, shovels and grease, and sent you ahead to Wheelman Luqman, who has climbed to the old station every spring of his life to look at the rope.'],
+    ['q_c49_clear', 'You and the Seedwrights dug a lifetime of slip mud and fallen roof timber off the upper station.'],
+    ['q_c49_clamps', 'You gathered the car’s rope clamps the slips had carried down across the Slip.'],
+    ['q_c49_wind', 'You knocked the chocks out from under the station’s winding drum and wound it full: a Makers’ rope machine wound to work, as the haulier was.'],
+    ['m_c49_rope', 'Yaqub wrote the day into the cutting book under the Makers’ last line, and Luqman took the brake.'],
+    ['q_c49_ride', 'The car carried you over the ridge, out of the rain and down into a dry wood in autumn. Halfway down it stopped on a seized sheave until the crew climbed the tower and freed it, and at the foot Ropeman Saeed was waiting on the pad.'],
+    ['q_c49_limbs', 'You sawed the limbs the last gale threw down along the station ride into lengths and stacked them at its edge.'],
+    ['m_c49_camp', 'Saeed sent you to Shed Master Ridwan at the Woodwrights’ camp: six men in a wood the Makers cut for six hundred.'],
+    ['q_c49_wedges', 'You gathered the felling wedges the gale had scattered round the camp.'],
+    ['m_c49_pits', 'Ridwan sent you to Sawyer Imran at the saw pits, who saws what the Woodwrights fell by hand: green wood, every board of it, and none seasoned.'],
+    ['m_c49_count', 'Stackman Thabit showed you the Long Sheds, a quarter mile of them, their louvres jammed shut for a lifetime and the oak inside going to damp in the dark; and up on the Standards the Coppice Engine, which lost its count a lifetime ago, fells every winter instead of every twentieth.'],
+  ] },
 ];
 // shown in the journal and the tracker once every step is done
-export const STORY_NEXT = 'Part Fourteen, the Rainward Gorge, is complete: the valley wound a Makers’ log haulier to work and rode the haul road up into the gorge, cleared the Makers’ drains and stopped the Terrace Engine in the Upper Cutting, and the hill holds through the storms. The first load of young poles in a lifetime has gone down the haul road to the Sound and up the lift to the Heights, and the valley has laid out a nursery of its own. More of the tale comes in a future update. Part Thirteen, the Tidewater Yards, is complete: the Tide Engine is stopped, the Makers’ Sea Gate shuts on the flood and opens on the ebb again, the creeks run fresh, the valley has planted a row of its own on the headland, and the first new lift rope laid on the Makers’ walk carries the cage to the Heights. Part Twelve, the Windward Heights, is complete. Part Eleven, the Long Road North, is complete too: the Floodgate and the Great Dam’s Heart are stopped, and the men of the Rime Steps keep the dams in repair. On the Heights all twelve wind engines turn, the Great Pump lifts meltwater into the cisterns, and the Makers’ Rest is lit again. The Makers left their works in order for whoever came next; the valley keeps them, and now it makes them too, for whoever comes after. Until then: the Upper Cutting and the Drain Adits, the Sea Gate, the Mill Races, the Makers’ Rest and the Pump Works on Heroic, the Great Dam, the Sluice Galleries, the First Furnace and the Ore Galleries.';
+export const STORY_NEXT = 'Part Fifteen, the Russet Weald, has begun: Kamal has drawn the thirteenth wind engine, the valley wound the Makers’ ropeway at the head of the Slip and rode it over the ridge into the Russet Weald, and the Woodwrights showed the Long Sheds, their louvres jammed shut and the oak going to damp, while the Coppice Engine fells out of its count on the Standards. Chapter 50, The Long Sheds, comes in a future update. Part Fourteen, the Rainward Gorge, is complete: the valley wound a Makers’ log haulier to work and rode the haul road up into the gorge, cleared the Makers’ drains and stopped the Terrace Engine in the Upper Cutting, and the hill holds through the storms. The first load of young poles in a lifetime has gone down the haul road to the Sound and up the lift to the Heights, and the valley has laid out a nursery of its own. Part Thirteen, the Tidewater Yards, is complete: the Tide Engine is stopped, the Makers’ Sea Gate shuts on the flood and opens on the ebb again, the creeks run fresh, the valley has planted a row of its own on the headland, and the first new lift rope laid on the Makers’ walk carries the cage to the Heights. Part Twelve, the Windward Heights, is complete. Part Eleven, the Long Road North, is complete too: the Floodgate and the Great Dam’s Heart are stopped, and the men of the Rime Steps keep the dams in repair. On the Heights all twelve wind engines turn, the Great Pump lifts meltwater into the cisterns, and the Makers’ Rest is lit again. The Makers left their works in order for whoever came next; the valley keeps them, and now it makes them too, for whoever comes after. Until then: the Upper Cutting and the Drain Adits, the Sea Gate, the Mill Races, the Makers’ Rest and the Pump Works on Heroic, the Great Dam, the Sluice Galleries, the First Furnace and the Ore Galleries.';
 
 // the story's own quests: mostly "talk" steps that carry the tale from one place to the next ({ talk: 1 } is done the
 // moment you accept it; hand it in to the turn-in NPC)
@@ -1289,6 +1304,56 @@ export const STORY_QUESTS = {
   m_c48_after: { name: 'The Hill Holds', giver: 'n_tw_row1', turnin: 'n_wh_kamal', lvl: 65, goal: talk, xp: 9000, gold: 5600, rewards: ['r_c48_mantle', 'r_c48_cloak'], ach: true,
     text: 'The other half of the load goes round the cold cape on the ship and up Mansur’s lift to the Heights. Go with it, and put the poles in Kamal’s hands.',
     done: 'Young poles, up the lift. ... Look at them. Straight, every one. We will plant the first shelter row along the west edge tomorrow, against the drifts, and in ten winters there will be board timber for the thirteenth engine. The hill in the gorge holds, the Makers’ nursery sends its poles down again, and now the valley raises its own: a Makers’ work, copied in our own ground.' },
+  // ---- Part Fifteen: The Russet Weald
+  // Chapter 49: When the Count Comes Round (levels 65-66). Kamal's drawing of the thirteenth wind engine stops at the
+  // windshaft and the brake wheel (oak seasoned twenty winters, and the valley has none); the last page of Cutwatch Yaqub's
+  // cutting book names the Long Sheds over the ridge, and its ropeway page the Makers' upper station at the head of the Slip.
+  // Kareem brings the Seedwrights up; with Wheelman Luqman you clear the station (rgstation), gather the car's rope clamps off
+  // the Slip (c49_clamp) and wind its drum (rgwind: a Makers' rope machine wound to work, as the haulier was); Luqman takes
+  // the brake (m_c49_rope opens the ropeway, SAIL.to.weald), the car rides over the ridge out of the rain into the dry autumn
+  // wood and stops halfway on a seized sheave until the crew frees it; at the Ropeway Foot you clear the gale's limbs off the
+  // station ride (wdlimb), gather the Woodwrights' felling wedges (c49_wedge), and Imran and Thabit show you green wood and
+  // the jammed sheds, and the Coppice Engine felling out of its count (Chapter 50). Men only; the gale and the damp are the
+  // trouble. Quest experience carries a level 65 hero to about 66 and a half.
+  m_c49_drawing: { name: 'The Thirteenth Engine', giver: 'n_wh_kamal', turnin: 'n_rg_yaqub', lvl: 65, goal: talk, xp: 7500, gold: 5600, rewards: [],
+    text: 'Look at this. The thirteenth engine, drawn in the valley for the valley: five boards from the new rows, a stone tower on our own hill. And here the drawing stops, at the windshaft and the brake wheel. The Makers made those of oak seasoned twenty winters, so they never twist and never split, and we have no oak that old, nor any seasoned at all. Nadir sent word with the poles that Yaqub at the cutting keeps a book from the Makers’ time. Take the drawing down to him and ask where the Makers got their oak.',
+    done: 'Kamal’s drawing? Let me see it. ... A windshaft. The cutting book has a timber page, my grandfather said, at the very back. Here. The last line in the Makers’ hand: Oak, from the Long Sheds over the ridge, by the rope, when the count comes round. Over the ridge. Nobody from the gorge has been over the ridge in my lifetime.' },
+  m_c49_page: { name: 'By the Rope', giver: 'n_rg_yaqub', turnin: 'n_rg_kareem', lvl: 65, goal: talk, xp: 7500, gold: 5600, rewards: [],
+    text: 'There is a page for the rope too, a few back. The Makers had a ropeway from the head of the Slip, up the cliff and over the ridge: an upper station on the slope above us, a winding drum, and a car on the rope. The station is still up there under a lifetime of mud. Clearing it is work for many hands. Go down to Kareem at the road head and ask him to bring the Seedwrights up.',
+    done: 'The old station above the Slip? Luqman has climbed up to it every spring since he was a boy, and nobody has ever gone with him. We will come, all of us, with ropes and shovels and a pot of grease. You go on ahead.' },
+  m_c49_crew: { name: 'The Upper Station', giver: 'n_rg_kareem', turnin: 'n_rg_luqman', lvl: 65, goal: talk, xp: 7500, gold: 5600, rewards: [],
+    text: 'Go back up the haul road to the head of the Slip. The station stands on the slope beside the cutting, under the cliff. Luqman will be there before you: he goes up whenever he can. Tell him we are coming.',
+    done: 'All of them? Coming up here? Then the rope will turn after all. Look at it: the mud off every slip for a lifetime has come down against this station, and half its roof has fallen in. The rope is sound. I have looked at it every spring.' },
+  q_c49_clear: { name: 'A Lifetime of Mud', giver: 'n_rg_luqman', turnin: 'n_rg_luqman', lvl: 65, goal: { use: 'rgstation', n: 3 }, xp: 12500, gold: 5700, rewards: ['r_c49_gloves', 'r_c49_boots'],
+    text: 'Three heaps lie on the station: slip mud and the roof timbers that came down with it, on the landing and against the bull wheel’s frame. Dig the mud out and stack the timbers along the wall, straight, so the car can come in and the drum can turn.',
+    done: 'Clear. Look at the floor: the Makers’ planks, still square under all that. The Seedwrights are at the drum already.' },
+  q_c49_clamps: { name: 'Rope Clamps', giver: 'n_rg_luqman', turnin: 'n_rg_luqman', lvl: 65, goal: { gather: 'c49_clamp', n: 6 }, xp: 12500, gold: 5700, rewards: ['r_c49_legs'],
+    text: 'The car holds the rope with square iron clamps, and over the years they fell off it one by one and the slips carried them away down the hill. They lie all over the Slip between the mud lanes. Bring me six, and I will bolt them back on the car.',
+    done: 'Six, and the bolts still turn. The car will hold the rope now.' },
+  q_c49_wind: { name: 'Wind the Drum', giver: 'n_rg_luqman', turnin: 'n_rg_yaqub', lvl: 65, goal: { use: 'rgwind', n: 1 }, xp: 13000, gold: 5800, rewards: ['r_c49_hood'],
+    text: 'The winding drum stands in front of the station, chocked as the Makers left it. Knock out the chocks and wind it full from the crank. It is a long winding. Then go and tell Yaqub: he will want the day in his book.',
+    done: 'I heard it from the cutting: a long creak, and then the rope taking up. The haulier was the first machine the valley wound to work. This is the second.' },
+  m_c49_rope: { name: 'The Brake', giver: 'n_rg_yaqub', turnin: 'n_rg_luqman', lvl: 65, goal: talk, xp: 7500, gold: 5700, rewards: [],
+    text: 'There. The day, under the Makers’ last line, in my hand. Go back up to Luqman. He has waited his whole life to take that brake off.',
+    done: 'Brake off, and the drum holds. The car is at the station, swinging on its hanger. Climb in when you are ready. I will let you down over the ridge.' },
+  q_c49_ride: { name: 'Over the Ridge', giver: 'n_rg_luqman', turnin: 'n_wd_saeed', lvl: 66, goal: { reach: 'ropewayfoot' }, xp: 11000, gold: 5800, rewards: [],
+    text: 'Ride the car over the ridge. The rope goes up the cliff into the cloud and over the top, and comes down on the dry side of the range, where the Long Sheds are. Whoever keeps the far station, if anyone does, will be at the foot of the rope.',
+    done: 'The car! I have greased the sheaves down here all my life, and it never once came down. I am Saeed, the ropeman, as my father was. You stopped halfway? That tower’s sheave has been seized since before I was born. Welcome to the Weald.' },
+  q_c49_limbs: { name: 'Limbs on the Ride', giver: 'n_wd_saeed', turnin: 'n_wd_saeed', lvl: 66, goal: { use: 'wdlimb', n: 3 }, xp: 13000, gold: 5800, rewards: ['r_c49_coat'],
+    text: 'The last gale threw three great limbs down along the ride from this pad to the camp. Saw each one into lengths and stack them at the ride’s edge, along it, so the carts can come up to the rope again.',
+    done: 'The ride is open to the station. If oak comes down that rope again, it comes down this ride first.' },
+  m_c49_camp: { name: 'The Woodwrights', giver: 'n_wd_saeed', turnin: 'n_wd_ridwan', lvl: 66, goal: talk, xp: 8000, gold: 5800, rewards: [],
+    text: 'Ridwan is the shed master, as his fathers were, though the sheds have been shut all his life. He keeps the camp. Go and tell him the rope has come down.',
+    done: 'The rope came down? Then somebody over the ridge remembers us. Six of us, in a wood the Makers cut for six hundred. We are the Woodwrights, what is left of them. We fell by hand what the engine leaves standing, and that is all we do.' },
+  q_c49_wedges: { name: 'Felling Wedges', giver: 'n_wd_ridwan', turnin: 'n_wd_ridwan', lvl: 66, goal: { gather: 'c49_wedge', n: 6 }, xp: 13500, gold: 5900, rewards: ['r_c49_axe'],
+    text: 'We fell with axe and wedge, the old way. The gale threw the wedge box off its bench and scattered the wedges all round the camp. Find six. Without them a cut closes on the saw.',
+    done: 'Six. Every one of these has been driven into a thousand cuts. Now, you came for oak. Go and see what Imran is sawing.' },
+  m_c49_pits: { name: 'Green Wood', giver: 'n_wd_ridwan', turnin: 'n_wd_imran', lvl: 66, goal: talk, xp: 8000, gold: 5900, rewards: [],
+    text: 'Imran is at the saw pits with this week’s log. Go and ask him if anything he saws would hold a windshaft.',
+    done: 'A windshaft? From this? Feel the board: wet through. Everything we fell is green, cut this autumn, and green oak twists as it dries. The Makers put their oak up in the Long Sheds for twenty winters before it was fit for a shaft. Thabit keeps the sheds. Ask him why we cannot.' },
+  m_c49_count: { name: 'When the Count Comes Round', giver: 'n_wd_imran', turnin: 'n_wd_thabit', lvl: 66, goal: talk, xp: 14500, gold: 6200, rewards: ['r_c49_charm', 'r_c49_mantle', 'r_c49_cloak'], ach: true,
+    text: 'Walk east along the main ride to the Long Sheds. Thabit will be there, by the first shed. He knows the count better than any of us.',
+    done: 'Look along them. A quarter mile of sheds, and every stack in them is the Makers’ oak, put up to season twenty winters. But the louvres have been jammed shut for a lifetime, and the damp has had it all in the dark. And the count? Up on the Standards the Coppice Engine fells the wood on a twenty-winter round. It lost its count a lifetime ago. It fells every winter now instead of every twentieth, half-cuts the great standards and leaves them standing dead, and every gale throws them across the rides. The count never comes round. Open the sheds, and stop that engine, and it might.' },
 };
 
 // existing quests that change hands so the story flows from one person to the next: [quest, new giver]
@@ -1414,6 +1479,9 @@ export const STORY_SCENES = {
   q_c46_channel: 'Water comes over the channel head behind the top step in a clear sheet, turns square into the stair lane and runs down its drain past every grate, step after step, to the haul road and the river.',
   m_c47_mouth: 'Mukhtar digs into the choked mouth of the middle adit by lamplight, setting a timber prop at every step, until the mud slumps away inside and the dark square of the adit opens under its flat stone lintel.',
   m_c47_dry: 'Clear water runs out of all three adit mouths behind the top steps and down every stair lane. The steps stand dry in the evening light. Far up the gorge, past the upper falls, a fresh scar of red mud still moves on the Slip.',
+  q_c49_wind: 'In front of the upper station the winding drum takes the crank turn by turn. The rope comes up out of the mud along its whole length, shedding leaves and silt, and runs up taut over the towers into the cloud on the cliff, and the car on its one straight hanger swings once and is still.',
+  q_c49_ride: 'The car swings out of the station and climbs the rope over the head of the Slip, up the cliff and into the cloud and the rain. Over the ridge the rain falls away behind, and the rope runs down over a dry wood in autumn, copper and gold leaf on grey trunks and mist lying in the hollows. Halfway down a sheave on a tower seizes and the car stops, swaying, until the crew climb the tower and free it, and at last the car comes down onto the pad at the ropeway foot.',
+  m_c49_count: 'Evening at the Long Sheds. Low sun through the copper leaf along a quarter mile of shut timber walls, every louvre jammed, and the smell of damp oak. Far up the ridge, on the Standards, an engine thuds once in the quiet and a great oak comes down across a ride.',
 };
 
 // filled by applyStory(): every step in order, and where each quest sits in the story

@@ -270,3 +270,5 @@ html.mobile.touch .hud .minimap .on-badge { position: relative; }
 html.mobile.touch .on-pop { width: min(340px, calc(100vw - 16px)); }
 html.mobile.touch .on-pop button { min-height: 28px; padding: 3px 9px; font-size: 12px; }
 html.mobile.touch .on-l1 { min-height: 26px; }
+/* P15.3 Clear the Rides on phones: a small pill at the top middle while it runs (the tracker is folded away) */
+html.mobile.touch .hud .rides-pill { display: block; position: absolute; left: 50%; transform: translateX(-50%); top: calc(var(--st) + 6px); z-index: 5; pointer-events: none; padding: 4px 10px; border-radius: 12px; background: rgba(90,40,12,.82); color: #f6e8d4; font-size: 12px; white-space: nowrap; border: 1px solid #e08a3a; }

@@ -7,9 +7,10 @@ import { RIME, inRime } from './rime.js';
 import { HEIGHTS, inHeights } from './heights.js';
 import { TIDEWATER, inTidewater } from './tidewater.js';
 import { RAINWARD, inRainward } from './rainward.js';
+import { WEALD, inWeald } from './weald.js';
 import { AREAS, AREA_BY_ID, islandAt } from './areas.js';
 import { houseFloor } from './houses.js'; // a circular import: houses.js reads heightAt / islandAt only when first asked
-export { REACH, inReach, RIME, inRime, HEIGHTS, inHeights, TIDEWATER, inTidewater, RAINWARD, inRainward, AREAS, AREA_BY_ID, islandAt };
+export { REACH, inReach, RIME, inRime, HEIGHTS, inHeights, TIDEWATER, inTidewater, RAINWARD, inRainward, WEALD, inWeald, AREAS, AREA_BY_ID, islandAt };
 
 // The overworld is a rectangle: the old 640 m valley (-320..320) plus a strip to the north-west (to -440) where a pass
 // climbs through the mountains to the far valley (Part Four). The origin stays put, so every coordinate in the data holds.
@@ -94,6 +95,10 @@ export const ZONES = [
   { id: 'gorgefoot', name: 'The Gorge Foot', area: 'rainward', x: 428, z: -2990, r: 0, lx: 428, lz: -3010, level: '60-61' },
   { id: 'seedterraces', name: 'The Seed Terraces', area: 'rainward', x: 528, z: -3000, r: 0, lx: 528, lz: -3012, level: '62-63' },
   { id: 'slip', name: 'The Slip', area: 'rainward', x: 622, z: -3010, r: 0, lx: 622, lz: -3020, level: '64-65' },
+  // Part Fifteen: the Russet Weald, an old autumn hardwood forest over the ridge with its own terrain box (shared/weald.js)
+  { id: 'ropewayfoot', name: 'The Ropeway Foot', area: 'weald', x: 432, z: -3420, r: 0, lx: 432, lz: -3438, level: '65-66' },
+  { id: 'longsheds', name: 'The Long Sheds', area: 'weald', x: 532, z: -3480, r: 0, lx: 532, lz: -3462, level: '67-68' },
+  { id: 'standards', name: 'The Standards', area: 'weald', x: 622, z: -3500, r: 0, lx: 622, lz: -3482, level: '69-70' },
 ];
 // which outdoor area a point belongs to: the dungeons (x 700 and on), one of the island-style AREAS ('reach', 'rime', 'heights'), or the valley.
 // Nothing walks between areas: they change only by teleport (doors, the ship, the compass, caravans)

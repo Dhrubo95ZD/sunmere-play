@@ -17,6 +17,7 @@ import { RIME, rimeHeight, rimeGround, rimeWater, rimeWaterKind, rimeDeck, rimeZ
 import { HEIGHTS, heightsHeight, heightsGround, heightsWater, heightsWaterKind, heightsDeck, heightsZone, heightsGap } from './heights.js';
 import { TIDEWATER, tidewaterHeight, tidewaterGround, tidewaterWater, tidewaterWaterKind, tidewaterDeck, tidewaterZone, tidewaterGap } from './tidewater.js';
 import { RAINWARD, rainwardHeight, rainwardGround, rainwardWater, rainwardWaterKind, rainwardDeck, rainwardZone, rainwardGap } from './rainward.js';
+import { WEALD, wealdHeight, wealdGround, wealdWater, wealdWaterKind, wealdDeck, wealdZone, wealdGap } from './weald.js';
 
 export const inBox = (B, x, z, pad = 0) => x >= B.minX + pad && x <= B.maxX - pad && z >= B.minZ + pad && z <= B.maxZ - pad;
 
@@ -31,6 +32,9 @@ export const AREAS = [
   // Part Fourteen: a deep wet gorge inland of the Sound, reached by the haul road from the Tide Mills; its rain comes and goes
   // on the world clock (shared/rainward.js), the same for every player, like the Sound's tide
   { id: 'rainward', name: 'The Rainward Gorge', box: RAINWARD, height: rainwardHeight, ground: rainwardGround, water: rainwardWater, waterKind: rainwardWaterKind, zone: rainwardZone, gap: rainwardGap, deck: rainwardDeck },
+  // Part Fifteen: an old autumn hardwood forest over the ridge above the Gorge's Slip, reached by the Makers' ropeway; its gale
+  // comes and goes on the world clock (shared/weald.js), the same for every player, like the Gorge's rain (no water here)
+  { id: 'weald', name: 'The Russet Weald', box: WEALD, height: wealdHeight, ground: wealdGround, water: wealdWater, waterKind: wealdWaterKind, zone: wealdZone, gap: wealdGap, deck: wealdDeck },
 ];
 export const AREA_BY_ID = Object.fromEntries(AREAS.map((A) => [A.id, A]));
 

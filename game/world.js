@@ -13,6 +13,8 @@ import { TIDEWATER, tidewaterHeight, tidewaterGround } from '/sunmere-play/share
 import { buildTidewater } from './tidewaterLayout.js';
 import { RAINWARD, rainwardHeight, rainwardGround } from '/sunmere-play/shared/rainward.js';
 import { buildRainward } from './rainwardLayout.js';
+import { WEALD, wealdHeight, wealdGround } from '/sunmere-play/shared/weald.js';
+import { buildWeald } from './wealdLayout.js';
 import { WORLD, ZONES, LAKE, ROADS, WATERFALL, roadDist, desertWeight, gladeWeight, forestWeight, highreachWeight, alpineWeight, snowWeight, coastWeight, flatsWeight, wildWeight, edgeE, inVillage, streamInfo } from '/sunmere-play/shared/terrain.js';
 import { buildVillage } from './villageLayout.js';
 import { buildQuarry } from './quarryLayout.js';
@@ -99,8 +101,9 @@ export class World {
     this.heightsGroup = new THREE.Group(); this.heightsGroup.name = 'heights'; this.heightsGroup.visible = false;
     this.tidewaterGroup = new THREE.Group(); this.tidewaterGroup.name = 'tidewater'; this.tidewaterGroup.visible = false;
     this.rainwardGroup = new THREE.Group(); this.rainwardGroup.name = 'rainward'; this.rainwardGroup.visible = false;
-    this.areaGroups = { valley: this.valleyGroup, reach: this.reachGroup, rime: this.rimeGroup, heights: this.heightsGroup, tidewater: this.tidewaterGroup, rainward: this.rainwardGroup };
-    this.group.add(this.valleyGroup, this.reachGroup, this.rimeGroup, this.heightsGroup, this.tidewaterGroup, this.rainwardGroup);
+    this.wealdGroup = new THREE.Group(); this.wealdGroup.name = 'weald'; this.wealdGroup.visible = false;
+    this.areaGroups = { valley: this.valleyGroup, reach: this.reachGroup, rime: this.rimeGroup, heights: this.heightsGroup, tidewater: this.tidewaterGroup, rainward: this.rainwardGroup, weald: this.wealdGroup };
+    this.group.add(this.valleyGroup, this.reachGroup, this.rimeGroup, this.heightsGroup, this.tidewaterGroup, this.rainwardGroup, this.wealdGroup);
     this.area = 'valley';
     onProgress(0.1, 'Shaping the land…');
     this.terrain = new Terrain();
@@ -125,7 +128,11 @@ export class World {
     this.rainwardTerrain = new Terrain({ minX: RAINWARD.minX, maxX: RAINWARD.maxX, minZ: RAINWARD.minZ, maxZ: RAINWARD.maxZ, cell: 1.25, height: rainwardHeight, ground: rainwardGround, chunks: 6, segs: 40, theme: 'rainward' });
     this.terrain.alts.push(this.rainwardTerrain);
     this.rainwardGroup.add(this.rainwardTerrain.group);
-    this.areaTerrains = { valley: this.terrain, reach: this.reachTerrain, rime: this.rimeTerrain, heights: this.heightsTerrain, tidewater: this.tidewaterTerrain, rainward: this.rainwardTerrain };
+    // the Russet Weald: a seventh box, copper and gold leaf litter, trodden rides, pale sawdust, grey banks (the terrain's weald theme)
+    this.wealdTerrain = new Terrain({ minX: WEALD.minX, maxX: WEALD.maxX, minZ: WEALD.minZ, maxZ: WEALD.maxZ, cell: 1.25, height: wealdHeight, ground: wealdGround, chunks: 6, segs: 40, theme: 'weald' });
+    this.terrain.alts.push(this.wealdTerrain);
+    this.wealdGroup.add(this.wealdTerrain.group);
+    this.areaTerrains = { valley: this.terrain, reach: this.reachTerrain, rime: this.rimeTerrain, heights: this.heightsTerrain, tidewater: this.tidewaterTerrain, rainward: this.rainwardTerrain, weald: this.wealdTerrain };
     onProgress(0.35, 'Filling the lake…');
     this.lake = createLake(this.terrain, engine.sunDir);
     this.valleyGroup.add(this.lake);
@@ -180,6 +187,8 @@ export class World {
     this.buildTidewater();
     onProgress(0.795, 'Up the haul road…');
     this.buildRainward();
+    onProgress(0.797, 'Over the ridge by the rope…');
+    this.buildWeald();
     onProgress(0.8, 'Digging the dungeons…');
     this.buildDungeons();
     this.shafts = createShafts(this.shaftSpots, engine.sunDir);
@@ -192,7 +201,7 @@ export class World {
   // cut-away) and their detail (shown by distance), house interiors, doors, the homestead's furnishings and the valley's
   // build stages (both toggled and moved: userData.cols), water, grass, shafts, the light pools and lights
   _runtimeSet() {
-    const S = new Set([this.grass, this.lake, this.sea, this.reachSea, this.rimeSea, this.rimeChannels, this.tidewaterSea, ...(this.tidewaterRuntime || []), ...(this.rainwardRuntime || []), this.waterfall, this.stream, this.shafts, ...this.lightPool]);
+    const S = new Set([this.grass, this.lake, this.sea, this.reachSea, this.rimeSea, this.rimeChannels, this.tidewaterSea, ...(this.tidewaterRuntime || []), ...(this.rainwardRuntime || []), ...(this.wealdRuntime || []), this.waterfall, this.stream, this.shafts, ...this.lightPool]);
     for (const g of this.houseGroups.values()) { S.add(g.shell); S.add(g.detail); }
     for (const o of Object.values(this.home || {})) for (const x of Array.isArray(o) ? o : [o]) if (x) S.add(x);
     for (const list of this.valleyParts?.parts || []) for (const x of list) S.add(x);
@@ -219,7 +228,7 @@ export class World {
     try {
       for (const r of roots) this.shadowProxies.push(buildShadowProxies(r, { exclude: ex, dynamic: dynList, freeArrays: IS_MOBILE }));
     } finally { for (const [o, up] of opened) o.userData.update = up; for (const r of hidden) r.visible = false; }
-    for (const s of [this.scatter, this.reachScatter, this.rimeScatter, this.heightsScatter, this.tidewaterScatter, this.rainwardScatter]) if (s?.buildShadowProxies) this.shadowProxies.push(s.buildShadowProxies());
+    for (const s of [this.scatter, this.reachScatter, this.rimeScatter, this.heightsScatter, this.tidewaterScatter, this.rainwardScatter, this.wealdScatter]) if (s?.buildShadowProxies) this.shadowProxies.push(s.buildShadowProxies());
   }
 
   // D1: freeze the static world's matrices (client/game/freeze.js): computed once, then the scene walk skips them. Everything
@@ -230,7 +239,7 @@ export class World {
     const run = this._runtimeSet(), ex = this._runtimeExclude(run);
     // (the world and area groups hold lights and fires, so they keep walking and only their static children freeze)
     const dynamic = [...this.dyn, ...run];
-    for (const s of [this.scatter, this.reachScatter, this.rimeScatter, this.heightsScatter, this.tidewaterScatter, this.rainwardScatter]) if (s?.dynamics) dynamic.push(...s.dynamics);
+    for (const s of [this.scatter, this.reachScatter, this.rimeScatter, this.heightsScatter, this.tidewaterScatter, this.rainwardScatter, this.wealdScatter]) if (s?.dynamics) dynamic.push(...s.dynamics);
     this.freezeInfo = freezeStatic(this.group, { dynamic, exclude: ex });
     // a hidden area or dungeon (every one but the place you are in) is not walked for matrices at all: nothing of it is
     // drawn, and its static parts keep the matrices they had; the walk on the frame it shows again brings it up to date
@@ -462,6 +471,16 @@ export class World {
     this.rainwardScatter.colliders = this.scatter.colliders;
     buildRainward(this, this.rainwardScatter);
     this.rainwardGroup.add(this.rainwardScatter.build());
+  }
+
+  // the Russet Weald: the ropeway's station and towers, the camp and saw pits, the rides, the Long Sheds and log decks, the
+  // coppice and the standards, the fall lines, the great ride's gate, the mist in the hollows and the gale's look (wealdLayout.js)
+  buildWeald() {
+    this.wealdScatter = new Scatter();
+    this.guardScatter(this.wealdScatter);
+    this.wealdScatter.colliders = this.scatter.colliders;
+    buildWeald(this, this.wealdScatter);
+    this.wealdGroup.add(this.wealdScatter.build());
   }
 
   // which outdoor area is shown: 'valley', 'reach', 'rime', 'heights' or 'dungeon' (the valley stays loaded behind the dungeons, as
@@ -851,10 +870,11 @@ export class World {
     if (this.indoor) { this.updateDungeon(dt, t, focus); return; }
     this.updateLights(t, focus);
     if (this.shafts) { const k = (1 - this.night) * (1 - (this.rain || 0)) * (1 - 0.7 * (this.sand || 0)); this.shafts.visible = k > 0.08; if (this.shafts.material?.uniforms?.uStrength) this.shafts.material.uniforms.uStrength.value = k; }
-    (this.area === 'reach' ? this.reachScatter : this.area === 'rime' ? this.rimeScatter : this.area === 'heights' ? this.heightsScatter : this.area === 'tidewater' ? this.tidewaterScatter : this.area === 'rainward' ? this.rainwardScatter : this.scatter).update(dt, t, focus, 70);
+    (this.area === 'reach' ? this.reachScatter : this.area === 'rime' ? this.rimeScatter : this.area === 'heights' ? this.heightsScatter : this.area === 'tidewater' ? this.tidewaterScatter : this.area === 'rainward' ? this.rainwardScatter : this.area === 'weald' ? this.wealdScatter : this.scatter).update(dt, t, focus, 70);
     if (this.area === 'heights') this.heightsTick?.(dt);
     if (this.area === 'tidewater') this.tidewaterTick?.(dt, t);
     if (this.area === 'rainward') this.rainwardTick?.(dt, t);
+    if (this.area === 'weald') this.wealdTick?.(dt, t);
     for (const o of this.dyn) if ((o.userData.center || o.position).distanceToSquared(focus) < (o.userData.reach || 90) ** 2) o.userData.update?.(dt, t);
   }
 

@@ -4,6 +4,7 @@ import { TEX } from './fx.js';
 import { G } from '../engine/globals.js';
 import { DUNGEON_BY_ID, dungeonTide } from '/sunmere-play/shared/dungeons.js';
 import { tideNow } from '/sunmere-play/shared/tidewater.js';
+import { galeLevel, hollowK } from '/sunmere-play/shared/weald.js';
 
 const C = (h) => new THREE.Color(h);
 const r = (a, b) => a + (b - a) * Math.random();
@@ -32,6 +33,7 @@ export class Ambient {
     const alt = this.T.altAt?.(focus.x, focus.z);
     if (alt?.theme === 'tidewater') return this.tide(dt, focus, g);
     if (alt?.theme === 'rainward') return this.gorge(dt, focus, g, weather);
+    if (alt?.theme === 'weald') return this.weald(dt, focus, g);
     if (alt) return alt.theme === 'rime' || alt.theme === 'heights' ? this.rime(dt, focus, g, weather, alt.theme === 'heights') : this.reach(dt, focus, g);
     if (weather?.rain > 0.05) {
       // rain: small splashes on the ground round the hero
@@ -89,6 +91,19 @@ export class Ambient {
     if (rain > 0.05) emit('splash', 110 * rain, () => { const p = at(0.05, 0.05); this.fx.alpha.spawn({ pos: p, vel: new THREE.Vector3(0, 0.7, 0), age: 0, life: 0.25, size: r(0.08, 0.18), tex: TEX.puff, alpha: 0.55, rot: r(0, 6), color: C('#dce8ec'), grow: 2.5 }); });
     emit('mist', 0.6 * (1 - rain * 0.6), () => { const p = at(0.4, 2.2); this.fx.alpha.spawn({ pos: p, vel: new THREE.Vector3(wd.x * 0.3 * ws, r(0, 0.05), wd.y * 0.3 * ws), age: 0, life: r(6, 10), size: r(2.0, 3.5), tex: TEX.puff, alpha: 0.05, rot: r(0, 6), spin: r(-0.1, 0.1), color: C('#dfe6e2'), grow: 1.2, fadeIn: 2 }); });
     if (g.forest > 0.2) emit('leaf', 2 * g.forest, () => { const p = at(3, 7); this.fx.alpha.spawn({ pos: p, vel: new THREE.Vector3(wd.x * 0.8 * ws, r(-1.0, -0.6), wd.y * 0.8 * ws), age: 0, life: r(5, 8), size: r(0.07, 0.1), tex: TEX.leaf, alpha: 1, rot: r(0, 6), spin: r(-2, 2), color: C('#4a5a32'), fadeIn: 0.5 }); });
+  }
+
+  // the Russet Weald: copper and gold leaves (plain ovals) drifting down through the wood, streaming sideways in thick flurries
+  // while the gale blows; a slow low mist in the hollows when it is calm; nothing alive (a quiet, rustling wood)
+  weald(dt, focus, g) {
+    const wd = G.windDir.value, ws = G.windStrength.value, R = 24, gl = galeLevel(tideNow());
+    const at = (h0, h1) => { const a = Math.random() * Math.PI * 2, d = Math.sqrt(Math.random()) * R; const p = new THREE.Vector3(focus.x + Math.cos(a) * d, 0, focus.z + Math.sin(a) * d); p.y = this.T.height(p.x, p.z) + r(h0, h1); return p; };
+    const emit = (key, rate, fn) => { this.acc[key] = (this.acc[key] || 0) + rate * dt; while (this.acc[key] > 1) { this.acc[key]--; fn(); } };
+    const LEAF = ['#c8743a', '#b85e2a', '#e0b04a', '#d4a03c', '#9a4a22'];
+    emit('leaf', 5 + 4 * g.forest + 70 * gl, () => { const p = at(2, 9), k = 1 + gl * 7; this.fx.alpha.spawn({ pos: p, vel: new THREE.Vector3(wd.x * r(0.8, 1.4) * k * ws, r(-0.9, -0.45) * (1 - 0.4 * gl), wd.y * r(0.8, 1.4) * k * ws), age: 0, life: r(4, 7), size: r(0.1, 0.16), tex: TEX.leaf, alpha: 1, rot: r(0, 6), spin: r(-3, 3) * (1 + gl * 2), color: C(LEAF[(Math.random() * LEAF.length) | 0]), fadeIn: 0.4, fadeOut: 0.8 }); });
+    if (gl > 0.3) emit('drift', 24 * gl, () => { const p = at(0.05, 0.5); this.fx.alpha.spawn({ pos: p, vel: new THREE.Vector3(wd.x * r(5, 9), r(0.1, 0.6), wd.y * r(5, 9)), age: 0, life: r(0.8, 1.6), size: r(0.08, 0.13), tex: TEX.leaf, alpha: 1, rot: r(0, 6), spin: r(-8, 8), color: C(LEAF[(Math.random() * LEAF.length) | 0]), fadeIn: 0.15, fadeOut: 0.4 }); });
+    const hk = hollowK(focus.x, focus.z);
+    emit('mist', (0.4 + 1.4 * hk) * (1 - gl * 0.8), () => { const p = at(0.2, 1.2); this.fx.alpha.spawn({ pos: p, vel: new THREE.Vector3(wd.x * 0.25 * ws, r(0, 0.04), wd.y * 0.25 * ws), age: 0, life: r(6, 10), size: r(2.2, 3.6), tex: TEX.puff, alpha: 0.06, rot: r(0, 6), color: C('#ece2d4'), fadeIn: 2, fadeOut: 3 }); });
   }
 
   // the Rime Steps: spindrift skimming the snow on the wind (thick in a blizzard), glints of frost on the ice and the snow,

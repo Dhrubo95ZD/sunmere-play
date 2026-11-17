@@ -44,6 +44,7 @@ export const SOC_LINES = {
     quest: ['doing {quest} too? want to team up', 'you on {quest} as well? we could group for it', 'same job here, {quest}. group up?'],
     hunt: ['hunting here too? want to group up for a bit', 'these go quicker with two. want to group?', 'want to team up while we clear this spot?'],
     boss: ['{boss} is up. want to take it on together?', 'going for {boss}? happy to join you', 'want a hand with {boss}? I can group'],
+    event: ['gale is up, want to clear the rides together?', 'clearing the rides too? we could group for it', 'want to team up on these trunks while it blows?'],
   },
   invite_ask_note: ['sending you an invite, no pressure'],
   invite_yes: { any: ['sure, lead the way', 'yeah ok, omw', 'sounds good, count me in', 'sure thing, invite away'] },
@@ -251,6 +252,9 @@ export const BOT_SOCIAL_METHODS = {
       const S = this.botSocial();
       if (!S.bigs || this.time - S.bigsT > 60) { S.bigsT = this.time; S.bigs = [...this.mobs.values()].filter((m) => (m.def.world || m.def.elite) && !m.sp?.dungeon && m.x < DUNGEON_MIN_X); }
       for (const m of S.bigs) if (!m.dead && dist(m, h) < BOT_INVITE.bossRange && dist(m, b) < BOT_INVITE.bossRange) return { kind: 'boss', why: 'boss:' + m.id, boss: m.id, slots: { boss: m.def.name } };
+      // an open event counts as a world boss does (the Russet Weald's Clear the Rides: a trunk across a ride near both)
+      const T = this.ridesTarget?.(b);
+      if (T && dist(T, h) < BOT_INVITE.bossRange && dist(T, b) < BOT_INVITE.bossRange) return { kind: 'event', why: 'boss', boss: 'rides', slots: { boss: 'the rides' } };
     }
     // the same hunting ground: the bot's own ground, or any spawn ground both stand on (a bot with a mind hunts for its
     // quest or goal wherever that is, and its old wanderer ground may be far behind it)
@@ -341,7 +345,7 @@ export const BOT_SOCIAL_METHODS = {
       return S.endT && this.time - S.endT >= BOT_PARTY.lfgAfter ? 'lfg' : null;
     }
     if (S.q && !o.quests?.[S.q]) return 'quest';
-    if (S.boss) { const m = this.mobs.get(S.boss); if (!m || m.dead) { S.bossT ||= this.time + R(...BOT_PARTY.bossWait); if (this.time >= S.bossT) return 'boss'; } }
+    if (S.boss) { const m = S.boss === 'rides' ? (this.rides?.live ? { dead: false } : null) : this.mobs.get(S.boss); if (!m || m.dead) { S.bossT ||= this.time + R(...BOT_PARTY.bossWait); if (this.time >= S.bossT) return 'boss'; } }
     if (Math.abs(b.level - o.level) > BOT_PARTY.levelGap) return 'level';
     if (!b.dead && !b.away && this.botAvailable && this.botAvailable(b, 'party') === false) return 'routine';
     if (Math.hypot(o.x - S.lx, o.z - S.lz) > 3) { S.lx = o.x; S.lz = o.z; S.still = 0; } else S.still += 1;
@@ -377,7 +381,7 @@ export const BOT_SOCIAL_METHODS = {
       if (o && !o.bot) this.botPair(b, o).endT = this.botWall();
       this.botRemember?.(b, 'party', { names: o ? [o.name, ...names] : names, why: S.why, ok: why !== 'wipes' ? 1 : 0, end: why });
       if (S.lfg) this.botRemember?.(b, 'run', { a: S.lfg, names: S.runNames || (o ? [o.name] : []), ok: S.ok ? 1 : 0 });
-      if (S.boss && why === 'boss') this.botRemember?.(b, 'boss', { a: S.boss, names: o ? [o.name] : [], ok: 1 });
+      if (S.boss && why === 'boss') this.botRemember?.(b, 'boss', { a: S.boss === 'rides' ? 'Clear the Rides' : S.boss, names: o ? [o.name] : [], ok: 1 });
       // out of a dungeon by its door
       if (b.x >= DUNGEON_MIN_X) { const D = DUNGEON_BY_ID[S.lfg] || dungeonAt(b.x, b.z); if (D?.door) { const a = D.door.ry; b.x = D.door.x + Math.sin(a) * 4 + R(-1, 1); b.z = D.door.z + Math.cos(a) * 4 + R(-1, 1); } else { const g = this.graveyard(b); b.x = g.x; b.z = g.z; } }
     }

@@ -13,6 +13,8 @@ export const G = {
   fadeDepth: { value: 1e6 },
   fadeRadius: { value: 0.11 },
   fadeOn: { value: 0 },
+  // the Russet Weald's canopy cut (materials.js FRAG_CANOPY): x on, y radius (m), z height over the hero's feet (m)
+  canopy: { value: new THREE.Vector3(0, 13, 3.4) },
   // house cut-away (world.updateHouses, materials.js CUT): while you stand in a house, the roof, the upper storey and the
   // camera-side upper walls inside its cut box are discarded. Centre = the house origin, rot its turn; cutRect / cutFoot are
   // the local cut box (footprint + extensions + eaves) and footprint as (x0, z0, x1, z1); cutDir is the camera's forward

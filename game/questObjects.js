@@ -21,6 +21,19 @@ function build(kind, seed) {
     for (let i = 0; i < 8; i++) d.add(box(0.5, 0.04, 0.12), 'woodLight', { p: [Math.cos(i * 2.4) * 0.7, 0.03, Math.sin(i * 2.4) * 0.6], r: [0, i, 0], c: '#c8a878' });
     d.add(box(1.4, 0.03, 1.0), 'cloth', { p: [0.2, 0.02, 0.1], r: [0, 0.6, 0], c: '#3e5428' });
     for (let i = 0; i < 4; i++) d.add(sphere(0.25, 8, 6), 'cloth', { p: [Math.cos(i) * 0.4, 0.05, Math.sin(i * 1.7) * 0.4], s: [1, 0.2, 1], c: '#f4ecd8' });
+  } else if (kind === 'rideschest') {
+    // the Woodwrights' chest for Clear the Rides (P15.3): a plain square oak chest, two iron straps over it front to back
+    // (parallel), a flat lid; full: shut, two sound offcuts laid on it side by side; taken: the lid stood back against a
+    // block, empty
+    for (const k of [a, d]) {
+      k.add(rbox(1.1, 0.55, 0.7, 0.03), 'woodLight', { p: [0, 0.28, 0], uv: 'box', c: '#a87a4e' });
+      for (const x of [-0.32, 0.32]) k.add(box(0.07, 0.57, 0.72), 'iron', { p: [x, 0.28, 0], c: '#6a6460' });
+    }
+    a.add(rbox(1.12, 0.1, 0.72, 0.03), 'woodLight', { p: [0, 0.6, 0], uv: 'box', c: '#9a6e44' });
+    for (const x of [-0.32, 0.32]) a.add(box(0.07, 0.11, 0.74), 'iron', { p: [x, 0.6, 0], c: '#6a6460' });
+    for (const z of [-0.14, 0.14]) { a.add(cyl(0.09, 0.09, 0.8, 8), 'woodLight', { p: [0, 0.74, z], r: [0, 0, PI / 2], c: '#8a6a4a' }); for (const sx of [-1, 1]) a.add(cyl(0.085, 0.085, 0.01, 8), 'plaster', { p: [sx * 0.405, 0.74, z], r: [0, 0, PI / 2], c: '#d8b888' }); }
+    d.add(rbox(1.12, 0.1, 0.72, 0.03), 'woodLight', { p: [0, 0.78, -0.42], r: [-1.35, 0, 0], uv: 'box', c: '#9a6e44' });
+    d.add(box(0.98, 0.02, 0.58), 'woodDark', { p: [0, 0.565, 0], c: '#2a2018' }); // (the empty inside, seen over the rim)
   } else if (kind === 'keg') {
     for (const k of [a, d]) k.add(lathe([[0.001, 0], [0.32, 0], [0.38, 0.3], [0.37, 0.62], [0.32, 0.86], [0.001, 0.86]], 16), 'wood', { uv: 'box', us: 1.4, c: '#a06a3a' });
     for (const k of [a, d]) for (const y of [0.12, 0.74]) k.add(torus(0.35, 0.02, 6, 18), 'iron', { p: [0, y, 0], r: [PI / 2, 0, 0], c: 0xffffff });
@@ -299,6 +312,46 @@ function build(kind, seed) {
     }
     for (let i = 0; i < 4; i++) a.add(lumpy(sphere(0.8, 9, 6), 0.3, 1.6, seed + i, { flatBottom: 0 }), 'dirtPlain', { p: [-2.4 + i * 1.6, 0.12, 0.05], s: [1.4, 0.45, 1.0], uv: 'box', c: i % 2 ? '#6e4232' : '#7a4a36' });
     for (const sz of [-0.3, 0.3]) for (let x = -3.1; x < 3.2; x += 0.5) d.add(box(0.03, 0.26, 0.2), 'cloth', { p: [x, 0.3, sz], r: [0, 0.2, 0], c: '#6a9a52' });
+  } else if (kind === 'rgstation') {
+    // a heap on the ropeway's upper station (Chapter 49): red slip mud with fallen roof timbers lying in it side by side (all
+    // one way, never crossed); cleared, the timbers stacked square along the wall and a low smear of mud
+    for (let i = 0; i < 4; i++) a.add(lumpy(sphere(0.65, 9, 6), 0.3, 1.6, seed + i, { flatBottom: 0 }), 'dirtPlain', { p: [-1.2 + i * 0.8, 0.05, (i % 2 ? 0.25 : -0.2)], s: [1.3, 0.5 + (i % 3) * 0.1, 1.1], uv: 'box', c: i % 2 ? '#6e4232' : '#7a4a36' });
+    for (let i = 0; i < 3; i++) a.add(box(3.0, 0.2, 0.22), 'woodDark', { p: [0.1 + i * 0.15, 0.5 + i * 0.05, -0.45 + i * 0.45], r: [0, 0.06 * (i - 1), 0.08], c: '#4e3e30' });
+    for (let i = 0; i < 4; i++) d.add(box(2.8, 0.2, 0.22), 'woodDark', { p: [0, 0.1 + Math.floor(i / 2) * 0.21, 1.3 + (i % 2) * 0.24], c: '#4e3e30' });
+    d.add(box(2.6, 0.04, 0.9), 'dirtPlain', { p: [0, 0.02, -0.2], uv: 'box', c: '#6e4232' });
+  } else if (kind === 'rgwind') {
+    // the ropeway's winding drum (Chapter 49): a solid timber-lagged drum (plain disc ends, no rim ring) on a square frame
+    // of straight posts and level beams, a straight crank on one end; chocked, wedges under the drum and leaves and silt
+    // on it; wound, the chocks stacked beside the frame and the rope wound tight round the drum
+    for (const k of [a, d]) {
+      for (const sx of [-1, 1]) for (const sz of [-1, 1]) k.add(box(0.24, 1.6, 0.24), 'woodDark', { p: [sx * 1.3, 0.8, sz * 0.7], c: '#3e3226' });
+      for (const sx of [-1, 1]) k.add(box(0.24, 0.24, 1.7), 'woodDark', { p: [sx * 1.3, 1.5, 0], c: '#3e3226' });
+      for (const sz of [-1, 1]) k.add(box(2.84, 0.2, 0.2), 'woodDark', { p: [0, 0.3, sz * 0.7], c: '#3e3226' });
+      k.add(cyl(0.08, 0.08, 3.0, 8), 'iron', { p: [0, 1.3, 0], r: [0, 0, PI / 2], c: '#3a3c40' });
+      k.add(box(0.1, 0.7, 0.1), 'iron', { p: [1.55, 1.0, 0], c: '#3a3c40' }); // the crank arm, straight down
+      k.add(box(0.5, 0.08, 0.08), 'iron', { p: [1.75, 0.68, 0], c: '#3a3c40' }); // its handle, straight out
+    }
+    for (const sz of [-0.45, 0.45]) a.add(box(0.6, 0.3, 0.3), 'woodDark', { p: [0, 0.6, sz], c: '#5a4634' });
+    a.add(box(1.8, 0.05, 1.0), 'dirtPlain', { p: [0, 1.93, 0], uv: 'box', c: '#6e4232' });
+    a.add(cyl(0.62, 0.62, 2.2, 18), 'woodDark', { p: [0, 1.3, 0], r: [0, 0, PI / 2], c: '#5a4634' });
+    d.add(cyl(0.64, 0.64, 2.2, 18), 'woodDark', { p: [0, 1.3, 0], r: [0, 0, PI / 2], c: '#3a3430' }); // the rope wound tight, flush with the drum's ends (one plain disc end on)
+    for (let i = 0; i < 2; i++) d.add(box(0.6, 0.3, 0.3), 'woodDark', { p: [-1.9, 0.15 + i * 0.31, 0.9], c: '#5a4634' });
+  } else if (kind === 'wdlimb' || kind === 'wdbough') {
+    // a limb the gale threw down along a ride (Chapter 49; the main ride's boughs for the Woodwrights): a long grey limb
+    // lying along the ride with two short side limbs on one side, all leaning the same way (never crossed), a few copper
+    // leaf clumps; cleared, sawn into lengths stacked side by side at the ride's edge, the cut ends one plain colour
+    a.add(cyl(0.22, 0.32, 6.4, 9), 'wood', { p: [0, 0.3, 0], r: [0, 0, PI / 2], c: '#8a8680' });
+    for (const [x, l] of [[-1.2, 1.8], [1.0, 1.5]]) a.add(cyl(0.08, 0.12, l, 7), 'wood', { p: [x + 0.5, 0.32, 0.55], r: [0, -0.55, PI / 2], c: '#8a8680' });
+    for (let i = 0; i < 3; i++) a.add(lumpy(sphere(0.45, 7, 5), 0.25, 1.6, seed + i, { flatBottom: 0 }), 'cloth', { p: [-2.6 + i * 2.2, 0.35, 0.7 - (i % 2) * 1.2], s: [1.3, 0.45, 0.9], c: i % 2 ? '#a8582a' : '#c08a32' });
+    for (let i = 0; i < 5; i++) d.add(cyl(0.2, 0.2, 1.1, 9), 'wood', { p: [-0.5 + (i % 3) * 0.42, 0.2 + Math.floor(i / 3) * 0.36, 2.2], r: [PI / 2, 0, 0], c: '#8a8680' });
+    for (let i = 0; i < 4; i++) d.add(box(0.06, 0.02, 0.1), 'cloth', { p: [-2 + i * 1.2, 0.01, 0.3 - (i % 2) * 0.5], c: '#a8582a' });
+  } else if (kind === 'wdlog') {
+    // a log waiting beside the saw pits (the Woodwrights' side quest): a long grey oak log on the ground, square chocks at
+    // its ends; rolled, it lies up on two straight skids, the chocks set against it
+    a.add(cyl(0.42, 0.46, 5.6, 12), 'wood', { p: [0, 0.42, 0], r: [0, 0, PI / 2], c: '#8a8680' });
+    for (const k of [a, d]) for (const sx of [-1.8, 1.8]) k.add(box(0.24, 0.3, 2.4), 'woodDark', { p: [sx, 0.15, 0.9], c: '#4e3e30' }); // the skids
+    d.add(cyl(0.42, 0.46, 5.6, 12), 'wood', { p: [0, 0.72, 0.9], r: [0, 0, PI / 2], c: '#8a8680' });
+    for (const sx of [-1.8, 1.8]) d.add(box(0.26, 0.2, 0.2), 'woodDark', { p: [sx, 0.4, 0.4], c: '#5a4634' });
   }
   const ga = a.build(), gd = d.build();
   for (const o of dyn.a) ga.add(o);
@@ -388,6 +441,40 @@ export function seedTrayNode() {
   return g;
 }
 
+// a rope clamp node (Chapter 49, item c49_clamp): a square iron clamp off the ropeway car lying in the grass on the Slip,
+// its one straight bolt through it, a smear of red mud, a soft glint to spot it by
+export function ropeClampNode() {
+  const b = new Builder(86);
+  b.add(box(0.34, 0.16, 0.34), 'iron', { p: [0, 0.08, 0], r: [0, 0.4, 0], c: '#4a4c50' });
+  b.add(box(0.06, 0.06, 0.5), 'iron', { p: [0, 0.18, 0], r: [0, 0.4, 0], c: '#2e3034' });
+  b.add(box(0.6, 0.02, 0.5), 'dirtPlain', { p: [0.2, 0.01, 0.3], r: [0, 0.4, 0], uv: 'box', c: '#6e4232' });
+  const g = b.build();
+  const gl = glowSprite(0xfff0c8, 1.5, 0.45); gl.position.y = 0.8; g.add(gl);
+  g.userData.update = (dt, t) => gl.userData.update(dt, t);
+  return g;
+}
+// a felling wedge node (Chapter 49, item c49_wedge): a plain iron wedge lying in the leaf litter, a few copper leaves by it,
+// a soft glint to spot it by
+export function wedgeNode() {
+  const b = new Builder(87);
+  b.add(box(0.5, 0.12, 0.16), 'iron', { p: [0, 0.06, 0], r: [0, 0.5, 0.12], c: '#5a5c60' });
+  for (let i = 0; i < 3; i++) b.add(box(0.12, 0.02, 0.08), 'cloth', { p: [-0.3 + i * 0.3, 0.01, 0.25 - i * 0.15], r: [0, i, 0], c: i % 2 ? '#a8582a' : '#c08a32' });
+  const g = b.build();
+  const gl = glowSprite(0xfff0c8, 1.5, 0.45); gl.position.y = 0.8; g.add(gl);
+  g.userData.update = (dt, t) => gl.userData.update(dt, t);
+  return g;
+}
+// a split billet node (the Woodwrights' side quest, item wd_billet): two lengths of split oak lying side by side the same way
+// (never crossed), their split faces pale, a soft glint to spot them by
+export function billetNode() {
+  const b = new Builder(88);
+  for (const o of [-0.12, 0.12]) { b.add(box(0.8, 0.18, 0.2), 'wood', { p: [Math.sin(0.6) * o, 0.09, Math.cos(0.6) * o], r: [0, 0.6, 0], c: '#8a8680' }); b.add(box(0.8, 0.02, 0.16), 'woodLight', { p: [Math.sin(0.6) * o, 0.19, Math.cos(0.6) * o], r: [0, 0.6, 0], c: '#c8a878' }); }
+  const g = b.build();
+  const gl = glowSprite(0xfff0c8, 1.5, 0.45); gl.position.y = 0.8; g.add(gl);
+  g.userData.update = (dt, t) => gl.userData.update(dt, t);
+  return g;
+}
+
 export class QuestObjects {
   constructor(scene, heightAt) {
     this.list = OBJECTS.map((o, i) => {
@@ -417,8 +504,8 @@ export class QuestObjects {
     for (const qid of Object.keys(you.done || {})) { const Q = QUESTS[qid]; if (Q?.goal.use) doneKinds.add(Q.goal.use); }
     const pages = new Set(you.ledger || []), achC = this.achC || {};
     for (const o of this.list) {
-      o.done = o.kind === 'page' ? pages.has(o.id) : o.kind === 'drawing' ? !!achC['drw:' + o.id] : used.has(o.id) || doneKinds.has(o.kind);
-      o.need = !o.done && (o.kind === 'page' || o.kind === 'drawing' || needKinds.has(o.kind));
+      o.done = o.kind === 'rideschest' ? !you.ridesOwed : o.kind === 'page' ? pages.has(o.id) : o.kind === 'drawing' ? !!achC['drw:' + o.id] : used.has(o.id) || doneKinds.has(o.kind);
+      o.need = !o.done && (o.kind === 'rideschest' || o.kind === 'page' || o.kind === 'drawing' || needKinds.has(o.kind));
       o.ga.visible = !o.done; o.gd.visible = o.done;
       o.spark.visible = o.need;
     }
@@ -432,6 +519,7 @@ export class QuestObjects {
     const p = o.root.position.clone().setY(o.root.position.y + 0.8);
     if (o.kind === 'cache') { fx.emit('shards', p, { n: 18, color: '#c8a878' }); fx.emit('dust', p, { n: 8 }); sfx?.play('thud'); }
     else if (o.kind === 'keg') { fx.emit('smoke', p, { n: 6, size: 0.6 }); sfx?.play('ui'); }
+    else if (o.kind === 'rideschest') { fx.emit('motes', p, { n: 18, color: '#ffe08a' }); fx.emit('dust', p, { n: 6, color: '#c8a878' }); sfx?.play('ui'); }
     else if (o.kind === 'notes' || o.kind === 'page') { fx.emit('motes', p, { n: 14, color: '#fff4d0' }); sfx?.play('ui'); }
     else if (o.kind === 'valve') { fx.emit('smoke', p.setY(p.y + 0.6), { n: 10, color: '#e8e4e0', size: 0.8 }); sfx?.play('clang'); }
     else if (o.kind === 'warbanner') { fx.emit('dust', p, { n: 10 }); sfx?.play('thud'); }
@@ -443,6 +531,9 @@ export class QuestObjects {
     else if (o.kind === 'twflap' || o.kind === 'twrace') { fx.emit('dust', p.setY(p.y - 0.3), { n: 10, color: '#8a8478' }); sfx?.play('thud'); }
     else if (o.kind === 'twhaul') { fx.emit('smoke', p.setY(p.y + 1.6), { n: 8, color: '#8a8884', size: 0.6 }); fx.emit('dust', p.setY(p.y - 2.0), { n: 10, color: '#5a5148' }); sfx?.play('chain'); }
     else if (o.kind === 'rgspoil' || o.kind === 'rgshelf' || o.kind === 'rggrate' || o.kind === 'rgchannel' || o.kind === 'rgbed') { fx.emit('dust', p.setY(p.y - 0.4), { n: 12, color: '#6e4232' }); sfx?.play('thud'); }
+    else if (o.kind === 'rgstation' || o.kind === 'wdlog') { fx.emit('dust', p.setY(p.y - 0.4), { n: 12, color: o.kind === 'wdlog' ? '#8a7a60' : '#6e4232' }); sfx?.play('thud'); }
+    else if (o.kind === 'rgwind') { fx.emit('dust', p.setY(p.y + 0.4), { n: 8, color: '#5a5148' }); sfx?.play('chain'); }
+    else if (o.kind === 'wdlimb' || o.kind === 'wdbough') { fx.emit('shards', p.setY(p.y - 0.4), { n: 12, color: '#c8a878' }); fx.emit('dust', p, { n: 6, color: '#a8582a' }); sfx?.play('thud'); }
     else if (o.kind === 'twscour') { fx.emit('dust', p.setY(p.y - 0.4), { n: 12, color: '#8a8478' }); fx.emit('shards', p, { n: 8, color: '#6a6458' }); sfx?.play('thud'); }
     else if (o.kind === 'rangeplate') { fx.emit('sparks', p.setY(p.y + 0.15), { n: 8, color: '#ffd090' }); fx.emit('smoke', p, { n: 3, size: 0.5, color: '#c8c4bc' }); sfx?.play('shot'); sfx?.play('clang'); }
     else if (o.kind === 'beacon' || o.kind === 'ridgefire') { fx.emit('flame', p.setY(p.y + 1.0), { n: 14 }); fx.emit('embers', p, { n: 20 }); sfx?.play('ui'); }

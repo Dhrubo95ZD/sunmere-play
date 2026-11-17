@@ -299,7 +299,7 @@ export const SKILLS = {
 export const SKILL_BY_ID = {};
 for (const [cls, list] of Object.entries(SKILLS)) for (const s of list) { s.cls = cls; SKILL_BY_ID[s.id] = s; }
 
-export const LEVEL_CAP = 65; // 60 -> 65 with Part Fourteen (the Rainward Gorge, set with P14.1); 55 -> 60 with Part Thirteen (Tidewater Sound, set with P13.1); 50 -> 55 with Part Twelve (the Windward Heights); 45 -> 50 with Part Eleven (the Rime Steps); 40 -> 45 with Part Ten (the Cinder Reach); 25 -> 30 with Part Four (the Far Vale), 30 -> 35 with Part Six (the Glass Waste), 35 -> 40 with Part Eight (the Deepway)
+export const LEVEL_CAP = 70; // 65 -> 70 with Part Fifteen (the Russet Weald, set with P15.1); 60 -> 65 with Part Fourteen (the Rainward Gorge, set with P14.1); 55 -> 60 with Part Thirteen (Tidewater Sound, set with P13.1); 50 -> 55 with Part Twelve (the Windward Heights); 45 -> 50 with Part Eleven (the Rime Steps); 40 -> 45 with Part Ten (the Cinder Reach); 25 -> 30 with Part Four (the Far Vale), 30 -> 35 with Part Six (the Glass Waste), 35 -> 40 with Part Eight (the Deepway)
 export const xpForLevel = (l) => Math.round(120 * Math.pow(l, 1.55));
 export const skillsForLevel = (cls, level) => SKILLS[cls].filter((s) => s.lvl <= level);
 // base damage/heal per point of coefficient at a level

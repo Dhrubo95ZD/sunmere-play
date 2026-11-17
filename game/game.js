@@ -34,7 +34,8 @@ import { NPCS, QUESTS, MOBS, ITEMS, npcSeen, enginesTurning } from '/sunmere-pla
 import { Builder, box, rbox, cyl, sphere, lathe } from '../assets/kit.js';
 import { glowSprite } from '../assets/dynamic.js';
 import { Townsfolk } from './townsfolk.js';
-import { QuestObjects, brassTagNode, tarBarrelNode, yarnHankNode, stopBoardNode, seedTrayNode, liningStoneNode } from './questObjects.js';
+import { QuestObjects, brassTagNode, tarBarrelNode, yarnHankNode, stopBoardNode, seedTrayNode, liningStoneNode, ropeClampNode, wedgeNode, billetNode } from './questObjects.js';
+import { ropeCarMesh, CAR_HANG } from './ropewayLayout.js';
 import { buildHaulTrain } from '../assets/haulWagon.js';
 import { QuestWalk } from './questwalk.js';
 import { weatherAt, createRain, createSnow, nightAt } from '../engine/weather.js';
@@ -94,7 +95,7 @@ const AIM_TWIST = 1.22;
 export async function startGame() {
   // a painting of one of the valley's regions behind the loading bar, and a tip
   {
-    const L = document.getElementById('loading'), pics = ['valley', 'desert', 'rust', 'storm', 'briar', 'quarry', 'glade', 'westfold', 'coilway', 'farvale', 'harrow', 'saltpan', 'deepway', 'wildworks', 'ashfall', 'slagterraces', 'oldworks', 'icefall', 'flumeworks', 'damcrown', 'driftfields', 'enginerows', 'makersrest', 'ropewalkshore', 'tidemills', 'seagate'].filter((k) => LOADING.has(k));
+    const L = document.getElementById('loading'), pics = ['valley', 'desert', 'rust', 'storm', 'briar', 'quarry', 'glade', 'westfold', 'coilway', 'farvale', 'harrow', 'saltpan', 'deepway', 'wildworks', 'ashfall', 'slagterraces', 'oldworks', 'icefall', 'flumeworks', 'damcrown', 'driftfields', 'enginerows', 'makersrest', 'ropewalkshore', 'tidemills', 'seagate', 'gorgefoot', 'seedterraces', 'slip', 'ropewayfoot', 'longsheds', 'standards'].filter((k) => LOADING.has(k));
     L.style.backgroundImage = `linear-gradient(180deg, rgba(8,6,4,.2) 0%, rgba(8,6,4,.05) 40%, rgba(8,6,4,.85) 100%), url(/sunmere-play/ui/loading/${pics[Math.floor(Math.random() * pics.length)]}.webp)`;
     const TIPS = ['Loot names show their rarity: green Uncommon, blue Rare, purple Epic, gold Legendary, and the tempered-steel sheen of Prismatic.',
       'Logging out in Sunmere or beside a Caravan Master builds rested experience fastest.', 'Press G to use your Homeward Compass and return to your home caravan stop.',
@@ -340,7 +341,7 @@ export async function startGame() {
     setTimeout(() => ui.maybeNews(), 2500);
     for (const n of m.npcs) entities.addNpc(n);
     for (const n of m.nodes) {
-      const mesh = n.item === 'c33_drift' ? driftwood() : n.item === 'c37_block' ? ironBlock() : n.item === 'c40_tag' ? brassTagNode() : n.item === 'c41_tar' ? tarBarrelNode() : n.item === 'c41_yarn' ? yarnHankNode() : n.item === 'c43_board' ? stopBoardNode() : n.item === 'c45_tray' ? seedTrayNode() : n.item === 'c46_stone' ? liningStoneNode() : mushroom();
+      const mesh = n.item === 'c33_drift' ? driftwood() : n.item === 'c37_block' ? ironBlock() : n.item === 'c40_tag' ? brassTagNode() : n.item === 'c41_tar' ? tarBarrelNode() : n.item === 'c41_yarn' ? yarnHankNode() : n.item === 'c43_board' ? stopBoardNode() : n.item === 'c45_tray' ? seedTrayNode() : n.item === 'c46_stone' ? liningStoneNode() : n.item === 'c49_clamp' ? ropeClampNode() : n.item === 'c49_wedge' ? wedgeNode() : n.item === 'wd_billet' ? billetNode() : mushroom();
       mesh.position.set(n.x, heightAt(n.x, n.z), n.z);
       mesh.visible = n.ready;
       engine.scene.add(mesh);
@@ -480,6 +481,7 @@ export async function startGame() {
       case 'slam': { const v = entities.get(ev.id); if (v) { fx.impact('earth', v.pos.clone(), { r: ev.r }); fx.decal('crack', v.pos.clone(), ev.r * 0.6, 6); rig.addShake(0.6); } break; }
       case 'node': { const n = game.nodes.get(ev.id); if (n) { n.ready = ev.ready; n.mesh.visible = ev.ready; } break; }
       case 'valley': game.valleyStage = ev.stage; world?.setValleyStage?.(ev.stage); break;
+      case 'rides': world.wealdCleared = ev.cl.map((c) => c > 0); ui.setRides?.(ev); break; // P15.3 Clear the Rides: the zone-wide tally (shared/rides.js)
       case 'wake': {
         // the First Engine rising: a short scene the first time each day, if you are down in the Deepway to see it
         const P = game.playerPos?.() || local?.pos, D = P && dungeonAt(P.x, P.z);
@@ -522,6 +524,7 @@ export async function startGame() {
       case 'sail': startCrossing(ev.to, ev.from); break;
       case 'lift': startLift(ev.to, ev.from); break;
       case 'haul': startHaul(ev.to, ev.from); break;
+      case 'rope': startRope(ev.to, ev.from); break;
       case 'drink': { const v = entities.get(ev.id); if (v) fx.emit('motes', v.pos, { n: 20, color: '#ff8080', r: 0.5 }); break; }
     }
   }
@@ -920,6 +923,7 @@ export async function startGame() {
     { const dw = ui.windows.dialog; if (dw?._npc) { if (!dw.isConnected) dw._npc = null; else { const nv = entities.get(dw._npc); if (nv && nv.pos.distanceToSquared(local.pos) > 81) { dw.remove(); dw._npc = null; } } } }
     targetfx.update(dtRaw, game.target ? entities.get(game.target) : null, game.hover, game.you, ui);
     G.playerPos.value.copy(local.pos);
+    G.canopy.value.x = world.area === 'weald' && !crossing ? 1 : 0; // (the wood's crowns open round the hero)
     rig.updateFade(local.pos);
     const pushers = [{ x: local.pos.x, y: local.pos.y, z: local.pos.z, r: 1.4 }];
     for (const v of entities.views.values()) { if (pushers.length >= 8) break; if (v !== local && !v.dead && v.pos.distanceToSquared(local.pos) < 900) pushers.push({ x: v.pos.x, y: v.pos.y, z: v.pos.z, r: (v.radius || 0.5) * 2 + 0.8 }); }
@@ -931,7 +935,7 @@ export async function startGame() {
     const area = D ? 'dungeon' : areaOf(local.pos.x, local.pos.z);
     world.setArea(area);
     engine.setIndoor(D ? D.theme : null);
-    if (!D) engine.setOutdoorTheme(area === 'reach' || area === 'rime' || area === 'heights' || area === 'tidewater' || area === 'rainward' ? area : 'valley');
+    if (!D) engine.setOutdoorTheme(area === 'reach' || area === 'rime' || area === 'heights' || area === 'tidewater' || area === 'rainward' || area === 'weald' ? area : 'valley');
     // the Far Vale snow and the Glass Waste salt are near-white ground: raise the bloom threshold there like the Heights
     engine._brightGround = !D && area !== 'heights' && ((local.pos.x < -270 && local.pos.z < -240) || (local.pos.z > 300 && local.pos.x < 140 && local.pos.x > -140));
     // weather follows the shared clock and the ground you stand on (none underground)
@@ -939,7 +943,7 @@ export async function startGame() {
     const wt = window.WEATHER_FORCE || weatherAt(local.pos.x, local.pos.z, game.serverTime());
     // the first few minutes after you log in are always fair (rain, sand and snow fronts build in afterwards)
     // (not in the Rainward Gorge: its rain is the world's, the same for everyone there, and the slips run on it)
-    if (!window.WEATHER_FORCE && area !== 'rainward') { const since = (performance.now() - (game._enterAt ||= performance.now())) / 1000, calm = Math.min(1, Math.max(0, (since - 240) / 90)); if (calm < 1) { wt.rain *= calm; wt.sand *= calm; } }
+    if (!window.WEATHER_FORCE && area !== 'rainward' && area !== 'weald') { const since = (performance.now() - (game._enterAt ||= performance.now())) / 1000, calm = Math.min(1, Math.max(0, (since - 240) / 90)); if (calm < 1) { wt.rain *= calm; wt.sand *= calm; } }
     const wk = Math.min(1, dtRaw * (D ? 4 : 0.35)) + (game._lastArea !== area ? 1 : 0); game._lastArea = area; // a new area: its weather at once
     weather.rain += ((D ? 0 : wt.rain) - weather.rain) * wk; weather.sand += ((D ? 0 : wt.sand) - weather.sand) * wk; weather.snow += ((D ? 0 : wt.snow || 0) - weather.snow) * wk;
     weather.ash = (weather.ash || 0) + ((D ? 0 : wt.ash || 0) - (weather.ash || 0)) * Math.min(1, dtRaw * 2);
@@ -951,6 +955,9 @@ export async function startGame() {
     // (in the Rainward Gorge a downpour closes the air in grey-green, heavier than the Heights' squall: renderer setWeather's pour)
     const pour = !D && area === 'rainward' ? Math.min(1, (wt.pour ?? weather.rain) * weather.rain * 1.1) : 0;
     engine.setWeather(weather.rain, weather.sand, D ? 0 : night, weather.snow, weather.blizzard, squall, pour);
+    // (in the Russet Weald the gale is the world's, on the shared clock: the crowns thrash, the leaves stream, the wind roars)
+    const weald = !D && area === 'weald' ? wt.gale || 0 : 0;
+    if (weald) G.windStrength.value += 1.5 * weald;
     // (v112) dark glass by day, like the CGTrader shells' windows; the lamps behind the panes come on as dusk deepens
     // (lit 0 until the night value passes 0.12, full by 0.6) up to the same 2.75 glow at night as before
     const glass = getMat('glassWarm'), lit = D ? 1 : Math.min(1, Math.max(0, (night - 0.12) / 0.48)), litS = lit * lit * (3 - 2 * lit);
@@ -963,9 +970,9 @@ export async function startGame() {
     const gale = !D && area === 'heights' ? 0.6 : 0; // the Heights' wind never drops: the flakes always drive
     { const wsc = 1 + Math.max(weather.blizzard, gale) * 5; game._wv = (game._wv || V2()).set(G.windDir.value.x * wsc, G.windDir.value.y * wsc); }
     snow.userData.set(local.pos, area === 'reach' ? weather.ash : Math.min(1, weather.snow + squall * 0.3), game._wv, 1 + squall * 1.4);
-    sfx.loop('rain', weather.rain * 0.35); sfx.loop('wind', Math.max(weather.sand * 0.6, weather.snow * 0.3, weather.blizzard * 0.75, gale * 0.5 + weather.blizzard * 0.3));
+    sfx.loop('rain', weather.rain * 0.35); sfx.loop('wind', Math.max(weather.sand * 0.6, weather.snow * 0.3, weather.blizzard * 0.75, gale * 0.5 + weather.blizzard * 0.3, weald * 0.65));
     // the clouds run fast over the Heights
-    if (gale) { G.cloudOffset.value.x += dtRaw * 0.0042; G.cloudOffset.value.y += dtRaw * 0.0024; }
+    if (gale || weald > 0.3) { G.cloudOffset.value.x += dtRaw * 0.0042; G.cloudOffset.value.y += dtRaw * 0.0024; }
     // ambience: water near the stream, falls, mill and fountain; a breeze outdoors; crackle near fires
     if (!D) {
       const px = local.pos.x, pz = local.pos.z;
@@ -995,7 +1002,7 @@ export async function startGame() {
         if (px > -80 && px < 100 && pz > -30 && pz < 45) wv = Math.max(wv, 0.22 * (1 - Math.min(1, streamInfo(px, pz).d / 16)));
         for (const [wx, wz, r, g] of [[-46.4, 8.7, 22, 0.45], [-66, -8, 22, 0.4], [0, 0, 14, 0.18], [150, -187, 45, 0.5]]) wv = Math.max(wv, g * (1 - Math.min(1, Math.hypot(px - wx, pz - wz) / r)));
       }
-      sfx.loop('water', wv); sfx.loop('hum', hum); sfx.loop('breeze', (area === 'reach' ? 0.07 : area === 'rime' ? 0.09 : area === 'heights' ? 0.16 : area === 'tidewater' ? 0.1 : area === 'rainward' ? 0.06 : 0.04) + 0.05 * G.windStrength.value);
+      sfx.loop('water', wv); sfx.loop('hum', hum); sfx.loop('breeze', (area === 'reach' ? 0.07 : area === 'rime' ? 0.09 : area === 'heights' ? 0.16 : area === 'tidewater' ? 0.1 : area === 'rainward' ? 0.06 : area === 'weald' ? 0.09 : 0.04) + 0.05 * G.windStrength.value);
       game.fireT = (game.fireT || 0) - dtRaw;
       if (game.fireT <= 0) { game.fireT = 0.35 + Math.random() * 0.6; const near = (world.spots || []).some((s) => s.fire && (s.x - px) ** 2 + (s.z - pz) ** 2 < 100); if (near) sfx.play('fire', 0.35); }
     } else {
@@ -1052,7 +1059,7 @@ export async function startGame() {
     'tidewater>rime': { start: [338, -1560], f: [0, -1], side: [-1, 0], say: 'The ship runs out of the Sound on the ebb and back round the cold cape. On the second morning the white walls of the Rime Steps close round the grey shingle bay.' },
     'tidewater>valley': { start: [560, 74], f: [-1, 0], side: [0, 1], say: 'The ship runs out of the Sound, round the cold cape and south past the Rime Steps and the Cinder Reach. Days later Harrowmouth harbour wall comes up out of the evening.' },
   };
-  const ARRIVE = { reach: ['The Cinder Reach', 'Level 40-45'], rime: ['The Rime Steps', 'Level 45-50'], valley: ['Harrowmouth', 'Level 28-30'], heights: ['The Windward Heights', 'Level 50-55'], rimelift: ['The Dam Crown', 'The Rime Steps'], tidewater: ['Tidewater Sound', 'Level 55-60'], rainward: ['The Rainward Gorge', 'Level 60-65'], tidemills: ['The Tide Mills', 'Tidewater Sound'] };
+  const ARRIVE = { reach: ['The Cinder Reach', 'Level 40-45'], rime: ['The Rime Steps', 'Level 45-50'], valley: ['Harrowmouth', 'Level 28-30'], heights: ['The Windward Heights', 'Level 50-55'], rimelift: ['The Dam Crown', 'The Rime Steps'], tidewater: ['Tidewater Sound', 'Level 55-60'], rainward: ['The Rainward Gorge', 'Level 60-65'], weald: ['The Russet Weald', 'Level 65-70'], tidemills: ['The Tide Mills', 'Tidewater Sound'], slip: ['The Slip', 'The Rainward Gorge'] };
   const dockShips = () => [world.reachShip, world.rimeShip, world.tidewaterShip].filter(Boolean);
   function startCrossing(to, from) {
     if (crossing) endCrossing();
@@ -1078,6 +1085,7 @@ export async function startGame() {
     sfx.play('puff', 0.6);
   }
   function updateCrossing(dt) {
+    if (crossing.rope) { updateRope(dt); return; }
     if (crossing.haul) { updateHaul(dt); return; }
     if (crossing.lift) { updateLift(dt); return; }
     const C = crossing, f = crossOverlay();
@@ -1108,6 +1116,7 @@ export async function startGame() {
   }
   function endCrossing() {
     if (!crossing) return;
+    if (crossing.rope) { endRope(); return; }
     if (crossing.haul) { endHaul(); return; }
     if (crossing.lift) { endLift(); return; }
     crossing.cap?.remove(); crossShip.visible = false; engine.scene.remove(crossShip);
@@ -1241,6 +1250,74 @@ export async function startGame() {
     C.cap?.remove();
     if (haulTrain) { engine.scene.remove(haulTrain); haulTrain = null; }
     if (C.stand) C.stand.root.visible = true;
+    if (local?.root) local.root.visible = true;
+    ui.root.classList.remove('in-scene');
+    const f = crossOverlay(); f.style.transition = 'none'; f.style.opacity = '0';
+    crossing = null;
+  }
+  // ------------------------------------------------------------------ the ropeway (Chapter 49): fade, the car coming down the
+  // last stretch of the rope to its station, fade. Over the ridge (to the Russet Weald): down the east rope off the bank onto
+  // the lower station, beside the car parked on the west rope. Back (to the Slip): down off the cliff into the upper station
+  // on the west rope, beside the old car on the east rope. Halfway the car stops on a sheave and sways, then goes on. The
+  // server has already moved you; you ride the car, so you are hidden. Any key skips to the arrival.
+  const ROPE_SHOT = {
+    weald: { rope: () => world.wealdRope, side: 1, stop: 5.6, from: 2, cam: [16, 7, -6], say: 'The car climbs the rope over the head of the Slip and into the cloud. Over the ridge the rain falls away, and the rope runs down over a dry wood in autumn, copper and gold leaf on grey trunks. Halfway down a sheave seizes and the car hangs, swaying, until the crew free it.' },
+    slip: { rope: () => world.slipRope, side: -1, stop: -5.8, from: 2, cam: [-8, 5, 14], say: 'The car climbs out of the wood and over the ridge, and drops down the cliff through the cloud and the rain to the station at the head of the Slip.' },
+  };
+  let ropeCar = null;
+  const ropeYAt = (run, z) => { for (let i = 0; i < run.length - 1; i++) { const [z0, y0] = run[i], [z1, y1] = run[i + 1]; if ((z - z0) * (z - z1) <= 0) return y0 + (y1 - y0) * ((z - z0) / (z1 - z0 || 1)); } return run[run.length - 1][1]; };
+  function startRope(to) {
+    if (crossing) endCrossing();
+    const f = crossOverlay(); f.style.transition = 'none'; f.style.opacity = '1';
+    const S = ROPE_SHOT[to] || ROPE_SHOT.weald, R = S.rope();
+    if (ropeCar) engine.scene.remove(ropeCar);
+    ropeCar = ropeCarMesh(2591);
+    if (R) engine.scene.add(ropeCar);
+    const cap = document.createElement('div');
+    cap.className = 'scene-bars';
+    cap.innerHTML = `<div class="sb-top"></div><div class="sb-bot"><div class="sb-line">${S.say}</div><div class="sb-skip">Press any key to skip</div></div>`;
+    cap.style.zIndex = 61;
+    document.body.appendChild(cap);
+    ui.root.classList.add('in-scene');
+    // (the car runs from a point on the rope's run, between its second tower and the next, to its stop by the station)
+    const z0 = R ? (R.run[S.from][0] + R.run[S.from + 1][0]) / 2 : 0, z1 = R ? R.run[0][0] + S.stop : 0;
+    crossing = { haul: true, rope: true, to, t: 0, S, R, z0, z1, cap, shown: false, back: false };
+    sfx.play('chain', 0.6);
+  }
+  function updateRope(dt) {
+    const C = crossing, f = crossOverlay();
+    C.t += dt;
+    if (local?.root) local.root.visible = C.back;
+    if (C.t >= HAUL.back && !C.back) {
+      C.back = true;
+      if (local?.root) local.root.visible = true;
+      if (ropeCar) { engine.scene.remove(ropeCar); ropeCar = null; }
+      C.cap.classList.remove('on', 'say'); setTimeout(() => C.cap.remove(), 700);
+      ui.root.classList.remove('in-scene');
+      f.style.transition = 'opacity 0.9s ease-out'; f.style.opacity = '0';
+      if (game.you?.name) ui.zoneBanner(...(ARRIVE[C.to] || ARRIVE.weald));
+    }
+    if (C.t >= HAUL.end) { crossing = null; return; }
+    if (C.back || !ropeCar || !C.R) return;
+    if (C.t >= HAUL.inA && !C.shown) { C.shown = true; f.style.transition = `opacity ${HAUL.inB - HAUL.inA}s ease-in-out`; f.style.opacity = '0'; C.cap.classList.add('on'); setTimeout(() => C.cap?.classList.add('say'), 500); }
+    if (C.t >= HAUL.out && !C.fading) { C.fading = true; f.style.transition = `opacity ${HAUL.back - HAUL.out - 0.1}s ease-in`; f.style.opacity = '1'; }
+    // steady down the rope, a stop on the seized sheave (the car swaying on its hanger), then on and easing into the station
+    const k = Math.min(1, Math.max(0, C.t / (HAUL.out - 0.2)));
+    const run = k < 0.35 ? (k / 0.35) * 0.45 : k < 0.55 ? 0.45 : 0.45 + (1 - Math.pow(1 - (k - 0.55) / 0.45, 2)) * 0.55;
+    const z = C.z0 + (C.z1 - C.z0) * run, x = C.R.x + C.S.side * C.R.gauge / 2, y = ropeYAt(C.R.run, z) - CAR_HANG - 0.1;
+    const sway = k > 0.35 && k < 0.7 ? Math.sin((k - 0.35) * 40) * 0.07 * (1 - (k - 0.35) / 0.35) : 0;
+    ropeCar.position.set(x, y, z); ropeCar.rotation.set(sway, 0, 0);
+    if (k > 0.35 && k < 0.36 && !C.stopped) { C.stopped = true; sfx.play('clang', 0.5); }
+    const cam = engine.camera, cx = x + C.S.cam[0], cz = C.z1 + C.S.cam[2];
+    cam.position.set(cx, heightAt(cx, cz) + C.S.cam[1] + (1 - run) * 6, cz);
+    cam.lookAt(x, y + 1.2, z);
+    G.fadeOn.value = 0;
+    engine.updateShadow(ropeCar.position, 30);
+  }
+  function endRope() {
+    const C = crossing;
+    C.cap?.remove();
+    if (ropeCar) { engine.scene.remove(ropeCar); ropeCar = null; }
     if (local?.root) local.root.visible = true;
     ui.root.classList.remove('in-scene');
     const f = crossOverlay(); f.style.transition = 'none'; f.style.opacity = '0';

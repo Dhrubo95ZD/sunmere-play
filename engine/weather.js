@@ -4,8 +4,9 @@
 //   createRain() -> slanted rain streaks drawn around the camera focus in one instanced draw call
 import * as THREE from 'three';
 import { vnoise, smoothstep } from '/sunmere-play/shared/noise.js';
-import { desertWeight, highreachWeight, snowWeight, inReach, inRime, inHeights, inRainward } from '/sunmere-play/shared/terrain.js';
+import { desertWeight, highreachWeight, snowWeight, inReach, inRime, inHeights, inRainward, inWeald } from '/sunmere-play/shared/terrain.js';
 import { rainLevel } from '/sunmere-play/shared/rainward.js';
+import { galeLevel } from '/sunmere-play/shared/weald.js';
 import { DUNGEON_MIN_X } from '/sunmere-play/shared/dungeons.js';
 import { G } from './globals.js';
 
@@ -35,6 +36,9 @@ export function weatherAt(x, z, t) {
     const r = rainLevel(t);
     return { rain: r, sand: 0, snow: 0, ash: 0, pour: r };
   }
+  // the Russet Weald: dry (the far side of the range), but a gale on the world clock, the same for every player
+  // (shared/weald.js galeLevel): calm spells and gales that strip the leaves and throw the half-cut standards down
+  if (inWeald(x, z)) return { rain: 0, sand: 0, snow: 0, ash: 0, gale: galeLevel(t) };
   const desert = desertWeight(x, z);
   // slow fronts: about a quarter of the time it rains in the green lands, a fifth of the time the desert blows
   const a = vnoise(t / 260, 3.7, 811) * 0.7 + vnoise(t / 90, 1.3, 812) * 0.3;

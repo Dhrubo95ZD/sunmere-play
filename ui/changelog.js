@@ -1,6 +1,17 @@
 // What's new: shown once after an update (newest first). Bump `v` on the first entry whenever something is added.
 export const CHANGELOG = [
   {
+    v: 124, date: '17 November 2026', title: 'The Russet Weald',
+    items: [
+      ['Part Fifteen begins', 'Chapter 49, When the Count Comes Round: Kamal has drawn the thirteenth wind engine, and the oak it needs grows over the ridge. Clear and rewind the Makers’ old ropeway at the head of the Slip and ride its car over the ridge, out of the rain and down into the autumn wood.'],
+      ['The Russet Weald', 'A new land for levels 65 to 70: the Ropeway Foot with the Woodwrights’ camp and saw pits, the Long Sheds where the Makers seasoned their oak, and the Standards, the high wood of great half-cut oaks. Copper and gold leaf, long straight rides, low sun and mist in the hollows.'],
+      ['The gale', 'A gale blows through the Weald on the same clock for everyone. The wind tears the leaves loose, and at its height the half-cut standards come down across the rides along their marked lines. Mind where you stand.'],
+      ['Clear the Rides', 'An open event while the gale blows: everyone in the Weald, players and adventurers alike, works together to cut the fallen trunks clear and break the machines among them, with no group needed. Clear every ride before the gale drops and the Woodwrights’ chest at the camp pays out to all who helped.'],
+      ['New machines', 'Fellers with flat saw bars, bark strippers, stump grinders, log forwarders, stack cranes and ride wardens, two rare machines (the Leaning Feller and the Damp-Bound Stacker), and a world boss, the Great Forwarder, that drags fallen trunks along the rides while the gale blows.'],
+      ['Level 70', 'The level cap rises to 70, with the Woodwrights’ own quests and new gear. New skills and talents for levels 66 to 70 come in a later part of this update.'],
+    ],
+  },
+  {
     v: 123, date: '17 November 2026', title: 'Potion Slot',
     items: [
       ['Potion slot', 'The desktop app and the browser now have a potion slot just above the left end of your action bar, on its own key (comma by default; change it in Options under Keys). Press it or click it to drink.'],

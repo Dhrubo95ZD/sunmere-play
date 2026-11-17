@@ -68,6 +68,8 @@ const AIR = {
   reach: { fog: 0.011, h: 11, vol: 0.006, mist: 0.0, max: 0.6, bloom: 1.08 },
   rime: { fog: 0.008, h: 8, vol: 0.0035, mist: 0.02, max: 0.5, bloom: 1.3 },
   heights: { fog: 0.004, h: 6, vol: 0.003, mist: 0.0, max: 0.45, bloom: 1.75 },
+  // the Russet Weald: a soft warm haze between the trunks, mist lying low (the hollows), a soft sun with no shafts of rays
+  weald: { fog: 0.006, h: 4, vol: 0.0015, mist: 0.035, max: 0.45, bloom: 1.1 },
   indoor: { fog: 0.012, h: 3, vol: 0, mist: 0, max: 0.4, bloom: 1.08 },
 };
 const _sunNdc = new THREE.Vector3(), _fwd = new THREE.Vector3(), _lampAvg = new THREE.Color();
@@ -412,7 +414,7 @@ export class Engine {
     const B = this._base, tw = Math.min(1, night * (1 - night) * 4); // twilight peaks halfway into dusk and dawn
     this._tw = tw;
     // the sun sinks toward the hills at twilight (long golden shadows, a sun you can face) and climbs back as the moon
-    this.setSunElevation(THREE.MathUtils.lerp(40, 13, tw * tw * (3 - 2 * tw)));
+    this.setSunElevation(THREE.MathUtils.lerp(B.el ?? 40, 13, tw * tw * (3 - 2 * tw))); // (el: an area's own noon height, the Weald's low autumn sun)
     // the night's colours come in late (nk): halfway into twilight the light is still gold, not gold and moon-blue mixed
     // (which read pink); by full night it is a dim moonlit blue with the lamps doing the warm work
     const nk = THREE.MathUtils.smoothstep(night, 0.3, 1);
@@ -471,6 +473,11 @@ export class Engine {
               : theme === 'rainward'
                 ? { ...V, sun: V.sun * 0.78, sunC: c('#f4f0e2'), fill: V.fill * 1.0, fillC: c('#8ea89a'), hemi: V.hemi * 1.08, hemiS: c('#aebcb4'), hemiG: c('#2e3a28'),
                   fog: c('#9aa8a2'), near: V.near * 1.0, far: V.far * 0.95, env: V.env * 0.85, cloud: V.cloud + 0.06, zen: c('#6a7a84'), hor: c('#b8c2bc') }
+                // the Russet Weald: a low warm autumn sun (soft, through a haze: no disc of rays), copper light off the leaves, warm
+                // brown shadows, a pale gold haze down the rides
+                : theme === 'weald'
+                  ? { ...V, sun: V.sun * 0.82, sunC: c('#ffd8a8'), fill: V.fill * 0.95, fillC: c('#a08a78'), hemi: V.hemi * 1.0, hemiS: c('#c8b49a'), hemiG: c('#3a2a1c'),
+                    fog: c('#c4ae92'), near: V.near * 0.95, far: V.far * 0.92, env: V.env * 0.85, cloud: V.cloud + 0.08, zen: c('#7a8aa0'), hor: c('#dcc6a4'), el: 24 }
                 : V;
     }
     this._theme = theme;

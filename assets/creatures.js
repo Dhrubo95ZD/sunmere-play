@@ -12,6 +12,7 @@ import { buildWheelHammer, buildFlumeWalker, buildSluiceKeeper, buildDamSentry, 
 import { buildIcePlough, buildGaleWalker, buildRimeSweeper, buildTowerWarden, buildStormplough } from './heightsMachines.js';
 import { buildLogHaulier, buildSawCarriage, buildRopeLayer, buildSiltDredge, buildTideWarden, buildGreatDredge } from './tidewaterMachines.js';
 import { buildStumpPuller, buildTerraceCutter, buildDrainBorer, buildSeedDrill, buildSlopeWarden, buildHillLeveller } from './rainwardMachines.js';
+import { buildBarkStripper, buildStumpGrinder, buildLogForwarder, buildStackCrane, buildFeller, buildRideWarden, buildGreatForwarder, buildFallenStandard } from './wealdMachines.js';
 import { buildGreatSorter } from './oreBosses.js';
 import { buildGateWinder, buildTurbineHeart, buildFloodgate } from './sluiceBosses.js';
 import { buildRodEngine, buildCisternWarden, buildGreatPump } from './pumpBosses.js';
@@ -898,6 +899,8 @@ function dressColossus(root) {
 // the crawler model's paint by mob (tripoModels.js tint): salt-bleached skimmers, sooty tunnel crawlers, sea-green tide-crawlers
 const CRAWLER_TINT = { skimmer: { c: '#f4efe6', k: 0.95, b: 2.5 }, shaftcrawler: { c: '#8a7c6c', k: 0.4, b: 0.75 }, tidecrawler: { c: '#7fb8a8', k: 0.75, b: 1.0 } };
 export function buildMachine(model, variant = 0, mob = null) {
+  // Part Fifteen, the Russet Weald (the rares dress their model: the Damp-Bound Stacker's damp and sodden block, the Leaning Feller's cant and last butt)
+  if (model === 'barkstripper') return buildBarkStripper(variant); if (model === 'stumpgrinder') return buildStumpGrinder(variant); if (model === 'logforwarder') return buildLogForwarder(variant); if (model === 'stackcrane') return buildStackCrane(variant, mob === 'dampstacker'); if (model === 'feller') return buildFeller(variant, mob === 'leaningfeller'); if (model === 'ridewarden') return buildRideWarden(variant); if (model === 'greatforwarder') return buildGreatForwarder(); if (model === 'fallenstandard') return buildFallenStandard();
   // Part Fourteen, the Rainward Gorge (the rares dress their model: the Mired Puller's mud and last stump, the Moss-Grown Cutter's moss)
   if (model === 'stumppuller') return buildStumpPuller(variant, mob === 'miredpuller'); if (model === 'terracecutter') return buildTerraceCutter(variant, mob === 'mossgrowncutter'); if (model === 'drainborer') return buildDrainBorer(variant); if (model === 'seeddrill') return buildSeedDrill(variant); if (model === 'slopewarden') return buildSlopeWarden(variant); if (model === 'hillleveller') return buildHillLeveller();
   // the Upper Cutting (Part Fourteen raid): the Stump Puller Prime, the Spoil Conveyor, the Bed Ram and the Terrace Engine

@@ -23,6 +23,7 @@ import { rollGear, CLASS_WEIGHT } from './items.js';
 import { mulberry32 } from './noise.js';
 import { BOT_SEEDS, BOT_GUILDS, makePersona, makeFriends, nameSeed } from './botroster.js';
 import { BotPaths } from './botpath.js';
+import { RIDES } from './rides.js';
 
 export const BOTS_MIND = {
   key: 'bot1roster', v: 1,
@@ -32,8 +33,8 @@ export const BOTS_MIND = {
   offlineDays: 14, perCheck: 2, dungeonCool: 1800, friendAt: 3, gearPerRun: 0.01, gearMax: 0.15,
 };
 // the zone ladder by area (B.4): a bot moves up when its level passes the top of its area plus 1
-export const AREA_LADDER = [['valley', 1, 40], ['reach', 40, 45], ['rime', 45, 50], ['heights', 50, 55], ['tidewater', 55, 60], ['rainward', 60, 65]];
-export const targetArea = (L) => { for (const [a, , hi] of AREA_LADDER) if (L <= hi + 1) return a; return 'rainward'; };
+export const AREA_LADDER = [['valley', 1, 40], ['reach', 40, 45], ['rime', 45, 50], ['heights', 50, 55], ['tidewater', 55, 60], ['rainward', 60, 65], ['weald', 65, 70]];
+export const targetArea = (L) => { for (const [a, , hi] of AREA_LADDER) if (L <= hi + 1) return a; return AREA_LADDER[AREA_LADDER.length - 1][0]; };
 // roughly what a human makes per minute at a level (questbot pace); a bot gets persona.pace of it
 export const xpPerMin = (L) => xpForLevel(L) / (15 + 1.6 * L);
 const DAY = 864e5;
@@ -158,12 +159,12 @@ export const BOT_MIND_METHODS = {
       else if (G.talk) work = { kind: 'talk' };
       if (work) quests.push({ id, Q, area, giver: g, turnin: t, work });
     }
-    // crossings between areas (the ship, the lift, the haul road), as on_sail allows them
+    // crossings between areas (the ship, the lift, the haul road, the ropeway), as on_sail allows them
     const sails = [];
     for (const n of this.npcs.values()) for (const dest of sailRoutes(n)) {
       const to = SAIL.to[dest]; if (!to) continue;
-      const haul = !!n.haul || to.kind === 'haul', lift = !haul && (!!n.lift || to.kind === 'lift');
-      sails.push({ n, dest, from: npcArea.get(n.id), to: areaOf(to.x, to.z), need: [...(!lift && !haul ? [SAIL.need] : []), ...(to.need ? [to.need] : [])] });
+      const haul = !!n.haul || to.kind === 'haul', rope = !haul && (!!n.rope || to.kind === 'rope'), lift = !haul && !rope && (!!n.lift || to.kind === 'lift');
+      sails.push({ n, dest, from: npcArea.get(n.id), to: areaOf(to.x, to.z), need: [...(!lift && !haul && !rope ? [SAIL.need] : []), ...(to.need ? [to.need] : [])] });
     }
     const hubs = [...CARAVANS.filter((c) => c.x < DUNGEON_MIN_X).map((c) => ({ x: c.x, z: c.z + 3, area: areaOf(c.x, c.z) })), { x: 4, z: 4, area: 'valley' }];
     const vendors = [...this.npcs.values()].filter((n) => n.vendor && npcArea.get(n.id) !== 'dungeon');
@@ -419,7 +420,12 @@ export const BOT_MIND_METHODS = {
     if (b.bag.length >= BOTS_MIND.sellAt) add(2.5, () => this.goalSell(b));
     const q = this.goalQuest(b); if (q) add(1.3, () => q);
     const boss = [...this.mobs.values()].find((m) => m.def.world && !m.dead && !m.sp.dungeon && areaOf(m.x, m.z) === area && L >= m.level - 5 && dist(m, b) < 400);
-    if (boss) add(2 * like('world bosses', 1.5), () => ({ kind: 'worldboss', id: boss.id, label: `fighting ${boss.def.name}`, stale: 600 }));
+    // an open event in its area (the Russet Weald's Clear the Rides while the gale blows): go and help, as for a world boss.
+    // While it runs the event comes first (the Great Forwarder is always out in the gale; a world boss of a million health
+    // would otherwise hold every bot in the wood for the whole gale and leave the trunks to the players)
+    const ev = L >= RIDES.minLevel && !!this.ridesTarget?.(b);
+    if (boss) add((ev ? 0.6 : 2) * like('world bosses', 1.5), () => ({ kind: 'worldboss', id: boss.id, label: `fighting ${boss.def.name}`, stale: 600 }));
+    if (ev) add(2.2 * like('world bosses', 1.5), () => ({ kind: 'event', ev: 'rides', label: 'clearing the rides in the gale', stale: 300 }));
     const cr = this.goalCraft(b); if (cr) add(0.6 * like('crafting') * (cr.station === 'cook' ? like('cooking') : 1), () => cr);
     const ga = this.goalGather(b); if (ga) add(0.35 * like('gathering', 3), () => ga);
     if (this.time > (b.mind.runCool || 0)) { const d = this.goalDungeon(b); if (d) add(0.5 * like('dungeons'), () => d); }
@@ -523,7 +529,17 @@ export const BOT_MIND_METHODS = {
     } else if (g.kind === 'worldboss') {
       const m = this.mobs.get(g.id);
       if (!m || m.dead) { g.done = true; if (m) this.botRemember?.(b, 'boss', { a: m.def.name, ok: 1 }); return; }
+      // Clear the Rides started while it was at the boss: off to the trunks unless the boss is on it now (it chooses again)
+      if (m.target !== b.id && b.level >= RIDES.minLevel && this.ridesTarget?.(b)) { g.done = true; return; }
       g.G = { x: m.x, z: m.z, r: 30, sps: [m.sp] }; g.fight = (x) => x.id === g.id; g.boss = true;
+    } else if (g.kind === 'event') {
+      // Clear the Rides: the nearest trunk still across a ride, cut with whoever is there (shared/rides.js)
+      const m = this.ridesTarget?.(b);
+      if (!m) { g.done = true; return; }
+      g.id = m.id;
+      const cur = b.target && this.mobs.get(b.target); // (a machine set on it is fought first; another trunk it is cutting is kept)
+      if (!cur || cur.dead || !(cur.target === b.id || cur.def.inert)) { b.target = m.id; b.ai.pickT = this.time; }
+      g.G = { x: m.x, z: m.z, r: 12, sps: [] }; g.fight = (x) => x.id === g.id || x.target === b.id; g.boss = true;
     } else if (g.kind === 'dungeon') {
       if (g.lead !== b.id) { const L = this.players.get(g.lead); if (!L || L.mind?.goal?.kind !== 'dungeon' && !L.away) g.done = true; }
     } else if (g.kind === 'rest' && g.idle && this.time > g.idle) g.done = true;

@@ -20,7 +20,7 @@ function barkColor(tint = '#ffffff', mossAmt = 0.5, groundDark = 1.2) {
 const bendAmp = (H, k) => (y) => k * Math.pow(clamp(y / H, 0, 1.4), 2) * H;
 
 // A leafy cluster made of oriented cards around `c`.
-function leafCluster(b, mat, c, R, n, opts) {
+export function leafCluster(b, mat, c, R, n, opts) {
   const { canopyC, tintLo, tintHi, yLo, yHi, wind, size = 1.25, upBias = 0.7, flutter = 0.05, segs = 2, core = null, coreK = 0.6 } = opts;
   const lo = rgb(tintLo), hi = rgb(tintHi);
   if (core) {

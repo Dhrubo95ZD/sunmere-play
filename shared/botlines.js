@@ -139,6 +139,8 @@ const T = {
   ambient_tidewater_high: ['tide is in, mind the flats', 'high water at the Sound now'],
   ambient_rainward_wet: ['its pouring in the gorge again', 'rain again. my boots are full of red mud'],
   ambient_rainward_dry: ['rain stopped for once', 'dry for now in the gorge, wont last'],
+  ambient_weald_gale: ['gale is up in the weald, keep off the marked lines', 'trees coming down across the rides again'],
+  ambient_weald_calm: ['wood is quiet again', 'calm in the weald for now, just leaves falling'],
   levelled: ['finally level {level}', 'level {level}, at last', 'just hit {level}', '{level} now, slowly getting there', 'ding, {level}', 'ding {level}', '{level} finally', 'ding. {level}, slow going'],
   zone_move: ['made it out to {area}', 'finally out in {area}', '{area} at last', 'new ground: {area}', 'just got to {area}'],
   lfg_need: ['lf {role} for {dungeon}', 'need a {role} for {dungeon}', '{dungeon} queue needs a {role}, anyone?'],

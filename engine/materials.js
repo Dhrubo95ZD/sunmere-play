@@ -215,7 +215,23 @@ uniform float uCloudAmount;
 varying vec3 vWPos;
 varying float vVDepth;
 float ign(vec2 p) { return fract(52.9829189 * fract(dot(p, vec2(0.06711056, 0.00583715)))); }
+#ifdef SM_CANOPY
+uniform vec3 uCanopy;
+uniform vec3 uPlayerPos;
+#endif
 ` + CUT_PARS;
+
+// the Russet Weald's crowns (SM_CANOPY, G.canopy: x on, y radius, z height over the hero): the camera looks down on a
+// closed autumn canopy, so the crowns within the radius round the hero and above his head go (a dithered edge), and the
+// fight under the trees shows; shadows keep the whole crown. game.js turns it on in the wood only.
+const FRAG_CANOPY = /* glsl */ `
+#ifdef SM_CANOPY
+if (uCanopy.x > 0.5) {
+  float ck = (1.0 - smoothstep(uCanopy.y * 0.75, uCanopy.y, length(vWPos.xz - uPlayerPos.xz))) * smoothstep(uPlayerPos.y + uCanopy.z, uPlayerPos.y + uCanopy.z + 1.5, vWPos.y);
+  if (ck > ign(gl_FragCoord.xy) * 0.98 + 0.01) discard;
+}
+#endif
+`;
 
 const FRAG_FADE = /* glsl */ `
 #ifdef SM_FADE
@@ -249,6 +265,7 @@ function bindUniforms(shader) {
     uFadeDepth: G.fadeDepth,
     uFadeRadius: G.fadeRadius,
     uFadeOn: G.fadeOn,
+    uCanopy: G.canopy,
     uRes: G.resolution,
     uCloudTex: G.cloudTex,
     uCloudOffset: G.cloudOffset,
@@ -294,7 +311,7 @@ export function patchWorld(material, { wind = false, fade = false, cloud = true,
     patchVertex(shader, wind);
     shader.fragmentShader = shader.fragmentShader
       .replace('#include <common>', '#include <common>\n' + FRAG_PARS)
-      .replace('void main() {', 'void main() {\n' + FRAG_CUT + FRAG_FADE)
+      .replace('void main() {', 'void main() {\n' + FRAG_CUT + FRAG_FADE + FRAG_CANOPY)
       .replace('#include <opaque_fragment>', '#include <opaque_fragment>\n' + FRAG_CLOUD);
     if (material.userData.foliage) {
       shader.fragmentShader = shader.fragmentShader.replace('#include <alphatest_fragment>', `
@@ -314,7 +331,7 @@ export function patchWorld(material, { wind = false, fade = false, cloud = true,
       shader.fragmentShader = shader.fragmentShader.replace('#include <normal_fragment_begin>', chunk);
     }
   };
-  material.customProgramCacheKey = () => `sm${wind ? 'w' : ''}${fade ? 'f' : ''}${cut ? 'x' : ''}${cloud ? 'c' : ''}${noFlip ? 'n' : ''}${material.userData.billboard ? 'b' : ''}${material.userData.foliage ? 'L' : ''}`;
+  material.customProgramCacheKey = () => `sm${wind ? 'w' : ''}${fade ? 'f' : ''}${cut ? 'x' : ''}${cloud ? 'c' : ''}${noFlip ? 'n' : ''}${material.userData.billboard ? 'b' : ''}${material.userData.foliage ? 'L' : ''}${material.defines.SM_CANOPY !== undefined ? 'K' : ''}`;
   return material;
 }
 
@@ -688,7 +705,16 @@ const DEFS = {
   wheat: () => foliage('wheat', T.wheatCardTex(), { fade: false }),
   reed: () => foliage('reed', T.grassCardTex('reed', ['#3a5a2a', '#5a7a34', '#8aa44a', '#c8d080'], { blades: 40, h: 1.0 }), { fade: false }),
   flowers: () => foliage('flowers', T.flowerCardTex(), { fade: false }),
+  // the Russet Weald (Part Fifteen): smooth grey trunks, copper and gold autumn crowns (plain oval leaves in lobed clumps)
+  barkGrey: () => std('barkGrey', { tex: T.barkTex('barkGrey', { base: '#8a847a', light: '#b6aea0' }), wind: true }),
+  leafCopper: () => canopy(foliage('leafCopper', T.clumpCardTex('copper', ['#4a1e0c', '#7a3414', '#b0521e', '#d8823a', '#f0b868'], { seed: 11 }), { billboard: true })),
+  leafGold: () => canopy(foliage('leafGold', T.clumpCardTex('gold', ['#5a3a10', '#8e6418', '#c49428', '#e6c04a', '#f8e28c'], { seed: 13 }), { billboard: true })),
+  coreCopper: () => canopy(core('coreCopper', T.leafMassTex('copper', ['#3a180a', '#622a12', '#8e441c', '#b8682e']))),
+  coreGold: () => canopy(core('coreGold', T.leafMassTex('gold', ['#4a300e', '#765214', '#a27a22', '#c8a040']))),
 };
+
+// the Weald's crowns: cut round the hero (FRAG_CANOPY)
+function canopy(m) { m.defines = m.defines || {}; m.defines.SM_CANOPY = ''; m.needsUpdate = true; return m; }
 
 function core(key, tex, o = {}) {
   return std(key, { tex, wind: true, rough: 0.95, env: 0.5, normalScale: 0.6, emissive: o.emissive });

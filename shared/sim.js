@@ -8,6 +8,8 @@ import { mulberry32 } from './noise.js';
 import { tpSpot } from './tpspot.js';
 import { setTideClock, tideState } from './tidewater.js';
 import { rainState } from './rainward.js';
+import { galeState } from './weald.js';
+import { RIDES_METHODS } from './rides.js';
 import { houseSpec, houseAt, housePush, houseCrosses, houseTalkOk } from './houses.js';
 import { rollGear, gearValue, CLASS_WEIGHT, offhandLook, wornLook, shoulderLook, cloakLook, GEMS, UPG, upOf, canUpgrade, upgradeCost, upgraded, gearName, salvageYield, rollNamed, migrateGear, migrateEntry, migratePlayer, GEAR_V, TEMPER, newTemper, temperInfo, BILLET, ENGINE_CORE, RARITY_SRC, WEAPON_TYPES, OFFHAND_TYPES, unsocketFee } from './items.js';
 import { ACHIEVEMENTS, ACH_BY_ID, ACH_BY_COUNTER, DUNGEON_BOSSES, achTitle, achDone } from './achievements.js';
@@ -181,7 +183,7 @@ export class World {
     p.guild = saved && saved.cls === cls && saved.guild || null;
     p.friends = saved && saved.cls === cls ? this.loadFriends(saved) : [];
     p.ringWeek = saved && saved.cls === cls && saved.ringWeek || null;
-    p.botPrefs = saved && saved.cls === cls && saved.botPrefs || null; p.lfgRole = saved && saved.cls === cls && saved.lfgRole || null;
+    p.botPrefs = saved && saved.cls === cls && saved.botPrefs || null; p.lfgRole = saved && saved.cls === cls && saved.lfgRole || null; p.ridesOwed = saved && saved.cls === cls && saved.ridesOwed || null; // (P15.3: a Clear the Rides share not yet taken from the chest)
     p.compGear = saved && saved.cls === cls && saved.compGear || {};
     p.looks = saved && saved.cls === cls && saved.looks || [];
     p.wlook = saved && saved.cls === cls && saved.wlook || null;
@@ -230,7 +232,7 @@ export class World {
   }
 
   savePlayer(p) {
-    this.io.save(p.name, { cls: p.cls, level: p.level, xp: p.xp, gold: p.gold, bag: p.bag, equip: p.equip, quests: p.quests, done: p.done, picks: p.picks || {}, spares: p.spares || {}, lgear: p.lgear || null, raidLock: p.raidLock || null, x: p.x, z: p.z, visited: p.visited, talents: p.talents, ach: p.ach, title: p.title, companions: this.myBots(p).filter((b) => !b.lfg).map((b) => b.cls), runabout: !!p.runabout, rep: p.rep || {}, daily: p.daily || {}, bank: p.bank || [], paint: p.paint || 'brass', pets: p.pets || {}, pet: p.pet || null, cv: p.cv || 0, arenaBest: p.arenaBest || 0, bagSize: p.bagSize || BAG_BASE, bagV: BAG_V, rested: Math.round(p.rested || 0), savedAt: Date.now(), savedHub: this.inHub(p), home: p.home || 'village', looks: p.looks || [], wlook: p.wlook || null, ohlooks: p.ohlooks || [], ohlook: p.ohlook || null, shines: p.shines || [], wshine: p.wshine || null, shlooks: p.shlooks || [], shlook: p.shlook || null, cklooks: p.cklooks || [], cklook: p.cklook || null, homeDeco: p.homeDeco || {}, homePos: p.homePos || {}, compGear: p.compGear || {}, ringWeek: p.ringWeek || null, guild: p.guild || null, ledger: p.ledger || [], prof: p.prof || {}, bounty: p.bounty || null, lo: p.lo || 0, loadouts: this.loadouts(p), runaboutMk: p.runaboutMk || 1, crawler: !!p.crawler, mountKind: p.mountKind || 'runabout', recallReady: p.recallReady || 0, mail: p.mail || [], buyOrders: p.buyOrders || [], wo: p.wo || null, gearV: p.gearV || GEAR_V, temper: p.temper || newTemper(), heats: p.heats || [], wheat: p.wheat ?? null, friends: p.friends || [], botPrefs: p.botPrefs || null, lfgRole: p.lfgRole || null });
+    this.io.save(p.name, { cls: p.cls, level: p.level, xp: p.xp, gold: p.gold, bag: p.bag, equip: p.equip, quests: p.quests, done: p.done, picks: p.picks || {}, spares: p.spares || {}, lgear: p.lgear || null, raidLock: p.raidLock || null, x: p.x, z: p.z, visited: p.visited, talents: p.talents, ach: p.ach, title: p.title, companions: this.myBots(p).filter((b) => !b.lfg).map((b) => b.cls), runabout: !!p.runabout, rep: p.rep || {}, daily: p.daily || {}, bank: p.bank || [], paint: p.paint || 'brass', pets: p.pets || {}, pet: p.pet || null, cv: p.cv || 0, arenaBest: p.arenaBest || 0, bagSize: p.bagSize || BAG_BASE, bagV: BAG_V, rested: Math.round(p.rested || 0), savedAt: Date.now(), savedHub: this.inHub(p), home: p.home || 'village', looks: p.looks || [], wlook: p.wlook || null, ohlooks: p.ohlooks || [], ohlook: p.ohlook || null, shines: p.shines || [], wshine: p.wshine || null, shlooks: p.shlooks || [], shlook: p.shlook || null, cklooks: p.cklooks || [], cklook: p.cklook || null, homeDeco: p.homeDeco || {}, homePos: p.homePos || {}, compGear: p.compGear || {}, ringWeek: p.ringWeek || null, guild: p.guild || null, ledger: p.ledger || [], prof: p.prof || {}, bounty: p.bounty || null, lo: p.lo || 0, loadouts: this.loadouts(p), runaboutMk: p.runaboutMk || 1, crawler: !!p.crawler, mountKind: p.mountKind || 'runabout', recallReady: p.recallReady || 0, mail: p.mail || [], buyOrders: p.buyOrders || [], wo: p.wo || null, gearV: p.gearV || GEAR_V, temper: p.temper || newTemper(), heats: p.heats || [], wheat: p.wheat ?? null, friends: p.friends || [], botPrefs: p.botPrefs || null, lfgRole: p.lfgRole || null, ridesOwed: p.ridesOwed || null });
   }
 
   // plan A7: every place a character keeps gear, moved to the gearV 2 shape (bs/tq/up; rf n -> up n). Idempotent. The
@@ -280,7 +282,7 @@ export class World {
       hp: p.hp, maxHp: p.maxHp, res: p.res, maxRes: p.maxRes, bag: p.bag, equip: p.equip, quests: p.quests, done: p.done,
       stats: p.stats, power: Math.round(p.power), armorPct: p.armorPct, cds: p.cds, gcd: p.gcd, dead: p.dead, grave: p.dead ? this.graveName(p) : null, x: p.x, z: p.z,
       buffs: p.buffs.map((b) => ({ name: b.name, icon: b.icon, t: b.t, dur: b.dur, debuff: !!b.debuff })), absorb: Math.round(p.absorb),
-      duel: p.duel ? { with: p.duel.with, start: p.duel.start, end: p.duel.end } : null, mailNew: (p.mail || []).filter((m) => !m.read).length, bagSize: this.bagMax(p), rested: Math.round(p.rested || 0), home: CARAVANS.find((c) => c.id === p.home)?.name || 'Sunmere Village', recallReady: p.recallReady || 0, recalling: !!p.recall, looks: p.looks || [], wlook: p.wlook || null, ohlooks: p.ohlooks || [], ohlook: p.ohlook || null, shines: p.shines || [], wshine: p.wshine || null, shlooks: p.shlooks || [], shlook: p.shlook || null, cklooks: p.cklooks || [], cklook: p.cklook || null, heats: p.heats || [], wheat: p.wheat ?? null, temper: this.temperState(p), homeDeco: p.homeDeco || {}, homePos: p.homePos || {}, buyback: (p.buyback || []).map((b) => ({ it: b.it, value: b.value })), compGear: p.compGear || {}, comps: this.myBots(p).filter((b) => !b.escort).map((b) => ({ id: b.id, name: b.name, cls: b.cls, power: Math.round(b.power), hp: b.maxHp, armor: Math.round(b.armorPct * 100) })), guild: p.guild ? { name: p.guild.name, rank: p.guild.rank, roster: this.guildRoster(p) } : null, ledger: p.ledger || [], prof: p.prof || {}, lo: p.lo || 0, loadouts: this.loadouts(p), lgear: (p.lgear || [null, null]).map((g) => (g ? Object.keys(g).length : 0)), runaboutMk: p.runaboutMk || 1, runabout: !!p.runabout, crawler: !!p.crawler, mountKind: mountKind(p), mounted: !!p.mounted, paint: p.paint || 'brass', pets: p.pets || {}, pet: p.pet || null, rep: p.rep || {}, daily: p.daily || {}, today: this.today(),
+      duel: p.duel ? { with: p.duel.with, start: p.duel.start, end: p.duel.end } : null, mailNew: (p.mail || []).filter((m) => !m.read).length, bagSize: this.bagMax(p), rested: Math.round(p.rested || 0), home: CARAVANS.find((c) => c.id === p.home)?.name || 'Sunmere Village', recallReady: p.recallReady || 0, recalling: !!p.recall, looks: p.looks || [], wlook: p.wlook || null, ohlooks: p.ohlooks || [], ohlook: p.ohlook || null, shines: p.shines || [], wshine: p.wshine || null, shlooks: p.shlooks || [], shlook: p.shlook || null, cklooks: p.cklooks || [], cklook: p.cklook || null, heats: p.heats || [], wheat: p.wheat ?? null, temper: this.temperState(p), homeDeco: p.homeDeco || {}, homePos: p.homePos || {}, buyback: (p.buyback || []).map((b) => ({ it: b.it, value: b.value })), compGear: p.compGear || {}, comps: this.myBots(p).filter((b) => !b.escort).map((b) => ({ id: b.id, name: b.name, cls: b.cls, power: Math.round(b.power), hp: b.maxHp, armor: Math.round(b.armorPct * 100) })), guild: p.guild ? { name: p.guild.name, rank: p.guild.rank, roster: this.guildRoster(p) } : null, ledger: p.ledger || [], ridesOwed: p.ridesOwed?.k || 0, prof: p.prof || {}, lo: p.lo || 0, loadouts: this.loadouts(p), lgear: (p.lgear || [null, null]).map((g) => (g ? Object.keys(g).length : 0)), runaboutMk: p.runaboutMk || 1, runabout: !!p.runabout, crawler: !!p.crawler, mountKind: mountKind(p), mounted: !!p.mounted, paint: p.paint || 'brass', pets: p.pets || {}, pet: p.pet || null, rep: p.rep || {}, daily: p.daily || {}, today: this.today(),
       talents: p.talents, talentPts: talentPoints(p.level) - totalSpent(p.talents), speedMul: 1 + (p.tal?.speed || 0), crit: 0.1 + (p.tal?.crit || 0), dodge: p.tal?.dodge || 0, hastePct: p.hastePct || 0, title: p.title || '',
       mods: Object.fromEntries(['dmg', 'critDmg', 'heal', 'leech', 'cdr', 'thorns', 'regen', 'hp', 'armor', 'haste', 'crit', 'dodge', 'speed', 'absorb'].filter((k) => typeof p.tal?.[k] === 'number' && p.tal[k]).map((k) => [k, p.tal[k]])),
     };
@@ -389,6 +391,7 @@ export class World {
     else if (cmd === '/dismiss') this.dismissCompanion(p, false, arg);
     else if (cmd === '/comp') { const [, order, who] = text.split(/\s+/); this.on_compOrder(p, { order, name: who }); }
     else if (EMOTES[cmd.slice(1)]) this.emote(p, cmd.slice(1));
+    else if (cmd === '/gale') this.ridesGaleNow(arg, p); // test option (P15.3): the world clock on to the Russet Weald's next gale ('/gale' its start, '/gale down' or '/gale <n>' its first or n-th trunk down, '/gale cut' the trunk nearest you cut clear)
     else if (cmd === '/event') { const ev = this.wev.find((e) => e.def.id === arg) || this.wev[0]; if (!ev.live) ev.next = this.time; }
     else if (cmd === '/dungeon' && DUNGEON_BY_ID[arg]) { const D = DUNGEON_BY_ID[arg]; this.teleport(p, D.startW[0], D.startW[1]); this.checkReach(p); }
     else this.msg(p, 'Commands: /who, /invite <name>, /leave, /promote <name>, /p <text>, /s <text> (say), /w <name> <text> (whisper), /r <text> (reply), /friend <name>, /trade <name>, /inspect <name>, /dismiss, /unstuck, emotes /wave /cheer /point /salute /clap /laugh /shrug /nod /sit');
@@ -2333,6 +2336,7 @@ export class World {
     // (a held character, its connection dropped and waiting for a reconnect, earns nothing: no risk-free leech by unplugging)
     const contributors = [...m.threat.keys()].map((id) => this.players.get(id)).filter((q) => q && !q.held);
     for (const c of [...contributors]) for (const q of this.partyMembers(c)) if (!contributors.includes(q) && !q.dead && !q.held && dist(q, m) < 80) contributors.push(q);
+    this.ridesKill(m, contributors); // Clear the Rides: a trunk is everyone's who is near it, no party needed; machines count to the tally
     if (m.sp.event) { const ev = this.wev.find((e) => e.def.id === m.sp.event); if (ev?.live) for (const p of contributors) ev.live.fought.add(p.id); }
     for (const p of contributors) {
       if (p.bot) { if (p.mind) this.botKillCredit(p, m); continue; } // a living bot earns its own XP and quest credit (B.4)
@@ -2701,19 +2705,20 @@ export class World {
     const dest = m?.to != null ? m.to : n.sail;
     // a lift (the Windward Heights' counterweight lift, kind 'lift') is ridden like a crossing, with its own words and gate;
     // so is the haul road (Part Fourteen: the wagon behind the rewound log haulier, kind 'haul', from the Tide Mills to the
-    // Rainward Gorge and back)
-    const haul = !!n.haul || SAIL.to[dest]?.kind === 'haul', lift = !haul && (!!n.lift || SAIL.to[dest]?.kind === 'lift');
-    if (!sailRoutes(n).includes(dest) || !SAIL.to[dest]) return this.err(p, haul ? 'The haul road does not run there from here.' : lift ? 'The lift does not run there from here.' : 'The ship does not sail there from here.');
+    // Rainward Gorge and back), and the ropeway (Part Fifteen: the car on the Makers' rewound rope, kind 'rope', from the head
+    // of the Slip over the ridge to the Russet Weald and back)
+    const rope = !!n.rope || (!n.haul && SAIL.to[dest]?.kind === 'rope'), haul = !rope && (!!n.haul || SAIL.to[dest]?.kind === 'haul'), lift = !haul && !rope && (!!n.lift || SAIL.to[dest]?.kind === 'lift');
+    if (!sailRoutes(n).includes(dest) || !SAIL.to[dest]) return this.err(p, haul ? 'The haul road does not run there from here.' : rope ? 'The ropeway does not run there from here.' : lift ? 'The lift does not run there from here.' : 'The ship does not sail there from here.');
     if (dist(p, n) > SAIL.range) return this.err(p, 'Too far away.');
-    if (!lift && !haul && !p.done[SAIL.need]) return this.err(p, 'The ship is not ready to sail yet.');
-    if (SAIL.to[dest].need && !p.done[SAIL.to[dest].need]) return this.err(p, SAIL.to[dest].notReady || (haul ? 'The haul road is not running yet.' : lift ? 'The lift is not running yet.' : 'The ship is not ready to sail there yet.'));
+    if (!lift && !haul && !rope && !p.done[SAIL.need]) return this.err(p, 'The ship is not ready to sail yet.');
+    if (SAIL.to[dest].need && !p.done[SAIL.to[dest].need]) return this.err(p, SAIL.to[dest].notReady || (haul ? 'The haul road is not running yet.' : rope ? 'The ropeway is not running yet.' : lift ? 'The lift is not running yet.' : 'The ship is not ready to sail there yet.'));
     if (this.time - p.combatT < 5) return this.err(p, 'Not while you are fighting.');
     if (p.trial || p.duel) return this.err(p, 'Not now.');
     if (p.recall) { p.recall = null; p.session.send({ t: 'ev', list: [{ k: 'recallStop' }] }); }
     this.dismount(p); if (p.salv) this.endSalvage(p, false); p.sit = false; p.eating = 0;
     const to = SAIL.to[dest], from = areaOf(p.x, p.z);
     this.teleport(p, to.x + R(-1, 1), to.z + R(-1, 1));
-    p.session.send({ t: 'ev', list: [{ k: haul ? 'haul' : lift ? 'lift' : 'sail', to: dest, from }] });
+    p.session.send({ t: 'ev', list: [{ k: haul ? 'haul' : rope ? 'rope' : lift ? 'lift' : 'sail', to: dest, from }] });
     this.msg(p, to.sayFrom?.[from] || to.say, '#e8c26a');
     this.checkReach(p);
     this.pushSelf(p);
@@ -2722,9 +2727,9 @@ export class World {
   // liftwright's routes are kind 'lift' (lift: true on the whole offer), a waggoner's kind 'haul' (haul: true), and a lift or
   // the haul road needs only its own quest, not SAIL.need
   sailState(p, n) {
-    const okTo = (to) => (SAIL.to[to].kind === 'lift' || SAIL.to[to].kind === 'haul' || !!p.done[SAIL.need]) && (!SAIL.to[to].need || !!p.done[SAIL.to[to].need]);
+    const okTo = (to) => (SAIL.to[to].kind === 'lift' || SAIL.to[to].kind === 'haul' || SAIL.to[to].kind === 'rope' || !!p.done[SAIL.need]) && (!SAIL.to[to].need || !!p.done[SAIL.to[to].need]);
     const routes = sailRoutes(n).filter((to) => SAIL.to[to]).map((to) => ({ to, name: SAIL.to[to].name, ok: okTo(to), need: SAIL.to[to].need || SAIL.need, kind: SAIL.to[to].kind || 'ship' }));
-    return { to: n.sail, name: SAIL.to[n.sail].name, ok: okTo(n.sail), routes, lift: !!n.lift, haul: !!n.haul };
+    return { to: n.sail, name: SAIL.to[n.sail].name, ok: okTo(n.sail), routes, lift: !!n.lift, haul: !!n.haul, rope: !!n.rope };
   }
   on_setHome(p, m) {
     const n = this.npcs.get(m.npc);
@@ -3098,6 +3103,7 @@ export class World {
     const o = OBJECTS.find((x) => x.id === m.id);
     if (!o) return;
     if (Math.hypot(p.x - o.x, p.z - o.z) > 4.5) return this.err(p, 'Too far away.');
+    if (o.kind === 'rideschest') return this.ridesChest(p, o); // the Woodwrights' chest (shared/rides.js)
     if (o.kind === 'drawing') {
       if (p.ach.c['drw:' + o.id]) return this.err(p, 'You have already taken up this drawing.');
       this.achSet(p, 'drw:' + o.id, 1);
@@ -3140,7 +3146,7 @@ export class World {
     if (p.dead) return;
     const n = this.npcs.get(m.npc), c = CARAVANS.find((x) => x.id === m.to);
     if (!n?.caravan || !c || dist(p, n) > 7) return;
-    if (this.stopArea(c) !== this.stopArea(n)) return this.err(p, [this.stopArea(c), this.stopArea(n)].includes('rainward') ? 'No caravan runs up the haul road. Ride the wagon.' : 'No caravan crosses the sea. Take the ship.');
+    if (this.stopArea(c) !== this.stopArea(n)) return this.err(p, [this.stopArea(c), this.stopArea(n)].includes('weald') ? 'No caravan crosses the ridge. Ride the ropeway.' : [this.stopArea(c), this.stopArea(n)].includes('rainward') ? 'No caravan runs up the haul road. Ride the wagon.' : 'No caravan crosses the sea. Take the ship.');
     if (!p.visited[c.id]) return this.err(p, 'You have not found that caravan stop yet.');
     if (this.time - p.combatT < 5) return this.err(p, 'You cannot travel while in combat.');
     const cost = this.fare(n, c);
@@ -3157,7 +3163,7 @@ export class World {
     const z = zoneAt(p.x, p.z).id;
     const zk = 'z:' + z;
     if (!p.visited[zk] && z !== 'meadows') { p.visited[zk] = true; this.achSet(p, 'zone:' + z, 1); const zn = zoneAt(p.x, p.z); if (p.level > 1 || z !== 'village') { const xp = Math.round(40 + p.level * 28); this.msg(p, `Discovered: ${zn.name}`, '#e8d8a0'); p.session.send({ t: 'ev', list: [{ k: 'discover', zone: z }] }); this.giveXp(p, xp); } }
-    for (const c of CARAVANS) if (c.zone === z && !p.visited[c.id]) { p.visited[c.id] = true; this.msg(p, this.stopArea(c) === 'valley' ? `Caravan stop found: ${c.name}. Caravan Masters can now take you here.` : `Caravan stop found: ${c.name}. No caravan ${this.stopArea(c) === 'rainward' ? 'runs up the haul road' : 'crosses the sea'}, but its Caravan Master can point your Homeward Compass here.`, '#e8c26a'); }
+    for (const c of CARAVANS) if (c.zone === z && !p.visited[c.id]) { p.visited[c.id] = true; this.msg(p, this.stopArea(c) === 'valley' ? `Caravan stop found: ${c.name}. Caravan Masters can now take you here.` : `Caravan stop found: ${c.name}. No caravan ${this.stopArea(c) === 'rainward' ? 'runs up the haul road' : this.stopArea(c) === 'weald' ? 'crosses the ridge' : 'crosses the sea'}, but its Caravan Master can point your Homeward Compass here.`, '#e8c26a'); }
     for (const [qid, q] of Object.entries(p.quests)) {
       const Q = QUESTS[qid];
       if (Q.goal.reach && Q.goal.reach === z && q.n < 1) { q.n = 1; this.msg(p, `${Q.name}: destination reached.`, '#ffd060'); this.pushSelf(p); }
@@ -3174,6 +3180,7 @@ export class World {
     for (const p of this.players.values()) this.tickPlayer(p, dt);
     if (this.tiers) this.tickMobsTiered(dt, this.tiers); else this.tickMobsNear(dt);
     this.tickEvents();
+    this.tickRides(dt); // the Russet Weald's "Clear the Rides" while the gale blows (shared/rides.js)
     for (let i = this.aoes.length - 1; i >= 0; i--) {
       const a = this.aoes[i];
       if (this.time < a.t) continue;
@@ -3370,6 +3377,7 @@ export class World {
     this.tickBuffs(m, dt);
     if (m.dead) return;
     const def = m.def;
+    if (def.inert) { m.speed = 0; m.state = 'idle'; m.target = null; return; } // (an event target that never fights: the Weald's fallen standards)
     if (def.dummy) { m.speed = 0; m.state = 'idle'; m.target = null; if (this.time - (m.hitT ?? -99) > 8 && (m.hp < m.maxHp || m.threat.size)) { m.hp = m.maxHp; m.threat.clear(); m.buffs = []; } return; }
     const inDungeon = m.x >= DUNGEON_MIN_X;
     if ((def.raid || (def.boss && m.sp?.dungeon)) && !m.threat.size && m.hp >= m.maxHp) this.raidScale(m);
@@ -3441,7 +3449,9 @@ export class World {
       // patrol: walk the road from end to end and back. A spawn with a floodPath walks that one instead while the tide is
       // in at Tidewater Sound (the Great Dredge: across the mud flats at ebb, along their outer edge at flood); a spawn with a rainPath walks that one while it pours in the Rainward Gorge (the Hill Leveller:
       // along the head of the Slip when it is dry, down its own mud lane in the rain)
-      const P = m.sp.rainPath && rainState(this.time).pouring ? m.sp.rainPath : m.sp.floodPath && !tideState(this.time).ebb ? m.sp.floodPath : m.sp.path;
+      // a spawn with a galePath walks that one while the Russet Weald's gale blows (the Great Forwarder: up the south ride to
+      // the fall line across it, shared/rides.js)
+      const P = m.sp.galePath && galeState(this.time).blowing ? m.sp.galePath : m.sp.rainPath && rainState(this.time).pouring ? m.sp.rainPath : m.sp.floodPath && !tideState(this.time).ebb ? m.sp.floodPath : m.sp.path;
       if (m.pset !== P) { m.pset = P; m.pi = null; }
       if (m.pi == null) { let bi = 0, bd = 1e9; P.forEach(([px, pz], i) => { const d = Math.hypot(px - m.x, pz - m.z); if (d < bd) { bd = d; bi = i; } }); m.pi = bi; m.pdir = rand() < 0.5 ? 1 : -1; }
       const [wx, wz] = P[m.pi], d = Math.hypot(wx - m.x, wz - m.z);
@@ -3649,4 +3659,4 @@ export class World {
 }
 
 // playing together: whispers, say, who, friends, inspect, player trade (shared/social.js)
-Object.assign(World.prototype, SOCIAL_METHODS, BOT_MIND_METHODS, BOT_SOCIAL_METHODS, BOT_CHAT_METHODS, BOT_MEMORY_METHODS);
+Object.assign(World.prototype, SOCIAL_METHODS, BOT_MIND_METHODS, BOT_SOCIAL_METHODS, BOT_CHAT_METHODS, BOT_MEMORY_METHODS, RIDES_METHODS);

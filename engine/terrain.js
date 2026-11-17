@@ -86,6 +86,13 @@ const THEMES = {
     tint: [[0.38, 0.56, 0.32], [0.5, 0.46, 0.38], [0.4, 0.6, 0.36], [0.56, 0.45, 0.36], [0.72, 0.74, 0.72], [0.6, 0.62, 0.62], [0.38, 0.4, 0.39]],
     desat: [0.3, 0.3, 0.25, 0.3, 0.6, 1, 0.75], base: 0, seam: 0, mud: 1, mudTint: [1.32, 0.86, 0.62],
   },
+  // the Russet Weald: copper and brown leaf litter as the base (the grass layer, warmed and dried), gold and russet litter on
+  // the forest channel, damp moss in the hollows, the rides' trodden earth, the Makers' grey stone, pale sawdust on the sand
+  // channel, grey banks
+  weald: {
+    tint: [[1.16, 0.66, 0.34], [1.12, 0.8, 0.42], [0.5, 0.6, 0.34], [0.74, 0.6, 0.46], [0.76, 0.74, 0.7], [1.2, 1.06, 0.84], [0.62, 0.6, 0.56]],
+    desat: [0.62, 0.55, 0.3, 0.3, 0.6, 0.55, 0.7], base: 0, seam: 0,
+  },
 };
 
 export class Terrain {

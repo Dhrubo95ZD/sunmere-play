@@ -29,6 +29,7 @@ import { DUNGEONS } from '/sunmere-play/shared/dungeons.js';
 import { markDynamic } from './freeze.js';
 import { stoneBench, sacks } from './reachLayout.js';
 import { texTint, shade } from '../assets/houses/parts.js';
+import { buildSlipStation } from './ropewayLayout.js';
 
 const PI = Math.PI;
 const ST = '#8a8c86', ST_D = '#5a5e58', ST_L = '#a8aaa2', PLANK = '#6a563f', IRON = '#34363a', MOSS = '#56704a', MUD = '#6a3e26';
@@ -341,6 +342,7 @@ export function buildRainward(W, S) {
   // moved into the gorge's own group (its colliders stay where placeAt put them)
   const placeAbs = (r2, y = 0) => { const o = W.placeAt(r2, 0, y, 0, 0); W.rainwardGroup.add(o); return o; };
   const rng = mulberry32(1500);
+  buildSlipStation(W); // the Makers' ropeway's upper station at the head of the Slip (P15.1), first: the dressing keeps clear of its posts
   for (let v = 0; v < 5; v++) pre('rgbed' + v, seedBed(1501 + v, v));
   pre('rgbedS', seedBed(1507, 0, 5)); // (a short bed for the shelf's ends)
   for (let v = 0; v < 4; v++) pre('rgtree' + v, timberTree(1511 + v, 0.92 + v * 0.06));
