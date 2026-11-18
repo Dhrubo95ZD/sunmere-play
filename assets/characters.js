@@ -7,6 +7,7 @@ import { Builder, rbox, box, cyl, cone, sphere, ico, torus, lathe, extrude, tube
 import { lanternBuilder } from './dynamic.js';
 import { heatObject, heatCharMat, upgAttr, fillUpg, upgCover } from './heat.js';
 import { parseLook } from '/sunmere-play/shared/items.js';
+import { heroRig, heroOn } from './hero/heroBody.js';
 
 const PI = Math.PI;
 
@@ -30,10 +31,13 @@ function torsoW(y) {
 // robe skirt: follows hips at the top, blends into the legs on each side lower down
 function robeW(side) {
   return (x, y) => {
-    const t = clamp((1.0 - y) / 0.9, 0, 1);
-    const sx = clamp(x / 0.12, -1, 1); // -1 right .. +1 left
+    // (S0 review) the new body's legs stride further than the old body's (the UAL run clips): its robes, coat tails and
+    // skirts follow the legs more, or the front leg pushed through the cloth on every run step
+    const H = heroOn();
+    const t = clamp((1.0 - y) / (H ? 0.6 : 0.9), 0, 1);
+    const sx = clamp(x / (H ? 0.09 : 0.12), -1, 1); // -1 right .. +1 left
     const wl = clamp(0.5 + sx * 0.5, 0, 1), wr = 1 - wl;
-    const legK = t * 0.75;
+    const legK = H ? Math.sqrt(t) * 0.92 : t * 0.75;
     const out = [['hips', 1 - legK]];
     const shinK = sstep(0.45, 1, t);
     if (wl > 0) { out.push(['thighL', legK * wl * (1 - shinK * 0.5)]); out.push(['shinL', legK * wl * shinK * 0.5]); }
@@ -45,6 +49,7 @@ function robeW(side) {
 // --------------------------------------------------------------------------
 // base body (under-suit, hands, boots, head). opts: colours + bulk
 function baseBody(rb, o) {
+  if (rb.hero) { rb.hero.body(rb, o); return; } // the new skinned body (hero/heroBody.js, ?herobody=1): region colours from o
   const bulk = o.bulk ?? 1;
   const suit = o.suit ?? '#3a3550';
   // torso (the rig's V-taper widens the chest and shoulders over the waist)
@@ -165,7 +170,9 @@ function pauldron(rb, s, o) {
   }
   if (o.gem) {
     rb.add(cyl(0.04 * big, 0.04 * big, 0.02, 12), 'pmetal', bone, { p: [sx * 0.07 * big, 0.135 * big, 0.06 * big], r: [0.9, 0, -sx * 0.5], c: trim });
-    rb.add(ico(0.026 * big, 0), 'pglow', bone, { p: [sx * 0.075 * big, 0.143 * big, 0.067 * big], c: o.gem, flat: true });
+    // (a polished stone that does not glow: two glowing blue points, one on each shoulder, broke "no glow on characters",
+    // combat_design 10.2; review 18 Nov)
+    rb.add(ico(0.026 * big, 0), 'pmetal', bone, { p: [sx * 0.075 * big, 0.143 * big, 0.067 * big], c: o.gem });
   }
   if (o.spike) rb.add(cone(0.035 * big, 0.12 * big, 8), 'pmetal', bone, { p: [sx * 0.08 * big, 0.16 * big, 0], r: [0, 0, -sx * 0.5], c: trim });
 }
@@ -370,6 +377,7 @@ function robeSkirt(rb, color, trim, { len = 0.92, flare = 0.36 } = {}) {
   hem.scale(1, 1, 0.85);
   hem.translate(0, 1.02 - len + 0.01, 0);
   rb.addW(hem, 'metal', robeW(), { c: trim });
+  rb.hero?.robe(rb, 1.02 - len); // the new body: no thighs through the robe on a run
 }
 
 function robeTop(rb, color, trim, sleeveColor) {
@@ -405,21 +413,27 @@ function greatHelm(rb, metal, trim) {
   rb.add(rbox(0.05, 0.05, 0.02, 0.006), 'metal', 'head', { p: [0, 0.215, 0.13], r: [-0.45, 0, PI / 4], c: trim });
   // crest ridge front-to-back over the top
   rb.add(torus(0.14, 0.01, 6, 20, PI), 'metal', 'head', { p: [0, 0.13, 0], r: [0, PI / 2, 0], s: [1, 1, 1.06], c: trim });
+  // and a raised ridge along the flat top, so from straight above the crest runs front to back across the dome instead of
+  // a short dash inside a dome in a gold ring (review 18 Nov; it stops short of the brow, so no upright line meets the
+  // brow bar from the front)
+  rb.add(rbox(0.024, 0.03, 0.17, 0.008), 'metal', 'head', { p: [0, 0.272, -0.01], c: trim });
 }
 
 function bucketHelm(rb, metal, trim, { stepped = false } = {}) {
   rb.add(lathe([[0.01, -0.03], [0.15, -0.03], [0.155, 0.12], [0.15, 0.22], [0.13, 0.26], [0.01, 0.27]], 20), 'metal', 'head', { s: [1, 1, 1.05], c: metal, paint: 0.3 });
   rb.add(box(0.22, 0.026, 0.06), 'dark', 'head', { p: [0, 0.13, 0.145] });
-  rb.add(torus(0.153, 0.016, 6, 24), 'metal', 'head', { p: [0, 0.2, 0], r: [PI / 2, 0, 0], s: [1, 1.05, 1], c: trim });
+  // (review 18 Nov, from straight above) no trim band round the top edge: the flat top inside it read as a disc in a ring
+  // with the lathe's centre point as a dot. A straight ridge runs front to back over the top instead, and the boss on the
+  // brow is a plain metal rivet (a single glowing blue stone in the middle of the face read as an eye)
+  rb.add(rbox(0.03, 0.022, 0.27, 0.008), 'metal', 'head', { p: [0, 0.27, 0.0], s: [1, 1, 1.05], c: trim });
   rb.add(torus(0.152, 0.016, 6, 24), 'metal', 'head', { p: [0, -0.02, 0], r: [PI / 2, 0, 0], s: [1, 1.05, 1], c: trim });
   rb.add(rbox(0.07, 0.07, 0.025, 0.008), 'metal', 'head', { p: [0, 0.06, 0.155], r: [0, 0, PI / 4], c: trim });
-  rb.add(ico(0.022, 0), 'glow', 'head', { p: [0, 0.06, 0.17], c: '#5aa8ff', flat: true });
+  rb.add(ico(0.018, 0), 'metal', 'head', { p: [0, 0.06, 0.168], c: trim });
   // gorget (a stepped, two-shell gorget on the heavy helm)
   rb.add(shell([[0.2, -0.12], [0.17, -0.06], [0.12, -0.02]], 18), 'metal', 'neck', { p: [0, 0, 0], s: [1, 1, 0.85], c: metal });
   if (stepped) {
     rb.add(shell([[0.255, -0.17], [0.235, -0.13], [0.2, -0.1]], 22), 'metal', 'neck', { s: [1, 1, 0.82], c: metal, paint: 0.5 });
-    rb.add(torus(0.255, 0.012, 6, 28), 'metal', 'neck', { p: [0, -0.17, 0], r: [PI / 2, 0, 0], s: [1, 0.82, 1], c: trim });
-    rb.add(torus(0.2, 0.01, 6, 26), 'metal', 'neck', { p: [0, -0.12, 0], r: [PI / 2, 0, 0], s: [1, 0.85, 1], c: trim });
+    // (no trim rings on the two shells: from above they made concentric bronze bands round the helm, review 18 Nov)
   }
 }
 
@@ -521,15 +535,20 @@ function leafMantle(rb, colors) {
     s.moveTo(0, 0); s.quadraticCurveTo(0.06, 0.08, 0, 0.2); s.quadraticCurveTo(-0.06, 0.08, 0, 0);
     return extrude(s, 0.01, 0.004, 6);
   };
+  // (review 18 Nov, from straight above: evenly spaced leaves of one length round the neck read as a sunburst. The
+  // spacing, length, droop and lean are now uneven, the same every build; they lie down the shoulders, not out)
+  const jit = (k) => { const x = Math.sin(k * 12.9898) * 43758.5453; return x - Math.floor(x) - 0.5; };
   for (let ring = 0; ring < 2; ring++) {
     const n = 16 - ring * 3;
     for (let i = 0; i < n; i++) {
-      const a = (i / n) * PI * 2;
+      const k = i + ring * 31 + 1;
+      const a = ((i + 0.55 * jit(k)) / n) * PI * 2;
       const r = 0.25 - ring * 0.05;
       const y = 1.5 + ring * 0.06;
+      const sz = 0.82 + 0.36 * (jit(k * 3.7) + 0.5);
       rb.add(leaf(), 'pcloth', 'chest', {
-        p: [Math.sin(a) * r, y - rb.rest.chest[1], Math.cos(a) * r * 0.78],
-        r: [PI * 0.62 - ring * 0.15, a, 0], order: 'YXZ', c: colors[(i + ring) % colors.length],
+        p: [Math.sin(a) * r, y - rb.rest.chest[1], Math.cos(a) * r * 0.78], s: [sz, sz * (0.85 + 0.3 * (jit(k * 5.3) + 0.5)), 1],
+        r: [PI * 0.7 - ring * 0.15 + 0.22 * jit(k * 2.1), a, 0.35 * jit(k * 7.9)], order: 'YXZ', c: colors[(i + ring) % colors.length],
       });
     }
   }
@@ -624,32 +643,61 @@ function roadCoat(rb, coat, accent, brass) {
   const dark = shadeHex(coat, 0.7);
   rb.addW(shell([[0.215, 0.96], [0.22, 1.1], [0.24, 1.3], [0.252, 1.44], [0.232, 1.53], [0.16, 1.6]], 22), 'cloth', (x, y) => torsoW(y), { s: [1, 1, 0.71], c: coat });
   // the waistcoat between the lapels
-  rb.addW(rbox(0.17, 0.4, 0.03, 0.012), 'cloth', (x, y) => torsoW(y), { p: [0, 1.31, 0.158], c: dark });
+  // (Deadeye look pass) a panel that follows the coat's curve, not a flat slab on the chest
+  const wc = new THREE.LatheGeometry([[0.226, 1.11], [0.234, 1.2], [0.246, 1.32], [0.256, 1.44], [0.244, 1.5]].map(([r, y]) => new THREE.Vector2(r, y)), 8, -0.38, 0.76);
+  rb.addW(wc, 'cloth', (x, y) => torsoW(y), { s: [1, 1, 0.71], c: dark, paint: 0.15 });
   for (const sx of [-1, 1]) {
     for (let i = 0; i < 4; i++) rb.addW(sphere(0.011, 8, 6), 'metal', (x, y) => torsoW(y), { p: [sx * 0.045, 1.47 - i * 0.075, 0.176], c: brass });
-    // lapels: two broad strips meeting in a V at the belt
-    rb.addW(box(0.05, 0.46, 0.014), 'cloth', (x, y) => torsoW(y), { p: [sx * 0.105, 1.3, 0.168], r: [-0.06, 0, sx * 0.16], c: accent });
+    // lapels: two broad strips in a V, stopping above the waist (Deadeye look pass: so the bandolier, right shoulder to left
+    // hip, passes their ends and never crosses one)
+    rb.addW(box(0.05, 0.33, 0.014), 'cloth', (x, y) => torsoW(y), { p: [sx * 0.096, 1.365, 0.17], r: [-0.06, 0, sx * 0.16], c: accent });
   }
   // a turned-up collar standing at the back and sides, open at the front (theta 0 is +z)
   const cgap = PI * 0.62;
   const col = new THREE.CylinderGeometry(0.15, 0.19, 0.13, 22, 1, true, cgap / 2, PI * 2 - cgap);
   col.translate(0, 1.6, -0.015);
   rb.addW(col, 'cloth', () => [['chest', 1]], { s: [1, 1, 0.86], c: accent, ao: [1.5, 1.7, 0.8] });
-  // skirts to the knee, split at the front, folded slightly, a dark hem band
-  const gap = PI * 0.22, len = 0.5;
-  const g = new THREE.CylinderGeometry(0.225, 0.31, len, 26, 6, true, gap / 2, PI * 2 - gap);
-  const p = g.attributes.position;
-  for (let i = 0; i < p.count; i++) {
-    const x = p.getX(i), z = p.getZ(i), y = p.getY(i);
-    const a = Math.atan2(x, z), t = (len / 2 - y) / len, f = 1 + Math.sin(a * 7) * 0.03 * t;
-    p.setX(i, x * f); p.setZ(i, z * f * 0.86);
+  // skirts to the knee, split at the front, folded, a dark hem band. (Deadeye look pass, new body) the back is two long
+  // tails on the back cloth chain (tabB) with a vent between them, so they trail and swing behind on runs and turns
+  // (down and back, never spread); the front and side skirts follow the legs (robeW). Fold creases are shaded in.
+  const gap = PI * 0.22, len = 0.5, back = PI * 0.3, vent = PI * 0.025, tlen = 0.6;
+  const base = rgb(coat);
+  const folds = (n, k0, top, L) => (x, y, z) => {
+    const a = Math.atan2(x, z / 0.86), t = clamp((top - y) / L, 0, 1), cr = Math.max(0, -Math.sin(a * n));
+    const k = 1 - cr * 0.3 * (0.35 + 0.65 * t) - (1 - t) * 0.04;
+    return [base[0] * k * k0, base[1] * k * k0, base[2] * k * k0];
+  };
+  const skirtPiece = (t0, tl, L, r1, n) => {
+    const g = new THREE.CylinderGeometry(0.225, r1, L, Math.max(6, Math.round(tl * 9)), 7, true, t0, tl);
+    const p = g.attributes.position;
+    for (let i = 0; i < p.count; i++) {
+      const x = p.getX(i), z = p.getZ(i), y = p.getY(i);
+      const a = Math.atan2(x, z), t = (L / 2 - y) / L, f = 1 + Math.sin(a * n) * 0.045 * t;
+      p.setX(i, x * f); p.setZ(i, z * f * 0.86);
+    }
+    g.computeVertexNormals();
+    g.translate(0, 1.0 - L / 2, 0);
+    return g;
+  };
+  for (const [t0, tl] of [[gap / 2, PI - back - gap / 2], [PI + back, PI - back - gap / 2]]) {
+    rb.addW(skirtPiece(t0, tl, len, 0.31, 7), 'cloth', robeW(), { c: folds(7, 1, 1.0, len), ao: [0.45, 1.0, 0.75] });
+    const hem = new THREE.CylinderGeometry(0.322, 0.328, 0.045, Math.max(6, Math.round(tl * 9)), 1, true, t0, tl);
+    hem.scale(1, 1, 0.86); hem.translate(0, 1.0 - len + 0.025, 0);
+    rb.addW(hem, 'cloth', robeW(), { c: dark });
   }
-  g.computeVertexNormals();
-  g.translate(0, 1.0 - len / 2, 0);
-  rb.addW(g, 'cloth', robeW(), { c: coat, ao: [0.45, 1.0, 0.75] });
-  const hem = new THREE.CylinderGeometry(0.312, 0.318, 0.045, 26, 1, true, gap / 2, PI * 2 - gap);
-  hem.scale(1, 1, 0.86); hem.translate(0, 1.0 - len + 0.025, 0);
-  rb.addW(hem, 'cloth', robeW(), { c: dark });
+  // the two back tails: a touch wider than the skirt so their edges lap over it, longer, on the tabB chain from the belt
+  const tw = rb.chainWeights(CHAINS.tabB, 'hips');
+  for (const [t0, tl] of [[PI - back - 0.05, back + 0.05 - vent], [PI + vent, back + 0.05 - vent]]) {
+    const g = skirtPiece(t0, tl, tlen, 0.33, 9);
+    g.scale(1.03, 1, 1.03);
+    rb.addW(g, 'cloth', tw, { c: folds(9, 0.94, 1.0, tlen), ao: [0.35, 1.0, 0.75] });
+    const hem = new THREE.CylinderGeometry(0.348, 0.352, 0.045, 8, 1, true, t0, tl);
+    hem.scale(1.03, 1, 0.86 * 1.03); hem.translate(0, 1.0 - tlen + 0.025, 0);
+    rb.addW(hem, 'cloth', tw, { c: dark });
+  }
+  // a half-belt across the small of the back over the tails' tops, two brass buttons (horizontal: no cross)
+  rb.add(rbox(0.2, 0.045, 0.02, 0.008), 'cloth', 'hips', { p: [0, 0.05, -0.168], c: dark });
+  for (const sx of [-1, 1]) rb.add(sphere(0.012, 8, 6), 'metal', 'hips', { p: [sx * 0.08, 0.05, -0.181], c: brass });
   // the front edges of the skirts in the accent colour (two edges well apart, below the belt: no cross)
   for (const sx of [-1, 1]) {
     const a = gap / 2 + 0.02;
@@ -759,22 +807,83 @@ setTripoHands((rb, hb, v = 0) => {
   // the hip holsters on the Tripo coat (matte, with the hood: hb), a little further out than on the procedural outfit
   holsterPair(hb, '#c89a50', HOLSTER.tripo, 0.27, 'metal');
 });
-// the closed steel mask (smooth, no slit, no features) under a flat-crowned hat with a wide brim; a steel gorget below.
-// The brim is a little oval and the same colour as the crown, so from above it reads as a hat, not a ring round a disc.
-// The crown flares a touch to its flat top, so the band (low on the crown) sits under the top's edge and can't be seen
-// from above; the face plate stands proud of the dome everywhere, so the dome never pokes through it (no nose ridge).
-function gunMaskHat(rb, steel, hat, band) {
-  rb.add(lathe([[0.01, -0.07], [0.118, -0.064], [0.132, 0.0], [0.136, 0.09], [0.13, 0.16], [0.11, 0.2], [0.05, 0.215], [0.01, 0.218]], 22), 'metal', 'head', { s: [1, 1, 1.1], c: steel, paint: 0.25, us: 1.2 });
-  // a gently flattened front, as one smooth plate (front face at z 0.154, just past the dome's 0.15)
-  rb.add(rbox(0.19, 0.22, 0.052, 0.022), 'metal', 'head', { p: [0, 0.07, 0.128], c: steel, paint: 0.2, us: 1.2 });
-  // gorget: two stepped shells round the neck, rivets on the lower one
-  rb.add(shell([[0.2, -0.14], [0.175, -0.08], [0.125, -0.03], [0.1, 0.03]], 20), 'metal', 'neck', { s: [1, 1, 0.88], c: steel });
-  for (let i = 0; i < 5; i++) { const a = (i / 4 - 0.5) * 1.6; rb.add(sphere(0.009, 6, 4), 'metal', 'neck', { p: [Math.sin(a) * 0.188, -0.11, Math.cos(a) * 0.188 * 0.88], c: '#c89a50' }); }
-  // the hat
-  rb.add(cyl(0.136, 0.126, 0.12, 22), 'leather', 'head', { p: [0, 0.27, -0.006], c: hat, paint: 0.3 });
-  rb.add(cyl(0.13, 0.13, 0.032, 22), 'cloth', 'head', { p: [0, 0.228, -0.006], c: band });
-  rb.add(cyl(0.29, 0.3, 0.016, 32), 'leather', 'head', { p: [0, 0.206, -0.006], s: [1, 1, 0.9], c: hat, paint: 0.3 });
-  rb.add(cyl(0.134, 0.134, 0.004, 22), 'leather', 'head', { p: [0, 0.331, -0.006], c: shadeHex(hat, 0.9) });
+// (Deadeye look pass, new body) the head: a fitted cloth cowl over the plain head egg (no face, no seams, nothing in
+// pairs), a scarf wound up over the lower half and round the neck with one tail on the scarf chain, under a flat-crowned
+// road hat pulled a little forward. From straight above the hat must not read as a disc in a ring: the crown is a rounded
+// square, longer front to back, and the brim an oval whose sides curl up, both one colour (the band sits low on the
+// crown, under its flared top edge, so it never shows from above). Built in head-bone units (rb.add scales the head x1.1).
+const squircle = (x, z, n) => { const a = Math.atan2(x, z), c = Math.abs(Math.cos(a)), s = Math.abs(Math.sin(a)); return 1 / Math.pow(c ** n + s ** n, 1 / n); };
+function hatPiece(g, f) {
+  const p = g.attributes.position;
+  for (let i = 0; i < p.count; i++) { const o = f(p.getX(i), p.getY(i), p.getZ(i)); p.setXYZ(i, o[0], o[1], o[2]); }
+  // the hat sits on the crown of the head and tips 4 deg forward about the head's centre
+  g.translate(0, 0.205 - 0.1, -0.006); g.rotateX(0.035); g.translate(0, 0.1, 0);
+  g.computeVertexNormals();
+  return g;
+}
+function roadHat(rb, hat, band) {
+  // the crown's footprint: a rounded square, longer front to back and pinched narrower at the front (a teardrop from
+  // above, like a worn road hat's crown); its flat top a touch lower at the front
+  const sq = (x, y, z) => { const k = squircle(x, z, 3.2), Z = z * k * 1.12; return [x * k * 0.95 * (1 - 0.22 * Math.max(0, Z / 0.14)), y - (y > 0.1 ? 0.012 * Math.max(0, Z / 0.14) : 0), Z]; };
+  // (review 18 Nov) a pinched crease runs front to back down the crown's top, so from straight above the crown is not a
+  // flat oval sitting in the brim's oval (a disc in a ring): one soft valley, deepest at the front, nothing radiating
+  const crease = (x, y, z) => { const o = sq(x, y, z); if (y > 0.118) o[1] -= 0.02 * Math.exp(-((o[0] / 0.032) ** 2)) * (0.75 + 0.25 * Math.max(0, o[2] / 0.14)); return o; };
+  rb.add(hatPiece(lathe([[0.001, 0], [0.122, 0], [0.12, 0.05], [0.126, 0.1], [0.134, 0.117], [0.126, 0.126], [0.095, 0.127], [0.06, 0.128], [0.03, 0.128], [0.001, 0.128]], 32), crease), 'leather', 'head', { c: hat, paint: 0.3, us: 2 });
+  rb.add(hatPiece(lathe([[0.1235, 0.0], [0.1245, 0.012], [0.1235, 0.028]], 32), sq), 'cloth', 'head', { c: band, paint: 0.2 });
+  // the brim: a thin long oval with a rounded edge, the sides curled well up, the front and back dipping
+  const brim = lathe([[0.104, -0.007], [0.17, -0.007], [0.235, -0.006], [0.284, -0.004], [0.292, 0.001], [0.285, 0.006], [0.235, 0.007], [0.17, 0.007], [0.104, 0.007]], 44);
+  rb.add(hatPiece(brim, (x, y, z) => {
+    const X = x * 0.84, side = Math.max(0, (Math.abs(X) - 0.1) / 0.145);
+    return [X * (1 - 0.12 * side * side), y + 0.085 * side * side - 0.018 * (z / 0.29) ** 2 - (z > 0 ? 0.01 * z / 0.29 : 0), z * 1.02];
+  }), 'leather', 'head', { c: hat, paint: 0.3, us: 2 });
+}
+function scarfHead(rb, cowl, scarf) {
+  rb.add(sphere(0.121, 22, 16), 'cloth', 'head', { p: [0, 0.102, 0.006], s: [0.97, 1.08, 1.04], c: cowl, paint: 0.2 });
+  // the scarf: two soft turns wound round the jaw and lower head, both rising a little to the front (parallel: they never
+  // cross), over a fill in the cowl's cloth
+  rb.add(sphere(0.124, 22, 10, 0, PI * 2, PI * 0.5, PI * 0.5), 'cloth', 'head', { p: [0, 0.07, 0.008], s: [0.97, 1.0, 1.05], c: cowl, paint: 0.2 });
+  for (const [R, r, y, tl, k] of [[0.106, 0.036, 0.014, 0.1, 0.9], [0.113, 0.034, 0.064, 0.16, 1]]) {
+    rb.add(torus(R, r, 8, 26), 'cloth', 'head', { p: [0, y, 0.01], r: [PI / 2 - tl, 0, 0], s: [0.98, 1.08, 0.72], c: shadeHex(scarf, k), paint: 0.3 });
+  }
+  // wound round the neck down into the collar
+  rb.add(lathe([[0.112, -0.08], [0.104, -0.03], [0.096, 0.02], [0.084, 0.07]], 18), 'cloth', 'neck', { s: [1, 1, 1.05], c: scarf, paint: 0.25 });
+  // the knot behind the left ear (no hanging tail: down the back it crossed the bandolier's back run)
+  rb.add(rbox(0.06, 0.05, 0.04, 0.015), 'cloth', 'neck', { p: [0.05, 0.03, -0.1], r: [0.3, 0.4, 0], c: scarf });
+}
+// a leather bandolier from the right shoulder over the top and down to the left hip, front and back (one strap, one
+// direction: nothing crosses it), brass cartridges in loops across the front run. Follows the road coat's own shell.
+function bandolierStrap(rb, leather, brass) {
+  const prof = [[0.215, 0.96], [0.22, 1.1], [0.24, 1.3], [0.252, 1.44], [0.232, 1.53], [0.16, 1.6]];
+  const coatR = (y) => { for (let i = 0; i + 1 < prof.length; i++) if (y <= prof[i + 1][1]) return lerp(prof[i][0], prof[i + 1][0], clamp((y - prof[i][1]) / (prof[i + 1][1] - prof[i][1]), 0, 1)); return prof[prof.length - 1][0]; };
+  const side = (t, zs) => { const x = lerp(0.19, -0.118, t), y = lerp(1.0, 1.55, t), r = coatR(y); return V3(x, y, zs * (0.71 * Math.sqrt(Math.max(r * r - x * x, 0.0009)) + 0.02)); };
+  const pts = [];
+  for (let i = 0; i <= 10; i++) pts.push(side(i / 10, 1));
+  pts.push(V3(-0.124, 1.6, 0.075), V3(-0.128, 1.632, 0.0), V3(-0.124, 1.6, -0.075));
+  for (let i = 10; i >= 0; i--) pts.push(side(i / 10, -1));
+  const curve = new THREE.CatmullRomCurve3(pts, false, 'centripetal'), N = 60, w = 0.052, th = 0.012;
+  const pos = [], idx = [], frames = [];
+  for (let i = 0; i <= N; i++) {
+    const P = curve.getPointAt(i / N), T = curve.getTangentAt(i / N);
+    const n = V3(P.x, Math.max(0, P.y - 1.5) * 4, P.z / 0.71).normalize();
+    const s = V3().crossVectors(T, n).normalize();
+    n.crossVectors(s, T).normalize();
+    frames.push([P, n, s]);
+    for (const [a, b] of [[-1, 0], [1, 0], [1, 1], [-1, 1]]) pos.push(P.x + s.x * a * w / 2 + n.x * b * th, P.y + s.y * a * w / 2 + n.y * b * th, P.z + s.z * a * w / 2 + n.z * b * th);
+  }
+  for (let i = 0; i < N; i++) for (let k = 0; k < 4; k++) { const a = i * 4 + k, b = i * 4 + ((k + 1) % 4), c = a + 4, d = b + 4; idx.push(a, c, b, b, c, d); }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx); g.computeVertexNormals();
+  const tw = (x, y) => torsoW(Math.max(y, 1.12));
+  rb.addW(g, 'leather', tw, { c: leather, paint: 0.2 });
+  // brass cartridges across the strap on the front run, every other one a shade darker
+  const Y = V3(0, 1, 0), q = new THREE.Quaternion();
+  for (let i = 0; i < 6; i++) {
+    const [P, n, s] = frames[Math.round(N * (0.13 + i * 0.045))];
+    const c = cyl(0.0085, 0.0085, w * 0.8, 7);
+    c.applyQuaternion(q.setFromUnitVectors(Y, s));
+    c.translate(P.x + n.x * (th + 0.007), P.y + n.y * (th + 0.007), P.z + n.z * (th + 0.007));
+    rb.addW(c, 'metal', tw, { c: i % 2 ? '#d8b060' : brass });
+  }
 }
 
 // --------------------------------------------------------------------------
@@ -1045,6 +1154,12 @@ const BONE_SLOT = {
   foreL: 'hands', foreR: 'hands', handL: 'hands', handR: 'hands', weaponL: 'hands', weaponR: 'hands',
   hips: 'legs', thighL: 'legs', thighR: 'legs', skirtL0: 'legs', skirtL1: 'legs', skirtR0: 'legs', skirtR1: 'legs',
   shinL: 'feet', shinR: 'feet', footL: 'feet', footR: 'feet',
+  // the new body's bones (hero/heroBody.js): its regions take the worn pieces' colours like the old body's parts did
+  Head: 'head', neck_01: 'head', spine_01: 'chest', spine_02: 'chest', spine_03: 'chest', clavicle_l: 'chest', clavicle_r: 'chest',
+  upperarm_l: 'chest', upperarm_r: 'chest', lowerarm_l: 'hands', lowerarm_r: 'hands', hand_l: 'hands', hand_r: 'hands',
+  middle_01_l: 'hands', middle_02_l: 'hands', middle_03_l: 'hands', thumb_01_l: 'hands', thumb_02_l: 'hands', thumb_03_l: 'hands',
+  middle_01_r: 'hands', middle_02_r: 'hands', middle_03_r: 'hands', thumb_01_r: 'hands', thumb_02_r: 'hands', thumb_03_r: 'hands',
+  pelvis: 'legs', thigh_l: 'legs', thigh_r: 'legs', calf_l: 'feet', calf_r: 'feet', foot_l: 'feet', foot_r: 'feet', ball_l: 'feet', ball_r: 'feet',
 };
 // q6 Prismatic: a deep temper blue dye and a blued steel; its colour play is the sheen in the reflection (heat.js)
 const GEAR_DYE = ['#7a6a52', '#4a7a3a', '#2e5a9a', '#5a3a8a', '#a02a1e', '#26346a'];
@@ -1102,6 +1217,9 @@ function gearPrep(root) {
 function gearReach(root, bone, y, tol, mode = 'radial') {
   const U = root.userData, b = U.rest[bone], names = U.skeleton.bones.map((x) => x.name);
   const want = new Set(mode === 'front' ? ['chest', 'spine'] : [bone]);
+  // the new body (hero/heroBody.js): its vertices measured as they would sit on the old rig at rest
+  const hero = U.hero, HB = hero ? HERO_OLD[bone] || (mode === 'front' ? 'spine_03' : null) : null, hv = hero ? new THREE.Vector3() : null;
+  if (HB) { want.add(HB); if (mode === 'front') want.add('spine_02'); }
   let best = 0;
   for (const kind of ['metal', 'leather', 'cloth', 'pmetal', 'pleather', 'pcloth']) {
     const geo = U.meshes?.[kind]?.geometry;
@@ -1109,14 +1227,17 @@ function gearReach(root, bone, y, tol, mode = 'radial') {
     const P = geo.attributes.position, SI = geo.attributes.skinIndex, SW = geo.attributes.skinWeight;
     for (let i = 0; i < P.count; i++) {
       const py = P.getY(i);
-      if (Math.abs(py - y) > tol) continue;
       if (SW.getX(i) < 0.5 || !want.has(names[Math.round(SI.getX(i))])) continue;
-      if (mode === 'front') { if (Math.abs(P.getX(i)) < 0.05) best = Math.max(best, P.getZ(i)); }
-      else best = Math.max(best, Math.hypot(P.getX(i) - b[0], P.getZ(i) - b[2]));
+      let px = P.getX(i), pz = P.getZ(i), qy = py;
+      if (hero && SI.getX(i) >= hero.N) { hero.oldRest(Math.round(SI.getX(i)), px, py, pz, hv); px = hv.x; qy = hv.y; pz = hv.z; }
+      if (Math.abs(qy - y) > tol) continue;
+      if (mode === 'front') { if (Math.abs(px) < 0.05) best = Math.max(best, pz); }
+      else best = Math.max(best, Math.hypot(px - b[0], pz - b[2]));
     }
   }
   return best;
 }
+const HERO_OLD = { foreL: 'lowerarm_l', foreR: 'lowerarm_r', thighL: 'thigh_l', thighR: 'thigh_r', shinL: 'calf_l', shinR: 'calf_r', chest: 'spine_03', armL: 'upperarm_l', armR: 'upperarm_r' };
 // the pieces a worn slot adds, as skinned meshes on the character's own skeleton
 function gearPieces(root, rb, slot, w, q) {
   const U = root.userData, R = U.rest;
@@ -1396,12 +1517,18 @@ const OUTFITS = {
     gunSash(rb, accent);
     belt(rb, '#2a1c14', brass, 0);
     holsters(rb, brass);
-    gunMaskHat(rb, steel, hat, accent);
-    // one steel pauldron on the gun-arm (right) side; hidden under worn shoulder armour
-    // (squared plates, not the round lames: seen from below while aiming their rims floated like rings)
-    for (const [w, h, d, x, y, rz] of [[0.2, 0.05, 0.22, -0.05, 0.075, 0.42], [0.17, 0.045, 0.19, -0.1, 0.0, 0.8]]) {
-      rb.add(rbox(w, h, d, 0.018), 'pmetal', 'armR', { p: [x, y, 0], r: [0, 0, rz], c: steel, paint: 0.4 });
-      rb.add(sphere(0.011, 6, 4), 'pmetal', 'armR', { p: [x - 0.03 * Math.cos(rz), y + 0.026 + 0.03 * Math.sin(rz), d * 0.38], c: brass });
+    bandolierStrap(rb, '#3a2618', brass);
+    scarfHead(rb, shadeHex(coat, 0.8), shadeHex(accent, 0.5));
+    // (the hat band in the hat's own darker leather: an accent band showed as a coloured arc round the crown from above
+    // whenever the head tipped forward)
+    roadHat(rb, hat, shadeHex(hat, 0.62));
+    // a matched pair of leather shoulder plates, brass-studded (two squared lames each side, sat down onto the shoulder; hidden under
+    // worn shoulder armour) (squared plates, not the round lames: seen from below while aiming their rims floated like rings)
+    for (const [s, sx] of [['L', 1], ['R', -1]]) {
+      for (const [w, h, d, x, y, rz] of [[0.15, 0.032, 0.18, 0.035, 0.035, 0.5], [0.13, 0.03, 0.16, 0.08, -0.03, 0.92]]) {
+        rb.add(rbox(w, h, d, 0.014), 'pleather', 'arm' + s, { p: [sx * x, y, 0], r: [0, 0, -sx * rz], c: '#3e2a1c', paint: 0.35 });
+        rb.add(sphere(0.011, 6, 4), 'pmetal','arm' + s, { p: [sx * (x - 0.03 * Math.cos(rz)), y + 0.024 + 0.03 * Math.sin(rz), d * 0.38], c: brass });
+      }
     }
     // boots: steel toe caps, a strap below the knee and a steel band round the shaft
     for (const s of ['L', 'R']) {
@@ -1504,13 +1631,15 @@ export const CLASS_IDS = ['knight', 'ranger', 'chemist', 'sandblade', 'warden', 
 
 export function buildCharacter(kind, variant = 0) {
   const rb = new RigBuilder();
+  rb.hero = heroRig(kind); // null unless the new body is on
   OUTFITS[kind](rb, variant);
   const sliver = new THREE.BufferGeometry();
   sliver.setAttribute('position', new THREE.Float32BufferAttribute([0, 1.4, -0.02, 0.001, 1.4, -0.02, 0, 1.401, -0.02], 3));
   rb.addW(sliver, 'dark', () => [['cape1', 0.34], ['cape2', 0.33], ['cape3', 0.33]], { taper: false });
-  const root = rb.build(kind + ':' + variant); // characters of one look share their vertex arrays (rig.js)
+  const root = rb.build(kind + ':' + variant + (rb.hero ? ':h' : '')); // characters of one look share their vertex arrays (rig.js)
   root.userData.kind = kind;
   root.userData.variant = variant;
+  if (rb.hero) rb.hero.finish(root);
   if (kind === 'deadeye') dsaLater(root); // the Tripo body (tripoBody.js) for a look no setChar* call follows
   // find the bow string for live updates
   root.traverse((o) => { if (o.userData?.string) root.userData.bow = o; });

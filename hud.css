@@ -1970,7 +1970,7 @@ html.phone .login .srv-in { min-height: 40px; }
 .tc-sk.tc-page b { font: 800 11px var(--font-body); line-height: 1; }
 .tc-b { border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #ffe8a0; background: radial-gradient(circle at 50% 35%, rgba(70,54,30,.92), rgba(24,18,10,.92)); border: 2px solid #8a6a30; box-shadow: 0 0 0 2px rgba(0,0,0,.55), 0 4px 10px rgba(0,0,0,.5); }
 .tc-b svg { width: 52%; height: 52%; fill: currentColor; stroke: currentColor; pointer-events: none; }
-.tc-b.tc-jump svg { width: 56%; height: 56%; }
+.tc-b.tc-jump svg, .tc-b.tc-dodge svg { width: 56%; height: 56%; }
 .tc-b.on { border-color: #ffe08a; color: #fff; box-shadow: 0 0 0 2px rgba(0,0,0,.55), 0 0 14px rgba(255,214,120,.6); }
 .tc-b.none { opacity: .4; }
 .tc-b.down, .tc-t.down, .tc-sk:active { filter: brightness(1.4); }

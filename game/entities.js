@@ -18,6 +18,10 @@ import { buildRunabout } from '../assets/runabout.js';
 import { buildCrawler } from '../assets/crawler.js';
 import { PETS } from '/sunmere-play/shared/data.js';
 import { CLASSES } from '/sunmere-play/shared/classes.js';
+import { skillOf } from '/sunmere-play/shared/fusions.js'; // (S2: the new kit and fusions by id; legacy skills otherwise)
+const SKILL_BY_ID = new Proxy({}, { get: (_, id) => skillOf(id) });
+import { tierInfo } from '/sunmere-play/shared/feel.js';
+import { heroOn } from '../assets/hero/heroBody.js';
 
 const V = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
 const _before = new THREE.Vector3(), _hp = new THREE.Vector3(), _lw = new THREE.Vector3();
@@ -31,6 +35,9 @@ const _before = new THREE.Vector3(), _hp = new THREE.Vector3(), _lw = new THREE.
 export const VIEW_LOD = { FULL_D: 30, NEAR_D: 60, CULL_D: 110, HYST: 4, NEAR_HZ: 30, MID_HZ: 15, OFF_HZ: 5, OFF_NEAR_HZ: 10, FADE: 0.4 }; // FADE: s to grow in / shrink out at the cull edge
 // (v114, the phone presets: full detail to 24 m, then 20 Hz, past 60 m 12 Hz)
 export const VIEW_LOD_MOB = { ...VIEW_LOD, FULL_D: 24, NEAR_HZ: 20, MID_HZ: 12 };
+// (combat_design 7.1, the new hero body on desktop: its retarget pass costs more per update than the old body) full rate
+// within 20 m, half rate (30 Hz) to 40 m, a quarter (15 Hz) beyond; the old body keeps VIEW_LOD
+export const VIEW_LOD_HERO = { ...VIEW_LOD, FULL_D: 20, NEAR_D: 40 };
 // characters cast sun shadows within this many metres of you (the player always does); QUALITY.charShadowDist overrides
 export const charShadowDist = () => GFX.charShadowDist ?? (GFX.mobile ? 20 : 45);
 const _frustum = new THREE.Frustum(), _pv = new THREE.Matrix4(), _sph = new THREE.Sphere();
@@ -511,17 +518,24 @@ export class EntityView {
   }
 
   playSkill(id, targetEnt, ground, fx, haste = 1) {
-    let ch = CHOREO[id];
+    // a fusion (S2) plays the existing clip it names (choreo) until S4/S5 give it its own; its contacts count as the
+    // fusion's (ctx.as: the tier, and the server's dmg events, which name the fusion)
+    const as = CHOREO[id] ? null : skillOf(id)?.choreo ? id : null;
+    let ch = CHOREO[id] || (as && CHOREO[skillOf(id).choreo]);
     if (!ch || !this.anim) return;
     // a clip with a mirrored twin (the Deadeye's Snap Shot: right pistol, then left) alternates hands, cast by cast
     if (ch.alt && CHOREO[ch.alt]) { this.altShot = !this.altShot; if (!this.altShot) ch = CHOREO[ch.alt]; }
     const tgt = targetEnt ? targetEnt : null;
-    this.ctx = { char: this.char, animator: this.anim, cls: this.cls, yaw: this.ry, targetEnt: tgt, target: ground ? V(ground.x, 0, ground.z).setY(this.mgr.heightAt(ground.x, ground.z)) : null, held: this.ctx?.held || {} };
+    // S1 cancel (combat_design.md 2.2): a skill or dodge cutting the one before cross-fades in 0.06 s, and the cut swing's
+    // trail is stopped so it fades out instead of hanging in the air
+    const cut = this.anim.busy && this.anim.action;
+    if (this.ctx?.trails) { for (const k of Object.keys(this.ctx.trails)) this.ctx.trails[k].stop(); this.ctx.trails = {}; }
+    this.ctx = { char: this.char, animator: this.anim, cls: this.cls, yaw: this.ry, targetEnt: tgt, target: ground ? V(ground.x, 0, ground.z).setY(this.mgr.heightAt(ground.x, ground.z)) : null, held: this.ctx?.held || {}, local: this.id === this.mgr.localId, src: this, as };
     const ctx = this.ctx;
     // a holstered Deadeye draws at once: the pistols come into the fists as the clip lifts them from the hips
     this.skillAt = performance.now();
     if (this.anim.holster || this.anim.pistolsIn) this.holsterSync(false, true);
-    this.anim.play(ch.clip, { speed: haste, onEvent: (ev) => { ctx.yaw = this.ry; fx.run(ev, ctx); } });
+    this.anim.play(ch.clip, { speed: haste, fadeIn: cut ? 0.06 : undefined, onEvent: (ev) => { ctx.yaw = this.ry; fx.run(ev, ctx); } });
     if (this.char.userData.dsList && !(this.dist > 45)) dsAttack(this.char, fx); // Dragonslayer pieces vent steam
     heatAttack(this); // a +10 piece: the phones' and Simple's sparks and wisp follow your own attacks (heat.js)
   }
@@ -544,6 +558,24 @@ export class EntityView {
   // the reaction follows the hit: its weight picks graze / solid / stagger, the attacker's side sets the lean
   // (and, through lastHit, which way a killing blow drops the body)
   hit(fx, src, ev) {
+    // a hero's shot (S1 feel review): the server's word comes before the ball lands, often before it has left the gun (its
+    // damage lands at the skill's hit time, the clip fires the ball then). The whole contact (flinch, flash, stop, sound,
+    // sparks) waits for the ball: fx.runProjectile set shotDue for a ball in the air, or calls pendHit as it lands
+    if (src && src.ty === 'p' && ev?.ht != null && !ev.late && fx.after) {
+      const hk = SKILL_BY_ID[ev.skill]?.hit?.kind;
+      if (hk === 'proj') {
+        const late = () => this.hit(fx, src, { ...ev, late: true });
+        const due = this.shotDue ? this.shotDue - (fx.clockT || 0) : 0;
+        if (due > 0.005 && due < 0.8) { fx.after(due, null, late); return 'later'; }
+        const act = src.anim?.action;
+        if (src.ctx?.src === src && act?.clip.events?.some((e) => e.e === 'proj' && !act.fired.has(e))) {
+          const had = this.pendHit;
+          this.pendHit = had && had.ht >= ev.ht ? had : Object.assign(late, { ht: ev.ht });
+          if (!had) fx.after(0.5, null, () => { const q = this.pendHit; if (q) { this.pendHit = null; q(); } });
+          return 'later'; // (held: tools/combatshots logs the contact when it plays)
+        }
+      }
+    }
     const w = this.hitWeight(ev);
     const dot = ev?.skill === 'dot' || ev?.skill === 'thorns';
     let away = null;
@@ -561,12 +593,106 @@ export class EntityView {
     }
     // scoped hit-stop: only the attacker and this target stick for a moment (players' melee contacts, and the heavy
     // blows of anyone); the rest of the world, the particles and the camera keep running
+    // S1: a hero's skill contact carries its hit-stop tier (ev.ht, shared/feel.js). The clip's own contact frame already
+    // played the predicted tier (fx.tierHit); the server's word only adds what it alone knows (a break or a lift: T3).
+    // A contact the clip did not show (a shot, a far or culled hero) plays its tier here, the stop on the target only.
+    if (src && src.ty === 'p' && ev?.ht != null && fx.tierHit) {
+      // the server's contact came first (offline, or a tick ahead of the clip): the clip's own contact frame plays it, at the
+      // higher of the two tiers, so the stop never lands twice or holds the swing before its contact
+      const act = src.anim?.action;
+      if (act && src.ctx?.src === src && act.clip.events?.some((e) => e.e === 'impact' && (src.ctx.as || e.sk) === ev.skill && !act.fired.has(e))) { src.ctx.pendHt = Math.max(src.ctx.pendHt || 0, ev.ht); return; }
+      const L = src.lastImpact, fresh = L && performance.now() - L.at < 400 && (L.tgt === this.id || L.tgt === '*');
+      const T = tierInfo(ev.ht), local = src.id === this.mgr.localId;
+      const dir = away ? away.clone() : null, at = this.pos.clone().setY(this.pos.y + (this.height || 1.6) * 0.6);
+      // (ranged is the skill's own kind, not the distance: a pistol shot from 3 m stopped the shooter like a sword swing)
+      const hk = SKILL_BY_ID[ev.skill]?.hit?.kind, ranged = hk ? hk === 'proj' || hk === 'line' : !melee;
+      if (!fresh) fx.tierHit(T, { at, feet: this.pos.clone(), dir, who: [src, this], local, ranged });
+      else if (ev.ht > L.tier) { L.tier = ev.ht; fx.tierHit(T, { at, feet: this.pos.clone(), dir, who: [src, this], local, upgrade: true }); }
+      else if (L.tgt === '*' && T.stop) fx.hitstop?.(T.stop, [this]); // (each machine a spin reached still sticks)
+      return;
+    }
     if (melee && (src.ty === 'p' || w >= 0.8)) {
       const mine = src.id === this.mgr.localId;
       const d = w >= 0.8 ? (ev?.crit ? 0.075 : 0.06) : 0.045;
       fx.hitstop?.(src.ty === 'p' ? d : 0.05, [src, this]);
       if (mine) fx.rig?.addKick?.(ev?.crit ? 0.075 : w >= 0.8 ? 0.06 : 0.045, away.clone());
     }
+  }
+
+  // S1 machine reactions (combat_design.md 2.6, all physical): 'air' (Lifted: an arc 1.6-2.6 m up with a slow tumble away
+  // from the blow, a slam down with a dust puff and a 0.3 m bounce), 'stag' (Staggered: a 0.3 m lurch back, sparks from the
+  // joint nearest the hit and a puff of steam from a vent) and 'broken' (the body drops 0.3 m into a kneel, steam from
+  // the joints for 2 s, a few plates thrown off as debris). ev: the sim's event ({ dur, h, dir: [x, z], t })
+  startReact(kind, ev, fx) {
+    if (this.dead) return;
+    const d = ev?.dir ? V(ev.dir[0], 0, ev.dir[1]) : V(-Math.sin(this.ry), 0, -Math.cos(this.ry));
+    if (d.lengthSq() < 1e-4) d.set(0, 0, 1);
+    d.normalize();
+    const H = this.height || 2, at = this.pos.clone().setY(this.pos.y + H * 0.55);
+    // a hold on a machine already in the air (holdLift: High Ledger's cuts, Stormfall) carries on from where it hangs: a
+    // small rise from its height, then the fall, with no snap to the ground and no take-off puff (review 18 Nov: each
+    // hold restarted the arc from the floor, so the machine dropped and jumped again on every cut)
+    const was = this.react;
+    if (kind === 'air' && ev?.hold && was?.kind === 'air' && !was.landed && was.y > 0.05) {
+      const u0 = Math.min(1, was.t / was.dur);
+      this.react = { ...was, t: 0, dur: ev.dur || 0.6, y0: was.y, back0: (was.back0 ?? 0) + (0.7 - (was.back0 ?? 0)) * u0, h: Math.max(0.35, (was.h - was.y) * 0.45), held: true };
+      return;
+    }
+    // a stagger on a machine in the air jolts it there (sparks, a vent puff) instead of dropping it to the floor mid-arc
+    if (kind === 'stag' && was?.kind === 'air' && !was.landed && was.y > 0.05) {
+      if (fx) { fx.emit('sparks', this.pos.clone().setY(this.pos.y + was.y + H * 0.55).addScaledVector(d, -0.25), { n: 12, dir: d }); fx.emit('steam', this.pos.clone().setY(this.pos.y + was.y + H * 0.8), { n: 5, size: 0.8 }); }
+      return;
+    }
+    this.react = { kind, t: 0, dur: kind === 'air' ? ev.dur || 1 : kind === 'stag' ? 0.55 : Math.min(ev?.t || 4, 4), h: Math.min(2.6, Math.max(1.6, ev?.h || 1.9)), dir: d, y: 0, ox: 0, oz: 0, tilt: 0, fx, landed: false, jet: 0 };
+    if (!fx) return;
+    if (kind === 'stag') {
+      fx.emit('sparks', at.clone().addScaledVector(d, -0.25), { n: 12, dir: d });
+      fx.emit('steam', at.clone().setY(this.pos.y + H * 0.8), { n: 5, size: 0.8 });
+    } else if (kind === 'broken') {
+      fx.emit('steam', at, { n: 10, size: 1.1, spread: 0.4 });
+      fx.rocks(at, 3 + Math.floor(Math.random() * 3), 0.5); // plates thrown off (the rock pool)
+      fx.sound('hiss'); fx.sound('clang');
+    } else if (kind === 'air') {
+      fx.emit('dust', this.pos.clone().setY(this.pos.y + 0.15), { n: 8, spread: 0.5, size: 0.8 });
+      fx.sound('scrape');
+    }
+  }
+  updateReact(dt) {
+    const R = this.react, d = R.dir;
+    R.t += dt;
+    let y = 0, back = 0, tilt = 0;
+    if (R.kind === 'air') {
+      const u = Math.min(1, R.t / R.dur);
+      if (u < 1 && R.held) { y = R.y0 * (1 - u * u) + R.h * 4 * u * (1 - u); back = R.back0 + (0.7 - R.back0) * u; tilt = 0.75 * Math.sin((0.5 + 0.4 * u) * Math.PI); }
+      else if (u < 1) { y = R.h * 4 * u * (1 - u) * (u < 0.5 ? 1 : 1 - 0.25 * (u - 0.5)); back = 0.7 * u; tilt = 0.75 * Math.sin(u * Math.PI * 0.9); }
+      else {
+        if (!R.landed) {
+          R.landed = true;
+          const f = this.pos.clone(); f.y = this.pos.y;
+          R.fx?.emit('ringdust', f, { n: 14, r: 0.7, speed: 2.6, size: 0.9 });
+          R.fx?.emit('dust', f.clone().setY(f.y + 0.2), { n: 6, spread: 0.5, size: 1 });
+          R.fx?.rocks(f.clone().setY(f.y + 0.3), 4, 0.4);
+          R.fx?.sound('thud');
+        }
+        const b = R.t - R.dur;
+        y = b < 0.26 ? 0.3 * Math.sin((b / 0.26) * Math.PI) : 0; back = 0.7; tilt = b < 0.3 ? 0.2 * (1 - b / 0.3) : 0;
+        if (b > 0.5) { this.react = null; }
+      }
+    } else if (R.kind === 'stag') {
+      const u = R.t / R.dur;
+      back = 0.3 * Math.sin(Math.min(1, u * 1.6) * Math.PI * 0.5) * (u > 0.6 ? Math.max(0, 1 - (u - 0.6) / 0.4) : 1);
+      tilt = 0.18 * Math.sin(Math.min(1, u) * Math.PI);
+      if (u >= 1) this.react = null;
+    } else if (R.kind === 'broken') {
+      const t = R.t, down = t < 0.2 ? t / 0.2 : t > R.dur - 0.4 ? Math.max(0, (R.dur - t) / 0.4) : 1;
+      y = -0.3 * down * down; tilt = -0.22 * down; // (a kneel: the front drops toward the hero)
+      if (t < 2 && (R.jet += dt) > 0.22) { R.jet = 0; const H = this.height || 2; R.fx?.emit('steam', this.pos.clone().setY(this.pos.y + H * (0.35 + Math.random() * 0.4)).add(V((Math.random() - 0.5) * 0.8, 0, (Math.random() - 0.5) * 0.8)), { n: 2, size: 0.7, dir: V(Math.random() - 0.5, 0.6, Math.random() - 0.5) }); }
+      if (t >= R.dur) this.react = null;
+    }
+    R.y = y;
+    this.root.position.x += d.x * back; this.root.position.z += d.z * back; this.root.position.y += y;
+    if (Math.abs(tilt) > 1e-4) { if (!this.leanDir) this.root.rotation.set(0, this.ry, 0); _leanQ.setFromAxisAngle(_leanAx.set(d.z, 0, -d.x), tilt); this.root.quaternion.premultiply(_leanQ); }
+    else if (!this.leanDir) this.root.rotation.set(0, this.ry, 0);
   }
 
   // step (from EntityManager's LOD): undefined = the full update; otherwise { anim: seconds to advance the animator and
@@ -578,7 +704,10 @@ export class EntityView {
     // own time scale: a character in hit-stop (FX.hitstop sets char.userData.hitstopT) runs at HITSTOP_SCALE
     const hsU = ch.userData, hs = hsU.hitstopT || 0;
     if (hs > 0) hsU.hitstopT = Math.max(0, hs - dtRaw);
-    this.timeScale = hs > 0 ? HITSTOP_SCALE : 1;
+    // only the part of this frame inside the stop runs slow: a whole frame at HITSTOP_SCALE rounded every stop up to the next
+    // frame (T1 0.035 s held 0.067 s at 30 fps, 0.05 s at 60), which read as sticky on phones (S1 feel review)
+    const frz = Math.min(hs, dtRaw);
+    this.timeScale = hs > 0 && dtRaw > 0 ? (dtRaw - frz + frz * HITSTOP_SCALE) / dtRaw : 1;
     const dt = dtRaw * this.timeScale;
     const runAnim = !step || step.anim > 0;
     const adt = !step ? dt : step.anim * this.timeScale;
@@ -619,6 +748,7 @@ export class EntityView {
       this.root.scale.set(1 / Math.sqrt(sq), sq, 1 / Math.sqrt(sq));
       if (u >= 1) { this.leanDir = null; this.root.scale.set(1, 1, 1); this.root.rotation.set(0, this.ry, 0); }
     }
+    if (this.react) this.updateReact(dt); // (S1: lifted, staggered, broken)
     let fresh = false; // the animator refreshed the whole rig and nothing moved it afterwards
     if (this.anim) {
       if (this.eating && !this.anim.busy) this.anim.play(EAT, { fadeIn: 0.3 });
@@ -766,7 +896,7 @@ export class EntityManager {
   }
   // per frame: every view, at the rate and detail its distance and visibility earn (VIEW_LOD above)
   update(dt) {
-    const L = GFX.mobile ? VIEW_LOD_MOB : VIEW_LOD, me = this.views.get(this.localId), cam = window.game?.engine?.camera;
+    const L = GFX.mobile ? VIEW_LOD_MOB : heroOn() ? VIEW_LOD_HERO : VIEW_LOD, me =this.views.get(this.localId), cam = window.game?.engine?.camera;
     const ref = me ? me.pos : cam ? cam.position : null;
     this.lodT = (this.lodT ?? 0) - dt;
     const evalNow = this.lodT <= 0;

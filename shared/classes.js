@@ -324,3 +324,33 @@ export const dailyXp = (Q, pL) => Math.round(xpForLevel(Math.max(pL, Q.lvl || 1)
 export const skillsForLevel = (cls, level) => SKILLS[cls].filter((s) => s.lvl <= level);
 // base damage/heal per point of coefficient at a level
 export const powerAt = (level) => 9 + level * 3.2;
+
+// ---- the combat rework (combat_design.md section 11, stage S2) ----
+// SKILLS stays as LEGACY_SKILLS: a class on KIT_V2 (shared/kit.js) plays its new kit instead. OLD_TO_NEW maps every one
+// of the 210 legacy skills: { to, as } with as core / fusion / triad / form / notable / keystone / zone / retired. Used to
+// remap the bar and the phone wheel, talent and set modifiers naming a skill, logs, achievements and quest text, and to
+// reuse choreo. `to` is the new id where it is known; the classes after the Knight fill theirs with their slices
+// (S8-S13). A legacy skill not listed is a zone notable from level 42, else retired.
+export const LEGACY_SKILLS = SKILLS;
+const MIG = {
+  knight: {
+    core: ['k_valiant', 'k_rising', 'k_skybreaker', 'k_bash', 'k_cleave', 'k_lunge', 'k_guard'], k_riposte: ['core', 'k_guard'],
+    k_kingsfall: ['fusion', 'kf_kingsfall'], k_spin: ['fusion', 'kf_riposte'], k_sunder: ['fusion', 'kf_pierce'], k_charge: ['fusion', 'kf_battering'], k_shieldthrow: ['triad', 'kt_anvilfall'],
+    k_twin: ['form', 'k_valiant'], k_arcwave: ['form', 'k_cleave'], k_millrace: ['form', 'k_cleave'],
+    k_rally: ['notable', 'shared_courage'], k_unbreakable: ['notable', 'unyielding'], k_shout: ['keystone', 'oathbound'], k_wind: ['notable', 'second_breath'],
+  },
+  warden: { core: ['w_blow', 'w_uppercut', 'w_pound', 'w_slam', 'w_bulwark', 'w_split', 'w_challenge'], fusion: ['w_colossus', 'w_piledriver', 'w_icefall', 'w_triphammer', 'w_breakwater', 'w_intercept', 'w_combo'], form: ['w_toss', 'w_stomp'], notable: ['w_iron', 'w_fortify', 'w_laststand', 'w_deflect'] },
+  sandblade: { core: ['s_slash', 's_whirl', 's_leap', 's_step', 's_dust', 's_needle', 's_counter'], fusion: ['s_thousand', 's_sirocco', 's_glass', 's_devil'], form: ['s_twin', 's_scorch', 's_sweep'], notable: ['s_evasion', 's_finish', 's_cloak', 's_rend'] },
+  ranger: { core: ['r_quick', 'r_disengage', 'r_volley', 'r_trap', 'r_aimed', 'r_pierce', 'r_explosive'], fusion: ['r_deadweight', 'r_ripsaw', 'r_kick', 'r_roll'], form: ['r_arcing', 'r_fan'], notable: ['r_mark', 'r_rapid', 'r_smoke', 'r_thousand'] },
+  deadeye: { core: ['d_snap', 'd_pair', 'd_recoil', 'd_knee', 'd_scatter', 'd_fan', 'd_quick'], fusion: ['d_chain', 'd_rollingfire', 'd_lastround', 'd_breach', 'd_slide'], form: ['d_hotshot', 'd_saltshot', 'd_slug'], notable: ['d_reload', 'd_cartridge', 'd_chalk', 'd_priming', 'd_smoke'] },
+  chemist: { core: ['c_staff', 'c_smokebomb', 'c_fire', 'c_acid', 'c_chill', 'c_tar', 'c_concussion'], fusion: ['c_thermite', 'c_chain', 'c_boiler'], triad: ['c_grand'], form: ['c_volatile', 'c_naphtha'], notable: ['c_catalyst', 'c_flash', 'c_spark', 'c_draught'], retired: ['c_clockwork'] },
+  herbalist: { core: ['h_sweep', 'h_net', 'h_salve', 'h_poultice', 'h_dart', 'h_smoke', 'h_lantern'], fusion: ['h_remedy', 'h_bandage', 'h_sneeze', 'h_sap'], form: ['h_seed', 'h_swift', 'h_bark'], notable: ['h_antidote', 'h_brew', 'h_camphor', 'h_willowsteam', 'h_tonic', 'h_revive'] },
+};
+export const OLD_TO_NEW = {};
+for (const [cls, m] of Object.entries(MIG)) {
+  for (const [k, v] of Object.entries(m)) {
+    if (Array.isArray(v) && typeof v[0] === 'string' && SKILL_BY_ID[k]) { OLD_TO_NEW[k] = { to: v[1], as: v[0] }; continue; }
+    for (const id of v) OLD_TO_NEW[id] = { to: k === 'core' ? id : null, as: k };
+  }
+  for (const s of SKILLS[cls]) if (!OLD_TO_NEW[s.id]) OLD_TO_NEW[s.id] = { to: null, as: s.lvl >= 42 ? 'zone' : 'retired' };
+}

@@ -263,7 +263,7 @@ function detach(root) {
 export function tripoBodySync(root) {
   const U = root.userData, B = BODIES[U.kind];
   if (!B || !U.skeleton) return;
-  const want = tripoBodyEnabled() && ownLook(U);
+  const want = tripoBodyEnabled() && ownLook(U) && !U.hero; // (the new shared body replaces it: hero/heroBody.js, HR.4)
   if (!want) { if (U.tbody) { detach(root); showOutfit(U, true); } return; }
   const file = fileOf(B, IS_MOBILE || !!U.dsaFar);
   if (!store.has(file)) {

@@ -6,6 +6,9 @@ import { flaskMesh, arrowMesh, kiteShield, roundShield, warhammer, dagger } from
 import { placeString } from '../assets/weapons.js';
 import { lookChange } from '../assets/charMerge.js';
 import { mulberry32 } from '/sunmere-play/shared/noise.js';
+import { tierOf, tierInfo } from '/sunmere-play/shared/feel.js';
+import { skillOf } from '/sunmere-play/shared/fusions.js'; // (S2: the new kit and fusions by id; legacy skills otherwise)
+import { SETTINGS } from '../engine/settings.js';
 import { QUALITY as GFX } from '../engine/globals.js';
 // effect lights in the fixed pool (a fixed count: lights added or removed recompile every lit material). High keeps 4,
 // phones 2; QUALITY.fxLights, or half of QUALITY.lights, overrides
@@ -546,7 +549,20 @@ export class FX {
     m.position.copy(pos); m.position.y = this.ground(pos) + 0.08;
     m.renderOrder = 17;
     this.scene.add(m);
-    const delay = o.delay || 0;
+    // two rings on the same spot in the same beat (an impact kind's ring and the clip's own) read as concentric bands
+    // from above: the second starts 80 ms after the first (combat_design.md 2.8; S1 feel review)
+    let delay = o.delay || 0;
+    const now = this.clockT || 0, LR = this._lastRing;
+    // (review 18 Nov: 80 ms apart, both were still on screen together, two concentric bands round the slam from straight
+    // above (Kingsfall, Stormfall). A second ring on the same spot while the first still shows is a low dust wave instead)
+    if (LR && now + delay - LR.t > -0.01 && now + delay - LR.t < LR.dur * 0.85 && Math.hypot(pos.x - LR.x, pos.z - LR.z) < 2) {
+      this.scene.remove(m); m.geometry.dispose(); m.material.dispose();
+      const go = () => this.emit('ringdust', V(pos.x, this.ground(pos), pos.z), { n: Math.round(10 + radius * 2), r: radius * 0.35, speed: 1.6 + radius * 0.7, size: 1.1, alpha: 0.5 });
+      if (delay > 0) this.after(delay, null, go); else go();
+      return;
+    }
+    if (LR && Math.abs(now + delay - LR.t) < 0.08 && Math.hypot(pos.x - LR.x, pos.z - LR.z) < 2) delay = LR.t + 0.08 - now;
+    this._lastRing = { t: now + delay, x: pos.x, z: pos.z, dur };
     m.visible = delay === 0;
     this.after(dur + delay, (k, t) => {
       if (t < delay) return;
@@ -570,6 +586,7 @@ export class FX {
       const ph = t * (6 + 14 * k);
       area.material.opacity = (0.2 + 0.5 * k) * (0.8 + 0.2 * Math.sin(ph));
     }, () => { this.scene.remove(area); area.geometry.dispose(); area.material.dispose(); });
+    return area; // (a Broken boss's cut wind-up hides it: game.js)
   }
   telegraphTex() {
     if (this._tTex) return this._tTex;
@@ -1018,12 +1035,55 @@ export class FX {
     if (o.stop) this.hitstop(o.stop, o.who);
   }
 
-  sound(s) { this.sfx?.play(s); }
+  // the same noise twice on one frame (an impact kind's own `hit` and the tier layer's `hit`) only doubled its loudness and
+  // phased; one copy per frame (S1 feel review)
+  sound(s) {
+    if (this._sndF !== this.frameN) { this._sndF = this.frameN; (this._sndSet ||= new Set()).clear(); }
+    if (this._sndSet.has(s)) return;
+    this._sndSet.add(s);
+    this.sfx?.play(s);
+  }
+
+  // S1 tier layers on a contact (combat_design.md 2.1, 2.8, 2.9), on top of the impact kind's own core and sparks:
+  // the hit-stop on the attacker and target, the sound layers on this frame (and `crack` as the stop releases), more
+  // directional sparks, debris from the rock pool (0 / 4 / 10 / 16 for T1-T4), a dust puff at the target's feet 0.03 s
+  // later, one plain dust ring from T3 (never a second where the kind already threw one), a mark on T4 slams, and for your
+  // own hits the camera (shove, punch) and a short buzz on phones. o: { at, feet, dir, who, local, kind, slam, ranged, upgrade }
+  tierHit(T, o) {
+    const t = T.tier;
+    if (!t) { if (!o.upgrade) this.sound('tick'); return; }
+    const stopOn = SETTINGS.hitstop !== false;
+    if (stopOn && T.stop) this.hitstop(T.stop, o.ranged ? [o.who?.[1]] : o.who);
+    if (o.local) this.shake(T.shake); else if (t >= 4) this.shake(T.shake * 0.5);
+    for (const s of T.snd) this.sound(s);
+    if (t === 3 && o.kind !== 'shield' && o.kind !== 'clang') this.sound('clang'); // (plate: every enemy is a machine)
+    if (T.duck) this.sfx?.duck?.(T.duck);
+    if (T.crack) this.after(stopOn ? T.stop : 0.02, null, () => this.sound('crack'));
+    const dir = o.dir || V(1, 0, 0), at = o.at, feet = (o.feet || at).clone();
+    feet.y = this.ground(feet);
+    const spk = [0, 0, 6, 12, 20, 26][t];
+    if (spk && !o.upgrade) this.emit('fan', at, { n: GFX.mobile ? Math.ceil(spk / 2) : spk, dir, color: '#ffe0a0' });
+    const ROCKY = new Set(['earth', 'grand', 'blast']);
+    const deb = [0, 0, 4, 10, 16, 16][t];
+    if (deb && !ROCKY.has(o.kind)) this.rocks(feet.clone().setY(feet.y + 0.5), GFX.mobile ? Math.ceil(deb / 2) : deb, 0.32 + t * 0.06);
+    const RINGED = new Set(['sweep', 'blunt', 'execute', 'shatter', 'earth', 'blast', 'grand']);
+    this.after(0.03, null, () => {
+      this.emit('dust', feet.clone().setY(feet.y + 0.15), { n: 2 + t * 2, spread: 0.3, size: 0.55 + t * 0.12, alpha: 0.5 });
+      if (t >= 3 && !RINGED.has(o.kind)) this.emit('ringdust', feet, { n: 8 + t * 3, r: 0.5, speed: 2 + t * 0.4, size: 0.8 });
+    });
+    if (t >= 4 && o.slam) this.decal('crack', feet, 2.2, 4);
+    if (o.local) {
+      this.rig?.shove?.(dir, T.kick, o.slam ? -0.6 : 0);
+      if (T.punch) this.rig?.punch?.(T.punch, t >= 4 ? 0.2 : 0.14);
+      if (t >= 3 && GFX.mobile && SETTINGS.vibrate !== false) try { navigator.vibrate?.(t >= 4 ? 28 : 14); } catch { /* no vibration */ }
+    }
+  }
 
   // ---------------------------------------------------------------- per frame
   update(dt) {
     if (this.hitstopT > 0) this.hitstopT -= dt;
     this.frameN++;
+    this.clockT = (this.clockT || 0) + dt; // (FX's own clock: when a shot in flight reaches its target, see runProjectile)
     this.contact.update(this.shadowSource, this.camera);
     this.add.update(dt); this.alpha.update(dt);
     for (let i = this.trails.length - 1; i >= 0; i--) {
@@ -1099,15 +1159,33 @@ export class FX {
         break;
       }
       case 'impact': {
-        const p = ev.at ? where(ev.at) : where('target');
-        const dir = fwd.clone();
-        this.impact(ev.kind, p, { r: ev.r, shake: ev.shake, stop: ev.stop, dir, who: [char, ctx.targetEnt] });
+        // a spin's contact (k_spin: Turning Riposte, Sidewind Cut) sits on the machine it reached and sprays away from the
+        // hero, so from above there is no spark burst at the hero's centre inside the spin's ring (review 18 Nov, 10.2)
+        // (a self-cast spin has no target here: the contact goes to the blade's tip, out at the edge of the swing)
+        const spinOn = ev.at === 'self' && ev.kind === 'sweep';
+        const spinT = spinOn && ctx.targetEnt?.pos && ctx.targetEnt.pos.distanceTo(feet()) < (ev.r || 4) + 1.5;
+        const p = spinT ? where('target').setY(feet().y + 1.1) : spinOn ? where('weaponTip') : ev.at ? where(ev.at) : where('target');
+        const dir = spinOn ? p.clone().sub(feet()).setY(0).normalize() : fwd.clone();
+        if (spinOn && dir.lengthSq() < 0.5) dir.copy(fwd);
+        const sk = ctx.as ? skillOf(ctx.as) : ev.sk ? skillOf(ev.sk) : null; // (a fusion playing another clip: its own tier)
+        if (sk) {
+          // S1: the skill's tier (shared/feel.js) owns the stop, shake, camera and sound layers; the kind keeps its look
+          let T = tierOf(sk, ev.hi || 0);
+          if ((ctx.pendHt || 0) > T.tier) T = tierInfo(ctx.pendHt); // (the server already said: a break or a lift, T3)
+          ctx.pendHt = 0;
+          this.impact(ev.kind, p, { r: spinOn ? undefined : ev.r, dir, who: [char, ctx.targetEnt] });
+          const tp = ctx.targetEnt?.pos && (spinOn || !(ev.at === 'self' && ev.r)) ? ctx.targetEnt.pos.clone() : p.clone();
+          this.tierHit(T, { at: p, feet: tp, dir, who: [char, ctx.targetEnt], local: !!ctx.local, kind: ev.kind, slam: ev.kind === 'earth' || (ev.at === 'self' && !!ev.r && !spinOn) });
+          // (a self-cast round contact, a spin with no target, covers every machine it reached: '*', so the server's word for
+          // each of them does not play the tier a second time; review 18 Nov, Turning Riposte threw 48 rocks)
+          if (ctx.src) ctx.src.lastImpact = { at: performance.now(), tier: T.tier, tgt: ctx.targetEnt?.id ?? (ev.at === 'self' && ev.r ? '*' : undefined) };
+        } else this.impact(ev.kind, p, { r: ev.r, shake: ev.shake, stop: ev.stop, dir, who: [char, ctx.targetEnt] });
         if (ev.at === 'cone') { for (let i = -2; i <= 2; i++) { const d = fwd.clone().applyAxisAngle(V(0, 1, 0), i * 0.35); this.emit('sparks', feet().addScaledVector(d, 3).setY(feet().y + 1), { n: 4, color: '#ffe8b0' }); } }
         break;
       }
       case 'ring': this.ring(ev.at === 'target' ? tgt() : ev.at === 'front1' ? front(1.4) : feet(), ev.color, ev.r, 0.6, { delay: ev.delay }); break;
       case 'shake': this.shake(ev.amt); break;
-      case 'hitstop': this.hitstop(ev.dur, [char, ctx.targetEnt]); break;
+      case 'hitstop': this.hitstop(ev.dur, ev.self ? [char] : [char, ctx.targetEnt]); break; // (self: the weapon meets the ground at a ranged release; the target stops on arrival)
       case 'sound': this.sound(ev.s); break;
       case 'dust': this.emit('dust', feet().add(V(0, 0.15, 0)), { n: 8, spread: 0.4, color: this.ground(feet()) > -99 ? '#b8a07a' : '#b8a07a' }); break;
       case 'dash': case 'leap': {
@@ -1380,6 +1458,9 @@ export class FX {
       // shots spread over a patch of ground round the target (the Deadeye's Powder Storm, Pressure Volley)
       if (ev.scatter) { const a = r(0, 6.28), d = Math.sqrt(rnd()) * ev.scatter; dest.add(V(Math.cos(a) * d, 0, Math.sin(a) * d)); if (ev.ground) dest.y = this.ground(dest) + 0.1; }
       const mesh = make();
+      const flyT = ev.time ?? (ev.up ? 0.45 : ev.pierce ? (ball ? 0.42 : 0.55) : time * (ev.arc ? 1.25 : 1));
+      // a shot at a target: its contact (tier stop, sound, sparks) waits for the shot to land, not the server's word (S1 review)
+      if (ctx.targetEnt && ctx.targetEnt !== ctx.src && !ev.up && !ev.pierce && !ev.down && !ev.scatter && !ang) ctx.targetEnt.shotDue = Math.max(ctx.targetEnt.shotDue || 0, (this.clockT || 0) + flyT);
       const spin = ev.spin || 0;
       const arc = ev.arc || 0;
       const align = fast || ev.kind === 'dart';
@@ -1388,6 +1469,9 @@ export class FX {
         time: ev.time ?? (ev.up ? 0.45 : ev.pierce ? (ball ? 0.42 : 0.55) : time * (arc ? 1.25 : 1)), arc, spin, align, trail,
         onHit: (p) => {
           if (ev.up) return;
+          // a contact the server reported before this shot was fired plays now, as it lands (entities.js hit, S1 review)
+          const pt = ctx.targetEnt?.pendHit;
+          if (pt && !ang) { ctx.targetEnt.pendHit = null; pt(); }
           if (ev.bounce) { for (let i = 0; i < ev.bounce; i++) this.after(0.25 * i + 0.01, null, () => this.impact('shrapnel', p.clone().add(V(r(-1.5, 1.5), 0, r(-1.5, 1.5))))); return; }
           this.impact(impactKind, p, { r: ev.r ?? (ev.ground ? 3 : 0), dir: dest.clone().sub(from), big: ev.big });
           if (ev.ret) {

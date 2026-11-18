@@ -447,6 +447,8 @@ export class Animator {
 
   // ctx: { speed (m/s), turnRate (rad/s), air (bool), lookYaw (rad relative) }
   update(dt, ctx = {}) {
+    const hero = this.char.userData.hero; // the new body (assets/hero/heroBody.js, ?herobody=1): old bones back at rest first
+    if (hero) hero.pre(this);
     this.t += dt;
     const b = this.bones;
     const pose = this.pose;
@@ -463,6 +465,13 @@ export class Animator {
     this.lookYawTarget = ctx.lookYaw ?? 0;
     this.lookYaw += (this.lookYawTarget - this.lookYaw) * (1 - Math.exp(-dt * 8));
     this.trackMotion(dt);
+    // the new body on a townsperson with nothing keyed playing: its clips pose everything, so skip the hand-made pose
+    if (hero && hero.clipOnly(this)) {
+      this.rootOffset.set(0, 0, 0); this.locoHipsY = 0; this.turnOffset = 0; this.actW = 0; this.actLegW = 0; this.flinch = 0;
+      hero.post(this, dt);
+      if ((this.lod || 0) < 1) { if (this.chainsCold) { for (const ch of this.chains) ch.pts = null; this.chainsCold = false; } this.updateChains(dt); } else this.chainsCold = true;
+      return;
+    }
 
     // ---- base: idle / walk / run
     const runK = clamp((this.speed - 2.5) / 3.5, 0, 1);
@@ -613,9 +622,10 @@ export class Animator {
     add('head', 0, ly * 0.45, 0); add('neck', 0, ly * 0.25, 0); add('chest', 0, ly * 0.3, 0);
 
     // ---- action layer
+    this.locoHipsY = hipsY; // (the new body's clips bob on their own: heroBody.js takes only the action's root offset)
     this.rootOffset.set(0, hipsY, 0);
     this.turnOffset = 0;
-    this.actLegW = 0; this.actPlant = false; this.actRootZ = 0; this.actAirborne = 0;
+    this.actLegW = 0; this.actW = 0; this.actPlant = false; this.actRootZ = 0; this.actAirborne = 0;
     const applyAction = (act, wScale) => {
       if (!act) return;
       const c = act.clip;
@@ -625,6 +635,7 @@ export class Animator {
       const wIn = Math.min(1, act.time / Math.max(0.001, act.fadeIn));
       const wOut = Math.min(1, (c.dur - act.time) / Math.max(0.001, act.fadeOut));
       const w = Math.max(0, Math.min(wIn, wOut)) * wScale;
+      this.actW = Math.max(this.actW, w); // (the retarget weight of the new body's upper half, heroBody.js)
       const mask = c.mask || 'upper';
       const blend = mask === 'blend';
       // blend: the clip owns the upper body; legs and hip travel come from locomotion while moving
@@ -767,6 +778,7 @@ export class Animator {
       if (this.chainsCold) { for (const ch of this.chains) ch.pts = null; this.chainsCold = false; }
       this.updateChains(dt);
     } else this.chainsCold = true;
+    if (hero) hero.post(this, dt); // mixer locomotion + this pose retargeted onto the new body, outfit moved onto it
   }
 
   fire(act, ev) {

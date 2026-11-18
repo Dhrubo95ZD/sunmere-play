@@ -9,7 +9,8 @@
 //   top: unit frame and a one-line quest pill (left), the target frame (centre), Menu and Bag, the minimap and the
 //     camera-distance button (right); a chat icon with an unread count and short toasts; the menu drawer from the right
 // Windows get tap-to-select (tooltip and an action button: Equip / Use / Sell / Unequip / Deposit) and long-press tooltips.
-import { SKILLS, CLASSES } from '/sunmere-play/shared/classes.js';
+import { CLASSES, OLD_TO_NEW } from '/sunmere-play/shared/classes.js';
+import { kitOf } from '/sunmere-play/shared/kit.js';
 import { ITEMS } from '/sunmere-play/shared/data.js';
 import { skillCost } from '/sunmere-play/shared/talents.js';
 import { icon, skillIcon, menuArt, miscArt } from './icons.js';
@@ -27,6 +28,7 @@ const CAM_LABEL = { close: 'Near', normal: 'Mid', far: 'Far' };
 // plain line glyphs (circles, squares, arrows only)
 const GLYPH = {
   jump: '<svg viewBox="0 0 24 24"><path d="M12 4l7 8h-4.5v7h-5v-7H5z"/></svg>',
+  dodge: '<svg viewBox="0 0 24 24"><path d="M3 17c2.5-6 8-9.5 14-8.2l-.6-3.3L22 10.4l-6.3 3 .7-3.1C11.6 9.6 7.6 12.4 5.6 17z"/></svg>', // (S1: a swept arrow, the roll)
   ride: '<svg viewBox="0 0 24 24"><circle cx="6.5" cy="16.5" r="3.5"/><circle cx="17.5" cy="16.5" r="3.5"/><path d="M6.5 16.5L10 9h5l2.5 7.5M10 9H7.5M14 9l1-3h3" fill="none" stroke-width="2"/></svg>',
   run: '<svg viewBox="0 0 24 24"><path d="M5 6l6 6-6 6V6zm7 0l6 6-6 6V6z"/></svg>',
   target: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7" fill="none" stroke-width="2.2"/><circle cx="12" cy="12" r="2.4"/><path d="M12 1v5M12 18v5M1 12h5M18 12h5" stroke-width="2.2"/></svg>',
@@ -83,6 +85,7 @@ export function initTouch({ game, ui, rig, canvas, act }) {
     <div class="tc-stick"><div class="tc-base"></div><div class="tc-knob"></div></div>
     <div class="tc-wheel"></div>
     <button class="tc-b tc-jump" data-a="jump" aria-label="Jump">${GLYPH.jump}</button>
+    <button class="tc-b tc-dodge" data-a="dodge" aria-label="Dodge">${GLYPH.dodge}</button>
     <button class="tc-b tc-tgt" data-a="target" aria-label="Next target">${GLYPH.target}</button>
     <button class="tc-b tc-int hidden" data-a="interact" aria-label="Interact"><img alt=""><span class="tc-intg"></span></button>
     <div class="tc-intl hidden"></div>
@@ -154,13 +157,15 @@ export function initTouch({ game, ui, rig, canvas, act }) {
   // order; later pages keep the attack slot and show the next six skills not on the first page
   let page = 0, slots = [], builtKey = '', pages = 1;
   const wheelPages = () => {
-    const y = game.you, all = SKILLS[game.cls] || [];
+    const y = game.you, all = kitOf(game.cls);
     const known = all.filter((s) => s.lvl <= (y?.level || 1));
     const byId = Object.fromEntries(all.map((s) => [s.id, s]));
+    for (const [old, o] of Object.entries(OLD_TO_NEW)) if (!byId[old] && o.to && byId[o.to]) byId[old] = byId[o.to]; // (S2: an old wheel slot keeps its place where its skill survives)
     const mine = Array.isArray(T.wheel?.[game.cls]) ? T.wheel[game.cls].slice(0, SLOTS) : null;
     let first;
     if (mine && mine.some(Boolean)) {
       first = Array.from({ length: SLOTS }, (_, i) => (known.includes(byId[mine[i]]) ? byId[mine[i]] : null)); // a saved skill above your level stays an empty ring
+      first = first.map((s, i) => (s && first.indexOf(s) < i ? null : s)); // (two old slots that became one skill)
       if (!first[0]) first[0] = known.find((s) => !first.includes(s)) || null; // the big button is never empty while a skill is known
     } else first = Array.from({ length: SLOTS }, (_, i) => known[i] || null);
     const rest = known.filter((s) => !first.includes(s));
@@ -249,6 +254,7 @@ export function initTouch({ game, ui, rig, canvas, act }) {
       else { const p = polar(180 * a, outer[i]); put(S.el, p.x, p.y, 54 * a); }
     });
     let p = polar(180 * a, 182); put($('.tc-jump', tc), p.x, p.y, 58 * a);
+    put($('.tc-dodge', tc), p.x - 64 * a, p.y + 4 * a, 52 * a); // (S1: the dodge, just left of Jump)
     p = polar(180 * a, 110); put($('.tc-page', wheel), p.x, p.y, 44 * a);
     p = polar(180 * a, 86); put($('.tc-tgt', tc), p.x, p.y, 44 * a);
     G.arcK = k;
@@ -317,6 +323,7 @@ export function initTouch({ game, ui, rig, canvas, act }) {
     b.classList.add('down'); setTimeout(() => b.classList.remove('down'), 140);
     closeMenus();
     if (a === 'jump') act.jump();
+    else if (a === 'dodge') act.dodge?.();
     else if (a === 'target') {
       // a tap steps to the next foe; a long press clears the target
       clearTimeout(tgtHold);
@@ -605,7 +612,7 @@ export function initTouch({ game, ui, rig, canvas, act }) {
     rectCache = [
       rectOf(q('.player-frame')), rectOf(q('.target-frame')),
       union([rectOf(q('.minimap')), rectOf($('.tc-top', tc)), rectOf(camBtn)]),
-      union([...wheel.querySelectorAll('.tc-sk')].map(rectOf).concat([rectOf($('.tc-jump', tc)), rectOf($('.tc-tgt', tc))])),
+      union([...wheel.querySelectorAll('.tc-sk')].map(rectOf).concat([rectOf($('.tc-jump', tc)), rectOf($('.tc-dodge', tc)), rectOf($('.tc-tgt', tc))])),
       trackOpen ? union([rectOf(pill), rectOf(tracker)]) : rectOf(pill),
       rectOf($('.tc-chat', tc)), rectOf($('.tc-qb', tc)), rectOf(intBtn),
     ].filter(Boolean);

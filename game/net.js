@@ -81,6 +81,9 @@ export async function connect(onMsg, opts = {}) {
     else if (!on && timer) { clearInterval(timer); timer = 0; }
   };
   run(true);
+  // test only (?test=1&simworker=0, tools/combatshots/): the recorder stops the 20 Hz timer and steps the world itself,
+  // one fixed frame at a time, so a 30 fps strip shows every beat at the same time on every run
+  if (/[?&]test=1\b/.test(location.search)) window.__simCtl = { run, step: (dt) => world.tick(dt), world };
   // a phone may kill a backgrounded app without any unload event: save whenever the page is hidden or put away
   const saveNow = () => { sync = true; try { for (const p of world.players.values()) if (!p.bot) world.savePlayer(p); } catch (e) { console.error(e); } finally { sync = false; flush(); } };
   // in the background (A2): phones pause the world altogether (it picks up where it was when the app comes back: nothing

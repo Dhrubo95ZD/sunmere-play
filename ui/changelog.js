@@ -1,6 +1,16 @@
 // What's new: shown once after an update (newest first). Bump `v` on the first entry whenever something is added.
 export const CHANGELOG = [
   {
+    v: 128, date: '18 November 2026', title: 'Feel of the Fight',
+    items: [
+      ['A new hero', 'Every hero, adventurer and townsman now stands on a new body with real movement: proper runs, strafes, jumps and landings, and you keep running while you swing or shoot. The Deadeye has a new look to match: a cloth cowl and scarf, a flat-crowned hat, a long coat whose tails swing as you turn, and both pistols holstered.'],
+      ['Every hit lands', 'Blows now freeze for a split second on contact, heavier blows longer, with the sound right on the hit, sparks, dust and debris, and a punch of the camera on the big ones (both can be turned off in Options). Machines stagger, get thrown into the air and land in a cloud of dust, and elites and bosses can be broken: they kneel, vent steam and shed plates while you pile in.'],
+      ['Dodge', 'Tap Shift (or the new button on phones, or flick the stick) to roll out of harm. Dodge a blow at the last moment and your next skill is sure to strike hard.'],
+      ['The Knight, rebuilt', 'The Knight is the first class on the new combat: seven skills instead of a crowded bar, a parry, and fusions. Land one skill and the skills that combine with it light up: press one and they fuse into a new move. Rising Cut into Skybreaker becomes Stormfall: the Knight launches the machine, vaults past it and drives it into the ground. Discovered fusions go in your Fusion Book. Knights get their talent points back with a letter from the trainer.'],
+      ['The Skill Web', 'For the Knight, talents give way to the Skill Web, a large map of points where keystones change how whole kinds of moves behave: Cinder Landing turns Stormfall into Cinderfall. The other classes follow one by one.'],
+    ],
+  },
+  {
     v: 127, date: '18 November 2026', title: 'Twenty Winters',
     items: [
       ['Chapters 50 and 51', 'The Long Sheds and Twenty Winters: open the Makers’ seasoning sheds, find the oak that waited twenty winters, and climb into the lofts above the stacks.'],

@@ -13,6 +13,7 @@ import { buildSteamship } from '../assets/steamship.js';
 import { dungeonAt } from '/sunmere-play/shared/dungeons.js';
 import { houseAt, houseCrosses } from '/sunmere-play/shared/houses.js';
 import { sweepMove } from '/sunmere-play/shared/sweep.js';
+import { skillFeel, dodgeFor, dodgeWith, BUFFER, DODGE, CUT_KINDS } from '/sunmere-play/shared/feel.js';
 import * as THREE from 'three';
 import { Engine } from '../engine/renderer.js';
 import { G, QUALITY } from '../engine/globals.js';
@@ -30,6 +31,8 @@ const botHid = (ev, ch) => !!ev.bot && !ev.out && (SETTINGS.botChat?.[ch] === 0 
 import { UI } from '../ui/ui.js';
 import { CHOREO } from './choreo.js';
 import { CLASSES, SKILLS, SKILL_BY_ID } from '/sunmere-play/shared/classes.js';
+import { KIT_V2, kitOf, stepOf, CHAIN_RESET } from '/sunmere-play/shared/kit.js';
+import { FUSE, skillOf, fusionUnlocked, gateOk, LINK } from '/sunmere-play/shared/fusions.js';
 import { shownName } from '/sunmere-play/shared/social.js';
 import { NPCS, QUESTS, MOBS, ITEMS, npcSeen, enginesTurning } from '/sunmere-play/shared/data.js';
 import { Builder, box, rbox, cyl, sphere, lathe } from '../assets/kit.js';
@@ -172,7 +175,7 @@ export async function startGame() {
     playerPos() { return local ? local.pos : V(); }, playerYaw() { return local ? local.ry : 0; }, camYaw() { return rig.yaw; },
     nodesList() { return [...game.nodes.values()]; },
     setTarget(id) { game.target = id; game.send({ t: 'target', id }); },
-    useSkill: (id) => useSkill(id),
+    useSkill: (id, o) => useSkill(id, 0, o || {}),
   };
   // Tidewater Sound's tide (waterAt, the sea sheet, the ship) runs on the server's clock, the same for every player
   setTideClock(() => game.serverTime());
@@ -301,6 +304,7 @@ export async function startGame() {
       case 'kicked': if (entered && ui.hud) ui.chat(m.text, '#ff6050'); else pendingJoin?.rej(new Error(m.text)); game.kicked = true; return;
       case 'you': game.you = m.you; showIceBow(m.you); world.setValleyStage?.(game.valleyStage || 0); world.updateHomestead?.(m.you, ui.ach?.done); if (local?.char) { const L = wornLook(m.you); setCharWeapon(local.char, L.wt, L.wq, L.oh, L.wu, L.ou); setCharArmor(local.char, L.sh); setCharCape(local.char, L.ck); setCharGear(local.char, L.gr); } local?.setPet(m.you.pet || null); local?.setPaint(m.you.paint || 'brass', m.you.runaboutMk || 1); local?.setMounted(!!m.you.mounted); ui.setYou(m.you); updateMarkers(); qobjects.refresh(m.you); world.setEnginesTurning?.(enginesTurning(m.you)); world.setRestOpen?.(!!m.you.done?.m_c40_bar); break;
       case 'stat': if (game.you) { Object.assign(game.you, m); ui.setStat(m); } break;
+      case 'dodgeN': if (game.dodgeC) { game.dodgeC.n = m.n; game.dodgeC.next = m.next || 0; } break; // (S1: the server's dodge charges)
       case 'snap': game.serverT = m.time; game.serverLocal = performance.now(); entities.snapshot(m.e, performance.now() / 1000); for (const ev of m.ev) onEvent(ev); updateLootables(m.e); break;
       case 'ev': for (const ev of m.list) onEvent(ev); break;
       case 'correct': if (local) {
@@ -410,12 +414,30 @@ export async function startGame() {
     const me = game.localId;
     switch (ev.k) {
       case 'cast': {
-        if (ev.id === me) break; // already played locally
+        // already played locally. S2 prediction fallback: when the server cast something else from the same press (it fused
+        // where the client predicted plain, or refused a predicted fusion), the clip swaps from the same frame; both start
+        // from A's recovery pose, so the cut is clean
+        if (ev.id === me) {
+          const pr = game.pred, now = game.serverTime();
+          if (pr && (ev.base || ev.skill) === pr.base && ev.skill !== pr.as && now - pr.at < 1.5 && local) {
+            pr.as = ev.skill; local.playSkill(ev.skill, ev.target ? entities.get(ev.target) : null, ev.gx != null ? { x: ev.gx, z: ev.gz } : null, fx, ev.haste);
+            const k = skillOf(ev.skill); if (game.lastCast) { game.lastCast.sk = k; game.lastCast.id = ev.skill; game.lastCast.done = !!k?.from; }
+          }
+          break;
+        }
         const v = entities.get(ev.id);
         if (v) { if (ev.target) { const t = entities.get(ev.target); if (t) v.ry = Math.atan2(t.pos.x - v.pos.x, t.pos.z - v.pos.z); } v.playSkill(ev.skill, ev.target ? entities.get(ev.target) : null, ev.gx != null ? { x: ev.gx, z: ev.gz } : null, fx, ev.haste); }
         break;
       }
       case 'buff': ui.unitBuff(ev); break;
+      // a fusion found for the first time (S2 discovery): the toast, and outside dungeons, raids and duels the contact beat
+      // plays once at 0.6x for the own hero
+      case 'fusionNew': {
+        ui.zoneBanner?.(ev.name, 'New fusion'); sfx.play('crack', 0.6);
+        const k = skillOf(ev.f), act = local?.anim?.action;
+        if (ev.slow && k && act && 'speed' in act) { const hitAt = (k.hit?.t || 0.4) + Math.max(0, (k.hit?.n || 1) - 1) * (k.hit?.gap || 0); const wait = Math.max(0, hitAt - 0.1 - (act.time || 0)); setTimeout(() => { if (local.anim.action === act) act.speed = 0.6; setTimeout(() => { if (local.anim.action === act) act.speed = 1; }, 250); }, wait * 1000); }
+        break;
+      }
       case 'discover': ui.discoverCard(ev.zone); break;
       case 'homeview': ui.openHomeView(ev); break;
       case 'found': ui.onFound(ev.id); break;
@@ -434,6 +456,18 @@ export async function startGame() {
       }
       case 'heal': { ui.meterEvent('heal', ev); const t = entities.get(ev.tgt); if (t && (ev.src === me || ev.tgt === me)) ui.floatText(t.pos, '+' + ev.amt, 'heal'); break; }
       case 'miss': { const t = entities.get(ev.tgt); if (t && (ev.tgt === me || ev.src === me)) ui.floatText(t.pos, ev.text, 'miss'); break; }
+      // S1 machine reactions and the dodge (combat_design.md 2.4-2.6)
+      case 'air': case 'stag': case 'broken': entities.get(ev.id)?.startReact?.(ev.k, ev, fx);
+        if (ev.k === 'broken' && ev.cut) { for (const c of game.teleCut?.get(ev.id) || []) c.visible = false; game.teleCut?.delete(ev.id); ui.ucast?.delete(ev.id); } // (its wind-up was cancelled)
+        break;
+      case 'dodge': if (ev.id !== me) { const v = entities.get(ev.id); if (v) { v.ry = Math.atan2(ev.dx, ev.dz); v.playSkill('dodge_' + (v.cls || 'knight'), null, null, fx); } } break;
+      case 'pdodge': if (ev.id === me && local) {
+        // a perfect dodge: the world holds for 0.06 s around you, a puff of dust at the feet, a crack, and Opening
+        const near = [...entities.views.values()].filter((v) => v.pos.distanceTo(local.pos) < 30);
+        if (SETTINGS.hitstop !== false) fx.hitstop(DODGE.worldStop, near);
+        fx.emit('dust', local.pos.clone().setY(local.pos.y + 0.15), { n: 10, spread: 0.4, size: 0.8 });
+        sfx.play('crack', 0.8); ui.floatText(local.pos, 'Opening', 'miss');
+      } break;
       case 'die': {
         const v = entities.get(ev.id);
         if (v) { v.kill(); if (v.ty === 'm') { fx.emit('sparks', v.pos.clone().add(V(0, 1, 0)), { n: 20, color: '#ffc070' }); fx.emit('smoke', v.pos.clone().add(V(0, 1, 0)), { n: 6 }); if (!v.def.humanoid) fx.rocks(v.pos.clone(), 6, 0.6); } }
@@ -462,7 +496,9 @@ export async function startGame() {
       case 'tele': { ui.unitCast(ev.id, ev.name || 'Attack', ev.t || 1.5);
         const v = entities.get(ev.id);
         const wet = v?.def?.water || v?.def?.mud || v?.def?.dust; // machines whose strikes are water (the Sluice Galleries): blue circles; mud (the Drain Adits): red-brown; oak dust and damp (the Drying Lofts): pale gold
-        for (const sp of ev.spots) if (ev.kind !== 'cranes' && ev.kind !== 'damp') fx.telegraph(V(sp.x, 0, sp.z), sp.r, ev.t, ev.kind === 'damp' ? '#7a9a72' : ev.kind === 'nova' ? (wet ? v.def.novaColor || '#6ad0ff' : '#ff7a20') : (wet ? v.def.teleColor || '#2f9cff' : '#ff3020'));
+        const cutList = CUT_KINDS.has(ev.kind) ? ((game.teleCut ||= new Map()).get(ev.id) || []).filter((c) => c.parent) : null; // (S1: a Broken boss's wind-up circles are hidden)
+        if (cutList) game.teleCut.set(ev.id, cutList);
+        for (const sp of ev.spots) if (ev.kind !== 'cranes' && ev.kind !== 'damp') { const tc = fx.telegraph(V(sp.x, 0, sp.z), sp.r, ev.t, ev.kind === 'damp' ? '#7a9a72' : ev.kind === 'nova' ? (wet ? v.def.novaColor || '#6ad0ff' : '#ff7a20') : (wet ? v.def.teleColor || '#2f9cff' : '#ff3020')); if (cutList && tc) cutList.push(tc); }
         if (v?.machine) v.machine.attack(ev.t, 'slam'); else if (v?.anim) v.mobAttack(null, false, true, fx);
         if (v && local && v.pos.distanceTo(local.pos) < 45) sfx.play(ev.kind === 'nova' ? 'shout' : 'grind', 0.8);
         break;
@@ -559,6 +595,9 @@ export async function startGame() {
     if (e.code === 'Enter') { document.querySelector('.chat-in')?.focus(); e.preventDefault(); return; }
     if (e.code === 'Escape') { const open = Object.values(ui.windows).some((w) => w?.isConnected); if (!open && !game.target) ui.toggle('options'); else { if (game.target) game.setTarget(null); ui.closeAll(); } return; }
     const act = actionFor(e.code);
+    // the dodge (S1): on Shift it is a tap on its own (Shift held with 1-0 still casts the second bar), on any other key at once
+    if (act === 'dodge') { if (/^Shift/.test(e.code)) { if (!e.repeat) game.shiftTap = { at: performance.now(), used: false }; } else if (!e.repeat) game.dodge(); return; }
+    if (game.shiftTap && /^Digit/.test(e.code)) game.shiftTap.used = true;
     if (act === 'autorun') { game.autoRun = !game.autoRun; return; }
     if (act === 'fwd' || act === 'back') game.autoRun = false;
     if (act === 'hideui') { ui.root.classList.toggle('ui-hidden'); return; }
@@ -574,15 +613,19 @@ export async function startGame() {
     const win = ['char', 'bags', 'quests', 'skills', 'talents', 'ach', 'journal', 'options', 'map', 'help', 'meter', 'loot'].includes(act) ? act : null;
     if (win) { ui.toggle(win); return; }
     const sx = act && act.match(/^skill(\d+)$/);
-    if (sx) { const sk = SKILLS[game.cls][Number(sx[1]) - 1]; if (sk) useSkill(sk.id); return; }
+    if (sx) { const sk = kitOf(game.cls)[Number(sx[1]) - 1]; if (sk) useSkill(sk.id, 0, { plain: e.altKey }); return; }
     const m = e.code.match(/^Digit(\d)$/);
     if (m) {
       const idx = (Number(m[1]) + 9) % 10 + (e.shiftKey ? 10 : 0);
-      const sk = SKILLS[game.cls][idx];
-      if (sk) useSkill(sk.id);
+      const sk = kitOf(game.cls)[idx];
+      if (sk) useSkill(sk.id, 0, { plain: e.altKey }); // (Alt: B plain on purpose, never a fusion)
     }
   });
-  addEventListener('keyup', (e) => keys.delete(e.code));
+  addEventListener('keyup', (e) => {
+    keys.delete(e.code);
+    const st = game.shiftTap;
+    if (st && actionFor(e.code) === 'dodge') { game.shiftTap = null; if (!st.used && performance.now() - st.at < 350 && entered && local && !['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName)) game.dodge(); }
+  });
   const canvas = engine.renderer.domElement;
   // no browser context menu anywhere in the game (right mouse turns the camera); text boxes keep theirs
   document.addEventListener('contextmenu', (e) => { if (!(e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement)) e.preventDefault(); });
@@ -625,7 +668,8 @@ export async function startGame() {
       return hit ? 'hit' : pickNode() ? 'node' : null;
     },
     interact() { const it = game.nearInteract; if (it) { doInteract(it); return true; } return false; },
-    jump: () => (ramc.driving() ? ramc.strike() : jump()), ride, // (at the Ram Engine's levers the jump button strikes the ram)
+    jump: () => (ramc.driving() ? ramc.strike() : jump()), ride,
+    dodge: () => game.dodge?.(), // (S1: the dodge button and the stick flick; the stick's direction, back with none) // (at the Ram Engine's levers the jump button strikes the ram)
     autorun() { game.autoRun = !game.autoRun; return game.autoRun; },
     nextTarget() { tabTarget(); },
     clearTarget() { game.setTarget(null); },
@@ -701,7 +745,7 @@ export async function startGame() {
     return null;
   }
   function interact(v) {
-    if (v.ty === 'm' && !v.dead) { if (!game.you.dead) { const auto = SKILLS[game.cls].find((s) => s.lvl <= game.you.level && s.target === 'enemy' && !s.cd && !s.cast); if (auto) useSkill(auto.id); } return; }
+    if (v.ty === 'm' && !v.dead) { if (!game.you.dead) { const auto = kitOf(game.cls).find((s) => s.lvl <= game.you.level && s.target === 'enemy' && !s.cd && !s.cast); if (auto) useSkill(auto.id); } return; }
     interactTarget = v;
     moveTo = null;
   }
@@ -723,22 +767,47 @@ export async function startGame() {
   }
 
   // ------------------------------------------------------------------ skills
-  function useSkill(id) {
-    const sk = SKILL_BY_ID[id], y = game.you;
-    if (!sk || !y || !local || local.dead) return;
-    game.pressedSkill = id; setTimeout(() => { if (game.pressedSkill === id) game.pressedSkill = null; }, 120);
-    if (sk.lvl > y.level) return ui.error(`Requires level ${sk.lvl}.`);
+  // qUntil: a press held in the input buffer (S1, shared/feel.js BUFFER 0.3 s), retried every frame until it is legal
+  // o.plain: Alt held (B plain on purpose). S2 fusions (shared/fusions.js): B pressed in the link A opened plays the fusion
+  // at once (prediction) and tells the server the chain it cast (chain: A, accepted up to 0.15 s late); the server's cast
+  // event swaps the clip if it decided otherwise
+  function useSkill(id, qUntil, o = {}) {
+    const base = skillOf(id), y = game.you;
+    if (!base || base.from || !y || !local || local.dead) return;
+    if (!qUntil) { game.pressedSkill = id; setTimeout(() => { if (game.pressedSkill === id) game.pressedSkill = null; }, 120); }
+    if (base.lvl > y.level) return ui.error(`Requires level ${base.lvl}.`);
     const now = game.serverTime();
-    if ((y.cds[id] || 0) > now + 0.05) return ui.error('Not ready yet.');
-    if (sk.gcd && (y.gcd || 0) > now + 0.05) return;
-    if (local.anim.busy && local.anim.action?.clip?.mask === 'full' && !local.anim.action.clip.loop && sk.gcd) return; // (riding/sitting loops never block)
-    const cost = skillCost(sk, ui.tmods);
+    const fu = o.plain ? null : predictFusion(base, now);
+    const ch = game.chain && game.chain.id === base.id && now - game.chain.at <= CHAIN_RESET ? game.chain : null;
+    const sk = fu?.f || (base.chain ? stepOf(base, ch ? (ch.step % base.chain.length) + 1 : 1) : base);
+    // a fusion key pressed while A still winds up is held to A's contact + the buffer (the server holds it the same way)
+    const lc = game.lastCast;
+    if (!fu && !o.plain && lc && !lc.done && now < lc.at && FUSE[game.cls]) {
+      const f2 = FUSE[game.cls][lc.id + '>' + id];
+      if (f2 && fusionUnlocked(y, f2) && !((y.cds[f2.id] || 0) > lc.at)) { game.qSkill = { id, until: qUntil || lc.at + BUFFER, o }; return; }
+    }
+    // the first legal moment: the cooldown, the lock of the last plain skill (feel.js, 0.45-0.9 s) and the cancel point of
+    // the clip playing (its contact + 0.12 s, or the end of a dodge's evade); a press inside the buffer is held, the
+    // latest press wins (riding/sitting loops never block). A fusion skips A's lock
+    const cutAt = local.anim.busy && local.anim.action?.clip?.mask === 'full' && !local.anim.action.clip.loop ? game.cutT || 0 : 0;
+    const legal = Math.max(y.cds[id] || 0, fu ? y.cds[fu.f.id] || 0 : 0, sk.gcd && !fu ? Math.max(y.gcd || 0, cutAt) : 0);
+    // (no early grace: the server holds a press that comes in early and fires it on its next tick, so a client that went
+    // 0.05 s early ran its swing and contact 2-3 frames ahead of the server's damage, flinch and number; S1 feel review)
+    if (legal > now + 0.005) {
+      if (legal - now <= BUFFER + 0.05 && (!qUntil || now <= qUntil)) { game.qSkill = { id, until: qUntil || now + BUFFER, o }; return; }
+      if (qUntil) return;
+      if ((y.cds[id] || 0) > now + 0.05) return ui.error('Not ready yet.');
+      return;
+    }
+    game.qSkill = null;
+    const cost = fu ? skillCost(base, ui.tmods) + (fu.f.extra || 0) : skillCost(sk, ui.tmods);
     if (y.res < cost) return ui.error(`Not enough ${CLASSES[game.cls].resource}.`);
     if (y.mounted) { y.mounted = false; local.setMounted(false); }
     let tgtV = game.target ? entities.get(game.target) : null;
     let ground = null;
     const foe = (v) => v && !v.dead && (v.ty === 'm' || (v.ty === 'p' && y.duel && v.id === y.duel.with && now >= y.duel.start));
     if (sk.target === 'enemy') {
+      if (!foe(tgtV) && fu?.L.tgt) tgtV = entities.get(fu.L.tgt);
       if (!foe(tgtV)) {
         // auto-target the nearest enemy in range
         let best = null, bd = sk.range + 2;
@@ -762,19 +831,102 @@ export async function startGame() {
     local.aimRy = null; local.aimShot = (sk.range || 0) > 6;
     if (look) {
       const yaw = Math.atan2(look.x - local.pos.x, look.z - local.pos.z);
-      if (local.speed > 0.5 && CHOREO[id]?.mask === 'blend') local.aimRy = yaw; else local.ry = yaw;
+      if (local.speed > 0.5 && CHOREO[sk.choreo || id]?.mask === 'blend') local.aimRy = yaw; else local.ry = yaw;
     }
     // optimistic local cooldown so the bar reacts instantly
     y.res -= cost;
-    if (sk.cd) y.cds[id] = now + sk.cd;
-    if (sk.gcd) y.gcd = now + 1.0;
-    game.send({ t: 'cast', skill: id, target: tgtV && tgtV !== local ? tgtV.id : tgtV === local ? game.localId : null, gx: ground?.x, gz: ground?.z });
-    local.playSkill(id, tgtV && tgtV !== local ? tgtV : tgtV === local ? local : null, ground, fx);
+    if (base.cd) y.cds[id] = now + base.cd;
+    if (fu) y.cds[fu.f.id] = now + fu.f.cd;
+    const fe = skillFeel(sk);
+    if (sk.gcd) y.gcd = now + fe.win.lock;
+    game.cutT = now + fe.win.cancel; // (a dodge or the next skill may cut the follow-through from here)
+    // the link is spent; this cast's own contact may open the next one (frame step: the predicted link)
+    game.plink = null; y.link = null;
+    game.chain = base.chain && !fu ? { id, step: sk.step, at: now } : null;
+    const tgtId = tgtV && tgtV !== local ? tgtV.id : tgtV === local ? game.localId : null;
+    const hitEnd = (sk.hit?.t || 0) + Math.max(0, (sk.hit?.n || 1) - 1) * (sk.hit?.gap || 0);
+    game.lastCast = { id: sk.id, sk, t0: now, at: now + (sk.hit?.t || 0), end: now + hitEnd, lock: fe.win.lock, tgt: tgtId, done: !KIT_V2[game.cls] || !!sk.from };
+    game.pred = { base: id, as: sk.id, at: now };
+    game.send({ t: 'cast', skill: id, chain: fu ? fu.L.from : undefined, plain: o.plain || undefined, target: tgtId, gx: ground?.x, gz: ground?.z });
+    local.playSkill(sk.id, tgtV && tgtV !== local ? tgtV : tgtV === local ? local : null, ground, fx);
     if (sk.cast) game.casting = { name: sk.name, cast: sk.cast, t0: performance.now() / 1000 };
     moveTo = null;
     qwalk.stop('manual'); // (a skill means a fight, or something you chose to do here)
-    sfx.play('swing', 0.5);
+    // (no sound on the key press: the clip's whoosh lands 0.08-0.12 s before the contact, choreo.js)
   }
+  // the fusion B would make now (S2 prediction): the server's link (you.link) or the one predicted from this client's own
+  // contact (game.plink), an authored pair, unlocked, not cooling, inside the window with the 0.15 s grace, and its gate
+  // as far as the client can see it (a lifted machine is in the air on screen; a staggered one is reeling or kneeling)
+  function predictFusion(B, now) {
+    const y = game.you, fuse = KIT_V2[game.cls] && FUSE[game.cls];
+    if (!fuse) return null;
+    const opening = (y.buffs || []).some((b) => b.name === 'Opening');
+    const seen = (v, st) => (st === 'lifted' ? v?.react?.kind === 'air' : st === 'staggered' ? v?.react?.kind === 'stag' || v?.react?.kind === 'broken' || (v?.stunUntil || 0) > performance.now() : false);
+    for (const L of [game.plink, y.link]) {
+      if (!L) continue;
+      const f = fuse[L.from + '>' + B.id];
+      if (!f || !fusionUnlocked(y, f) || (y.cds[f.id] || 0) > now + 0.02 || now > L.until + LINK.grace) continue;
+      const tv = f.target === 'enemy' ? (game.target && entities.get(game.target)) || (L.tgt && entities.get(L.tgt)) : null;
+      if (f.target === 'enemy' && L.tgt && entities.get(L.tgt)?.dead) continue;
+      if (gateOk(f, L, tv, opening, seen)) return { f, L };
+    }
+    return null;
+  }
+  // this client's own link (S2): at its own cast's contact frame, a core skill that reached a live machine opens the window
+  // here at once (the server's you.link follows a round trip later and wins where they differ)
+  function predictLink(now) {
+    const c = game.lastCast;
+    if (!c || c.done || now < c.at) return;
+    c.done = true;
+    const sk = c.sk;
+    if (!sk || sk.from || (sk.chain && sk.step < sk.steps)) return;
+    let landed = sk.target !== 'enemy';
+    if (!landed) { const t = c.tgt && entities.get(c.tgt); landed = !!t && !t.dead && t.pos.distanceTo(local.pos) <= (sk.hit?.r || sk.range || 4) + (t.radius || 0.5) + 1.5; }
+    if (!landed) return;
+    game.plink = { from: sk.id, at: now, until: Math.max(now + LINK.win + (game.you?.web ? (ui.tmods?.linkWin || 0) + (ui.tmods?.linkSk?.[sk.id] || 0) : 0), c.t0 + c.lock + LINK.afterLock), landed: sk.target === 'enemy', done: true, step: sk.step || 0, tgt: c.tgt, parried: false, local: true };
+  }
+
+  // ------------------------------------------------------------------ dodge (S1, combat_design.md 2.4)
+  // the way you are moving (keys or the stick), flat, or null when nothing is held
+  function heldDir() {
+    const { fwd, right } = rig.axes(), d = V();
+    if (keys.has(keyFor('fwd')) || keys.has('ArrowUp')) d.add(fwd);
+    if (keys.has(keyFor('back')) || keys.has('ArrowDown')) d.sub(fwd);
+    if (keys.has(keyFor('right')) || keys.has('ArrowRight')) d.add(right);
+    if (keys.has(keyFor('left')) || keys.has('ArrowLeft')) d.sub(right);
+    const st = touch?.stick;
+    if (st && st.mag > 0.12) d.addScaledVector(fwd, -st.y).addScaledVector(right, st.x);
+    return d.lengthSq() > 1e-4 ? d.setY(0).normalize() : null;
+  }
+  // a roll the way you move, or a hop back with nothing held. Charges are kept here as the server keeps them; a press in a
+  // skill's wind-up is held to its contact (the buffer)
+  function dodge(dir, qUntil) {
+    const y = game.you;
+    if (!local || local.dead || !y || y.dead || crossing || ramc.driving()) return;
+    const now = game.serverTime(), D = y.web ? dodgeWith(game.cls, ui.tmods) : dodgeFor(game.cls); // (the Web's Quick Feet, Momentum, Iron Comet, as the server counts them)
+    const c = (game.dodgeC ||= { n: D.charges, next: 0 });
+    while (c.n < D.charges && c.next && now >= c.next) { c.n++; c.next = c.n < D.charges ? c.next + D.regen : 0; }
+    const legal = Math.max(c.n < 1 ? c.next : 0, local.anim.busy ? (game.cutT || 0) : 0);
+    if (legal > now + 0.02) {
+      if (legal - now <= BUFFER + 0.05 && (!qUntil || now <= qUntil)) game.qDodge = { dir: dir ? dir.clone() : null, until: qUntil || now + BUFFER };
+      else if (!qUntil && c.n < 1) ui.error('No dodge left.');
+      return;
+    }
+    game.qDodge = null;
+    c.n--; if (!c.next) c.next = now + D.regen;
+    if (y.mounted) { y.mounted = false; local.setMounted(false); }
+    game.casting = null; moveTo = null; interactTarget = null; qwalk.stop('manual');
+    local.aimRy = null;
+    if (dir) local.ry = Math.atan2(dir.x, dir.z);
+    const back = !dir, w = dir || V(-Math.sin(local.ry), 0, -Math.cos(local.ry));
+    game.send({ t: 'dodge', dx: +w.x.toFixed(3), dz: +w.z.toFixed(3) });
+    local.playSkill((back ? 'dodgeb_' : 'dodge_') + game.cls, null, null, fx);
+    game.cutT = now + DODGE.evade; // (skills cut in once the evade is over)
+    game.chain = null; game.lastCast = null; if (KIT_V2[game.cls]) game.plink = { from: 'dodge', at: now, until: now + D.dur + LINK.win, landed: true, done: true, step: 0, tgt: null, parried: false, local: true }; // (S2: the dodge is an input)
+    game.dodgeAt = now;
+  }
+  // (a plain { x, z } from a script or the touch layer is made a vector: the buffer clones it)
+  game.dodge = (dir) => dodge(dir === 'back' ? null : dir ? (dir.isVector3 ? dir : V(dir.x || 0, 0, dir.z || 0).normalize()) : heldDir());
 
   // ------------------------------------------------------------------ frame
   let sendT = 0;
@@ -806,6 +958,19 @@ export async function startGame() {
     }
     const y = game.you;
     const dead = !!y?.dead;
+    // ---- the input buffer (S1): a held skill or dodge press goes off on the first legal frame, or is dropped after 0.3 s
+    if (game.qDodge && !dead) { const q = game.qDodge; game.qDodge = null; dodge(q.dir, q.until); }
+    if (local && !dead) predictLink(game.serverTime()); // (S2: the link from this client's own contact)
+    if (game.qSkill && !dead) { const q = game.qSkill; game.qSkill = null; useSkill(q.id, q.until, q.o); }
+    // the stick flick (phones, option "dodgeFlick", on by default): out past 0.75 of the radius within 0.12 s of the push
+    // and let go within 0.3 s dodges that way; an ordinary push to run is held, so it never dodges
+    if (touch?.stick && SETTINGS.dodgeFlick !== false && !dead) {
+      const st = touch.stick, m = st.mag || 0, fk = (game.flick ||= { t: -1, peak: null });
+      if (m > 0.2 && fk.t < 0) { fk.t = 0; fk.peak = null; } else if (fk.t >= 0) fk.t += dtRaw;
+      if (fk.t >= 0 && fk.t <= 0.12 && m > 0.75) { const { fwd, right } = rig.axes(); fk.peak = V().addScaledVector(fwd, -st.y).addScaledVector(right, st.x).setY(0).normalize(); }
+      if (fk.t >= 0 && m < 0.2) { if (fk.peak && fk.t <= 0.3) dodge(fk.peak); fk.t = -1; fk.peak = null; }
+      else if (fk.t > 0.3) fk.peak = null;
+    }
     // ---- movement
     const { fwd, right } = rig.axes();
     const dir = V();

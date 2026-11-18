@@ -185,6 +185,29 @@ export class CameraRig {
     }
     this.kickV.x += sx * a * 30; this.kickV.y += sy * a * 30;
   }
+  // ---- S1 camera effects (combat_design.md 2.7), your own hero only, behind Camera shake and Camera effects:
+  // punch: the lens narrows by deg over 0.04 s and relaxes over t (0.12-0.2 s)
+  punch(deg, t = 0.16) { if (!SETTINGS.shake || SETTINGS.camFx === false || !(deg > 0)) return; this.fxP = { deg, t, a: 0 }; }
+  // shove: the look point nudges amt m (0.15-0.35) along the blow (dir, world) and springs back over 0.25 s; a slam pushes
+  // the view down (up < 0), a launch up (up > 0)
+  shove(dir, amt, up = 0) {
+    if (!SETTINGS.shake || SETTINGS.camFx === false || !(amt > 0)) return;
+    const l = dir ? Math.hypot(dir.x, dir.z) : 0;
+    this.fxK = { x: l > 1e-4 ? (dir.x / l) * amt : 0, y: up * amt, z: l > 1e-4 ? (dir.z / l) * amt : 0, a: 0 };
+  }
+  // lift: for aerial moves the camera rises `up` m and pulls back `back` m over 0.25 s, holds, and eases out over the last
+  // 0.3 s of t (the terrain and house clamps below still apply)
+  lift(up, back, t) { if (SETTINGS.camFx === false) return; this.fxL = { up, back, t, a: 0 }; }
+  camFxStep(dt) {
+    let fov = 0, ox = 0, oy = 0, oz = 0, up = 0, back = 0;
+    const P = this.fxP;
+    if (P) { P.a += dt; const u = P.a; fov = u < 0.04 ? P.deg * (u / 0.04) : P.deg * Math.max(0, 1 - (u - 0.04) / P.t) ** 2; if (u > 0.04 + P.t) this.fxP = null; }
+    const K = this.fxK;
+    if (K) { K.a += dt; const u = K.a, w = u < 0.03 ? u / 0.03 : Math.max(0, 1 - (u - 0.03) / 0.25) ** 2; ox = K.x * w; oy = K.y * w; oz = K.z * w; if (u > 0.3) this.fxK = null; }
+    const L = this.fxL;
+    if (L) { L.a += dt; const u = L.a, w = u < 0.25 ? smooth(u / 0.25) : u > L.t - 0.3 ? smooth(Math.max(0, (L.t - u) / 0.3)) : 1; up = L.up * w; back = L.back * w; if (u >= L.t) this.fxL = null; }
+    return { fov, ox, oy, oz, up, back };
+  }
   // 0 at the closest zoom, 1 at the widest (log scale, so the curve spends as long close in as far out)
   zoomT(dist = this.dist) { return clamp(Math.log(dist / this.minDist) / Math.log(this.maxDist / this.minDist), 0, 1); }
   // kept for older callers: 0 close, 1 far (smoothstep)
@@ -401,11 +424,14 @@ export class CameraRig {
     if (this.coll > this._hit - CAM.CLEAR * 0.5 && want < this.dist) this.coll = want; // never behind a surface, not even for a frame
     this.effDist = Math.min(this.dist, this.coll);
     // lens: wider up close (only touch the projection when it really changes); a nearer near plane close in
-    const fov = lerp(CAM.FOV_CLOSE, CAM.FOV_FAR, s);
+    const cf = this.fxP || this.fxK || this.fxL ? this.camFxStep(dt) : null; // (S1 punch, shove, lift)
+    const fov = lerp(CAM.FOV_CLOSE, CAM.FOV_FAR, s) - (cf ? cf.fov : 0);
     const near = this.effDist < 2 ? 0.1 : this.effDist < 6 ? 0.2 : 0.5;
     if (Math.abs(fov - this.camera.fov) > 0.05 || near !== this.camera.near) { this.camera.fov = fov; this.camera.near = near; this.camera.updateProjectionMatrix(); }
-    _off.copy(_dir).multiplyScalar(this.effDist);
+    if (cf) { _look.x += cf.ox; _look.y += cf.oy + cf.up * 0.6; _look.z += cf.oz; }
+    _off.copy(_dir).multiplyScalar(this.effDist + (cf && this._hit === Infinity ? cf.back : 0));
     this.camera.position.copy(_look).add(_off);
+    if (cf?.up) this.camera.position.y += cf.up * 0.4;
     // never below the ground at the lens itself (the ray test above samples, this catches the last few centimetres)
     if (this.env?.heightAt) { const gy = this.env.heightAt(this.camera.position.x, this.camera.position.z) + 0.3; if (this.camera.position.y < gy) this.camera.position.y = gy; }
     if (this.shake > 0.001) {

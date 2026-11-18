@@ -15,6 +15,8 @@ const KEY = 'sunmere:opts';
 // perfHud: (v116) the Performance readout panel (ui/perfhud.js), off by default
 // botChat / botInvites / botWhispers: (living bots C.11) show adventurers' (bots') chat per channel; adventurers may invite
 //   me to groups; adventurers may whisper me first. The server is told (net.js botPrefsMsg) and skips hidden channels.
+// heroBody: (S0, hero rework stage 2) the new skinned hero body for every humanoid, on by default since the S0 perf review (18 Nov), false = the old body (assets/hero/heroBody.js
+//   reads it once at load; ?herobody=1 / ?herobody=0 override it)
 // freeCam: Free camera (every platform, off by default): never turns on its own, wider zoom, hand-set pitch (game/camera.js)
 export const SETTINGS = { volume: 0.5, muted: false, bgMute: true, quality: IS_MOBILE ? 'mobile' : 'high', server: '', uiScale: 1, shake: true, miniZoom: 70, mapFog: true, fpsCap: IS_MOBILE ? 60 : 0, vsync: true, battery: false, dynRes: IS_MOBILE, freeCam: false, upgradeFx: IS_MOBILE ? 'simple' : 'full', botChat: { world: 1, say: 1, whisper: 1, guild: 1, party: 1 }, botInvites: true, botWhispers: true };
 export const MINI_ZOOMS = [40, 70, 110, 160];
@@ -31,11 +33,14 @@ export const KEY_ACTIONS = [
   ['skill27', 'Skill 27 (level 57)', 'BracketLeft'], ['skill28', 'Skill 28 (level 60)', 'BracketRight'], // no letters left: [ and ] sit beside P
   ['skill29', 'Skill 29 (level 62)', 'Semicolon'], ['skill30', 'Skill 30 (level 65)', 'Quote'], // ; and ' sit under [ and ]
   ['potion', 'Potion slot', 'Comma'], // the potion slot beside the action bar (desktop and browser)
+  ['dodge', 'Dodge (a tap)', 'ShiftLeft'], // (S1: a tap of Shift on its own dodges; Shift held with 1-0 still casts the second bar)
 ];
+// S1 feel layer (combat_design.md 2.1 and 2.7): hit-stop on contacts, and the camera's punch, kick and lift on your own hits
+for (const [k, v] of [['hitstop', true], ['camFx', true], ['dodgeFlick', true]]) if (SETTINGS[k] === undefined) SETTINGS[k] = v;
 SETTINGS.keys = { ...Object.fromEntries(KEY_ACTIONS.map(([a, , k]) => [a, k])), ...(SETTINGS.keys || {}) };
 export const keyFor = (action) => SETTINGS.keys[action];
 export const actionFor = (code) => { for (const [a] of KEY_ACTIONS) if (SETTINGS.keys[a] === code) return a; return null; };
-export const keyLabel = (code) => (code || '').replace(/^Key/, '').replace(/^Digit/, '').replace('Equal', '=').replace('Minus', '-').replace('Space', 'Space').replace('Numpad', 'Num ').replace('Backquote', '`').replace('BracketLeft', '[').replace('BracketRight', ']').replace('Semicolon', ';').replace('Quote', "'").replace('Comma', ','); // metres of world shown from the minimap's centre to its rim
+export const keyLabel = (code) => (code || '').replace(/^Key/, '').replace(/^Digit/, '').replace('Equal', '=').replace('Minus', '-').replace('Space', 'Space').replace('Numpad', 'Num ').replace('Backquote', '`').replace('BracketLeft', '[').replace('BracketRight', ']').replace('Semicolon', ';').replace('Quote', "'").replace('Comma', ',').replace('ShiftLeft', 'Shift').replace('ShiftRight', 'Right Shift'); // metres of world shown from the minimap's centre to its rim
 let _saved = {};
 try { _saved = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; Object.assign(SETTINGS, _saved); } catch { /* private window: defaults */ }
 // keys added since the options were saved (skills 21 to 30) get their defaults, unless the key is already taken

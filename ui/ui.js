@@ -1,7 +1,14 @@
 // HUD + windows (DOM). Frames, action bars, cast bar, xp, minimap, chat, quest tracker, nameplates,
 // floating combat text, character / bags / quests / skills / dialog / vendor / loot / map windows.
 import * as THREE from 'three';
-import { CLASSES, SKILLS, SKILL_BY_ID, xpForLevel, LEVEL_CAP, dailyXp } from '/sunmere-play/shared/classes.js';
+import { CLASSES, SKILLS, xpForLevel, LEVEL_CAP, dailyXp, OLD_TO_NEW } from '/sunmere-play/shared/classes.js';
+import { KIT_V2, kitOf } from '/sunmere-play/shared/kit.js';
+import { skillOf, fusionBook } from '/sunmere-play/shared/fusions.js';
+import { treeMods, webEff, pathTo, isLeaf, formOpt, leafRefundCost, treeResetCost } from '/sunmere-play/shared/treeMods.js';
+import { TREE_NODES, TREE_LINKS, TREE_BY_ID, TREE_MAP, TREE_START } from '/sunmere-play/shared/tree.js';
+import { KEYSTONES } from '/sunmere-play/shared/keystones.js';
+import { effName } from '/sunmere-play/shared/keystones.js';
+const SKILL_BY_ID = new Proxy({}, { get: (_, id) => skillOf(id) }); // (S2: a class on the new kit reads its kit and fusions)
 import { shownName } from '/sunmere-play/shared/social.js';
 import { ITEMS, QUESTS, MOBS, NPCS, QUALITY, QUALITY_NAME, PRISMATIC_STOPS, HOME_DECO, HOME_TROPHIES, HOME_SPOTS, HOME_MOVABLE, BAG_BASE } from '/sunmere-play/shared/data.js';
 import { ZONES, zoneAt, WORLD, REACH, RIME, HEIGHTS, TIDEWATER, RAINWARD, WEALD, AREA_BY_ID, areaOf, waterKind } from '/sunmere-play/shared/terrain.js';
@@ -78,7 +85,8 @@ if (IS_MOBILE) import('./mobileplates.js').then((m) => { MP = m; }).catch(() => 
 const isPhone = () => document.documentElement.classList.contains('phone');
 // the 7 wheel slots of a class: the saved list, or the first 7 skills in learn order
 // the default is the first 7 skills the hero already knows (as ui/touch.js builds the HUD wheel), never a locked one
-const wheelOf = (cls, lvl = Infinity) => { const w = SETTINGS.touch?.wheel?.[cls], known = (SKILLS[cls] || []).filter((s) => s.lvl <= lvl); return Array.from({ length: 7 }, (_, i) => (Array.isArray(w) ? w[i] ?? null : known[i]?.id ?? null)); };
+// (S2: on the new kit a saved wheel is remapped through OLD_TO_NEW: a slot keeps its place where its skill survives)
+const wheelOf = (cls, lvl = Infinity) => { const kit = kitOf(cls), w = SETTINGS.touch?.wheel?.[cls], known = kit.filter((s) => s.lvl <= lvl), have = new Set(); const rm = (id) => { if (!id || !KIT_V2[cls] || kit.some((s) => s.id === id)) return id; const to = OLD_TO_NEW[id]?.to; return to && kit.some((s) => s.id === to) ? to : null; }; return Array.from({ length: 7 }, (_, i) => { const id = Array.isArray(w) ? rm(w[i] ?? null) : known[i]?.id ?? null; if (!id || have.has(id)) return null; have.add(id); return id; }); };
 import { TALENTS, TALENT_ROW_REQ, TALENT_START, talentResetCost, pathSpent, describeEffect, talentMods, skillCost, skillCd } from '/sunmere-play/shared/talents.js';
 const SKILL_BY_NAME = Object.fromEntries(Object.values(SKILLS).flat().map((k) => [k.name, k]));
 
@@ -243,7 +251,7 @@ export class UI {
       const C = CLASSES[c];
       $('.cls-name', w).textContent = C.name; $('.cls-name', w).style.color = C.color;
       $('.cls-role', w).textContent = C.role; $('.cls-desc', w).textContent = C.desc; $('.cls-weapon', w).textContent = C.weapon + ' · ' + C.resource;
-      $('.cls-skills', w).innerHTML = SKILLS[c].map((s) => `<img title="${s.name}" src="${skillIcon(s)}">`).join('');
+      $('.cls-skills', w).innerHTML = kitOf(c).map((s) => `<img title="${s.name}" src="${skillIcon(s)}">`).join('');
       w.querySelectorAll('.cv').forEach((b) => { b.style.background = SW[c][b.dataset.v]; b.classList.toggle('on', Number(b.dataset.v) === cv); });
       onPreview?.(c, cv);
     };
@@ -433,7 +441,7 @@ export class UI {
   buildActionBars() {
     const cls = this.g.cls;
     const color = CLASSES[cls].color;
-    const list = SKILLS[cls];
+    const list = kitOf(cls); // (S2: the new kit's seven skills on a class with KIT_V2)
     const rows = [$('.row1', this.root), $('.row2', this.root), $('.row3', this.root)];
     this.slots = [];
     list.forEach((s, i) => {
@@ -522,9 +530,20 @@ export class UI {
     else if (P.cdt.textContent || P.cd.style.background !== 'none') { P.cd.style.background = 'none'; P.cdt.textContent = ''; }
   }
 
+  // the Fusion Book (S2 data, plain list; the screen with previews and Pin is S6): each fusion of the class with its two
+  // inputs, the gate in plain words, its numbers, uses and rank; unknown ones show their hint only; the triad once unlocked
+  fusionBookHtml() {
+    const y = this.you;
+    if (!y || !KIT_V2[y.cls]) return '';
+    const C = CLASSES[y.cls], R = ['', ' I', ' II', ' III'];
+    const rows = fusionBook(y.cls, y).filter((e) => e.show).map((e) => `<div class="sk fz ${e.known ? '' : 'locked'}" title="${e.known ? e.desc : e.hint}"><img src="${skillIcon(skillOf(e.id))}"><div><b>${e.known ? (this.eff?.[e.id] ? effName(this.eff[e.id]) : e.name) : '?'}</b>${e.rank ? ` <span class="sk-key">Mastery${R[e.rank]}</span>` : ''}<div class="sk-d">${e.fromName}, then ${e.toName}. ${e.gate}.${e.known ? '' : ' <i>' + e.hint + '</i>'}</div><div class="sk-m">${e.cost} ${C.resource} · ${e.cd}s cooldown · ${e.unlocked ? (e.known ? e.uses + ' landed' : 'Not found yet') : e.lvl ? 'Level ' + e.lvl : 'A notable on the Web'}</div></div></div>`).join('');
+    return `<div class="sk-list fz-book"><div class="sk-h"><b>Fusion Book</b> <span>Land the first skill, then press the second within a second.</span></div>${rows}</div>`;
+  }
   skillTip(s) {
     const C = CLASSES[s.cls];
-    const lines = [`<div class="tt-name" style="color:${C.color}">${s.name}</div>`];
+    const e = this.eff?.[s.id]; // (on the Web: the compiled record, renamed by a keystone as "Cinderfall (Stormfall)")
+    const lines = [`<div class="tt-name" style="color:${C.color}">${e ? effName(e) : s.name}</div>`];
+    if (e?.formName) lines.push(`<div class="tt-row"><span>Form: ${e.formName}</span><span></span></div>`);
     lines.push(`<div class="tt-row"><span>${skillCost(s, this.tmods)} ${C.resource}</span><span>${s.range ? s.range + ' yd range' : 'Self'}</span></div>`);
     lines.push(`<div class="tt-row"><span>${s.cast ? s.cast.toFixed(1) + ' sec cast' : s.channel ? 'Channeled' : 'Instant'}</span><span>${s.cd ? +skillCd(s, this.tmods).toFixed(1) + ' sec cooldown' : ''}</span></div>`);
     lines.push(`<div class="tt-desc">${s.desc}</div>`);
@@ -638,7 +657,9 @@ export class UI {
     }
     this.renderBuffs($('.buffs', pf), you.buffs);
     this.renderTracker();
-    this.tmods = talentMods(you.cls, you.talents);
+    // a hero on the Skill Web (S3): its table, and its compiled kit with Forms, carry and keystone renames for the tooltips
+    this.tmods = you.web ? treeMods(you.cls, you.tree || {}, { forms: you.forms, done: you.done }) : talentMods(you.cls, you.talents);
+    this.eff = you.web ? webEff(you, this.tmods) : null;
     $('.menubar [data-w="talents"]', this.root)?.classList.toggle('has-pts', (you.talentPts || 0) > 0);
     { const rb = $('.menubar .recall-btn', this.root), left = (you.recallReady || 0) - Date.now(); if (rb) { rb.title = `Homeward Compass (G): back to ${you.home || 'Sunmere Village'}${left > 0 ? ` · ready in ${Math.ceil(left / 60000)} min` : ''}`; rb.classList.toggle('cooling', left > 0); clearTimeout(this._recallT); if (left > 0) this._recallT = setTimeout(() => rb.classList.remove('cooling'), Math.min(left, 2 ** 31 - 1)); } }
     for (const k of Object.keys(this.windows)) if (this.windows[k]?.isConnected && this.windows[k].refresh) this.windows[k].refresh();
@@ -1468,8 +1489,9 @@ export class UI {
     const w = this.makeWindow('Skills', 'w-skills', 300, 80);
     w.refresh = () => {
       const C = CLASSES[this.you.cls];
-      $('.wb', w).innerHTML = `<div class="sk-list">${SKILLS[this.you.cls].map((s, i) => `<div class="sk ${s.lvl > this.you.level ? 'locked' : ''}" data-id="${s.id}"><img src="${skillIcon(s)}"><div><b>${s.name}</b> <span class="sk-key">${skillKeyLabel(i)}</span><div class="sk-d">${s.desc}</div><div class="sk-m">${s.cost} ${C.resource}${s.cast ? ' · ' + s.cast + 's cast' : ''}${s.cd ? ' · ' + s.cd + 's cooldown' : ''} · Level ${s.lvl}</div></div></div>`).join('')}</div>`;
-      if (IS_TOUCH) { this.skillsTouch(w); return; }
+      $('.wb', w).innerHTML = `<div class="sk-list">${kitOf(this.you.cls).map((s, i) => `<div class="sk ${s.lvl > this.you.level ? 'locked' : ''}" data-id="${s.id}"><img src="${skillIcon(s)}"><div><b>${s.name}</b> <span class="sk-key">${skillKeyLabel(i)}</span><div class="sk-d">${s.desc}</div><div class="sk-m">${s.cost} ${C.resource}${s.cast ? ' · ' + s.cast + 's cast' : ''}${s.cd ? ' · ' + s.cd + 's cooldown' : ''} · Level ${s.lvl}</div></div></div>`).join('')}</div>`;
+      if (IS_TOUCH) { this.skillsTouch(w); $('.wb', w).insertAdjacentHTML('beforeend', this.fusionBookHtml()); return; }
+      $('.wb', w).insertAdjacentHTML('beforeend', this.fusionBookHtml());
       w.querySelectorAll('.sk').forEach((e) => (e.onclick = () => this.g.useSkill(e.dataset.id)));
     };
     w.refresh();
@@ -1478,7 +1500,7 @@ export class UI {
   // the Skills sheet on a phone or tablet: tap a skill to open it (Use, Add to wheel); "Add to wheel" shows a small copy of
   // the skill wheel, and tapping one of its 7 slots puts the skill there (SETTINGS.touch.wheel[class], 7 slots)
   skillsTouch(w) {
-    const y = this.you, cls = y.cls, wb = $('.wb', w), list = SKILLS[cls];
+    const y = this.you, cls = y.cls, wb = $('.wb', w), list = kitOf(cls);
     const pick = this._skPick; // { id, wheel: true } while choosing a slot
     const slots = wheelOf(cls, y.level);
     // the mini wheel: the same arc as the touch controls (attack + 4 inner + 2 outer), drawn small
@@ -1514,8 +1536,9 @@ export class UI {
   }
 
   winTalents() {
-    const w = this.makeWindow('Talents', 'w-talents', Math.max(20, innerWidth / 2 - 380), 70);
+    const w = this.makeWindow(this.you?.web ? 'Skill Web' : 'Talents', 'w-talents', Math.max(20, innerWidth / 2 - 380), 70);
     w.refresh = () => {
+      if (this.you?.web) return this.webPanel(w); // (S3: a class on the Skill Web; the full Web screen is S6)
       const y = this.you, cls = y.cls, C = CLASSES[cls], tal = y.talents || {};
       const pts = y.talentPts || 0;
       const spentAll = Object.values(tal).reduce((a, b) => a + b, 0);
@@ -1553,6 +1576,67 @@ export class UI {
     };
     w.refresh();
     return w;
+  }
+  // the Skill Web, interim panel (S3): the whole map from above, drawn as rounded squares on parchment. Click a node to
+  // take the road to it (Apply), right-click or long-press the end of a road to hand it back, click a held Form to switch
+  // its option. The full screen with pan, zoom, search and suggested paths is S6
+  webPanel(w) {
+    const y = this.you, cls = y.cls, tree = y.tree || {}, S = 0.42;
+    const held = (id) => id === TREE_START[cls] || !!tree[id];
+    const SZ = { small: [14, 14], notable: [24, 24], form: [26, 26], fusion: [24, 24], triad: [28, 28], keystone: [40, 28], start: [34, 34] };
+    const roads = TREE_LINKS.map(([a, b]) => {
+      const A = TREE_BY_ID[a], B = TREE_BY_ID[b], on = held(a) && held(b), near = held(a) || held(b);
+      return `<line x1="${A.x * S}" y1="${A.y * S}" x2="${B.x * S}" y2="${B.y * S}" stroke="${on ? '#c8962e' : near ? '#9a7a46' : '#8a8070'}" stroke-width="${on ? 3 : 2}" ${!on && near ? 'stroke-dasharray="4 3"' : ''}/>`;
+    }).join('');
+    const boxes = TREE_NODES.map((n) => {
+      const [bw, bh] = SZ[n.kind], k = n.kind === 'small' ? 1 : 1.1, ww = bw * S * 1.7 * k, hh = bh * S * 1.7 * k;
+      const have = held(n.id), can = !have && n.adj.some(held);
+      const fill = have ? (n.kind === 'keystone' ? '#e0703a' : '#e8b850') : n.kind === 'start' ? CLASSES[n.cls]?.color || '#888' : n.kind === 'keystone' ? '#7a5a4a' : n.region === cls ? '#8a8478' : '#9a9488';
+      const split = n.kind === 'form' ? `<line x1="${n.x * S}" y1="${n.y * S - hh / 2 + 2}" x2="${n.x * S}" y2="${n.y * S + hh / 2 - 2}" stroke="#3a2a14" stroke-width="1.5"/>` : '';
+      return `<g class="wn ${can ? 'can' : ''}" data-id="${n.id}"><rect x="${n.x * S - ww / 2}" y="${n.y * S - hh / 2}" width="${ww}" height="${hh}" rx="${Math.min(ww, hh) * 0.25}" fill="${fill}" stroke="${can ? '#f0d890' : '#3a2a14'}" stroke-width="${can ? 2 : 1.2}"/>${split}</g>`;
+    }).join('');
+    const pts = y.treePts || 0, spent = Object.keys(tree).length, free = !!y.treeFree;
+    const L = y.webSets || null, lo = y.lo || 0;
+    const sets = `<div class="tl-sets">${[0, 1].map((i) => `<button class="tl-set ${i === lo ? 'on' : ''}" data-i="${i}" ${i !== lo && y.level < 10 ? 'disabled title="Opens at level 10"' : ''}>${i + 1}. ${i === lo ? spent : L?.[i] ?? 0} places</button>`).join('')}</div>`;
+    const head = `<div class="tl-head"><span>Web points: <b class="${pts ? 'tl-free' : ''}">${pts}</b></span><span class="tl-spent">${spent} taken${free ? ' (respec free)' : ''}</span>${spent ? `<button class="tl-reset">Clear the Web (${free ? 'free' : fmtMoneyText(treeResetCost(y.level))})</button>` : ''}</div>`;
+    const box = $('.wb', w);
+    const keep = $('.web-scroll', box), sx = keep?.scrollLeft, sy = keep?.scrollTop;
+    const tapW = IS_TOUCH ? 'Tap' : 'Click';
+    box.innerHTML = sets + head + `<div class="web-scroll" style="width:min(86vw,920px);height:min(62vh,520px);overflow:auto;background:#ece0c4;border-radius:6px"><svg width="${TREE_MAP.w * S}" height="${TREE_MAP.h * S}" style="display:block">${roads}${boxes}</svg></div><div class="bag-hint">${tapW} a place to take the road to it. ${IS_TOUCH ? 'Long-press' : 'Right-click'} the end of a road to hand it back${free ? '' : ` (${fmtMoneyText(leafRefundCost(y.level))}, in a town)`}. ${tapW} a Form you hold to switch it.</div>`;
+    const sc = $('.web-scroll', box);
+    if (keep) { sc.scrollLeft = sx; sc.scrollTop = sy; } else { const st = TREE_BY_ID[TREE_START[cls]]; sc.scrollLeft = st.x * S - 300; sc.scrollTop = st.y * S - 220; }
+    const back = (id) => { if (tree[id] && isLeaf(cls, tree, id)) { this.g.send({ t: 'treeRefund', id }); this.g.sfx?.play('ui'); } };
+    box.querySelectorAll('.wn').forEach((g) => {
+      const n = TREE_BY_ID[g.dataset.id];
+      g.style.cursor = 'pointer';
+      g.addEventListener('click', () => {
+        if (n.kind === 'form' && tree[n.id]) { const cur = formOpt(n, y.forms || {}, y.done || {}), nx = n.form.opts.find((o) => o.id !== cur.id); this.g.send({ t: 'treeForm', id: n.id, opt: nx.id }); }
+        else if (!held(n.id)) { const ids = pathTo(cls, tree, n.id); if (ids?.length) this.g.send({ t: 'tree', ids }); }
+        this.g.sfx?.play('ui');
+      });
+      g.addEventListener('contextmenu', (ev) => { ev.preventDefault(); back(n.id); });
+      let lp = 0;
+      g.addEventListener('touchstart', () => { lp = setTimeout(() => back(n.id), 600); }, { passive: true });
+      g.addEventListener('touchend', () => clearTimeout(lp));
+      g.addEventListener('mouseenter', (ev) => this.showTip(ev, this.webTip(n)));
+      g.addEventListener('mouseleave', () => this.hideTip());
+    });
+    w.querySelectorAll('.tl-set').forEach((b) => (b.onclick = () => { if (!b.classList.contains('on')) this.g.send({ t: 'loadout', i: Number(b.dataset.i) }); }));
+    const rs = $('.tl-reset', w);
+    if (rs) rs.onclick = () => { if (rs.dataset.sure) this.g.send({ t: 'treeReset' }); else { rs.dataset.sure = '1'; rs.textContent = IS_TOUCH ? 'Tap again to clear' : 'Click again to clear'; } };
+  }
+  webTip(n) {
+    const y = this.you, cls = y.cls, tree = y.tree || {};
+    const KIND = { small: '', notable: 'Notable', form: 'Form', fusion: 'Fusion notable', triad: 'Triad notable', keystone: 'Keystone', start: 'Class start' };
+    const where = n.region === 'common' ? 'Common Ground' : n.region === 'bridge' ? 'Bridge' : CLASSES[n.region]?.name || '';
+    const lines = [`<div class="tt-name" style="color:${CLASSES[cls].color}">${n.name}</div>`, `<div class="tt-row"><span>${KIND[n.kind]}</span><span>${where}</span></div>`];
+    const ex = (e) => (e[0] === 'link' ? `link windows +${e[1]} s` : e[0] === 'brk' ? `${Math.round(e[1] * 100)}% more poise damage` : e[0] === 'fuse' ? `fusions ${Math.round(e[1] * 100)}% stronger` : e[0] === 'range' ? `${Math.round(e[1] * 100)}% more range` : describeEffect(e));
+    if (n.kind === 'keystone') { const K = KEYSTONES[n.id]; lines.push(`<div class="tt-desc">${K.desc}</div><div class="tt-req">${K.price}</div>`); }
+    else if (n.kind === 'form') { const cur = formOpt(n, y.forms || {}, y.done || {}); for (const o of n.form.opts) lines.push(`<div class="tt-desc"><b>${o.name}${tree[n.id] && o.id === cur.id ? ' (chosen)' : ''}</b>: ${o.desc}</div>`); }
+    else if (n.desc) lines.push(`<div class="tt-desc">${n.desc}</div>`);
+    else if (n.e?.length) lines.push(`<div class="tt-desc">${n.e.map(ex).join('; ')}.</div>`);
+    if (!tree[n.id] && n.kind !== 'start') { const pp = pathTo(cls, tree, n.id); if (pp) lines.push(`<div class="tt-sub">Path to here: ${pp.length} point${pp.length > 1 ? 's' : ''}</div>`); }
+    return lines.join('');
   }
   talentTip(t, have) {
     const cls = this.you.cls;
@@ -2084,6 +2168,7 @@ export class UI {
         <div class="o-note">Quality changes take effect when the world view reloads. <a class="o-reload">Reload now</a></div>
         <label class="opt chk"><input type="checkbox" class="o-shake" ${SETTINGS.shake ? 'checked' : ''}> Camera shake on big hits</label>
         <label class="opt chk"><input type="checkbox" class="o-perfhud" ${SETTINGS.perfHud ? 'checked' : ''}> Performance readout: frame rate, frame times and draw counts in a small corner panel, with Copy and a 20 s Bench here</label>
+        <label class="opt chk"><input type="checkbox" class="o-herobody" ${SETTINGS.heroBody !== false ? 'checked' : ''}> New hero body: the reworked body and animation for every hero and townsperson (untick for the old body). Takes effect when the world view reloads.</label>
         ${IS_TOUCH ? '' : `<h4>Camera</h4>${this.freeCamHtml()}`}
         ${IS_TOUCH ? '' : '<h4>Performance</h4>' + this.perfOptsHtml()}
         <h4>Interface</h4>
@@ -2102,6 +2187,7 @@ export class UI {
       const qt = $('.o-trail', w); if (qt) qt.onchange = (e) => { SETTINGS.questTrail = e.target.checked; set(); };
       $('.o-shake', w).onchange = (e) => { SETTINGS.shake = e.target.checked; set(); };
       $('.o-perfhud', w).onchange = (e) => { SETTINGS.perfHud = e.target.checked; set(); this.perfHud?.setOn(SETTINGS.perfHud); };
+      const hb = $('.o-herobody', w); if (hb) hb.onchange = (e) => { SETTINGS.heroBody = e.target.checked; set(); }; // (assets/hero/heroBody.js reads it at load)
       this.bindFreeCam(w);
       this.bindBotChat(w);
       w.querySelectorAll('.o-q button').forEach((b) => (b.onclick = () => { SETTINGS.quality = b.dataset.q; SETTINGS.qualityPicked = true; set(); w.refresh(); })); // a picked quality wins over the phone's auto pick (settings.js)

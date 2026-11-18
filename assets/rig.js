@@ -304,7 +304,9 @@ export class RigBuilder {
     const root = new THREE.Group();
     root.add(bones.root);
     root.updateMatrixWorld(true);
+    if (this.hero) this.hero.addBones(root, list); // the new body's UAL bones join the skeleton (assets/hero/heroBody.js)
     const skeleton = new THREE.Skeleton(list);
+    if (this.hero) this.hero.fixInverses(skeleton);
     const meshes = {};
     const mats = {};
     const makeMat = (kind) => charMat(kind, this.matTweak[kind]);
@@ -335,6 +337,7 @@ export class RigBuilder {
       root.add(mesh);
       meshes[kind] = mesh;
     }
+    if (this.hero) this.hero.fixInverses(skeleton); // (bind() above recomputed every inverse from the bones' matrices)
     // the bone-attached pieces (weapons, shields, tools): plain meshes nothing edits afterwards, shared whole (a bow's string
     // line is its own and is left alone)
     const pieces = [];

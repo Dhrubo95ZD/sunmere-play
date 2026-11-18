@@ -52,6 +52,12 @@ export class SFX {
     src.connect(f); f.connect(g); g.connect(this.master);
     src.start(t, Math.random() * 1.5, a + d + 0.05);
   }
+  // T4 hits: the other effect sounds dip for a moment (60 ms) so the landing stands alone
+  duck(t = 0.06) {
+    if (!this.master) return;
+    const g = this.master.gain, now = this.ctx.currentTime, lv = this.level();
+    g.cancelScheduledValues(now); g.setValueAtTime(lv * 0.35, now); g.setTargetAtTime(lv, now + t, 0.03);
+  }
   // a continuous noise bed (rain hiss, storm wind) faded to the given level
   loop(name, gain) {
     if (!this.ctx) return;
@@ -76,6 +82,7 @@ export class SFX {
     L.g.gain.setTargetAtTime(Math.max(0, gain), this.ctx.currentTime, 0.6);
   }
   play(name, vol = 1) {
+    globalThis.__sfxTrace?.push(name); // (test only: tools/combatshots/ logs which sound plays on which frame)
     if (!this.ctx) return;
     const now = performance.now();
     if (this.last[name] && now - this.last[name] < 35) return;
@@ -83,6 +90,13 @@ export class SFX {
     const v = vol;
     switch (name) {
       case 'swing': this.burst({ f0: 2200, f1: 500, q: 1.2, a: 0.03, d: 0.16, gain: 0.25 * v }); break;
+      // S1 feel layer (combat_design.md 2.9), all noise: the snap out of a heavy hit-stop, a long low roll for the biggest
+      // landings, a band sweep for spins, blade on metal, and the dodge's rush of air
+      case 'crack': this.burst({ type: 'highpass', f0: 2400, f1: 1200, q: 0.6, a: 0.001, d: 0.06, gain: 0.55 * v }); this.burst({ type: 'bandpass', f0: 900, f1: 400, q: 0.9, a: 0.001, d: 0.05, gain: 0.3 * v }); break;
+      case 'rumble': this.burst({ type: 'lowpass', f0: 160, f1: 45, q: 0.7, a: 0.03, d: 0.8, gain: 0.9 * v, brown: true }); break;
+      case 'whirr': this.burst({ type: 'bandpass', f0: 700, f1: 2600, q: 1.6, a: 0.06, d: 0.22, gain: 0.22 * v }); break;
+      case 'scrape': this.burst({ type: 'bandpass', f0: 3600, f1: 2200, q: 2.2, a: 0.004, d: 0.2, gain: 0.16 * v }); this.burst({ type: 'highpass', f0: 5000, q: 0.7, a: 0.002, d: 0.08, gain: 0.08 * v, delay: 0.03 }); break;
+      case 'gust': this.burst({ type: 'lowpass', f0: 1100, f1: 260, q: 0.5, a: 0.05, d: 0.3, gain: 0.3 * v }); break;
       case 'whoosh': case 'throw': this.burst({ f0: 1400, f1: 300, q: 0.9, a: 0.06, d: 0.26, gain: 0.28 * v }); break;
       case 'hit': this.burst({ type: 'lowpass', f0: 2600, f1: 600, q: 0.7, a: 0.002, d: 0.12, gain: 0.5 * v }); this.burst({ type: 'lowpass', f0: 300, f1: 90, a: 0.002, d: 0.14, gain: 0.5 * v, brown: true }); break;
       case 'thud': this.burst({ type: 'lowpass', f0: 500, f1: 80, q: 0.8, a: 0.003, d: 0.22, gain: 0.8 * v, brown: true }); break;

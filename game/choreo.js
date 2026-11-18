@@ -290,7 +290,7 @@ const DEF = {};
     k(0.3, P(G, { spine: [18, -10, 0], chest: [6, 0, 0], armL: [-84, 76, 30], foreL: [-110, 0, 0], armR: [-40, 0, -20], foreR: [-90, 0, 0], handR: [40, 0, 0], head: [10, 0, 0] }, L.deep), { root: [0, -0.34, 0], e: 'snap' }),
     k(0.7, P(G, { spine: [18, -10, 0], armL: [-86, 76, 30], foreL: [-108, 0, 0] }, L.deep), { root: [0, -0.34, 0] }),
     k(1, GL, { root: R.guard }),
-  ], [{ t: 0.3, e: 'impact', kind: 'shield', at: 'self', shake: 0.2 }, { t: 0.32, e: 'aura', color: '#9ac8ff', dur: 1.6 }, { t: 0.3, e: 'dust' }]);
+  ], [{ t: 0.3, e: 'impact', kind: 'shield', at: 'self', shake: 0.2 }, { t: 0.3, e: 'dust' }]); // (no aura ring: 10.2, and from above it sat inside Turning Riposte's ring)
 
   // Twin Slash: a flat forehand cut right-to-left, the blade carried round, then a flat backhand cut back across
   const twin = (dur, h1, h2, legs1, legs2, end = -80) => [
@@ -1548,7 +1548,7 @@ const DEF = {};
     k(0.5, P(SH, { spine: [50, 0, 0], chest: [16, 0, 0], armR: [-60, 0, -10], foreR: [0, 0, 0], handR: [66, 0, 0], head: [24, 0, 0] }, L.lungeL), { root: [0, -0.42, 0.3], e: 'snap' }),
     k(0.75, P(SH, { spine: [46, 0, 0], armR: [-56, 0, -10], handR: [68, 0, 0] }, L.lungeL), { root: [0, -0.4, 0.3] }),
     k(1, GL, { root: R.guard }),
-  ], [{ t: 0.29, e: 'trail', on: true, color: T, w: 1.3, along: 0.85 }, { t: 0.52, e: 'wave', kind: 'rock', len: 14 }, { t: 0.52, e: 'shake', amt: 0.7 }, { t: 0.52, e: 'hitstop', dur: 0.08 }, { t: 0.76, e: 'trail', on: false }], { strike: 0.28 });
+  ], [{ t: 0.29, e: 'trail', on: true, color: T, w: 1.3, along: 0.85 }, { t: 0.52, e: 'wave', kind: 'rock', len: 14 }, { t: 0.52, e: 'shake', amt: 0.35 }, { t: 0.52, e: 'hitstop', dur: 0.05, self: true }, { t: 0.76, e: 'trail', on: false }], { strike: 0.28 });
   W1('w_toss', 1.0, 'upper', [
     k(0, G),
     // a longer throw from the cocked key, so the hammer leaves the hand near 60 m/s rather than 71
@@ -2425,6 +2425,31 @@ const BLEND = new Set([
 ]);
 const MELEE = new Set(['slash', 'blunt', 'pierce', 'sweep', 'shield', 'sand', 'execute', 'shatter', 'earth']);
 
+// ============================== DODGE (S1, combat_design.md 2.4) ==============================
+// Every class: a low shoulder roll the way you move (4 m, the evade covers the first 0.3 s; the push-off crouch comes
+// first, 0.1 s) and, with no direction held, a quick hop back. Arms tucked, coat and cloak trail behind (no wings).
+// Played as root motion (travel); the server only keeps the evade window, the charges and Opening (shared/feel.js).
+for (const cls of Object.keys(TRAIL)) {
+  const G = P(guard(cls), { spine: [8, 0, 0] }), GL = P(G, LG);
+  const TK = { armL: [-60, 30, 30], foreL: [-110, 0, 0], armR: [-50, 0, -30], foreR: [-100, 0, 0], head: [30, 0, 0] };
+  const dist = cls === 'sandblade' ? 2.5 : cls === 'ranger' ? 5 : 4;
+  DEF['dodge_' + cls] = C(cls, 0.55, 'full', [
+    k(0, GL),
+    k(0.1 / 0.55, P(G, TK, { spine: [34, 0, 0] }, L.deep), { root: [0, -0.38, 0.25] }),
+    k(0.2 / 0.55, P(G, TK, { spine: [120, 0, 0], chest: [30, 0, 0] }, L.tuck), { root: [0, -0.55, dist * 0.42], e: 'linear' }),
+    k(0.3 / 0.55, P(G, TK, { spine: [230, 0, 0], chest: [30, 0, 0] }, L.tuck), { root: [0, -0.6, dist * 0.8], e: 'linear' }),
+    k(0.38 / 0.55, P(G, TK, { spine: [30, 0, 0] }, L.kneel), { root: [0, -0.42, dist * 0.97] }),
+    k(1, GL, { root: [0, 0, dist] }),
+  ], [{ t: 0.02, e: 'sound', s: 'gust' }, { t: 0.1 / 0.55, e: 'dust' }, { t: 0.38 / 0.55, e: 'dust' }], { endRoot: [0, 0, dist], dodge: true });
+  DEF['dodgeb_' + cls] = C(cls, 0.5, 'full', [
+    k(0, GL),
+    k(0.1 / 0.5, P(G, { spine: [24, 0, 0] }, L.deep), { root: [0, -0.3, 0.05] }),
+    k(0.24 / 0.5, P(G, { spine: [-14, 0, 0], chest: [-8, 0, 0], armL: [-40, 40, 30], armR: [-30, 0, -40] }, L.tuck), { root: [0, 0.42, -dist * 0.55], e: 'out' }),
+    k(0.34 / 0.5, P(G, { spine: [18, 0, 0] }, L.deep), { root: [0, -0.28, -dist * 0.95], e: 'in' }),
+    k(1, GL, { root: [0, 0, -dist] }),
+  ], [{ t: 0.02, e: 'sound', s: 'gust' }, { t: 0.1 / 0.5, e: 'dust' }, { t: 0.34 / 0.5, e: 'dust' }], { endRoot: [0, 0, -dist], dodge: true });
+}
+
 // compile: resolve 'hit', 'hit2'.. into normalized times from the skill's impact timing
 export const CHOREO = {};
 for (const [id, def] of Object.entries(DEF)) {
@@ -2440,8 +2465,18 @@ for (const [id, def] of Object.entries(DEF)) {
   const events = def.events.map((e) => {
     const o = { ...e, t: resolveT(e.t) };
     if (e.e === 'impact' && typeof e.t === 'string' && MELEE.has(e.kind) && !e.stop) o.selfStop = (e.shake || 0) >= 0.4 ? 0.07 : 0.045;
+    // S1: a contact names its skill and hit, so fx.js takes the stop, shake, camera and sound from the tier (shared/feel.js)
+    if (sk && typeof e.t === 'string' && /^hit\d*$/.test(e.t)) { o.sk = sk.id; o.hi = e.t === 'hit' ? 0 : Number(e.t.slice(3)) - 1; }
     return o;
-  }).sort((a, b) => a.t - b.t);
+  });
+  // S1 sound timing (combat_design.md 2.9): the whoosh 0.08-0.12 s before a melee contact, never on the key press
+  // (added where the clip has no swing sound of its own in that span)
+  if (sk && sk.hit && ['melee', 'cone', 'aoe', 'line'].includes(sk.hit.kind) && events.some((e) => e.e === 'impact' && e.hi === 0 && MELEE.has(e.kind))) {
+    const hT = hit.t / def.dur, near = (e) => e.e === 'sound' && /swing|whoosh|whirr/.test(e.s) && e.t >= hT - 0.16 / def.dur && e.t <= hT;
+    for (const e of events) if (near(e) || (e.e === 'sound' && /swing|whoosh/.test(e.s) && e.t > hT - 0.25 / def.dur && e.t <= hT)) e.t = Math.max(0, hT - 0.1 / def.dur); // (the clip's own swing, put on the beat)
+    if (!events.some(near) && hit.t > 0.12) events.push({ t: hT - 0.1 / def.dur, e: 'sound', s: def.events.some((e) => e.e === 'trail' && (e.w || 1) >= 1.2) ? 'whirr' : 'swing' });
+  }
+  events.sort((a, b) => a.t - b.t);
   // lint: a blade rolled about its own length while it trails reads as a stiff upright sweep; use arc()/wield()
   if (events.some((e) => e.e === 'trail') && def.keys.some((q) => q.p?.handR && !q.p.handR.ik && Math.abs(q.p.handR[2] || 0) > 30)) console.warn(`[choreo] ${id}: handR z-roll over 30 deg in a trailed swing; build the sweep with arc()/wield()`);
   let keys = retime(def.keys, def.dur, def.strike);
