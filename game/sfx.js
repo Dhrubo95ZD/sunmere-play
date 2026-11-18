@@ -94,6 +94,8 @@ export class SFX {
       // landings, a band sweep for spins, blade on metal, and the dodge's rush of air
       case 'crack': this.burst({ type: 'highpass', f0: 2400, f1: 1200, q: 0.6, a: 0.001, d: 0.06, gain: 0.55 * v }); this.burst({ type: 'bandpass', f0: 900, f1: 400, q: 0.9, a: 0.001, d: 0.05, gain: 0.3 * v }); break;
       case 'rumble': this.burst({ type: 'lowpass', f0: 160, f1: 45, q: 0.7, a: 0.03, d: 0.8, gain: 0.9 * v, brown: true }); break;
+      // S7: a machine slammed into a wall or rock: a low body thud and a few gritty breaks at uneven gaps (noise only)
+      case 'crunch': this.burst({ type: 'lowpass', f0: 420, f1: 70, q: 0.8, a: 0.002, d: 0.26, gain: 0.85 * v, brown: true }); for (let i = 0; i < 4; i++) this.burst({ type: 'bandpass', f0: 1400 + Math.random() * 2200, q: 0.9, a: 0.001, d: 0.03 + Math.random() * 0.05, gain: 0.22 * v, delay: 0.01 + i * 0.03 + Math.random() * 0.025 }); break;
       case 'whirr': this.burst({ type: 'bandpass', f0: 700, f1: 2600, q: 1.6, a: 0.06, d: 0.22, gain: 0.22 * v }); break;
       case 'scrape': this.burst({ type: 'bandpass', f0: 3600, f1: 2200, q: 2.2, a: 0.004, d: 0.2, gain: 0.16 * v }); this.burst({ type: 'highpass', f0: 5000, q: 0.7, a: 0.002, d: 0.08, gain: 0.08 * v, delay: 0.03 }); break;
       case 'gust': this.burst({ type: 'lowpass', f0: 1100, f1: 260, q: 0.5, a: 0.05, d: 0.3, gain: 0.3 * v }); break;

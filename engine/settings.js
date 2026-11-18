@@ -33,6 +33,7 @@ export const KEY_ACTIONS = [
   ['skill27', 'Skill 27 (level 57)', 'BracketLeft'], ['skill28', 'Skill 28 (level 60)', 'BracketRight'], // no letters left: [ and ] sit beside P
   ['skill29', 'Skill 29 (level 62)', 'Semicolon'], ['skill30', 'Skill 30 (level 65)', 'Quote'], // ; and ' sit under [ and ]
   ['potion', 'Potion slot', 'Comma'], // the potion slot beside the action bar (desktop and browser)
+  ['pin1', 'Pinned fusion 1 (new kit: Q when unset)', ''], ['pin2', 'Pinned fusion 2 (new kit: E when unset)', ''], // (S6: the Fusion Book's pins; unset, a class on the seven-skill kit uses the free keys of skills 21 and 22)
   ['dodge', 'Dodge (a tap)', 'ShiftLeft'], // (S1: a tap of Shift on its own dodges; Shift held with 1-0 still casts the second bar)
 ];
 // S1 feel layer (combat_design.md 2.1 and 2.7): hit-stop on contacts, and the camera's punch, kick and lift on your own hits

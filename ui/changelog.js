@@ -1,6 +1,15 @@
 // What's new: shown once after an update (newest first). Bump `v` on the first entry whenever something is added.
 export const CHANGELOG = [
   {
+    v: 131, date: '18 November 2026', title: 'Coats and Combos',
+    items: [
+      ['A bar that shows the combo', 'For the Knight, the skill bar now changes as you fight: when a blow lands, the skills that would fuse with it light up as the fusion for a moment, with its name above the bar. A hit counter and the target’s poise bar show how close it is to breaking. Two pinned slots (Q and E) hold your favourite fusions, and Alt casts a skill plain. On phones, slide your thumb from one skill onto another to fuse them.'],
+      ['The Skill Web screen', 'Press N for the Knight’s Skill Web: pan and zoom the map, search it, preview the road to any point, try suggested paths, and apply or undo before you commit.'],
+      ['The Fusion Book', 'A new tab in the Skills window lists every fusion you have found, with a short clip of each, what goes into it and what changes it. The ones you have not found yet show only a hint.'],
+      ['Machines that react', 'Knock a machine into a wall and it crunches, stuns and lingers pinned. Nets and traps pin machines in place. Coats of tar, frost, acid and powder slow and weaken machines, and the right blow sets them off: heat ignites tar, a heavy blow shatters frost, a spark leaps through acid to the next machine. Broken bosses kneel, vent steam and shed plates, bosses catch their breath after their biggest attacks, and a fusion that finishes a machine breaks it apart.'],
+    ],
+  },
+  {
     v: 130, date: '18 November 2026', title: 'The Knight',
     items: [
       ['The Knight, finished', 'Every Knight fusion now has its own motion, its own weight and its own effects. High Ledger hops into three quick cuts; Kingsfall cuts twice and slams; Pierce the Line drives clean through and out past the machine; Battering Line charges behind the shield over a wake of dust; Upheaval throws the machine high; Turning Riposte and Sidewind Cut spin and knock machines aside; Anvil Fall hurls the shield and lands it on the beat; Stormfall slams the machine into the ground and leaves it stunned.'],

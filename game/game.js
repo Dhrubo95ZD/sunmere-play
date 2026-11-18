@@ -22,6 +22,7 @@ import { CameraRig } from './camera.js';
 import { createHorizon } from './horizon.js';
 import { TargetFX } from './targetfx.js';
 import { FX } from './fx.js';
+import { installReactFx } from './reactfx.js';
 import { SFX } from './sfx.js';
 import { EntityManager } from './entities.js';
 import { Ambient } from './ambient.js';
@@ -185,6 +186,7 @@ export async function startGame() {
   game.world = world;
   const ui = new UI(game);
   game.ui = ui;
+  installReactFx(fx, { ui, entities, localId: () => game.localId }); // (S7: coats, Reactions, wall slams, plates, the split, foes' clips)
   // v109 the quest walk: a click on a quest in the tracker or the log walks you there, with a faint trail ahead (questwalk.js)
   const qwalk = new QuestWalk({ scene: engine.scene, world, ui, game, heightAt, busy: () => !!(crossing || ui.scene) });
   game.qwalk = qwalk;
@@ -429,11 +431,11 @@ export async function startGame() {
         if (v) { if (ev.target) { const t = entities.get(ev.target); if (t) v.ry = Math.atan2(t.pos.x - v.pos.x, t.pos.z - v.pos.z); } v.playSkill(ev.skill, ev.target ? entities.get(ev.target) : null, ev.gx != null ? { x: ev.gx, z: ev.gz } : null, fx, ev.haste); }
         break;
       }
-      case 'buff': ui.unitBuff(ev); break;
+      case 'buff': ui.unitBuff(ev); if (ev.debuff && ev.id?.[0] === 'm') fx.coat?.(entities.get(ev.id), ev.name, ev.dur); break; // (S7: a coat's look on the machine)
       // a fusion found for the first time (S2 discovery): the toast, and outside dungeons, raids and duels the contact beat
       // plays once at 0.6x for the own hero
       case 'fusionNew': {
-        ui.zoneBanner?.(ev.name, 'New fusion'); sfx.play('crack', 0.6);
+        if (ui.combat) ui.combat.fusionToast(ev.name, true); else ui.zoneBanner?.(ev.name, 'New fusion'); sfx.play('crack', 0.6); // (S6: the fusion toast, "New fusion: Stormfall")
         const k = skillOf(ev.f), act = local?.anim?.action;
         if (ev.slow && k && act && 'speed' in act) { const hitAt = (k.hit?.t || 0.4) + Math.max(0, (k.hit?.n || 1) - 1) * (k.hit?.gap || 0); const wait = Math.max(0, hitAt - 0.1 - (act.time || 0)); setTimeout(() => { if (local.anim.action === act) act.speed = 0.6; setTimeout(() => { if (local.anim.action === act) act.speed = 1; }, 250); }, wait * 1000); }
         break;
@@ -457,12 +459,15 @@ export async function startGame() {
       case 'heal': { ui.meterEvent('heal', ev); const t = entities.get(ev.tgt); if (t && (ev.src === me || ev.tgt === me)) ui.floatText(t.pos, '+' + ev.amt, 'heal'); break; }
       case 'miss': { const t = entities.get(ev.tgt); if (t && (ev.tgt === me || ev.src === me)) ui.floatText(t.pos, ev.text, 'miss'); break; }
       // S1 machine reactions and the dodge (combat_design.md 2.4-2.6)
-      case 'air': case 'stag': case 'broken': entities.get(ev.id)?.startReact?.(ev.k, ev, fx);
+      case 'air': case 'stag': case 'broken': case 'recover': entities.get(ev.id)?.startReact?.(ev.k, ev, fx);
         if (ev.k === 'broken' && ev.cut) { for (const c of game.teleCut?.get(ev.id) || []) c.visible = false; game.teleCut?.delete(ev.id); ui.ucast?.delete(ev.id); } // (its wind-up was cancelled)
         break;
       // a knockback (S5): the machine slides with a dust trail from its feet and a scrape (Battering Line, Sidewind Cut,
       // Kingsfall); the move itself is the snapshot lerp
-      case 'knock': { const v = entities.get(ev.id); if (v && !v.dead && fx.after) { let acc = 0; fx.after(0.45, (k, t, dt) => { acc += dt * 28; while (acc > 1) { acc--; fx.emit('dust', v.pos.clone().setY(v.pos.y + 0.15), { n: 1, spread: 0.35, size: 0.75, alpha: 0.5 }); } }); fx.sound('scrape'); } }
+      // S7: a Reaction (the word and its effects), a wall slam (crunch, sparks, dust burst); a raider thrown far goes down
+      case 'react': fx.react?.(ev); break;
+      case 'wall': fx.wallSlam?.(ev); break;
+      case 'knock': { const v = entities.get(ev.id); if (v?.def?.humanoid && ev.d >= 2.5) fx.foeClip?.(v, 'down'); if (v && !v.dead && fx.after) { let acc = 0; fx.after(0.45, (k, t, dt) => { acc += dt * 28; while (acc > 1) { acc--; fx.emit('dust', v.pos.clone().setY(v.pos.y + 0.15), { n: 1, spread: 0.35, size: 0.75, alpha: 0.5 }); } }); fx.sound('scrape'); } }
         break;
       case 'dodge': if (ev.id !== me) { const v = entities.get(ev.id); if (v) { v.ry = Math.atan2(ev.dx, ev.dz); v.playSkill((ev.s ? 'dodges_' : 'dodge_') + (v.cls || 'knight'), null, null, fx); } } break;
       case 'pdodge': if (ev.id === me && local) {
@@ -474,12 +479,13 @@ export async function startGame() {
       } break;
       case 'die': {
         const v = entities.get(ev.id);
-        if (v) { v.kill(); if (v.ty === 'm') { fx.emit('sparks', v.pos.clone().add(V(0, 1, 0)), { n: 20, color: '#ffc070' }); fx.emit('smoke', v.pos.clone().add(V(0, 1, 0)), { n: 6 }); if (!v.def.humanoid) fx.rocks(v.pos.clone(), 6, 0.6); } }
+        // (S7: a fusion's kill, ev.fz, splits a machine into 3-5 tumbling parts; the core falls with the death tilt)
+        if (v) { const away = v.lastHit && performance.now() - v.lastHit.at < 1500 ? v.lastHit.away : null; v.kill(); if (v.ty === 'm') { fx.emit('sparks', v.pos.clone().add(V(0, 1, 0)), { n: 20, color: '#ffc070' }); fx.emit('smoke', v.pos.clone().add(V(0, 1, 0)), { n: 6 }); const sp = ev.fz && !v.def.humanoid && fx.split?.(v, away); if (!v.def.humanoid && !sp) fx.rocks(v.pos.clone(), 6, 0.6); } }
         if (ev.id === game.target && v?.ty === 'm') setTimeout(() => { if (game.target === ev.id) game.setTarget(null); }, 1200);
         if (ev.id === me) { game.casting = null; ui.chat('You have been defeated.', '#ff6050'); }
         break;
       }
-      case 'revive': case 'spawn': { const v = entities.get(ev.id); v?.revive(true); break; }
+      case 'revive': case 'spawn': { const v = entities.get(ev.id); fx.unsplit?.(v); v?.revive(true); break; }
       case 'xp': if (local) ui.floatText(local.pos, `+${ev.amt} XP${ev.rested ? ' (rested)' : ''}`, 'xp'); break;
       case 'lvl': {
         const v = entities.get(ev.id);
@@ -616,13 +622,18 @@ export async function startGame() {
     if (act === 'potion') { ui.usePotion?.(); return; }
     const win = ['char', 'bags', 'quests', 'skills', 'talents', 'ach', 'journal', 'options', 'map', 'help', 'meter', 'loot'].includes(act) ? act : null;
     if (win) { ui.toggle(win); return; }
+    // (S6) the two pinned fusions: their own keys, or on the new kit the keys of skills 21 and 22 (Q and E), which the
+    // seven-skill bar leaves free (Z hides the interface and C opens the character window, so the design's Z and C clash)
+    const pin = act === 'pin1' || act === 'pin2' ? Number(act[3]) - 1 : KIT_V2[game.cls] && (act === 'skill21' || act === 'skill22') && !keyFor('pin' + (act === 'skill21' ? 1 : 2)) ? (act === 'skill21' ? 0 : 1) : -1;
+    if (pin >= 0) { if (!e.repeat) ui.combat?.pin(pin); return; }
+    const plainK = SETTINGS.fuseAlt ? !e.altKey : e.altKey; // (Alt casts B plain; the option "fuse only with Alt" turns it round)
     const sx = act && act.match(/^skill(\d+)$/);
-    if (sx) { const sk = kitOf(game.cls)[Number(sx[1]) - 1]; if (sk) useSkill(sk.id, 0, { plain: e.altKey }); return; }
+    if (sx) { const sk = kitOf(game.cls)[Number(sx[1]) - 1]; if (sk) useSkill(sk.id, 0, { plain: plainK }); return; }
     const m = e.code.match(/^Digit(\d)$/);
     if (m) {
       const idx = (Number(m[1]) + 9) % 10 + (e.shiftKey ? 10 : 0);
       const sk = kitOf(game.cls)[idx];
-      if (sk) useSkill(sk.id, 0, { plain: e.altKey }); // (Alt: B plain on purpose, never a fusion)
+      if (sk) useSkill(sk.id, 0, { plain: plainK }); // (Alt: B plain on purpose, never a fusion)
     }
   });
   addEventListener('keyup', (e) => {

@@ -510,6 +510,7 @@ export class EntityView {
   }
   revive(snap) {
     this.dead = false;
+    if (this.splitHidden) { for (const m of this.splitHidden) m.visible = true; this.splitHidden = null; } // (S7: a split machine is whole again)
     this.anim?.revive(); this.machine?.revive();
     if (this.mTilt) { const part = this.machine?.p?.body || this.machine?.p?.torso || this.machine?.p?.hull; if (part) { part.rotation.x -= this.mTilt.x || 0; part.rotation.z -= this.mTilt.z || 0; } this.mTilt = null; }
     if (snap) { this.pos.copy(this.target); }
@@ -631,6 +632,17 @@ export class EntityView {
   // the joints for 2 s, a few plates thrown off as debris). ev: the sim's event ({ dur, h, dir: [x, z], t })
   startReact(kind, ev, fx) {
     if (this.dead) return;
+    // S7: a raider plays the hero body's clips (Air_Juggle_Loop, Hit_Knockback, Knockdown, LayToIdle; reactfx.js foeClip)
+    const human = !!this.def?.humanoid;
+    if (human && kind !== 'recover' && !(kind === 'air' && ev?.hold) && !(kind === 'stag' && this.react?.kind === 'air' && !this.react.landed)) fx?.foeClip?.(this, kind, ev);
+    // S7: a boss's recovery after its big telegraph: it sags and vents steam for the window (not over a lift or a kneel)
+    if (kind === 'recover') {
+      if (this.react && this.react.kind !== 'recover') return;
+      const d0 = V(-Math.sin(this.ry), 0, -Math.cos(this.ry));
+      this.react = { kind, t: 0, dur: Math.min(2, ev?.t || 1.2), dir: d0, y: 0, fx, jet: 0, h: 0 };
+      if (fx && !human) { fx.emit('steam', this.pos.clone().setY(this.pos.y + (this.height || 2) * 0.85), { n: 8, size: 1 + (this.radius || 1) * 0.25, spread: 0.5 }); fx.sound('hiss'); }
+      return;
+    }
     const d = ev?.dir ? V(ev.dir[0], 0, ev.dir[1]) : V(-Math.sin(this.ry), 0, -Math.cos(this.ry));
     if (d.lengthSq() < 1e-4) d.set(0, 0, 1);
     d.normalize();
@@ -669,10 +681,16 @@ export class EntityView {
     if (kind === 'stag') {
       fx.emit('sparks', at.clone().addScaledVector(d, -0.25), { n: 12, dir: d });
       fx.emit('steam', at.clone().setY(this.pos.y + H * 0.8), { n: 5, size: 0.8 });
+    } else if (kind === 'broken' && human) {
+      fx.emit('dust', this.pos.clone().setY(this.pos.y + 0.15), { n: 8, spread: 0.5, size: 0.8 }); fx.sound('thud');
     } else if (kind === 'broken') {
-      fx.emit('steam', at, { n: 10, size: 1.1, spread: 0.4 });
-      fx.rocks(at, 3 + Math.floor(Math.random() * 3), 0.5); // plates thrown off (the rock pool)
-      fx.sound('hiss'); fx.sound('clang');
+      // (S7) jets of steam from the joints and 3-5 armour plates thrown off in the machine's own colour, sized to it
+      const R = this.radius || 1, big = Math.min(2.2, 0.8 + R * 0.45);
+      fx.emit('steam', at, { n: 10 + Math.round(R * 4), size: 1.1 * big, spread: 0.4 * big });
+      for (let i = 0; i < 3; i++) fx.emit('steam', this.pos.clone().setY(this.pos.y + H * (0.3 + Math.random() * 0.5)).add(V((Math.random() - 0.5) * R, 0, (Math.random() - 0.5) * R)), { n: 3, size: 0.8 * big, dir: V(Math.random() - 0.5, 0.5, Math.random() - 0.5), speed: 1.4 });
+      if (fx.plates) fx.plates(at.clone().setY(this.pos.y + H * 0.6), 3 + Math.floor(Math.random() * 3), Math.min(1.1, 0.32 + R * 0.22), fx.machineTone?.(this), d.clone().negate());
+      else fx.rocks(at, 3 + Math.floor(Math.random() * 3), 0.5);
+      fx.sound('hiss'); fx.sound('clang'); fx.sound('thud');
     } else if (kind === 'air') {
       fx.emit('dust', this.pos.clone().setY(this.pos.y + 0.15), { n: 8, spread: 0.5, size: 0.8 });
       fx.sound('scrape');
@@ -725,12 +743,19 @@ export class EntityView {
       back = 0.3 * Math.sin(Math.min(1, u * 1.6) * Math.PI * 0.5) * (u > 0.6 ? Math.max(0, 1 - (u - 0.6) / 0.4) : 1);
       tilt = 0.18 * Math.sin(Math.min(1, u) * Math.PI);
       if (u >= 1) this.react = null;
+    } else if (R.kind === 'recover') {
+      // a sag forward and down, eased in and out, with a vent puff now and then (no glow, steam in the alpha pool)
+      const t = R.t, k = Math.min(1, t / 0.25, Math.max(0, (R.dur - t) / 0.35));
+      y = -0.08 * k * Math.min(1.6, (this.height || 2) / 2.5); tilt = -0.09 * k;
+      if ((R.jet += dt) > 0.34 && t < R.dur - 0.2 && !this.def?.humanoid) { R.jet = 0; const Hh = this.height || 2; R.fx?.emit('steam', this.pos.clone().setY(this.pos.y + Hh * (0.6 + Math.random() * 0.3)).add(V((Math.random() - 0.5) * (this.radius || 1), 0, (Math.random() - 0.5) * (this.radius || 1))), { n: 2, size: 0.9, dir: V(Math.random() - 0.5, 0.8, Math.random() - 0.5) }); }
+      if (t >= R.dur) this.react = null;
     } else if (R.kind === 'broken') {
       const t = R.t, down = t < 0.2 ? t / 0.2 : t > R.dur - 0.4 ? Math.max(0, (R.dur - t) / 0.4) : 1;
       y = -0.3 * down * down; tilt = -0.22 * down; // (a kneel: the front drops toward the hero)
       if (t < 2 && (R.jet += dt) > 0.22) { R.jet = 0; const H = this.height || 2; R.fx?.emit('steam', this.pos.clone().setY(this.pos.y + H * (0.35 + Math.random() * 0.4)).add(V((Math.random() - 0.5) * 0.8, 0, (Math.random() - 0.5) * 0.8)), { n: 2, size: 0.7, dir: V(Math.random() - 0.5, 0.6, Math.random() - 0.5) }); }
       if (t >= R.dur) this.react = null;
     }
+    if (this.def?.humanoid) tilt *= 0.2; // (a raider's own clip carries the fall: the root only rises and slides)
     R.y = y;
     this.root.position.x += d.x * back; this.root.position.z += d.z * back; this.root.position.y += y;
     if (Math.abs(tilt) > 1e-4) { if (!this.leanDir) this.root.rotation.set(0, this.ry, 0); _leanQ.setFromAxisAngle(_leanAx.set(d.z, 0, -d.x), tilt); this.root.quaternion.premultiply(_leanQ); }

@@ -10,13 +10,15 @@
 //     camera-distance button (right); a chat icon with an unread count and short toasts; the menu drawer from the right
 // Windows get tap-to-select (tooltip and an action button: Equip / Use / Sell / Unequip / Deposit) and long-press tooltips.
 import { CLASSES, OLD_TO_NEW } from '/sunmere-play/shared/classes.js';
-import { kitOf } from '/sunmere-play/shared/kit.js';
+import { kitOf, KIT_V2 } from '/sunmere-play/shared/kit.js';
+import { FUSION_BY_ID, fusionUnlocked } from '/sunmere-play/shared/fusions.js';
 import { ITEMS } from '/sunmere-play/shared/data.js';
 import { skillCost } from '/sunmere-play/shared/talents.js';
 import { icon, skillIcon, menuArt, miscArt } from './icons.js';
 import { IS_TOUCH } from '../engine/platform.js';
 import { SETTINGS, TOUCH_EVENT } from '../engine/settings.js';
 import { initTouchInput } from './touchinput.js';
+import { fuseFor, morph, haptic, pinsOf, pinCast } from './combathud.js'; // (S6: the morphing wheel, drag-fuse, two-finger plain, pinned chips)
 
 const $ = (sel, root = document) => root.querySelector(sel);
 const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html !== undefined) e.innerHTML = html; return e; };
@@ -85,7 +87,9 @@ export function initTouch({ game, ui, rig, canvas, act }) {
     <div class="tc-stick"><div class="tc-base"></div><div class="tc-knob"></div></div>
     <div class="tc-wheel"></div>
     <button class="tc-b tc-jump" data-a="jump" aria-label="Jump">${GLYPH.jump}</button>
-    <button class="tc-b tc-dodge" data-a="dodge" aria-label="Dodge">${GLYPH.dodge}</button>
+    <button class="tc-b tc-dodge" data-a="dodge" aria-label="Dodge">${GLYPH.dodge}<span class="tc-dp"></span></button>
+    <button class="tc-b tc-pin hidden" data-a="pin0" aria-label="Pinned fusion 1"><img alt=""><i class="tc-cd"></i></button>
+    <button class="tc-b tc-pin hidden" data-a="pin1" aria-label="Pinned fusion 2"><img alt=""><i class="tc-cd"></i></button>
     <button class="tc-b tc-tgt" data-a="target" aria-label="Next target">${GLYPH.target}</button>
     <button class="tc-b tc-int hidden" data-a="interact" aria-label="Interact"><img alt=""><span class="tc-intg"></span></button>
     <div class="tc-intl hidden"></div>
@@ -181,18 +185,28 @@ export function initTouch({ game, ui, rig, canvas, act }) {
     builtKey = `${game.cls}:${y.level}:${JSON.stringify(T.wheel?.[game.cls] || null)}`;
     const shown = P[page];
     wheel.innerHTML = shown.map((s, i) => (s
-      ? `<button class="tc-sk ${i ? '' : 'main'}" data-i="${i}" aria-label="${s.name}"><img src="${skillIcon(s)}" alt=""><i class="tc-cd"></i><span class="tc-cdt"></span><i class="tc-ring"></i></button>`
+      ? `<button class="tc-sk ${i ? '' : 'main'}" data-i="${i}" aria-label="${s.name}"><img src="${skillIcon(s)}" alt=""><i class="tc-cd"></i><span class="tc-cdt"></span><i class="tc-ring"></i><i class="tc-fzw"></i><b class="tc-fzq">?</b></button>`
       : `<div class="tc-sk tc-empty ${i ? '' : 'main'}" data-i="${i}"></div>`)).join('')
       + `<button class="tc-sk tc-page${pages > 1 ? '' : ' hidden'}" aria-label="Next skills">${GLYPH.page}<b>${page + 1}/${pages}</b></button>`;
-    slots = shown.map((s, i) => { const b = wheel.querySelector(`[data-i="${i}"]`); return { s, el: b, cd: s && $('.tc-cd', b), cdt: s && $('.tc-cdt', b), left: 0 }; });
+    slots = shown.map((s, i) => { const b = wheel.querySelector(`[data-i="${i}"]`); return { s, el: b, cd: s && $('.tc-cd', b), cdt: s && $('.tc-cdt', b), left: 0, img: s && $('img', b), base: s && skillIcon(s), fzw: s && $('.tc-fzw', b) }; });
     for (const S of slots) {
       if (!S.s) continue;
       let hold = null;
       S.el.addEventListener('pointerdown', (e) => {
         e.preventDefault(); e.stopPropagation(); closeMenus();
-        useSkill(S.s);
+        // (S6) a second finger on the same button within 150 ms is a two-finger tap: B plain (the option "fuse only with a
+        // two-finger tap" turns it round). A tap on a morphed button waits 70 ms for that second finger; any other goes at once
+        const now = performance.now(), tw = fingers.find((f) => f.S === S && now - f.t < 150 && f.id !== e.pointerId);
+        fingers = fingers.filter((f) => now - f.t < 400);
+        const me = { S, t: now, id: e.pointerId, wait: 0 };
+        fingers.push(me);
+        if (tw) { if (tw.wait) { clearTimeout(tw.wait); tw.wait = 0; useSkill(S.s, { plain: !T2() }); } return; }
+        const st = KIT_V2[game.cls] ? fuseFor(game, ui, S.s.id, game.serverTime()) : null;
+        if (st && !st.cooling) me.wait = setTimeout(() => { me.wait = 0; useSkill(S.s, { plain: T2() }); }, 70);
+        else useSkill(S.s, { plain: !!st && T2() });
+        dragS = { S, id: e.pointerId, x: e.clientX, y: e.clientY, moved: false };
         clearTimeout(hold);
-        hold = setTimeout(() => { ui.showTip({ currentTarget: S.el }, ui.skillTip(S.s)); tipShownAt = performance.now(); }, 550);
+        hold = setTimeout(() => { if (dragS?.moved) return; ui.showTip({ currentTarget: S.el }, S.el.dataset.fz ? ui.fuseTip(S.el.dataset.fz, S.s) : ui.skillTip(S.s)); tipShownAt = performance.now(); }, 550);
       });
       const off = () => { clearTimeout(hold); };
       S.el.addEventListener('pointerup', off); S.el.addEventListener('pointercancel', off); S.el.addEventListener('pointerleave', off);
@@ -219,7 +233,27 @@ export function initTouch({ game, ui, rig, canvas, act }) {
     const pick = cone || near;
     if (pick) game.setTarget(pick.id);
   };
-  const useSkill = (s) => { autoTarget(s); game.useSkill(s.id); };
+  const useSkill = (s, o) => { autoTarget(s); game.useSkill(s.id, o); };
+  // (S6) drag-fuse: slide the thumb from A (a wheel button or the dodge) onto B and lift. A went off on the press; the lift
+  // presses B into A's window, or holds it in the buffer while A still winds up. The button under the thumb is lit
+  let fingers = [], dragS = null;
+  const T2 = () => !!SETTINGS.fuseAlt; // (the option turns the two-finger tap round: two fingers fuse, one casts plain)
+  const slotUnder = (x, y) => { const e = document.elementFromPoint(x, y)?.closest?.('.tc-sk[data-i]'); return e ? slots[Number(e.dataset.i)] : null; };
+  const dragMove = (e) => {
+    const d = dragS; if (!d || e.pointerId !== d.id) return;
+    if (!d.moved && Math.hypot(e.clientX - d.x, e.clientY - d.y) > 18) d.moved = true;
+    if (!d.moved) return;
+    const T = slotUnder(e.clientX, e.clientY), over = T && T !== d.S && T.s ? T : null;
+    if (over !== d.over) { d.over?.el.classList.remove('tc-drop'); over?.el.classList.add('tc-drop'); d.over = over; }
+  };
+  const dragEnd = (e) => {
+    const d = dragS; if (!d || e.pointerId !== d.id) return;
+    dragS = null; d.over?.el.classList.remove('tc-drop');
+    if (!d.moved || e.type === 'pointercancel') return;
+    const T = slotUnder(e.clientX, e.clientY);
+    if (T && T !== d.S && T.s) { useSkill(T.s); haptic('light'); game.dragFused = (game.dragFused || 0) + 1; }
+  };
+  addEventListener('pointermove', dragMove, true); addEventListener('pointerup', dragEnd, true); addEventListener('pointercancel', dragEnd, true);
 
   // where everything sits (spec section 2): computed from the screen so it scales from a 360-tall phone to a tablet
   function layout() {
@@ -256,6 +290,9 @@ export function initTouch({ game, ui, rig, canvas, act }) {
     let p = polar(180 * a, 182); put($('.tc-jump', tc), p.x, p.y, 58 * a);
     put($('.tc-dodge', tc), p.x - 64 * a, p.y + 4 * a, 52 * a); // (S1: the dodge, just left of Jump)
     p = polar(180 * a, 110); put($('.tc-page', wheel), p.x, p.y, 44 * a);
+    // (S6) the two pinned-fusion chips above the arc: the page chip's place (the new kit has one page) and up beside it
+    const pins = tc.querySelectorAll('.tc-pin');
+    if (pins.length) { put(pins[0], p.x, p.y, 46 * a); const q = polar(232 * a, 124); put(pins[1], q.x, q.y, 46 * a); }
     p = polar(180 * a, 86); put($('.tc-tgt', tc), p.x, p.y, 44 * a);
     G.arcK = k;
     // Interact: left of the arc, a little above the attack button; its label chip under it
@@ -323,7 +360,8 @@ export function initTouch({ game, ui, rig, canvas, act }) {
     b.classList.add('down'); setTimeout(() => b.classList.remove('down'), 140);
     closeMenus();
     if (a === 'jump') act.jump();
-    else if (a === 'dodge') act.dodge?.();
+    else if (a === 'dodge') { act.dodge?.(); dragS = { S: null, id: e.pointerId, x: e.clientX, y: e.clientY, moved: false }; }
+    else if (a === 'pin0' || a === 'pin1') { const id = pinsOf(game.cls)[a === 'pin0' ? 0 : 1]; if (id) pinCast(game, ui, id); else ui.openBook?.(); }
     else if (a === 'target') {
       // a tap steps to the next foe; a long press clears the target
       clearTimeout(tgtHold);
@@ -619,6 +657,21 @@ export function initTouch({ game, ui, rig, canvas, act }) {
     return rectCache;
   };
 
+  // ------------------------------------------------------------------ S6: the dodge's charges and the pinned chips
+  const dodgeBtn = $('.tc-dodge', tc), dp = $('.tc-dp', dodgeBtn), pinEls = [...tc.querySelectorAll('.tc-pin')];
+  let dpKey = '', pinKey = '';
+  function updateKit2(t) {
+    const y = game.you, c = game.dodgeC;
+    const k = c ? `${c.n}` : 'x';
+    if (k !== dpKey) { dpKey = k; dp.innerHTML = Array.from({ length: Math.max(2, c?.n || 0) }, (_, i) => `<i class="${!c || i < c.n ? 'on' : ''}"></i>`).join(''); }
+    const pins = pinsOf(game.cls), pk = pins.join('|') + ':' + y.level;
+    if (pk !== pinKey) {
+      pinKey = pk;
+      pinEls.forEach((b, i) => { const f = pins[i] && FUSION_BY_ID[pins[i]]; b.classList.remove('hidden'); b.classList.toggle('empty', !f); b.classList.toggle('locked', !!f && !fusionUnlocked(y, f)); const im = $('img', b); if (f) im.src = skillIcon(f); else im.removeAttribute('src'); });
+    }
+    pinEls.forEach((b, i) => { const f = pins[i] && FUSION_BY_ID[pins[i]]; if (!f) return; const l = Math.max(y.cds?.[f.id] || 0, y.cds?.[f.to] || 0) - t, cd = $('.tc-cd', b), bg = l > 0 ? `conic-gradient(rgba(0,0,0,.7) ${Math.min(1, l / (f.cd || 1)) * 360}deg, transparent 0)` : 'none'; if (cd.style.background !== bg) cd.style.background = bg; });
+  }
+
   // ------------------------------------------------------------------ the per-frame state of the wheel and buttons
   let qT = 0, last = performance.now(), lastHp = 1, rideOk = null, buffN = -1;
   const tick = (now) => {
@@ -627,7 +680,7 @@ export function initTouch({ game, ui, rig, canvas, act }) {
     const y = game.you;
     if (!y) return;
     if (builtKey !== `${game.cls}:${y.level}:${JSON.stringify(T.wheel?.[game.cls] || null)}`) buildWheel();
-    const t = game.serverTime(), res = y.res;
+    const t = game.serverTime(), res = y.res, kit2 = !!KIT_V2[game.cls];
     for (const S of slots) {
       const s = S.s;
       if (!s) continue;
@@ -640,7 +693,9 @@ export function initTouch({ game, ui, rig, canvas, act }) {
       S.left = left;
       S.el.classList.toggle('nores', res < skillCost(s, ui.tmods));
       S.el.classList.toggle('pressed', game.pressedSkill === s.id);
+      if (kit2) morph(S, fuseFor(game, ui, s.id, t)); // (S6: the button shows the fusion it would cast in A's window)
     }
+    if (kit2) updateKit2(t);
     // a red pulse at the screen's edge when a hit takes you under 35%
     const hp = y.maxHp ? y.hp / y.maxHp : 1;
     if (hp < 0.35 && hp < lastHp - 0.005 && !y.dead) { vig.classList.remove('on'); void vig.offsetWidth; vig.classList.add('on'); }

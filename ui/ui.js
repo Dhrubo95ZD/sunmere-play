@@ -57,6 +57,9 @@ import { icon, skillIcon, talentArt, pathArt, buffArt, achArt, factionArt, homeA
 import { CHANGELOG, CHANGELOG_VERSION } from './changelog.js';
 import { installSocial } from './social.js';
 import { PerfHud } from './perfhud.js';
+import { CombatHud, setPin, pinsOf, pinnable, pinCast } from './combathud.js';
+import { openWebScreen } from './webscreen.js';
+import { fusionBookPage, wireFusionBook } from './fusionbook.js';
 import { botPrefsMsg } from '../game/net.js';
 import { STAT_NAME, STAT_PCT, SLOT_LABEL, typeLine, gearValue, offhandLook, wornLook, SHINE_NAME, OH_NAME, SH_NAME, CLOAK_NAME, GEMS, UPG, upOf, canUpgrade, upgradeCost, upgraded, upgradeTotal, gearName, salvageYield, unsocketFee, BILLET, ENGINE_CORE } from '/sunmere-play/shared/items.js';
 import { buildCharacter, setCharWeapon, setCharArmor, setCharCape, setCharGear } from '../assets/characters.js';
@@ -419,6 +422,7 @@ export class UI {
       </div>`);
     this.hud = $('.hud', r);
     r.style.setProperty('--ui-scale', SETTINGS.uiScale);
+    this.combat = new CombatHud(this); // (S6: the morphing bar, pill, toast, dodge chip, pins, combo counter, poise bar)
     this.buildActionBars();
     // painted menu icons, with the hotkey letter kept small in the corner
     for (const b of r.querySelectorAll('.menubar button')) { const a = menuArt(b.dataset.w); if (a) { b.innerHTML = `<img src="${a}" alt=""><span>${b.textContent}</span>`; b.classList.add('mb-art'); } }
@@ -450,12 +454,13 @@ export class UI {
       const row = rows[i < 10 ? 0 : i < 20 ? 1 : 2];
       const b = el('div', 'slot');
       b.innerHTML = `<img src="${skillIcon(s)}"><div class="cd"></div><span class="key">${skillKeyLabel(i, true)}</span><span class="cdt"></span><div class="lock"><span>${s.lvl}</span></div>`;
-      b.addEventListener('click', () => this.g.useSkill(s.id));
-      b.addEventListener('mouseenter', (e) => this.showTip(e, this.skillTip(s)));
+      b.addEventListener('click', (e) => this.g.useSkill(s.id, { plain: SETTINGS.fuseAlt ? !e.altKey : e.altKey })); // (S6: Alt casts B plain; "fuse only with Alt" turns it round)
+      b.addEventListener('mouseenter', (e) => this.showTip(e, b.dataset.fz ? this.fuseTip(b.dataset.fz, s) : this.skillTip(s)));
       b.addEventListener('mouseleave', () => this.hideTip());
       row.appendChild(b);
       this.slots.push({ s, el: b, cd: $('.cd', b), cdt: $('.cdt', b), lock: $('.lock', b) });
     });
+    this.combat?.buildBar(this.slots, rows[0]);
     this.buildPotionSlot();
   }
 
@@ -538,6 +543,15 @@ export class UI {
     const C = CLASSES[y.cls], R = ['', ' I', ' II', ' III'];
     const rows = fusionBook(y.cls, y).filter((e) => e.show).map((e) => `<div class="sk fz ${e.known ? '' : 'locked'}" title="${e.known ? e.desc : e.hint}"><img src="${skillIcon(skillOf(e.id))}"><div><b>${e.known ? (this.eff?.[e.id] ? effName(this.eff[e.id]) : e.name) : '?'}</b>${e.rank ? ` <span class="sk-key">Mastery${R[e.rank]}</span>` : ''}<div class="sk-d">${e.fromName}, then ${e.toName}. ${e.gate}.${e.known ? '' : ' <i>' + e.hint + '</i>'}</div><div class="sk-m">${e.cost} ${C.resource} · ${e.cd}s cooldown · ${e.unlocked ? (e.known ? e.uses + ' landed' : 'Not found yet') : e.lvl ? 'Level ' + e.lvl : 'A notable on the Web'}</div></div></div>`).join('');
     return `<div class="sk-list fz-book"><div class="sk-h"><b>Fusion Book</b> <span>Land the first skill, then press the second within a second.</span></div>${rows}</div>`;
+  }
+  // the Fusion Book tab of the Skills window (S6), from an empty pin or the hint
+  openBook() { this._skTab = 'book'; if (this.windows.skills?.isConnected) this.windows.skills.refresh(); else this.toggle('skills'); }
+  // a morphed slot's tooltip: the fusion it would cast now, and what plain B would be
+  fuseTip(fid, s) {
+    const f = SKILL_BY_ID[fid], rec = (this.you?.web && this.eff?.[fid]) || f, known = (this.you?.fusions || []).includes(fid);
+    if (!f) return this.skillTip(s);
+    const C = CLASSES[this.you.cls];
+    return `<div class="tt-name" style="color:#ffd88a">${known ? effName(rec) : 'A fusion not found yet'}</div><div class="tt-row"><span>${skillCost(SKILL_BY_ID[f.to] || s, this.tmods) + (rec.extra || 0)} ${C.resource}</span><span>${rec.cd}s cooldown</span></div><div class="tt-desc">${known ? rec.desc : f.hint || ''}</div><div class="tt-hint">${IS_TOUCH ? 'Two fingers' : SETTINGS.fuseAlt ? 'Without Alt' : 'Alt + key'}: ${s.name} plain</div>`;
   }
   skillTip(s) {
     const C = CLASSES[s.cls];
@@ -1489,6 +1503,19 @@ export class UI {
     const w = this.makeWindow('Skills', 'w-skills', 300, 80);
     w.refresh = () => {
       const C = CLASSES[this.you.cls];
+      // (S6) a class on the new kit: two tabs, Skills and the Fusion Book
+      if (KIT_V2[this.you.cls]) {
+        const tab = this._skTab || 'skills';
+        w.classList.toggle('w-book', tab === 'book');
+        const tabs = `<div class="sk-tabs"><button data-t="skills" class="${tab === 'skills' ? 'on' : ''}">Skills</button><button data-t="book" class="${tab === 'book' ? 'on' : ''}">Fusion Book</button></div>`;
+        const wire = () => w.querySelectorAll('.sk-tabs button').forEach((b) => (b.onclick = () => { this._skTab = b.dataset.t; this.g.sfx?.play('ui'); w.refresh(); }));
+        if (tab === 'book') { $('.wb', w).innerHTML = tabs + fusionBookPage(this); wireFusionBook(this, w); wire(); return; }
+        if (IS_TOUCH) { this.skillsTouch(w); $('.wb', w).insertAdjacentHTML('afterbegin', tabs); wire(); return; }
+        $('.wb', w).innerHTML = tabs + `<div class="sk-list">${kitOf(this.you.cls).map((s, i) => `<div class="sk ${s.lvl > this.you.level ? 'locked' : ''}" data-id="${s.id}"><img src="${skillIcon(s)}"><div><b>${this.eff?.[s.id] ? effName(this.eff[s.id]) : s.name}</b> <span class="sk-key">${skillKeyLabel(i)}</span><div class="sk-d">${s.desc}</div><div class="sk-m">${s.cost} ${C.resource}${s.cast ? ' · ' + s.cast + 's cast' : ''}${s.cd ? ' · ' + s.cd + 's cooldown' : ''} · Level ${s.lvl}</div></div></div>`).join('')}</div>`;
+        wire();
+        w.querySelectorAll('.sk').forEach((e) => (e.onclick = () => this.g.useSkill(e.dataset.id)));
+        return;
+      }
       $('.wb', w).innerHTML = `<div class="sk-list">${kitOf(this.you.cls).map((s, i) => `<div class="sk ${s.lvl > this.you.level ? 'locked' : ''}" data-id="${s.id}"><img src="${skillIcon(s)}"><div><b>${s.name}</b> <span class="sk-key">${skillKeyLabel(i)}</span><div class="sk-d">${s.desc}</div><div class="sk-m">${s.cost} ${C.resource}${s.cast ? ' · ' + s.cast + 's cast' : ''}${s.cd ? ' · ' + s.cd + 's cooldown' : ''} · Level ${s.lvl}</div></div></div>`).join('')}</div>`;
       if (IS_TOUCH) { this.skillsTouch(w); $('.wb', w).insertAdjacentHTML('beforeend', this.fusionBookHtml()); return; }
       $('.wb', w).insertAdjacentHTML('beforeend', this.fusionBookHtml());
@@ -1536,6 +1563,7 @@ export class UI {
   }
 
   winTalents() {
+    if (this.you?.web) return openWebScreen(this); // (S6: the full Skill Web screen)
     const w = this.makeWindow(this.you?.web ? 'Skill Web' : 'Talents', 'w-talents', Math.max(20, innerWidth / 2 - 380), 70);
     w.refresh = () => {
       if (this.you?.web) return this.webPanel(w); // (S3: a class on the Skill Web; the full Web screen is S6)
@@ -2171,6 +2199,9 @@ export class UI {
         <label class="opt chk"><input type="checkbox" class="o-herobody" ${SETTINGS.heroBody !== false ? 'checked' : ''}> New hero body: the reworked body and animation for every hero and townsperson (untick for the old body). Takes effect when the world view reloads.</label>
         ${IS_TOUCH ? '' : `<h4>Camera</h4>${this.freeCamHtml()}`}
         ${IS_TOUCH ? '' : '<h4>Performance</h4>' + this.perfOptsHtml()}
+        <h4>Combat</h4>
+        <label class="opt chk"><input type="checkbox" class="o-fusealt" ${SETTINGS.fuseAlt ? 'checked' : ''}> ${IS_TOUCH ? 'Fuse only with a two-finger tap (a one-finger tap casts the second skill plain)' : 'Fuse only while Alt is held (without Alt the second skill casts plain)'}</label>
+        ${IS_TOUCH ? `<label class="opt chk"><input type="checkbox" class="o-vib" ${SETTINGS.vibrate !== false ? 'checked' : ''}> Vibration: a light tick when a fusion window opens, and on heavy hits</label>` : ''}
         <h4>Interface</h4>
         <div class="opt"><span>Interface size</span><div class="o-s">${[0.85, 1, 1.15, 1.3].map((v) => `<button data-s="${v}" class="${SETTINGS.uiScale === v ? 'on' : ''}">${Math.round(v * 100)}%</button>`).join('')}</div></div>
         ${this.botChatHtml()}
@@ -2187,6 +2218,7 @@ export class UI {
       const qt = $('.o-trail', w); if (qt) qt.onchange = (e) => { SETTINGS.questTrail = e.target.checked; set(); };
       $('.o-shake', w).onchange = (e) => { SETTINGS.shake = e.target.checked; set(); };
       $('.o-perfhud', w).onchange = (e) => { SETTINGS.perfHud = e.target.checked; set(); this.perfHud?.setOn(SETTINGS.perfHud); };
+      { const fa = $('.o-fusealt', w); if (fa) fa.onchange = (e) => { SETTINGS.fuseAlt = e.target.checked; set(); }; const vb = $('.o-vib', w); if (vb) vb.onchange = (e) => { SETTINGS.vibrate = e.target.checked; set(); }; }
       const hb = $('.o-herobody', w); if (hb) hb.onchange = (e) => { SETTINGS.heroBody = e.target.checked; set(); }; // (assets/hero/heroBody.js reads it at load)
       this.bindFreeCam(w);
       this.bindBotChat(w);
@@ -2349,6 +2381,7 @@ export class UI {
 
   // ======================================================== damage meter (you, your party and your companions)
   meterEvent(kind, ev) {
+    if (kind === 'dmg') this.combat?.onDmg(ev);
     const M = this.meter ||= { overall: { last: 0, dur: 0, by: {} }, cur: null, tab: 'dmg', seg: 'cur' };
     const me = this.g.localId, team = (id) => id === me || this.partyIds?.has(id);
     const now = performance.now() / 1000;
@@ -3668,6 +3701,7 @@ export class UI {
       sl.el.classList.toggle('pressed', g.pressedSkill === s.id);
     }
     this.updatePotionSlot(now);
+    this.combat?.update(now);
     // bar rows whose skills are all still locked stay out of the way until the first one unlocks
     if (this._rowLvl !== this.you.level) {
       this._rowLvl = this.you.level;

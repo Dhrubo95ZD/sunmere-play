@@ -66,7 +66,7 @@ export const FUSIONS = {
     // the triad (a deep tree notable): Stormfall > Shield Bash
     F('kt_anvilfall', 'Anvil Fall', { cls: 'knight', icon: 'disc', from: 'kf_stormfall', to: 'k_bash', tree: 'three_heights', need: 'hit', triad: true, cd: 50, extra: 10, range: 20,
       hit: { t: 0.53, kind: 'proj', speed: 26 }, fx: [['dmg', 2.4], ['ricochet', 2, 8], ['brk', 120], ['slow', 40, 4]],
-      tags: ['shield', 'throw', 'triad'], tier: 5, choreo: 'kt_anvilfall', // (hit 0.53, S5: the shield leaves the hand at 0.4 s and lands about 0.13 s later; the damage at 0.38 came first and the machine waited) hint: 'From the crater, the shield has one more fall in it.', ai: { role: 'burst' },
+      tags: ['shield', 'throw', 'triad'], tier: 5, choreo: 'kt_anvilfall', hint: 'From the crater, the shield has one more fall in it.', ai: { role: 'burst' }, // (hit 0.53, S5: the shield leaves the hand at 0.4 s and lands about 0.13 s later; the damage at 0.38 came first and the machine waited. S6: the hint and ai sat inside this comment)
       desc: 'From the crater, bounce the shield off the ground into the slammed machine; it strikes two more and returns.' }),
   ],
 };

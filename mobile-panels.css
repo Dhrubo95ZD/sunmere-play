@@ -258,3 +258,18 @@ html.phone .ug-b { order: 4; } html.phone .ug-stats { order: 5; } html.phone .ug
 /* the Upgrade window's list is long: its Back bar sits after the content instead of floating over the last rows (the
    header's close button is always on screen) */
 html.phone .window .wb:has(.ug-wrap) .dbtns { position: static; box-shadow: none; }
+
+/* ---------------- S6: the Skill Web screen, the Fusion Book and the Skills tabs on a phone */
+html.phone .window.w-web { z-index: 30; padding: 0; }
+html.phone .window.w-web .ws-top { gap: 6px; padding: 4px 8px; flex-wrap: nowrap; overflow-x: auto; }
+html.phone .window.w-web .ws-title { display: none; }
+html.phone .window.w-web .ws-pts { font-size: 12px; white-space: nowrap; }
+html.phone .window.w-web .ws-search { width: 110px; min-height: 36px; font-size: 14px; }
+html.phone .window.w-web .ws-top button { min-height: 40px; padding: 4px 10px; font-size: 13px; white-space: nowrap; }
+html.phone .window.w-web .wx { flex: 0 0 48px; width: 48px !important; height: 40px !important; }
+html.phone .window.w-web .ws-legend { display: none; }
+html.phone .window.w-web .ws-sugl { position: fixed; top: 52px; left: 8px; width: min(360px, 90vw); }
+html.phone .window .sk-tabs button { min-height: 44px; }
+html.phone .window.w-skills.w-book > .wb { width: auto !important; }
+html.phone .fb-row { flex-wrap: wrap; }
+html.phone .fb-prev { flex-basis: 176px; }

@@ -28,6 +28,8 @@ import { TALENT_BY_ID, TALENTS, TALENT_ROW_REQ, talentMods, talentPoints, talent
 import { onWeb, treeMods, treeCompile, treePoints, treeSpent, allocBlock, isLeaf, pruneAlloc, freeRespec, formAllowed, leafRefundCost, treeResetCost, TREE_V, TREE_FREE_DAYS } from './treeMods.js';
 import { TREE_BY_ID } from './tree.js';
 import { runKeys } from './keystones.js';
+import { COATS, REACTIONS, WALL, KNOCKDOWN, RECOVER, PIN, PIN_SKILLS, elemsOf, coatOf, reactionFor, fromBehind } from './reactions.js';
+const HEAT_ONLY = Object.freeze(['heat']); // (a fire patch's tick, S7)
 
 const rand = mulberry32(Date.now() & 0xffff);
 const R = (a = 0, b = 1) => a + (b - a) * rand();
@@ -2548,9 +2550,11 @@ export class World {
         case 'heal': for (const q of allies) this.heal(p, q, healPow * (1 + this.buffVal(p, 'dmg')) * a * R(0.95, 1.05)); break;
         case 'hot': for (const q of allies) this.addBuff(q, { name: sk.name, stat: 'hot', hot: (healPow * (1 + this.buffVal(p, 'dmg')) * a * (1 + tal.dot)) / b, t: b, dur: b, src: p.id, tick: 0, icon: sk.icon }); break;
         case 'stun': for (const m of enemies) if (m.type === 'mob' && !m.def.boss) this.addBuff(m, { name: 'Stunned', cc: 'stun', t: a * cc1, dur: a * cc1, debuff: true, icon: 'stun' }); break;
-        case 'root': for (const m of enemies) if (m.type === 'mob' && !m.def.boss) this.addBuff(m, { name: 'Rooted', cc: 'root', t: a * cc1, dur: a * cc1, debuff: true, icon: 'root' }); break;
+        // (S7) a net, a trap or a chain shot is Pinned: rooted, and +30% from behind (shared/reactions.js); ['pin', s] too
+        case 'root': case 'pin': for (const m of enemies) if (m.type === 'mob' && !m.def.boss) { const pin = type === 'pin' || PIN_SKILLS.has(sk.id) || !!sk.tags?.includes('pin'); this.addBuff(m, { name: pin ? 'Pinned' : 'Rooted', cc: 'root', t: a * cc1, dur: a * cc1, debuff: true, icon: 'root' }); if (pin) m.pinT = Math.max(m.pinT || 0, this.time + a * cc1); } break;
         case 'slow': for (const m of enemies) if (m.type === 'mob') this.addBuff(m, { name: 'Slowed', stat: 'slow', pct: a, t: b, dur: b, debuff: true, icon: 'slow' }); break;
-        case 'knock': for (const m of enemies) { if (m.type !== 'mob' || m.def.boss) continue; const d = dist(p, m) || 1; const kx = m.x, kz = m.z; m.x += ((m.x - p.x) / d) * a; m.z += ((m.z - p.z) / d) * a; if (m.x >= DUNGEON_MIN_X) [m.x, m.z] = dungeonPush(m.x, m.z, Math.min(1.2, m.def.radius)); else { [m.x, m.z] = clampWorld(m.x, m.z, kx, kz, 0); if (houseCrosses(kx, kz, m.x, m.z)) { m.x = kx; m.z = kz; } else [m.x, m.z] = housePush(m.x, m.z, Math.min(1.2, m.def.radius)); } m._kb = Math.hypot(m.x - kx, m.z - kz) / a; m.y = walkHeight(m.x, m.z); this.broadcast({ k: 'knock', id: m.id }); } break; // (never knocked through a house wall; _kb: the share it moved, for wallSlam)
+        // (S7) a knockback stopped short by a wall, a rock face or another machine is a wall slam (knockMob)
+        case 'knock': { const kd = sk.fx.find((f) => f[0] === 'dmg')?.[1] || 0.5; for (const m of enemies) { if (m.type !== 'mob' || m.def.boss || m.dead) continue; this.knockMob(p, m, a, power * kd, sk.id); } break; }
         case 'buff': for (const q of allies) this.addBuff(q, { name: sk.name, stat: a, pct: b, t: cc, dur: cc, icon: sk.icon }); break;
         case 'debuff': for (const m of enemies) this.addBuff(m, { name: sk.name, stat: a, pct: b, t: cc, dur: cc, debuff: true, icon: sk.icon }); break;
         // a taunt lifts the taunter above the top of the threat list (v120: long boss fights let a damage dealer outrun a flat +5000)
@@ -2566,11 +2570,15 @@ export class World {
         case 'slamDown': for (const m of enemies) { if (m.type !== 'mob' || m.dead) continue; const was = m.airT > this.time; const b = isElite(m.def) ? 0.5 : 0.8; if (was) { m.airT = this.time + b; const lb = m.buffs.find((bf) => bf.name === 'Lifted'); if (lb) { lb.t = b; lb.dur = Math.max(lb.dur, b); } this.broadcast({ k: 'air', id: m.id, dur: b, h: 0.3, hold: 1, slam: 1, dir: [0, 0] }); } if (!m.def.boss && (was || a > 0)) { const st = (was ? b : 0) + a * cc1; this.addBuff(m, { name: 'Slammed', cc: 'stun', t: st, dur: st, debuff: true, icon: 'stun' }); m.swingT = Math.max(m.swingT || 0, st); } } break;
         case 'parry': p.parryT = this.time + a; p.parryFrom = sk.id; break; // (Guard: a blow in this window is parried, see playerDamaged)
         case 'parryBack': if (c.blocked) for (const m of enemies) this.damage(p, m, c.blocked * a, sk.id); break; // (a share of the blocked blow back: Turning Riposte)
-        case 'wallSlam': for (const m of enemies) { if (m.type !== 'mob' || m.dead || m._kb == null) continue; const blocked = m._kb < 0.6 || this.foesOf(p).some((o) => o !== m && !o.dead && dist(o, m) < this.rad(o) + this.rad(m) + 0.2); m._kb = undefined; if (blocked && !m.def.boss) { this.addBuff(m, { name: 'Pinned', cc: 'root', t: a, dur: a, debuff: true, icon: 'root' }); this.broadcast({ k: 'stag', id: m.id, dur: 0.4, dir: [0, 0] }); } } break; // (carried into a wall or a machine: Pinned)
+        // (carried into a wall or a machine: the knock's wall slam is held Pinned for a s; Battering Line)
+        case 'wallSlam': for (const m of enemies) { if (m.type !== 'mob' || m.dead || m._wall !== this.time || m.def.boss) continue; m._kb = undefined; this.addBuff(m, { name: 'Pinned', cc: 'root', t: a, dur: a, debuff: true, icon: 'root' }); m.pinT = Math.max(m.pinT || 0, this.time + a); } break;
         case 'ricochet': { const t0 = enemies[0]; if (!t0) break; const coef = sk.fx.find((f) => f[0] === 'dmg')?.[1] || 1; const near = this.foesOf(p).filter((o) => !o.dead && !enemies.includes(o) && dist(o, t0) <= b).sort((x, y) => dist(x, t0) - dist(y, t0)).slice(0, Math.min(a, 2)); for (const o of near) this.damage(p, o, power * coef * 0.7 * R(0.9, 1.1), sk.id); break; } // (at most 2 bounces a shot, section 3.6)
       }
     }
     this._hc = null;
+    // (S7) a coat the skill leaves on every machine it reached, after its own blow (so it never sets itself off)
+    const ck = enemies.length && p.type === 'player' ? coatOf(sk) : null;
+    if (ck) for (const m of enemies) this.applyCoat(p, m, ck.kind, ck.dur);
     if (KIT_V2[p.cls] && p.type === 'player') this.linkAfter(p, sk, c, enemies, allies); // (fusions: the link window, mastery)
     // the end of a leap or a dash (its first contact is the landing): the keystones' onLand (Iron Comet's 0.6 s link to
     // Shield Bash, S5; before, the hook was never called)
@@ -2595,13 +2603,19 @@ export class World {
     }
     const tal = src.type === 'player' ? src.tal : null;
     const hc = this._hc && skill === this._hc.sk.id ? this._hc : null; // a skill contact being resolved (applySkill): feel.js
-    let crit = !!hc?.opening || rand() < 0.1 + (src.type === 'player' ? this.buffVal(src, 'crit') + (tal?.crit || 0) : 0);
+    let crit = !!hc?.opening || (skill !== 'galvanic' && rand() < 0.1 + (src.type === 'player' ? this.buffVal(src, 'crit') + (tal?.crit || 0) : 0)); // (S7: Galvanic's jump is a share of a blow that already rolled)
     if (tal?.noCrit && !hc?.opening) crit = false; // (Heavy Hand)
     if (crit) amt *= 1.6 + (tal?.critDmg || 0);
     if (tal) { const f = m.hp / m.maxHp; if (f < 0.35) amt *= 1 + tal.execute; else if (f > 0.9) amt *= 1 + tal.opener; }
     amt *= 1 + this.buffVal(m, 'vuln');
     if (m.type === 'mob') amt *= 1 + Math.min(0.6, this.buffVal(m, 'armor')); // sundered armour (every caster's breaks add up, to +60% at most)
     if (hc && m.type === 'mob' && m.airT > this.time && hc.air) amt *= hc.air; // ['air', x]: more against a Lifted machine
+    // (S7, shared/reactions.js) Pinned: +30% from behind. A coated machine struck by the right kind of blow: a Reaction
+    let rx = null;
+    if (m.type === 'mob') {
+      if (m.pinT > this.time && fromBehind(m, src.x, src.z)) amt *= 1 + PIN.behind;
+      if (m.coatT > this.time && src.type === 'player') { rx = this.reactCheck(m, hc, skill); if (rx?.mul) amt *= rx.mul; }
+    }
     if (tal?.keys) { // the Skill Web (S3): notables against a state, then the keystones' onHit (shared/keystones.js)
       for (const [st, v] of Object.entries(tal.vs || {})) if (m.type === 'mob' && this.hasState(m, st)) amt *= 1 + v;
       if (tal.keys.length) amt = runKeys(this, src, 'onHit', { sk: hc?.sk, tgt: m, amt, fused: !!hc?.sk?.from }).amt;
@@ -2609,13 +2623,95 @@ export class World {
     amt = Math.max(1, Math.round(amt));
     m.hp -= amt;
     const react = hc && m.type === 'mob' && !m.dead ? this.poiseHit(src, m, hc, crit) : null;
-    let ht = hc ? tierOf(hc.sk, hc.i, { crit, broke: react?.broke, launched: react?.launched, kill: m.hp <= 0 }).tier : skill === 'dot' ? 0 : undefined;
+    if (hc) hc.xbrk = 0;
+    let ht = hc ? tierOf(hc.sk, hc.i, { crit, broke: react?.broke, launched: react?.launched, kill: m.hp <= 0, reaction: !!rx || !!hc.wall }).tier : skill === 'dot' ? 0 : undefined;
+    if (rx && ht == null) ht = 3;
     if (hc?.encore && ht < 3) ht = 3; // (Chainwork's Encore: a heavy stop)
     this.broadcast({ k: 'dmg', src: src.id, tgt: m.id, amt, crit, skill, ht });
     if (tal?.leech && !src.dead) src.hp = Math.min(src.maxHp, src.hp + amt * tal.leech);
     if (m.type === 'mob') this.provoke(m, src, amt * (1 + (tal?.threat || 0)) * (src.bot && TANK_CLS.has(src.cls) ? BOT_TANK_THREAT : 1));
+    if (rx) this.reactFire(src, m, rx, amt);
     if (m.def?.dummy) { m.hitT = this.time; if (m.hp < m.maxHp * 0.02) m.hp = m.maxHp; return; }
-    if (m.hp <= 0) this.kill(m, src);
+    if (m.hp <= 0 && hc?.sk?.from) m.fzKill = this.time; // (a fusion's blow: the client splits the machine apart)
+    if (m.hp <= 0 && !m.dead) this.kill(m, src);
+  }
+
+  // ---- S7 (combat_design.md 2.5, 5.8; shared/reactions.js): coats, Reactions, wall slams
+  // a coat on a machine (one of each kind; Corroded stacks to 5). Its buff carries the slow, the armour or the miss chance
+  applyCoat(src, m, kind, dur) {
+    const C = COATS[kind];
+    if (!C || m.type !== 'mob' || m.dead) return;
+    const i = m.buffs.findIndex((b) => b.coat === kind), n = C.stacks ? Math.min(C.stacks, (i >= 0 ? m.buffs[i].n || 1 : 0) + 1) : 1;
+    if (i >= 0) m.buffs.splice(i, 1);
+    this.addBuff(m, { name: C.name, coat: kind, n, stat: C.stat, pct: C.pct * n, t: dur, dur, src: src.id, debuff: true, icon: C.icon });
+    m.coatT = Math.max(m.coatT || 0, this.time + dur);
+  }
+  // the blow's kinds (its record's tags, or the legacy table; a fire patch's tick is heat) against the machine's coats: the
+  // first coat it sets off is consumed. -> { kind, coat, mul } or null
+  reactCheck(m, hc, skill) {
+    const el = hc ? elemsOf(hc.sk) : skill === 'zone' && this._zk === 'fire' ? HEAT_ONLY : null;
+    if (!el?.length) return null;
+    for (let i = 0; i < m.buffs.length; i++) {
+      const b = m.buffs[i];
+      if (!b.coat || b.t <= 0) continue;
+      const kind = reactionFor(b.coat, el);
+      if (!kind) continue;
+      m.buffs.splice(i, 1);
+      if (kind === 'shatter' && hc) hc.xbrk = REACTIONS.shatter.brk; // (60 more poise on this machine only)
+      return { kind, coat: b.coat, mul: kind === 'shatter' ? REACTIONS.shatter.mul : 1 };
+    }
+    return null;
+  }
+  // after the blow: Ignite's burn, Galvanic's jump; the word and its effects on every client ({k:'react'})
+  reactFire(src, m, rx, amt) {
+    let to = null;
+    if (rx.kind === 'ignite' && !m.dead) { const R0 = REACTIONS.ignite; this.addBuff(m, { name: 'Ignite', stat: 'dot', dot: (src.power * R0.burn) / R0.dur, t: R0.dur, dur: R0.dur, src: src.id, tick: 0, debuff: true, icon: 'flame' }); }
+    if (rx.kind === 'galvanic') {
+      let bd = REACTIONS.galvanic.range;
+      for (const o of this.mobs.values()) { if (o === m || o.dead || o.def.dummy) continue; const d = dist(o, m); if (d < bd && this.foeOf(src, o.id)) { bd = d; to = o; } }
+    }
+    this.broadcast({ k: 'react', id: m.id, kind: rx.kind, src: src.id, ...(to ? { to: to.id } : {}) });
+    if (to) this.damage(src, to, amt * REACTIONS.galvanic.share, 'galvanic');
+  }
+  // a knockback of a m: the machine slides away from p, clamped by dungeon walls, house walls and the world's edge, and
+  // stopped where the ground rises into a rock face. Stopped short, or carried into another machine: a wall slam (T3):
+  // +20% of the blow, held 0.8 s (elites 0.45) then Pinned 0.5 s, and the machine it hit takes 10%. slamAmt: the blow
+  knockMob(p, m, a, slamAmt, skId) {
+    const d = dist(p, m) || 1, ux = (m.x - p.x) / d, uz = (m.z - p.z) / d, kx = m.x, kz = m.z, r = Math.min(1.2, m.def.radius);
+    let tx = kx + ux * a, tz = kz + uz * a, rock = false;
+    if (kx < DUNGEON_MIN_X) { const h0 = heightAt(kx, kz); for (let i = 1; i <= 3; i++) { const f = i / 3; if (heightAt(kx + ux * a * f, kz + uz * a * f) - h0 > WALL.rise) { const g = Math.max(0, f - 1 / 3); tx = kx + ux * a * g; tz = kz + uz * a * g; rock = true; break; } } }
+    m.x = tx; m.z = tz;
+    if (m.x >= DUNGEON_MIN_X) [m.x, m.z] = dungeonPush(m.x, m.z, r);
+    else { [m.x, m.z] = clampWorld(m.x, m.z, kx, kz, 0); if (houseCrosses(kx, kz, m.x, m.z)) { m.x = kx; m.z = kz; } else [m.x, m.z] = housePush(m.x, m.z, r); } // (never knocked through a house wall)
+    const moved = Math.hypot(m.x - kx, m.z - kz);
+    m._kb = moved / a; m.y = walkHeight(m.x, m.z);
+    let other = null;
+    if (!rock && m._kb >= WALL.short) for (const o of this.mobs.values()) {
+      if (o === m || o.dead) continue;
+      const ox = o.x - m.x, oz = o.z - m.z;
+      if (Math.abs(ox) > 4 || Math.abs(oz) > 4) continue;
+      const od = Math.hypot(ox, oz);
+      if (od < o.def.radius + m.def.radius + 0.15 && (ox * ux + oz * uz) > 0.3 * od && this.foeOf(p, o.id)) { other = o; break; } // (the one it was thrown at, ahead of it)
+    }
+    this.broadcast({ k: 'knock', id: m.id, d: +moved.toFixed(1) });
+    if (rock || other || m._kb < WALL.short) {
+      const st = isElite(m.def) ? WALL.stunElite : WALL.stun;
+      m._wall = this.time;
+      this.addBuff(m, { name: 'Slammed', cc: 'stun', t: st, dur: st, debuff: true, icon: 'stun' });
+      this.addBuff(m, { name: 'Pinned', cc: 'root', t: st + WALL.pin, dur: st + WALL.pin, debuff: true, icon: 'root' });
+      m.pinT = Math.max(m.pinT || 0, this.time + st + WALL.pin);
+      m.pending = null; m.swingT = Math.max(m.swingT || 0, st);
+      this.broadcast({ k: 'wall', id: m.id, dir: [+ux.toFixed(2), +uz.toFixed(2)], on: other ? 'mob' : rock ? 'rock' : 'wall', ...(other ? { o: other.id } : {}) });
+      const hc = this._hc;
+      if (hc) { hc.wall = true; if (other) hc.broke.add(other.id); } // (the machine it hit loses no poise to this contact)
+      if (slamAmt > 0) this.damage(p, m, slamAmt * WALL.bonus * R(0.9, 1.1), skId);
+      if (other && slamAmt > 0) this.damage(p, other, slamAmt * WALL.other * R(0.9, 1.1), skId);
+      if (hc) hc.wall = false;
+    } else if (m.def.humanoid && moved >= KNOCKDOWN.dist) {
+      // a raider thrown far goes down (Knockdown, LayToIdle on the client) and is held while it gets up
+      this.addBuff(m, { name: 'Knocked Down', cc: 'stun', t: KNOCKDOWN.down, dur: KNOCKDOWN.down, debuff: true, icon: 'stun' });
+      m.pending = null; m.swingT = Math.max(m.swingT || 0, KNOCKDOWN.down);
+    }
   }
 
   // poise (feel.js, combat_design.md 2.5): a skill contact wears a machine's poise down; at 0 a normal machine is Staggered
@@ -2630,7 +2726,7 @@ export class World {
     hc.broke.add(m.id); // (once per machine per contact)
     const out = { broke: false, launched: false };
     const big = !liftable(m.def);
-    let dmg = hc.brk * (crit ? POISE.critMul : 1) * (hc.launch && big ? POISE.bigLaunchMul : 1) * (m.def.boss || m.def.world ? POISE.bossTake : 1);
+    let dmg = (hc.brk + (hc.xbrk || 0)) * (crit ? POISE.critMul : 1) * (hc.launch && big ? POISE.bigLaunchMul : 1) * (m.def.boss || m.def.world ? POISE.bossTake : 1);
     if (src.tal?.keys) dmg *= (1 + (src.tal.brk || 0)) * (src.tal.brkMul || 1); // the Skill Web's poise damage (Impact nodes, Heavy Impact, Heavy Hand)
     if (m.brokenT > this.time) dmg = 0; // a Broken machine is already open
     const elite = isElite(m.def);
@@ -2651,8 +2747,9 @@ export class World {
       const dur = ctl(elite ? Math.min(POISE.eliteAir, hc.launch) : hc.launch);
       if (dur > 0) {
         m.airT = this.time + dur;
-        this.addBuff(m, { name: 'Lifted', cc: 'stun', t: dur, dur, debuff: true, icon: 'stun' });
-        m.pending = null; m.swingT = Math.max(m.swingT || 0, dur);
+        const down = m.def.humanoid ? KNOCKDOWN.liftDown : 0; // (S7: a raider lands on its back and gets up: Air_Juggle_Loop, LayToIdle)
+        this.addBuff(m, { name: 'Lifted', cc: 'stun', t: dur + down, dur: dur + down, debuff: true, icon: 'stun' });
+        m.pending = null; m.swingT = Math.max(m.swingT || 0, dur + down);
         const d = Math.hypot(m.x - src.x, m.z - src.z) || 1;
         this.broadcast({ k: 'air', id: m.id, dur: +dur.toFixed(2), h: +(hc.sk?.liftH || 1.6 + Math.min(1, dur - 0.7) * 1).toFixed(2), dir: [+((m.x - src.x) / d).toFixed(2), +((m.z - src.z) / d).toFixed(2)] });
         out.launched = true;
@@ -2728,7 +2825,7 @@ export class World {
   kill(m, killer) {
     m.dead = true; m.hp = 0; m.cast = null;
     if (killer?.tal?.keys?.length) runKeys(this, killer, 'onKill', { tgt: m });
-    this.broadcast({ k: 'die', id: m.id });
+    this.broadcast(m.fzKill === this.time && m.type === 'mob' ? { k: 'die', id: m.id, fz: 1 } : { k: 'die', id: m.id }); // (fz: a fusion's kill, S7)
     if (m.type !== 'mob') return;
     if (this.tmod(m, 'boilers') && !m.def.humanoid && !m.sp.temp) {
       const spots = [{ x: +m.x.toFixed(2), z: +m.z.toFixed(2), r: 2.4 + (m.def.radius || 1) }], dmg = R(m.def.dmg[0], m.def.dmg[1]) * (1 + 0.18 * (m.level - 1)) * mobAbilityMul(m.level) * 0.9 * (m.rh ? 1.25 : 1); // a telegraphed mechanic: on the ability curve (0.85-1), not the swing curve (up to 2.3)
@@ -3605,6 +3702,14 @@ export class World {
       // (S1: the bots that step out were picked when the telegraph went down, and they dodge out of it; botSidePlan)
       for (const p of this.players.values()) if (!p.dead && a.spots.some((sp) => Math.hypot(p.x - sp.x, p.z - sp.z) < sp.r) && !(p.bot && (a.side?.has(p.id) || (!a.side?.hit?.has(p.id) && rand() < BOT_SIDESTEP)))) this.playerDamaged(p, src, a.dmg);
       this.broadcast({ k: 'boom', id: a.src, kind: a.kind, spots: a.spots });
+      // (S7) a boss's readable window: after its own big telegraph lands (and none more of its own are waiting) it recovers
+      // 1.0-1.5 s: no swing, no mechanic (its ability clock waits while it is held)
+      if (!a.caller && RECOVER.kinds.has(a.kind) && src.type === 'mob' && (src.def.boss || src.def.world) && !src.dead && !this.aoes.some((o) => o.src === a.src && !o.caller && o.t > this.time)) {
+        const t = R(RECOVER.min, RECOVER.max);
+        this.addBuff(src, { name: 'Recovering', cc: 'stun', t, dur: t, debuff: true, icon: 'stun' });
+        src.pending = null; src.swingT = Math.max(src.swingT || 0, t);
+        this.broadcast({ k: 'recover', id: src.id, t: +t.toFixed(2) });
+      }
     }
     for (const n of this.nodes.values()) if (!n.ready && this.time > n.t) { n.ready = true; this.broadcast({ k: 'node', id: n.id, ready: true }); }
     this.snapT += dt;
@@ -3727,7 +3832,7 @@ export class World {
       const tal = p.tal || {};
       for (const m of (foes ||= this.foesOf(p))) {
         if (m.dead || Math.hypot(m.x - z.x, m.z - z.z) > z.r + this.rad(m)) continue;
-        this.damage(p, m, p.power * (1 + (tal.dmg || 0)) * z.coef * 0.5, 'zone');
+        this._zk = z.kind; this.damage(p, m, p.power * (1 + (tal.dmg || 0)) * z.coef * 0.5, 'zone'); this._zk = null; // (a fire patch is heat: Ignite)
         if (z.slow && m.type === 'mob') this.addBuff(m, { name: 'Cinders', stat: 'slow', pct: z.slow, t: 0.6, dur: 0.6, debuff: true, icon: 'slow' });
       }
     }
@@ -4209,7 +4314,7 @@ export class World {
       }
       for (const m of this.mobs.values()) {
         if (dist2(p, m) > VIEW * VIEW) continue;
-        list.push({ id: m.id, ty: 'm', k: m.kind, l: m.level, x: +m.x.toFixed(2), y: +m.y.toFixed(2), z: +m.z.toFixed(2), r: +m.ry.toFixed(2), s: +m.speed.toFixed(1), h: m.hp / m.maxHp, hp: Math.round(m.hp), mh: m.maxHp, d: m.dead ? 1 : 0, t: m.target, lt: m.loot && m.loot.owners.includes(p.id) ? 1 : 0, lq: m.loot && m.loot.owners.includes(p.id) ? this.lootBest(m.loot)?.q : undefined, ln: m.loot && m.loot.owners.includes(p.id) ? this.lootBest(m.loot)?.name : undefined, st: this.hasCC(m, 'stun') ? 1 : 0 });
+        list.push({ id: m.id, ty: 'm', k: m.kind, l: m.level, x: +m.x.toFixed(2), y: +m.y.toFixed(2), z: +m.z.toFixed(2), r: +m.ry.toFixed(2), s: +m.speed.toFixed(1), h: m.hp / m.maxHp, hp: Math.round(m.hp), mh: m.maxHp, d: m.dead ? 1 : 0, t: m.target, lt: m.loot && m.loot.owners.includes(p.id) ? 1 : 0, lq: m.loot && m.loot.owners.includes(p.id) ? this.lootBest(m.loot)?.q : undefined, ln: m.loot && m.loot.owners.includes(p.id) ? this.lootBest(m.loot)?.name : undefined, st: this.hasCC(m, 'stun') ? 1 : 0, po: m.poiseMax && m.poise < m.poiseMax ? +(m.poise / m.poiseMax).toFixed(2) : undefined }); // (po: the poise bar of S6, only while worn down)
       }
       const mine = evs.filter((e) => {
         const a = e.id || e.src || e.tgt;
