@@ -82,7 +82,7 @@ export const TIDEWATER = {
     [[406, -2626], [496, -2626]], // the ropewalk's own floor
     [[536, -2642], [538, -2620], [532.5, -2600]], // to the first mill's door
     [[538, -2620], [545, -2610]], // and on to the races pad
-    [[582, -2643], [583, -2614], [578.5, -2603]], // to the second mill's door
+    [[582, -2641.9], [583, -2614], [578.5, -2603]], // to the second mill's door ((RF.7) starts on the road: it began 1 m past it, a stub tail)
     [[604, -2630], [640, -2614], [649, -2603]], // out to the tide-mark tower
     [[500, -2615], [506, -2596], [508, -2578]], // down the slipway onto the flats
     [[452.5, -2606.5], [445.5, -2605]], // the graveyard, off the ropewalk track

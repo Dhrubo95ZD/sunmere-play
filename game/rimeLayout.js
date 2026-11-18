@@ -423,7 +423,7 @@ export function buildRime(W, S) {
     const rng = mulberry32(497);
     for (const Wk of RIME.works) for (let i = 0; i < 7; i++) {
       const a = rng() * PI * 2, d = Wk.r * (0.75 + rng() * 0.5), x = Wk.x + Math.cos(a) * d, z = Wk.z + Math.sin(a) * d;
-      if (Math.abs(x - 552) < 3) continue;
+      if (Math.abs(x - 552) < 3 || rimePathDist(x, z) < 3.2) continue; // (RF.7 review) never on the mill tracks (one ice block stood on the re-routed north one)
       put(rng() < 0.6 ? 'sdrift' + (i % 3) : 'iceblock' + (i % 3), x, z, rng() * 6, 0.7 + rng() * 0.5, 0.2);
     }
   }
@@ -434,6 +434,7 @@ export function buildRime(W, S) {
   {
     const D = RIME.dam, ox = D.x, oz = (D.z0 + D.z1) / 2, b = new Builder(510), cols = [];
     const gapW = (z) => z > -1644 && z < -1638; // the ramp's top onto the crest
+    const gapE = (z) => z > -1655 && z < -1649; // (RF.7) the step down onto the ice, 11 m north of the way up (no + across the crest)
     const seg = 3;
     for (let z = D.z0; z < D.z1 - 0.01; z += seg) {
       const zc = z + seg / 2, lz = zc - oz;
@@ -441,10 +442,10 @@ export function buildRime(W, S) {
       const g = Math.min(H(597, z), H(597, z + seg)), bot = Math.min(g, 36) - 2.5;
       if (!gapW(zc)) b.add(box(0.9, D.crest - 0.2 - bot, seg + 0.02), 'stone', { p: [-3.05, (D.crest - 0.2 + bot) / 2, lz], c: ST, us: 0.4, ao: { y0: bot, y1: bot + 4, min: 0.7 } });
       // the upstream (east) face against the ice
-      if (!gapW(zc)) b.add(box(0.9, 4.0, seg + 0.02), 'stone', { p: [3.05, D.crest - 2.2, lz], c: ST, us: 0.4 });
+      if (!gapE(zc)) b.add(box(0.9, 4.0, seg + 0.02), 'stone', { p: [3.05, D.crest - 2.2, lz], c: ST, us: 0.4 });
       // parapets with coping, snow along their tops
       for (const sd of [-1, 1]) {
-        if (gapW(zc)) continue;
+        if (sd < 0 ? gapW(zc) : gapE(zc)) continue;
         b.add(box(0.5, 0.9, seg + 0.02), 'stone', { p: [sd * 2.75, D.crest + 0.35, lz], c: ST });
         b.add(box(0.7, 0.14, seg + 0.04), 'stoneLarge', { p: [sd * 2.75, D.crest + 0.86, lz], c: ST_L });
         b.add(box(0.5, 0.1, seg), 'snowPack', { p: [sd * 2.75, D.crest + 0.98, lz], c: SNOW });
@@ -461,9 +462,9 @@ export function buildRime(W, S) {
       cols.push({ x: -4.1, z: z - oz, hw: 0.8, hd: 0.9 });
     }
     // the crest's colliders: both parapets, broken where the ramps come on
-    for (const sd of [-1, 1]) {
-      cols.push({ x: sd * 2.75, z: (D.z0 + -1644) / 2 - oz, hw: 0.3, hd: (-1644 - D.z0) / 2 });
-      cols.push({ x: sd * 2.75, z: (-1638 + D.z1) / 2 - oz, hw: 0.3, hd: (D.z1 - -1638) / 2 });
+    for (const [sd, g0, g1] of [[-1, -1644, -1638], [1, -1655, -1649]]) {
+      cols.push({ x: sd * 2.75, z: (D.z0 + g0) / 2 - oz, hw: 0.3, hd: (g0 - D.z0) / 2 });
+      cols.push({ x: sd * 2.75, z: (g1 + D.z1) / 2 - oz, hw: 0.3, hd: (D.z1 - g1) / 2 });
     }
     // frozen spill down the west face: curtains of ice from under the coping to the tread, mounds of ice at the foot
     for (const zs of [-1704, -1686, -1679, -1626, -1618, -1600]) {
@@ -496,7 +497,7 @@ export function buildRime(W, S) {
     const rng = mulberry32(530);
     for (let i = 0; i < 70; i++) {
       const x = RIME.lake.x0 + 4 + rng() * (RIME.glacier - RIME.lake.x0 - 6), z = RIME.axis.z - 52 + rng() * 104;
-      if (Math.abs(H(x, z) - RIME.lake.ice) > 0.3 || (Math.abs(z + 1641) < 4 && x < 618)) continue;
+      if (Math.abs(H(x, z) - RIME.lake.ice) > 0.3 || (Math.abs(z + 1652) < 4 && x < 618)) continue;
       if (DUNGEONS.some((Dg) => Math.hypot(x - Dg.door.x, z - Dg.door.z) < 10)) continue; // keep the Sluice Galleries' gatehouse clear
       const k = rng();
       S.place(k < 0.4 ? 'iceslab' + (i % 2) : k < 0.75 ? 'sdrift' + (i % 3) : 'iceblock' + (i % 3), x, RIME.lake.ice - 0.1, z, rng() * 6, 0.6 + rng() * 0.6);

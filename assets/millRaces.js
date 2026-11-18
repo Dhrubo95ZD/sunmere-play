@@ -31,7 +31,9 @@ const pl = (w, h, d, o = {}) => plate(w, h, d, { br: Math.max(0.035, Math.min(0.
 const TAR = '#2a2622', WOOD = '#5e4c3a', WOOD2 = '#4a3c2e', IRON = '#5a5e60', IRON2 = '#46494c', BRONZE = '#7a6a3e', SILT = '#5a5148', SALT = '#dcd8ce';
 
 // silt crust: flattened grey lumps over a face
+// (RF.7 review) one flattened slab over the face first, so the lumps never read as scattered dots (die pips) on a dark top
 function silt(b, cx, y, cz, w, d, n, s = 0.12) {
+  if (w > s && d > s) b.add(rb(w * 0.92 + s, s * 0.45, d * 0.92 + s, s * 0.2), 'wPaint', { p: [cx, y - s * 0.05, cz], c: wear(SILT, 0.14, n) });
   for (let i = 0; i < n; i++) b.add(ico(s * b.r(0.6, 1.2), 0), 'wPaint', { p: [cx + b.r(-w / 2, w / 2), y, cz + b.r(-d / 2, d / 2)], s: [1.7, 0.4, 1.3], r: [0, b.r(0, 3), 0], c: wear(SILT, 0.15, i) });
 }
 // the pale salt line a hand's height round a block (a thin band, one way only)

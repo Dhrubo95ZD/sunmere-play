@@ -19,6 +19,7 @@ import { TIDEWATER } from './tidewater.js';
 import { RAINWARD } from './rainward.js';
 import { WEALD } from './weald.js';
 import { ITEM_ART } from './itemArt.js';
+import { xpForLevel, KILL_XP, curveAt } from './classes.js';
 const PI2 = Math.PI * 2;
 
 export const MOBS = {
@@ -2557,8 +2558,8 @@ NPCS.push({ id: 'n_marks', name: 'Quartermaster Hamid', title: 'Makers\u2019 Mar
 // everyone's donations raise one engine in the square, in five stages; it starts again from bare ground every week.
 // The key has a digit in it, so no character (letters only) can ever share its save file.
 export const VALLEY = { key: 'world9build', stages: [0, 120, 300, 550, 850, 1200], gifts: { scrap: 1, cog: 2, spring: 2, rustedgear: 3, bronzecog: 5, copyplate: 12 },
-  names: ['Bare ground', 'The platform', 'The frame', 'The water tank', 'The paddle wheels', 'The valley\u2019s engine'], x: 25, z: -7 };
-NPCS.push({ id: 'n_build', name: 'Master-Builder Darius', title: 'The Valley\u2019s Engine', look: 'warden', v: 0, x: 20.6, z: -3.6, ry: 2.2, build: true,
+  names: ['Bare ground', 'The platform', 'The frame', 'The water tank', 'The paddle wheels', 'The valley\u2019s engine'], x: 29, z: -9 }; // (RF.7 review) was 25, -7: on the re-routed north-east lane
+NPCS.push({ id: 'n_build', name: 'Master-Builder Darius', title: 'The Valley\u2019s Engine', look: 'warden', v: 0, x: 29, z: -2.4, ry: 3.14, build: true,
   greet: 'The drawings are open to all, so we build one engine for all of us. Bring scrap, cogs, springs, bronze: anything that can be melted down or bolted on.' });
 
 // ============================================================================ PART TEN: THE FAR SHORE (P10.1, Chapter 29)
@@ -5152,6 +5153,163 @@ OBJECTS.push({ id: 'o_hm_ramchest', kind: 'ramchest', x: 349.5, z: 118.5, ry: 0.
 OBJECT_KINDS.ramchest = { prompt: 'Open Yard-Engineer Yusuf’s chest', goal: 'Yusuf’s chest opened', done: 'opened' };
 // ============================================================================ end of LF.6
 
+// ============================================================================ P15.4 THE DRYING LOFTS (dungeon, level 70)
+// (Chapters 50-51's story goes in story.js; their quest items, objects, nodes, Loftman Suhail and the Long Sheds' side quests
+// in the block after this one)
+// The upper lofts and crane galleries of the Long Sheds, over the stacks (shared/dungeons.js dryinglofts). Two mechanics: the
+// gantry cranes lower a load into one marked bay each on the crane clock (kind 'cranes': step off the mark; every machine
+// fighting near a mark calls it), and in each boss's loft the damp spreads bay by bay from the jammed louvres (kind 'damp')
+// until two people work the paired louvre lever together; bots in a party go to the second handle (shared/sim.js
+// loftLevers). Three bosses, all machines (client/assets/loftBosses.js): the Stack Turner (the tracked machine that turned
+// the stacks layer by layer so they dried even, now stacking wet oak on sound), the Louvre Jack (the screw jack that set the
+// louvres; it jacks them shut) and the Louvre Engine (the last boss: the engine against the Engine Loft's north wall that
+// drives every louvre rod and gantry in the sheds, still working the old count). Strikes are timber dust and damp. Heroic
+// is the raid kind (rhIlvl 102); named drops item level 100. Trash uses the Weald's own machine models. Health on the v120
+// balance (docs/ai/balance_v120.md: the last boss about 40 s for the harness party); experience on the Weald machines' and
+// the Drain Adits' pattern (taken from their numbers, so a retune of the 65-70 machines carries over).
+{
+  const XPT = MOBS.ridewarden.xp, XPB = (k) => Math.round((MOBS[k].xp * XPT) / MOBS.adwarden.xp / 50) * 50; // (the Adits' bosses carried up to the wood's level)
+  const LM = (name, model, variant, lvl, hp, dmg, xp, extra = {}) => ({ name, model, variant, lvl, hp, dmg, speed: 3.2, aggro: 13, range: 3.4, swing: 2.4, xp, loot: 'loftTrash', radius: 1.5, ...extra });
+  const DUST = { dust: true, teleColor: '#d8a85a', novaColor: '#e8c890' };
+  const CR = (text, dmg = 1.5) => ({ kind: 'cranes', dmg, ...(text ? { text } : {}) });
+  const DAMP = (text, every, dmg, max) => ({ kind: 'damp', every, delay: 2.0, dmg, max, hold: 2, clear: 22, label: 'Spreading damp', text });
+  Object.assign(MOBS, {
+    lfcrane: LM('Loft Stack Crane', 'stackcrane', 0, [69, 70], 13900, [106, 138], XPT, { ...DUST, speed: 2.8, range: 3.6, swing: 2.6, radius: 1.7, abilities: [CR(null, 1.3)] }),
+    lfbronze: LM('Old Bronze Loft Crane', 'stackcrane', 1, [69, 70], 14200, [108, 140], XPT, { ...DUST, speed: 2.8, range: 3.6, swing: 2.6, radius: 1.7, abilities: [CR(null, 1.3)] }),
+    lfforwarder: LM('Loft Forwarder', 'logforwarder', 0, [69, 70], 14000, [106, 138], XPT, { ...DUST, speed: 3.0, range: 3.8, swing: 2.6, radius: 1.8, abilities: [CR(null, 1.3)] }),
+    lfwarden: LM('Loft Warden', 'ridewarden', 0, [69, 70], 14400, [108, 142], XPT, { ...DUST, radius: 1.3, abilities: [CR(null, 1.3)] }),
+    stackturner: LM('The Stack Turner', 'stackturner', 0, [70, 70], 126000, [108, 140], XPB('spoiltipper'), { ...DUST, loot: 'u_stackturner', rhIlvl: 102, speed: 2.6, range: 4.4, swing: 2.6, radius: 2.6, elite: true,
+      abilities: [CR('The gantries run down the Gantry Loft, and the loads come down onto their marks!'),
+        DAMP('The Stack Turner stacks wet oak on sound, and the damp creeps in from the jammed louvres, bay by bay!', 8, 1.2, 6),
+        { kind: 'beam', every: 10, len: 18, r: 2.0, delay: 1.9, dmg: 1.45, text: 'The Stack Turner shoves a whole stack down the boards!' },
+        { kind: 'adds', at: 0.5, mob: 'lfcrane', n: 2, text: 'Two loft cranes roll down the gallery to load the Stack Turner!' }] }),
+    louvrejack: LM('The Louvre Jack', 'louvrejack', 0, [70, 70], 131000, [110, 142], XPB('sumpram'), { ...DUST, loot: 'u_louvrejack', rhIlvl: 102, speed: 2.4, range: 4.6, swing: 2.6, radius: 2.6, elite: true,
+      abilities: [CR('The gantry over the Stack Loft runs out, and its load comes down onto a mark!'),
+        DAMP('The Louvre Jack screws the louvres down hard, and the damp spreads along the Stack Loft, bay by bay!', 8, 1.25, 6),
+        { kind: 'nova', every: 13, r: 6, delay: 2.0, dmg: 1.5, text: 'The Louvre Jack drops its screw foot, and the boards jump all round it!' },
+        { kind: 'adds', at: 0.5, mob: 'lfforwarder', n: 2, text: 'Loft forwarders bring the Louvre Jack wet oak to stack!' }] }),
+    // the last boss: fixed against the Engine Loft's north wall, the cranes and the damp all round it, a heave of the louvre
+    // rods round it, and below half health the gantries drop their whole loads all over the loft
+    louvreengine: LM('The Louvre Engine', 'louvreengine', 0, [71, 71], 500000, [116, 150], XPB('aditdriver'), { ...DUST, loot: 'u_louvreengine', rhIlvl: 102, speed: 0, aggro: 18, range: 7.0, swing: 3.0, radius: 4.6, elite: true, boss: true,
+      abilities: [CR('The Louvre Engine winds its gantries, and every load in the Engine Loft comes down!', 1.6),
+        DAMP('The Louvre Engine turns every louvre rod shut, and the damp comes down the Engine Loft from the north wall, bay by bay!', 9, 1.3, 6),
+        { kind: 'nova', every: 14, r: 9, delay: 2.4, dmg: 1.6, text: 'The Louvre Engine throws its rods over, and the whole loft floor shakes round it!' },
+        { kind: 'circles', below: 0.5, every: 8, n: 6, r: 3.4, delay: 2.0, dmg: 1.4, text: 'The Louvre Engine slips its gantry brakes, and loose boards come down all over the Engine Loft!' }] }),
+  });
+  // named drops: item level 100 (all three), raised to 102 on Heroic. Budget x1.38 over the item-level line (not the
+  // Sea Gate's x1.45): the Dragonslayer weapons (335-355) and armour stay on top even over the Heroic-raised drops
+  // (tools/tests/dstest.mjs, dsarmourtest.mjs, uppercuttingtest.mjs); x1.45 made 342-power weapons and a 1102 cloth hood
+  const ST = {
+    weapon: { power: 118, hp: 40, crit: 7 }, trinket: { power: 100, hp: 44, haste: 30 },
+    plate: { armor: 420, hp: 112, power: 24 }, mail: { armor: 380, hp: 110, crit: 8 }, cloth: { armor: 380, hp: 96, power: 30 },
+  };
+  const W = ['sword', 'axe', 'mace', 'hammer', 'bow', 'rod', 'scimitar', 'staff', 'pistol'];
+  const N = (name, slot, kind, ilvl, desc) => {
+    const w = W.includes(kind) ? kind : null, wt = ['plate', 'mail', 'cloth'].includes(kind) ? kind : null;
+    const base = ST[w ? 'weapon' : wt || 'trinket'], k = (ilvl / 50) * 1.38, stats = {};
+    for (const [s, v] of Object.entries(base)) stats[s] = Math.round(v * k);
+    const icon = w ? `w_${w}~3` : wt ? `a_${wt}_${slot}~3` : 't_trinket~3';
+    return { name, slot, q: 4, ilvl, req: 68, stats, desc, unique: true, icon, ...(w ? { wtype: w } : {}), ...(w === 'pistol' ? { classes: ['deadeye'] } : {}), ...(wt ? { weight: wt } : {}) };
+  };
+  const drops = {
+    stackturner: [['Turning-Table Axe', 'weapon', 'axe', 100, 'A plate off the Stack Turner’s turning table, ground to an edge and set on an oak haft.'], ['Stack-Turner’s Sabatons', 'feet', 'plate', 100, 'Shoe plates off the Stack Turner’s tracks, worn smooth by a lifetime of loft boards.'], ['Gantry-Rail Pistol', 'weapon', 'pistol', 100, 'Its barrel was a length of a gantry’s guide rod. Sawdust still works out of the grooves.']],
+    louvrejack: [['Screw-Foot Hammer', 'weapon', 'hammer', 100, 'The Louvre Jack’s square screw foot on a length of its own screw.'], ['Louvre-Slat Hood', 'head', 'cloth', 100, 'Felted louvre packing, dry at last, stiff with old oak dust.'], ['Louvre-Rod Longbow', 'weapon', 'bow', 100, 'Two louvre rods of springy shed oak, seasoned twenty winters, set straight and strung.']],
+    louvreengine: [['Louvre-Rod Hauberk', 'chest', 'mail', 100, 'Links off the chain that ran the Louvre Engine’s rods, each one worn flat on one side.'], ['The Twentieth Winter', 'trinket', 'trinket', 100, 'A brass counter off the Louvre Engine’s gearing. It counts winters, and it stood at nineteen.'], ['Windshaft-Oak Staff', 'weapon', 'staff', 100, 'A length of loft oak from the first sound stack, straight as a ride.']],
+  };
+  for (const [mob, list] of Object.entries(drops)) list.forEach(([name, slot, kind, ilvl, desc], i) => { ITEMS[`u_${mob}${i + 1}`] = N(name, slot, kind, ilvl, desc); });
+  const T = (mob, gold, extra, gearQ, gearN) => ({ gold, items: [...drops[mob].map((_, i) => [`u_${mob}${i + 1}`, mob === 'louvreengine' ? 0.3 : 0.25]), ...extra], gear: 1, gearQ, gearN });
+  const boss = [['tonic', 1], ['wealdiron', 1]], last = [['draught', 1], ['wealdiron', 1]];
+  Object.assign(LOOT_TABLES, {
+    loftTrash: { gold: [48, 72], items: [['wealdiron', 0.45], ['bronzecog', 0.25], ['draught', 0.12]], gear: 0.4 },
+    u_stackturner: T('stackturner', [250, 320], boss, 3, 2), u_louvrejack: T('louvrejack', [250, 320], boss, 3, 2), u_louvreengine: T('louvreengine', [680, 860], last, 4, 3),
+  });
+  // packs loft by loft, south to north (local metres in the dungeon grid), each boss in its own loft, every pack clear of
+  // the gantries' marks and the louvre levers
+  SPAWNS.push(
+    ds('dryinglofts', 'lfwarden', 78, 97, 1.5, 2),
+    ds('dryinglofts', 'lfcrane', 50, 97, 2, 3), ds('dryinglofts', 'lfforwarder', 28, 97, 2, 2), ds('dryinglofts', 'lfbronze', 60, 110, 1.2, 2), ds('dryinglofts', 'lfcrane', 96, 110, 1.2, 2), ds('dryinglofts', 'lfwarden', 40, 84, 1.2, 2),
+    ds('dryinglofts', 'stackturner', 116, 97, 1, 1), // in the middle of the loft, between the two rows of marks
+    ds('dryinglofts', 'lfbronze', 40, 62.6, 1.2, 2),
+    ds('dryinglofts', 'lfforwarder', 52, 49, 2, 2), ds('dryinglofts', 'lfcrane', 70, 49, 2, 2), ds('dryinglofts', 'lfwarden', 76, 35.6, 1.2, 2),
+    ds('dryinglofts', 'louvrejack', 30, 49, 1, 1),
+    ds('dryinglofts', 'lfforwarder', 117, 36, 2, 2), ds('dryinglofts', 'lfbronze', 96, 52, 1.2, 2), ds('dryinglofts', 'lfcrane', 138, 20, 1.2, 2), ds('dryinglofts', 'lfwarden', 138, 48, 1.2, 2),
+    ds('dryinglofts', 'louvreengine', 117, 10, 1, 1),
+  );
+}
+// ============================================================================ end of P15.4 THE DRYING LOFTS
+
+// ============================================================================ P15.4 CHAPTERS 50-51 (story text in story.js)
+// "The Long Sheds" and "Twenty Winters" (levels 67-68, the Long Sheds). Thabit opens the first shed: the stacks on its ground
+// floor gone to damp. You knock the jammed louvre panels on the sheds' long walls free (o_wdlouvre1-4), break the stack
+// cranes still stacking wet oak in, gather the louvre pins the cranes knocked out (questOnly nodes wdpin0-7, item c50_pin)
+// and knock a sample billet out of three stacks at the gables (o_wdstack1-3): the ground floors are lost, and the best oak
+// was always up in the lofts, where the cranes put it and the Louvre Engine works the louvres shut. Then Loftman Suhail (a
+// new Woodwright, a man, at the lofts' pad), the log forwarders filling the sheds with green logs, hoist rope off the
+// wood's machines (c51_rope, off the wealdMach table, only for those on the quest), the big loft door unbarred (the
+// dungeon's door, need m_c51_door), a look up the stair, Ridwan bringing the Woodwrights with ropes, and a company of five
+// stopping the Louvre Engine. The louvres open the length of the sheds and the loft oak is sound, twenty winters seasoned;
+// on the Standards the Coppice Engine still fells out of its count (Chapter 52). Rewards item level 96-99.
+// Two plain side quests at the Long Sheds for players and roster bots (Thabit's stickers and the old bronze cranes).
+{
+  const R = (name, slot, lvl, art, haste = false) => {
+    const g = gear(name, slot, 4, lvl, haste);
+    if (slot === 'weapon') { g.wtype = art; g.icon = `w_${art}~3`; }
+    else if (slot === 'trinket') g.icon = 't_trinket~3';
+    else if (slot === 'back') g.icon = 'a_back~3';
+    else { g.weight = art; g.icon = `a_${art}_${slot}~3`; }
+    return g;
+  };
+  Object.assign(ITEMS, {
+    c50_pin: { name: 'Louvre Pin', slot: 'quest', icon: 'scrap', q: 1, stack: 20, desc: 'A square iron pin off a louvre rod, knocked out by a stack crane and trodden into the leaf litter. Thabit wants them back in the rods.' },
+    c51_rope: { name: 'Hoist Rope', slot: 'quest', icon: 'scrap', q: 1, stack: 20, desc: 'A coil of the lofts’ hoist rope, dragged off the shed hooks by a forest engine. Suhail wants five to swing the loft door.' },
+    wd_sticker: { name: 'Stack Sticker', slot: 'quest', icon: 'scrap', q: 1, stack: 20, desc: 'A thin square batten of seasoned oak, laid between the layers of a stack so the air goes through. Thabit lays them one way, always.' },
+    r_c50_gloves: R('Louvre-Breaker’s Gauntlets', 'hands', 96, 'mail'),
+    r_c50_boots: R('Long Shed Boots', 'feet', 96, 'cloth'),
+    r_c50_helm: R('Stackman’s Helm', 'head', 96, 'plate'),
+    r_c50_coat: R('Sticker-Layer’s Hauberk', 'chest', 97, 'mail'),
+    r_c50_maul: R('Louvre-Pin Mace', 'weapon', 97, 'mace'),
+    r_c51_legs: R('Loftman’s Legplates', 'legs', 97, 'plate'),
+    r_c51_rod: R('Hoist-Beam Rod', 'weapon', 98, 'rod'),
+    r_c51_mantle: R('Gantry-Rail Spaulders', 'shoulders', 98, 'cloth'),
+    r_c51_charm: { ...R('Sound Oak Keepsake', 'trinket', 99, null, true), desc: 'A sticker off the first sound stack in the lofts, dry and light, twenty winters seasoned.' },
+    r_c51_cloak: R('Cloak of the Long Sheds', 'back', 99),
+  });
+  // the hoist rope comes off the wood's machines (only for those on the quest)
+  LOOT_TABLES.wealdMach.items.push(['c51_rope', 0.5]);
+  OBJECT_KINDS.wdlouvre = { prompt: 'Knock the jammed louvre panel free', goal: 'Louvre panels freed', done: 'freed' };
+  OBJECT_KINDS.wdstack = { prompt: 'Knock a sample billet out of the stack', goal: 'Stacks sampled', done: 'sampled' };
+  OBJECTS.push(
+    // the louvre panels: against the sheds' long walls (ry 0: the panel runs along x, the wall's way)
+    { id: 'o_wdlouvre1', kind: 'wdlouvre', x: 510, z: -3469.4, ry: 0 },
+    { id: 'o_wdlouvre2', kind: 'wdlouvre', x: 557, z: -3469.4, ry: 0 },
+    { id: 'o_wdlouvre3', kind: 'wdlouvre', x: 505, z: -3482.6, ry: Math.PI },
+    { id: 'o_wdlouvre4', kind: 'wdlouvre', x: 560, z: -3493.4, ry: 0 },
+    // the sample stacks: outside three gables (never the lofts' door)
+    { id: 'o_wdstack1', kind: 'wdstack', x: 490, z: -3500, ry: -Math.PI / 2 },
+    { id: 'o_wdstack2', kind: 'wdstack', x: 577, z: -3476, ry: Math.PI / 2 },
+    { id: 'o_wdstack3', kind: 'wdstack', x: 577, z: -3500, ry: Math.PI / 2 },
+  );
+  // the louvre pins round the sheds, the stickers along the second row
+  NODES.push(...[[486, -3466], [512, -3467.5], [552, -3467.5], [580, -3466], [484, -3490], [515, -3488], [545, -3489], [582, -3488]].map(([x, z], i) => ({ id: 'wdpin' + i, item: 'c50_pin', x, z, questOnly: true })));
+  NODES.push(...[[490, -3511], [508, -3510], [524, -3511], [546, -3510], [564, -3510], [581, -3507], [499, -3491], [570, -3487]].map(([x, z], i) => ({ id: 'wdsticker' + i, item: 'wd_sticker', x, z, questOnly: true })));
+  NPCS.push(
+    { id: 'n_wd_suhail', name: 'Loftman Suhail', title: 'The Drying Lofts', look: 'villager', v: 4, x: 483.6, z: -3479.4, ry: -1.4, quests: [],
+      greet: 'My grandfather was the last man up the loft stair. The door has been barred from the inside since, and swollen tight in its frame. The best oak in the wood is up there, if it is anywhere.' },
+  );
+  // the side quests: experience on the Woodwrights' own side quests' pattern, carried up the level curve
+  const xpUp = (q, lvl) => Math.round((QUESTS[q].xp * xpForLevel(lvl)) / xpForLevel(QUESTS[q].lvl) / 50) * 50;
+  const side = (id, giver, turnin, lvl, pre, goal, like, gold, name, text, done) => { QUESTS[id] = { name, giver, turnin, lvl, pre, goal, xp: xpUp(like, lvl), gold, rewards: [], text, done }; NPCS.find((n) => n.id === giver).quests.push(id); };
+  side('q_wd_stickers', 'n_wd_thabit', 'n_wd_thabit', 67, 'm_c49_count', { gather: 'wd_sticker', n: 6 }, 'q_wd_billets', 4900, 'Stack Stickers',
+    'The stack cranes throw the stickers out of every stack they turn, and the gale carries them off along the second row. Every stack wants its stickers between the layers, or the air never gets through it. Bring me six.',
+    'Six. Laid one way, every layer, so the wind goes through the stack and out the other side. That is all seasoning is: air, and time.');
+  side('q_wd_cranes', 'n_wd_thabit', 'n_wd_thabit', 68, 'q_wd_stickers', { kill: 'bronzecrane', n: 4 }, 'q_wd_logs', 5000, 'Old Bronze Cranes',
+    'The old bronze stack cranes round the sheds are the worst of them: they lift a sound stack and set it down in the wet, every time. Break four of them.',
+    'Four. The stacks they had hold of can stand where they are now. We will cover them before the next gale.');
+}
+// the Main Story ran (applyStory) before Loftman Suhail was placed: give him his story quests
+for (const [id, Q] of Object.entries(QUESTS)) if (Q.msq) { const g = NPCS.find((n) => n.id === Q.giver); if (g && !(g.quests ||= []).includes(id)) g.quests.push(id); }
+// ============================================================================ end of P15.4 CHAPTERS 50-51
+
 // ============================================================================ PAINTED ITEM ICONS
 // every everyday item (food, tonics, materials, quest items, junk) with its own painted icon uses it instead of the shared drawing
 for (const [id, it] of Object.entries(ITEMS)) if (!it.stats && ITEM_ART.has(id)) { it.iconShared = it.icon; it.icon = 'i_' + id; }
@@ -5210,4 +5368,30 @@ for (const id of ['n_smith', 'n_dw_garan', 'n_rs_forge', 'n_wh_forge']) { const 
     const want = gearRef(it) * gearTier(it, src), has = gearWorth(it.stats);
     if (has > 0 && has < want) { const k = want / has; for (const s of Object.keys(it.stats)) if (it.stats[s] > 0) it.stats[s] = Math.ceil(it.stats[s] * k); }
   }
+}
+
+// Quest experience by level (P15.7, v127; docs/ai/xp_v127.md, measured with tools/xpcheck.mjs). The authored values paid
+// 2.7-6.4 times the levels of their part from the Valley to Tidewater (Valley quests alone carried a hero to 59, the
+// Heights' past the cap), so the quests of each level are scaled together: their hand-ins plus the machines they ask for
+// (questKills: a kill goal's count, 1.5 kills a quest item, 3 for an escort, each worth KILL_XP.share of a level, see
+// shared/classes.js) pay QUEST_XP.ratio of that level (a curve: 0.85 in the Valley, whose dungeons and discoveries add more), the hand-ins never less than QUEST_XP.floor of it (a curve: the
+// Valley's quests ask for many kills). A level with no quests is paid by the quests of the level below it (the step
+// before a gap carries you over it). Authored sizes, against their chapter's, still set how a level's experience is shared. Dailies and
+// weeklies keep their own rules (sim.js on_turnin). questWorth(Q) is a quest's hand-in plus its machines.
+export const QUEST_XP = { ratio: [[1, 0.85], [39, 0.85], [40, 1]], floor: [[1, 0.3], [39, 0.3], [40, 0.6]] };
+export const QUEST_XP_AUTHORED = {}; // id -> the authored value, before the scale (tools/xpcheck.mjs reports both)
+export const questKills = (G = {}) => (G.kill ? G.n : G.kills ? G.kills.length : G.item ? G.n * 1.5 : G.escort ? 3 : 0);
+export const questWorth = (Q) => Q.xp + Math.round(questKills(Q.goal) * curveAt(KILL_XP.share, Q.lvl || 1) * xpForLevel(Q.lvl || 1));
+{
+  const cap = 70, lv = (Q) => Math.min(cap - 1, Math.max(1, Q.lvl || 1));
+  const list = Object.entries(QUESTS).filter(([, Q]) => !Q.daily && Q.xp > 0), sum = {}, kx = {}, need = {}, fl = {}, rt = {};
+  // a quest's weight: its authored size against the mean of its chapter (side quests: of the side quests at its level), so a
+  // chapter written large (Part Twelve's, about 100k a step) and a lean one at the same level (Chapter 41, about 10k) share
+  // that level by their number of steps, not their authoring era
+  const grp = (Q) => (Q.msq ? 'c' + Q.msq.ch : 's' + lv(Q)), gs = {}, gn = {}, w = {};
+  for (const [, Q] of list) { gs[grp(Q)] = (gs[grp(Q)] || 0) + Q.xp; gn[grp(Q)] = (gn[grp(Q)] || 0) + 1; }
+  for (const [id, Q] of list) { QUEST_XP_AUTHORED[id] = Q.xp; w[id] = Q.xp / (gs[grp(Q)] / gn[grp(Q)]); const L = lv(Q); sum[L] = (sum[L] || 0) + w[id]; kx[L] = (kx[L] || 0) + questWorth(Q) - Q.xp; }
+  let at = null;
+  for (let L = 1; L < cap; L++) { if (sum[L]) at = L; const to = at ?? Object.keys(sum).map(Number).find((x) => x > L); need[to] = (need[to] || 0) + xpForLevel(L); fl[to] = (fl[to] || 0) + xpForLevel(L) * curveAt(QUEST_XP.floor, L); rt[to] = (rt[to] || 0) + xpForLevel(L) * curveAt(QUEST_XP.ratio, L); }
+  for (const [id, Q] of list) { const L = lv(Q), pay = Math.max(fl[L], rt[L] - kx[L]); Q.xp = Math.max(50, Math.round((w[id] * pay) / sum[L] / 50) * 50); }
 }

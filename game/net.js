@@ -9,7 +9,7 @@ import { QUALITY } from '../engine/globals.js';
 export const botsCfg = () => ({ roster: 16, maxActive: IS_MOBILE ? (SETTINGS.battery ? 6 : 8) : 12, minOnline: IS_MOBILE ? (SETTINGS.battery ? 4 : 5) : 6 });
 
 // living bots C.11: the player's bot-chat options for the server (sent after the welcome and on every change); the
-// server skips a hidden channel altogether, so no bot line (and no local-AI call) is made for it
+// server skips a hidden channel altogether, so no bot line is made for it
 export function botPrefsMsg() {
   const C = SETTINGS.botChat || {}, hide = {};
   for (const ch of ['world', 'say', 'whisper', 'guild', 'party']) hide[ch] = C[ch] === 0 || C[ch] === false ? 1 : 0;

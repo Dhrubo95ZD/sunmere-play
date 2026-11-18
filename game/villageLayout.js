@@ -58,7 +58,7 @@ export function buildVillage(W) {
   W.placeObject(forgeWorkshop(), -42, -8.5, 0.12);
   for (const [x, z, r] of [[-36.4, -6.2, 0.4], [-36.8, -2.6, 1.2]]) put('crates', x, z, r);
   put('coal', -47.8, -4.0, 0.6);
-  put('signpost', -16.5, 3.5, 0.2);
+  put('signpost', -26.4, 3.8, 0.2);
   // sparring ring by the forge (open on the south side for onlookers)
   { const cx = -29.5, cz = -10.5;
     for (const x of [cx - 1.5, cx + 1.5]) put('fence', x, cz - 3, 0);
@@ -82,8 +82,9 @@ export function buildVillage(W) {
   for (let i = 0; i < 3; i++) put('fence', -36.4, -48 + i * 3, PI / 2);
   for (let i = 0; i < 3; i++) put('fence', -20.2, -48 + i * 3, PI / 2);
   put('haystack', -21.8, -38.4, 0.4, 0.7);
-  put('signpost', -12.4, -12.6, -0.6);
-  put('signpost', 12.6, -12.4, 0.7);
+  // (RF.7) at the T junctions where the lanes leave the west and east roads
+  put('signpost', -23.6, -4.4, -0.6);
+  put('signpost', 25.6, -3.4, 0.7);
 
   // ---- houses along the stream and at the village edges (built above); the well between the west houses
   W.placeObject(P.well(1), -37, 32, 0);
@@ -100,7 +101,8 @@ export function buildVillage(W) {
   }
 
   // ---- trees framing the village
-  const oaks = [[16, -16], [-16, -16], [20, 9], [-21, 5], [25, -42], [33, -6], [-50, 32], [-36, 47], [18, 51], [42, 43]];
+  // (RF.7 review) the oak at (33, -6) moved to (39, -16): the valley's engine stands there now, off the re-routed north-east lane
+  const oaks = [[16, -16], [-16, -16], [20, 9], [-21, 5], [25, -42], [39, -16], [-50, 32], [-36, 47], [18, 51], [42, 43]];
   oaks.forEach(([x, z], i) => put('oak' + (i % 3), x, z, i * 1.7, 0.9 + (i % 3) * 0.1));
   const pines = [[0, -66], [-12, -65], [12, -65], [-24, -64], [24, -63], [-50, -27], [-53, -40], [-47, -47], [-38, -53], [-27, -55], [-56, -18], [36, -50], [44, -40]];
   pines.forEach(([x, z], i) => put('pine' + (i % 3), x, z, i * 2.3, 1.05 + (i % 2) * 0.15));

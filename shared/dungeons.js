@@ -456,6 +456,88 @@ DEFS.push({
     ...[8, 13.6, 19.2, 24.8, 30.4, 36].flatMap((z) => [[50, z, 3.4], [100, z, 3.4]]),
   ],
 });
+// Part Fifteen: the Drying Lofts, the upper lofts and crane galleries of the Long Sheds in the Russet Weald (dungeon, level
+// 70), where the Makers' best oak waited its twenty winters over the stacks. The id is 'dryinglofts', not 'longsheds': that
+// is the Long Sheds region's zone id outside. Four floors south to north, each a plain block joined by a short passage set
+// off the middle (centre, then west, then east), so from above the plan is a staggered run of blocks, never a cross: the
+// Loft Stair (up from the first shed's west gable door), the Gantry Loft (a long loft under two gantry cranes), the Stack
+// Loft (the seasoning stacks in rows) and the Engine Loft, where the Louvre Engine that works every louvre and gantry in
+// the sheds stands against the north wall. Two mechanics, both on the timber and the air, never a water rise, lane or sump:
+//  - the gantry cranes (cranes.period seconds; cranes.warn seconds of warning) run the length of each loft on rails and
+//    lower a load of oak into one marked bay each, on the world clock (dungeonCrane, craneDrops): step off the mark;
+//  - the damp: each loft (lofts: its floor rect, the axis its bays run along, the end the jammed louvres are at, the bay
+//    width, its gantries and its paired louvre lever) is cut into bays, and while a boss works the loft the damp spreads
+//    from the louvres bay by bay, hurting everyone standing in a damp bay, until two people (bots count) stand at the two
+//    handles of the paired louvre lever together long enough to throw the louvres open (shared/sim.js 'damp').
+// The door is the first long shed's big west gable door on the lofts' pad (shared/weald.js lofts, sheds[0]); it faces west
+// onto the pad. It opens once Loftman Suhail has unbarred it (Chapter 51, m_c51_door).
+DEFS.push({
+  id: 'dryinglofts', name: 'The Drying Lofts', level: '70', theme: 'lofts', ox: 6200, oz: -60, w: 150, h: 146,
+  door: { x: 491.4, z: -3476, ry: -PI / 2, label: 'The Drying Lofts', bare: true },
+  need: { done: 'm_c51_door', text: 'The big loft door in the first shed’s west gable is barred across from the inside and swollen in its frame. Loftman Suhail means to unbar it before anyone goes up (Chapter 51: "Twenty Winters").' },
+  start: [73, 134], exit: [73, 139],
+  rects: [
+    [62, 126, 84, 142], [69, 112, 77, 128], // the Loft Stair and the way up
+    [14, 80, 134, 114], // the Gantry Loft
+    [30, 66, 44, 82], // passage west
+    [10, 30, 86, 68], // the Stack Loft
+    [82, 38, 94, 48], // passage east
+    [88, 4, 146, 56], // the Engine Loft
+  ],
+  cranes: { period: 15, warn: 3.2 },
+  lofts: [
+    { name: 'the Gantry Loft', rect: [14, 80, 134, 114], axis: 'x', from: 1, bay: 6, gantries: 2, levers: [[108, 81.4], [124, 81.4]] },
+    { name: 'the Stack Loft', rect: [10, 30, 86, 68], axis: 'x', from: 0, bay: 6, gantries: 1, levers: [[18, 31.4], [34, 31.4]] },
+    { name: 'the Engine Loft', rect: [88, 4, 146, 56], axis: 'z', from: 0, bay: 6, gantries: 1, levers: [[89.6, 26], [144.4, 26]] },
+  ],
+});
+// a loft's bays in the order the damp takes them (from the jammed louvres' end): local [x0, z0, x1, z1]
+export function loftBays(A) {
+  const [x0, z0, x1, z1] = A.rect, along = A.axis === 'x', lo = along ? x0 : z0, hi = along ? x1 : z1, n = Math.floor((hi - lo) / A.bay), out = [];
+  for (let k = 0; k < n; k++) {
+    const a = A.from ? hi - (k + 1) * A.bay : lo + k * A.bay, b = a + A.bay;
+    out.push(along ? [a, z0, b, z1] : [x0, a, x1, b]);
+  }
+  return out;
+}
+// the loft a local point stands in (or null)
+export function loftAt(D, lx, lz) {
+  for (const A of D?.lofts || []) { const [x0, z0, x1, z1] = A.rect; if (lx >= x0 && lx <= x1 && lz >= z0 && lz <= z1) return A; }
+  return null;
+}
+// the marked bay a gantry lowers into (a square mark in the bay, a little off the loft's middle line, alternately to either
+// side): local x, z and its half size
+export function loftMark(A, k) {
+  const [bx0, bz0, bx1, bz1] = loftBays(A)[k], [x0, z0, x1, z1] = A.rect, f = k % 2 ? 0.3 : 0.7;
+  return A.axis === 'x' ? { x: (bx0 + bx1) / 2, z: z0 + (z1 - z0) * f, r: 2.6 } : { x: x0 + (x1 - x0) * f, z: (bz0 + bz1) / 2, r: 2.6 };
+}
+// the bays gantry g of a loft serves (a run of the loft's bays: the gantries never share a bay)
+export function gantryBays(A, g) { const n = loftBays(A).length, k = A.gantries || 1; return [Math.floor((g * n) / k), Math.floor(((g + 1) * n) / k)]; }
+// which bay gantry g lowers into on cycle n (it hops along its run, never the same bay twice running)
+export function gantryBay(A, g, n) { const [a, b] = gantryBays(A, g), L = b - a; return a + ((((n * 7 + g * 3) % L) + L) % L); }
+// the gantry cranes in a dungeon with them (the Drying Lofts) at world time t: n (the drop coming next), toDrop (seconds to
+// it), warn (inside the warning: the load is coming down), running (the first second after a drop), since
+export function dungeonCrane(D, t) {
+  const C = D?.cranes;
+  if (!C) return null;
+  const q = t / C.period, n = Math.floor(q) + 1, toDrop = (n - q) * C.period, since = (q - Math.floor(q)) * C.period;
+  return { n, toDrop, warn: toDrop <= C.warn, running: since < 1, since };
+}
+// every load coming down on drop n: { a (loft index), g (gantry), k (bay), x, z, r } in local metres
+export function craneDrops(D, n) {
+  const out = [];
+  (D?.lofts || []).forEach((A, a) => { for (let g = 0; g < (A.gantries || 1); g++) { const k = gantryBay(A, g, n), M = loftMark(A, k); out.push({ a, g, k, x: M.x, z: M.z, r: M.r }); } });
+  return out;
+}
+// where gantry g of loft a is at world time t, along its rails (local metres on the loft's axis), and how far its load is
+// let down (0 up at the girder .. 1 on the floor): it travels from the last drop's bay to the next one, waits, then lowers
+export function gantryAt(D, a, g, t) {
+  const A = D.lofts[a], C = D.cranes, S = dungeonCrane(D, t), M0 = loftMark(A, gantryBay(A, g, S.n - 1)), M1 = loftMark(A, gantryBay(A, g, S.n));
+  const travel = C.period - C.warn - 1.6, k = Math.min(1, Math.max(0, (S.since - 1) / travel)), e = k * k * (3 - 2 * k);
+  const p0 = A.axis === 'x' ? M0.x : M0.z, p1 = A.axis === 'x' ? M1.x : M1.z, c0 = A.axis === 'x' ? M0.z : M0.x, c1 = A.axis === 'x' ? M1.z : M1.x;
+  const low = S.warn ? 1 - S.toDrop / C.warn : S.since < 1 ? 1 - S.since : 0;
+  return { pos: p0 + (p1 - p0) * e, cross: c0 + (c1 - c0) * e, low: Math.max(0, Math.min(1, low)), axis: A.axis };
+}
 // the slips in a dungeon with them (the Drain Adits) at world time t: n (the burst coming next, counted on the world clock),
 // toBurst (seconds to it), warn (inside the warning before it), running (a burst in the lanes now: the first 1.5 s after one).
 // Every player sees the same slips: the client passes the server's clock.

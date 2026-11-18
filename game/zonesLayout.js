@@ -12,7 +12,7 @@ import * as L from '../assets/village3.js';
 import { spotFree, nearHouse } from './villageLayout.js';
 import { Builder, box, rbox, cyl, cone, sphere, torus, lathe, gear, prism, tube as tubeGeo } from '../assets/kit.js';
 import { addRock } from '../assets/trees.js';
-import { CARAVANS, NPCS, ARENA, HOME_DECO } from '/sunmere-play/shared/data.js';
+import { CARAVANS, NPCS, ARENA, HOME_DECO, VALLEY } from '/sunmere-play/shared/data.js';
 import { buildRunabout } from '../assets/runabout.js';
 import { buildSteamship } from '../assets/steamship.js';
 import { islandAt, ROADS, BRIDGES, roadDist, streamInfo, STREAM } from '/sunmere-play/shared/terrain.js';
@@ -186,7 +186,7 @@ export function buildZones(W) {
     for (const [x, z, r] of [[-26, 168, 0.4], [-54, 168, 1.6], [-44, 182, 0.2]]) put('crates', x, z, r);
     for (const [x, z] of [[-32, 156], [-56, 182], [-24, 176]]) put('lantern', x, z, 0);
     W.placeObject(P.well(49), -34, 182, 0);
-    put('signpost', -38, 186, 1.8);
+    put('signpost', -36.6, 190, 1.8); // (RF.7 review) on the corner of the T where the raider road now leaves the south road (it stood in the new road)
   }
 
   // ------------------------------------------------------------------ Brasswind Dig: Halim's excavation of the old engine works
@@ -322,8 +322,10 @@ export function buildZones(W) {
 
   // ------------------------------------------------------------------ the valley's engine in Sunmere: five stages, shown by the shared project
   {
-    const vx = 25, vz = -7, parts = [];
-    const stage = (fn, seed) => { const b = new Builder(seed); fn(b); return W.placeObject(res(b), vx, vz, -0.5); };
+    // (RF.7 review) moved east and turned along the north-east lane: at (25, -7) it stood on the lane once that was re-routed
+    // to leave the east road square-on at x 22 (VALLEY in shared/data.js keeps the same spot)
+    const vx = VALLEY.x, vz = VALLEY.z, vr = -PI / 2, parts = [];
+    const stage = (fn, seed) => { const b = new Builder(seed); fn(b); return W.placeObject(res(b), vx, vz, vr); };
     // 1: a dressed-stone platform, timber scaffold poles round it (the scaffold comes down at the end)
     parts.push([stage((b) => { b.add(rbox(7, 0.5, 5, 0.06), 'stoneLarge', { p: [0, 0.25, 0], uv: 'box', c: '#d8d0c0' }); b.add(rbox(7.4, 0.14, 5.4, 0.04), 'stoneLarge', { p: [0, 0.5, 0], uv: 'box', c: '#c8c0b0' }); }, 300)]);
     const scaffold = stage((b) => { for (const [x, z] of [[-3.3, -2.3], [3.3, -2.3], [-3.3, 2.3], [3.3, 2.3]]) b.add(box(0.16, 6, 0.16), 'beam', { p: [x, 3, z], c: 0xffffff }); for (const y of [2, 4]) { b.add(box(6.8, 0.12, 0.12), 'beam', { p: [0, y, -2.3], c: 0xffffff }); b.add(box(6.8, 0.12, 0.12), 'beam', { p: [0, y, 2.3], c: 0xffffff }); } }, 301);
@@ -336,7 +338,7 @@ export function buildZones(W) {
     // 5: the stack, a square lamp and the drawing's plain bronze plate
     const top = { ...res(new Builder(305)), smokes: [{ p: [0, 6.6, 0], opts: { rate: 2, size: 1.0, rise: 1.4, color: 0xd8d4cc, opacity: 0.4 } }] };
     top.builder.add(cyl(0.3, 0.38, 2.6, 14), 'wIron', { p: [0, 5.2, 0], c: '#4a4640' }); top.builder.add(rbox(0.5, 0.5, 0.5, 0.04), 'wGlowAmber', { p: [0, 4.6, 1.2] }); top.builder.add(rbox(1.4, 0.9, 0.08, 0.03), 'wBronze', { p: [0, 1.2, 2.55], c: '#d8b070' });
-    parts.push([W.placeObject(top, vx, vz, -0.5)]);
+    parts.push([W.placeObject(top, vx, vz, vr)]);
     W.valleyParts = { parts, scaffold };
     W.setValleyStage = (st) => { parts.forEach((list, i) => list.forEach((o) => { o.visible = i < st; for (const c of o.userData.cols || []) c.off = i >= st; })); scaffold.visible = st >= 1 && st < 5; };
     W.setValleyStage(0);

@@ -10,7 +10,7 @@ import { fire, glowSprite, lanternBuilder, smoke, assemble } from './dynamic.js'
 import { mineCart, railTrack } from './dressing.js';
 import { rubble, stoneStack, workTent } from './quarry.js';
 import { crateStack, campfire, cart } from './props.js';
-import { CELL, cellFloor, dungeonTide, dungeonSlip } from '/sunmere-play/shared/dungeons.js';
+import { CELL, cellFloor, dungeonTide, dungeonSlip, loftBays, loftMark, gantryAt, dungeonCrane, craneDrops } from '/sunmere-play/shared/dungeons.js';
 import { tideNow } from '/sunmere-play/shared/tidewater.js';
 import { mulberry32 } from '/sunmere-play/shared/noise.js';
 import { getMat } from '../engine/materials.js';
@@ -55,6 +55,7 @@ const THEME = {
   adits: { floor: 'dFloorDeep', wall: 'dWallDeep', wallH: 4.8, light: 0xffc890, floorTint: '#8e8072', wallTint: '#7a7268', floorUs: 0.15 },
   cutting: { floor: 'dFloorMine', wall: 'dWallMine', wallH: 8.5, light: 0xfff0e0, floorTint: '#a8866a', wallTint: '#7e8276', rock: '#6e7068' },
   seagate: { floor: 'dFloorDeep', wall: 'dWallDeep', wallH: 6.2, light: 0xffc890, floorTint: '#8e928c', wallTint: '#7e8480', floorUs: 0.15 },
+  lofts: { floor: 'dFloorBoard', wall: 'dFloorBoard', wallH: 6.2, light: 0xffd8a0, floorTint: '#c8a478', wallTint: '#6e5440', floorUs: 0.18 },
   workshop: { floor: 'dFloorBoard', wall: 'plaster', wallH: 5.6, light: 0xffd8a0, floorTint: '#f4e8d4', wallTint: '#ece6d8', floorUs: 0.18 },
 };
 
@@ -190,6 +191,16 @@ export function buildDungeon(D) {
           b.add(box(0.4, H - 0.5, 0.3), 'dTimber', { p: [fx - di * 0.15, (H - 0.5) / 2, fz - dj * 0.15], r: [0, rot, 0], c: '#4a3c2e' });
           b.add(box(0.6, 0.24, 0.4), 'dTimber', { p: [fx - di * 0.2, H - 0.38, fz - dj * 0.2], r: [0, rot, 0], c: '#5a4a38' });
         }
+        // the Drying Lofts: a square oak post every few metres under a flat cap, and between them louvre panels high on the
+        // walls (parallel slats all set one way over a dark backing, jammed shut)
+        if (D.theme === 'lofts' && k % 3 === 0) {
+          b.add(box(0.44, H - 0.3, 0.34), 'dTimber', { p: [fx - di * 0.17, (H - 0.3) / 2, fz - dj * 0.17], r: [0, rot, 0], c: '#5a4430' });
+          b.add(box(0.7, 0.26, 0.5), 'dTimber', { p: [fx - di * 0.25, H - 0.42, fz - dj * 0.25], r: [0, rot, 0], c: '#4a3828' });
+        }
+        if (D.theme === 'lofts' && k % 3 === 1) {
+          b.add(box(CELL * 1.5, 1.7, 0.04), 'dCap', { p: [fx - di * 0.03, H - 2.1, fz - dj * 0.03], r: [0, rot, 0], c: '#14100c' });
+          for (let q = 0; q < 5; q++) b.add(box(CELL * 1.5, 0.24, 0.05), 'dTimber', { p: [fx - di * 0.07, H - 2.85 + q * 0.34, fz - dj * 0.07], r: [0, rot, 0], c: q % 2 ? '#7a6048' : '#6e563e' });
+        }
         if (D.theme === 'adits') b.add(box(CELL + 0.02, 0.5, 0.05), 'dirtPlain', { p: [fx - di * 0.03, 0.3, fz - dj * 0.03], r: [0, rot, 0], c: '#6a4a3a' });
         // the Upper Cutting: raw rock strata, a stepped buttress of dark rock every few metres with moss on its ledge, and a
         // red-brown mud line round the walls where the slips have run
@@ -295,6 +306,7 @@ export function buildDungeon(D) {
   else if (D.theme === 'adits') dressAdits(D, b, { r, rng, isFloorL, addDyn, col, placeRes, group, dyn, torches });
   else if (D.theme === 'cutting') dressCutting(D, b, { r, rng, isFloorL, addDyn, col, placeRes, group, dyn, torches });
   else if (D.theme === 'seagate') dressSeaGate(D, b, { r, rng, isFloorL, addDyn, col, placeRes, group, dyn, torches });
+  else if (D.theme === 'lofts') dressLofts(D, b, { r, rng, isFloorL, addDyn, col, placeRes, group, dyn, torches });
   else if (D.theme === 'workshop') dressWorkshop(D, b, { r, rng, isFloorL, addDyn, col, placeRes, group, dyn, torches });
   else dressFoundry(D, b, { r, rng, isFloorL, torch, addDyn, col, placeRes, group, dyn, torches });
   if (D.theme === 'deep' || D.theme === 'foundry') wallClutter(D, b, { F, cx, cz, rng, r, col, colliders, placeRes });
@@ -2156,6 +2168,171 @@ function dressAdits(D, b, { r, rng, isFloorL, addDyn, col, placeRes, group, dyn,
   addDyn(smoke({ rate: 2, life: 2.4, size: 1.3, rise: 0.8, color: 0x7a6a5a, opacity: 0.3 }), 112, 0.4, 9); addDyn(smoke({ rate: 2, life: 2.2, size: 1.1, rise: 0.8, color: 0x7a6a5a, opacity: 0.28 }), 122, 0.4, 9.5);
 }
 
+// ----------------------------------------------------------------------------------------- THE DRYING LOFTS (dungeon 'dryinglofts')
+// The upper lofts of the Long Sheds over the stacks: old oak boards underfoot, planked walls with square oak posts and louvre
+// panels high up (parallel slats, jammed shut), pale oak dust everywhere. In each loft (D.lofts) two gantry rails run its
+// length high on the long walls (plain square timbers capped with iron, nothing across them), and each gantry is a square
+// girder across the loft between two end trucks on solid disc wheels, a trolley on the girder, one straight hanger and a
+// load of oak (a solid block, layer lines on its sides only) that the gantry lowers onto a marked bay on the crane clock
+// (shared/dungeons.js gantryAt, on the server's clock). The marked bays: pale painted square outlines on the boards. The
+// damp: a dark wet stain that comes over the boards bay by bay from the jammed louvres' end (ev 'damp', set by
+// group.userData.damp). The paired louvre lever: two square oak posts on the louvre wall, a straight handle up out of each,
+// one iron rod along the wall between them; the handles go over when the louvres are thrown. Seasoning stacks along the
+// walls (solid blocks with side layer lines, never a grid from above), lamps on square posts, never in pairs on a face.
+function dressLofts(D, b, { r, rng, isFloorL, addDyn, col, placeRes, group, dyn, torches }) {
+  const TB = '#5a4430', TB2 = '#4a3828', IR = '#3a3834', OAK = '#a08058', OAK2 = '#6e5438', PAINTK = '#e0d2a8', DUSTC = '#c8b494';
+  const warm = (x, y, z, k = 1.0) => torches.push({ x: D.ox + x, y, z: D.oz + z, color: 0xffd8a0, k });
+  const post = (x, z, h = 3.2) => {
+    b.add(box(0.5, 0.2, 0.5), 'dTimber', { p: [x, 0.1, z], c: TB2 });
+    b.add(box(0.24, h, 0.24), 'dTimber', { p: [x, h / 2, z], c: TB });
+    for (const y of [0.6, h - 0.5]) b.add(box(0.3, 0.1, 0.3), 'dIron', { p: [x, y, z], c: IR });
+    lanternBuilder('yellow', 1.05, b, [x, h + 0.05, z]);
+    addDyn(glowSprite(0xffd090, 2.2, 0.7), x, h - 0.35, z);
+    warm(x, h - 0.3, z, 1.2);
+    col(x, z, 0.3);
+  };
+  // a seasoning stack: a solid block of oak on two bearers, layer lines on its sides only, dust on top
+  const stackBlock = (x, z, w, d, h, rot = 0, c = OAK) => {
+    const cs = Math.cos(rot), sn = Math.sin(rot);
+    for (const t of [-1, 1]) b.add(box(0.24, 0.24, d + 0.3), 'dTimber', { p: [x + cs * t * (w / 2 - 0.4), 0.12, z - sn * t * (w / 2 - 0.4)], r: [0, rot, 0], c: TB2 });
+    b.add(box(w, h, d), 'dTimber', { p: [x, 0.24 + h / 2, z], r: [0, rot, 0], c });
+    const n = Math.max(3, Math.round(h / 0.32));
+    for (let i = 1; i < n; i++) { const y = 0.24 + (h * i) / n; b.add(box(w + 0.02, 0.05, d + 0.02), 'dTimber', { p: [x, y, z], r: [0, rot, 0], c: OAK2 }); }
+    b.add(box(w - 0.1, 0.03, d - 0.1), 'dTimber', { p: [x, 0.24 + h + 0.015, z], r: [0, rot, 0], c: '#b89c74' });
+    col(x, z, Math.max(w, d) / 2 + 0.2);
+  };
+
+  // ---- every loft: its marked bays, its rails, its gantries, its damp and its paired louvre lever
+  const damps = [], levers = [];
+  (D.lofts || []).forEach((A, a) => {
+    const [x0, z0, x1, z1] = A.rect, along = A.axis === 'x', bays = loftBays(A);
+    // the marks: a pale painted square outline on the boards in every bay (four plain strips, square corners)
+    bays.forEach((_, k) => {
+      const M = loftMark(A, k), s = M.r;
+      for (const [qx, qz, w, d] of [[M.x, M.z - s, 2 * s + 0.2, 0.2], [M.x, M.z + s, 2 * s + 0.2, 0.2], [M.x - s, M.z, 0.2, 2 * s - 0.2], [M.x + s, M.z, 0.2, 2 * s - 0.2]]) b.add(box(w, 0.02, d), 'snowPack', { p: [qx, 0.012, qz], c: PAINTK });
+      b.add(box(2 * s - 0.4, 0.01, 2 * s - 0.4), 'dFloorBoard', { p: [M.x, 0.006, M.z], uv: 'box', us: 0.18, c: '#b08e66' }); // (the boards in the mark, scuffed paler by the loads)
+    });
+    // the rails: a square timber along each long wall high up, an iron cap on it
+    const RY = 5.2, span = along ? z1 - z0 : x1 - x0, len = along ? x1 - x0 : z1 - z0;
+    for (const s of [0, 1]) {
+      const c = (along ? z0 : x0) + 0.5 + s * (span - 1.0), mid = (along ? x0 + x1 : z0 + z1) / 2;
+      const P = along ? [mid, RY, c] : [c, RY, mid];
+      b.add(box(along ? len : 0.5, 0.5, along ? 0.5 : len), 'dTimber', { p: P, c: TB2 });
+      b.add(box(along ? len : 0.16, 0.08, along ? 0.16 : len), 'dIron', { p: [P[0], RY + 0.29, P[2]], c: '#5a5854' });
+    }
+    // the gantries (dynamic): the girder across the loft between its end trucks, the trolley, the hanger and the load
+    for (let g = 0; g < (A.gantries || 1); g++) {
+      const G = new THREE.Group(), T = new THREE.Group(), L = new THREE.Group();
+      const gb = new Builder(D.ox + a * 31 + g * 7), tb = new Builder(D.ox + a * 31 + g * 7 + 1), lb = new Builder(D.ox + a * 31 + g * 7 + 2);
+      // (built along local z: the girder runs across the loft; G is turned for an 'x' loft so local z is across it)
+      gb.add(box(0.7, 0.6, span - 1.2), 'dTimber', { p: [0, RY + 0.95, 0], c: '#8a6a4a' });
+      gb.add(box(0.8, 0.08, span - 1.1), 'dIron', { p: [0, RY + 1.29, 0], c: '#5a5854' });
+      for (const s of [-1, 1]) {
+        gb.add(box(1.6, 0.7, 0.9), 'dIron', { p: [0, RY + 0.65, s * (span / 2 - 0.5)], c: '#4a4440' });
+        for (const t of [-1, 1]) gb.add(cyl(0.3, 0.3, 0.14, 16), 'dIron', { p: [t * 0.5, RY + 0.5, s * (span / 2 - 0.5) - s * 0.52], r: [PI / 2, 0, 0], c: '#2e2c2a' }); // solid disc wheels on the rail
+      }
+      tb.add(box(0.8, 0.5, 1.8), 'dIron', { p: [0, RY + 0.3, 0], c: '#4a4440' }); // (a long trolley no wider than the girder's cap: no arms out to the sides from above)
+      // the load: a block of oak with its layer lines on the sides only, on a square lifting beam
+      lb.add(box(0.5, 0.2, 2.4), 'dIron', { p: [0, 1.75, 0], c: IR }); // (along the girder, so from straight above beam and girder never cross)
+      lb.add(box(2.2, 1.5, 2.2), 'dTimber', { p: [0, 0.8, 0], c: OAK });
+      for (let i = 1; i < 5; i++) lb.add(box(2.22, 0.05, 2.22), 'dTimber', { p: [0, 0.05 + 0.3 * i, 0], c: OAK2 });
+      lb.add(box(2.1, 0.03, 2.1), 'dTimber', { p: [0, 1.56, 0], c: '#b89c74' });
+      const gm = gb.build(), tm = tb.build(), lm = lb.build();
+      G.add(gm); T.add(tm); G.add(T); L.add(lm); G.add(L);
+      G.rotation.y = along ? 0 : PI / 2;
+      group.add(G);
+      const crossMid = along ? (z0 + z1) / 2 : (x0 + x1) / 2;
+      // the mark the load is coming down on lights up while it comes (a square, the mark's own shape: no circle, so nothing
+      // round shows half hidden under the load from above or from the side)
+      const wm = new THREE.Mesh(new THREE.BoxGeometry(5.0, 0.02, 5.0), new THREE.MeshBasicMaterial({ color: 0xe8b050, transparent: true, opacity: 0.4, depthWrite: false }));
+      wm.visible = false; wm.renderOrder = 3; group.add(wm);
+      const upd = new THREE.Group(); upd.userData.update = () => {
+        const S = gantryAt(D, a, g, tideNow());
+        { const C = dungeonCrane(D, tideNow()), M = C.warn && craneDrops(D, C.n).find((q) => q.a === a && q.g === g); wm.visible = !!M; if (M) { wm.position.set(M.x, 0.04, M.z); wm.material.opacity = 0.25 + 0.3 * (0.5 + 0.5 * Math.sin(performance.now() / 120)); } }
+        if (along) G.position.set(S.pos, 0, crossMid); else G.position.set(crossMid, 0, S.pos);
+        const lz = S.cross - crossMid; // (local z of the girder: across the loft)
+        T.position.z = lz; L.position.z = lz;
+        const yTop = RY - 2.0, y = yTop - (yTop - 0.02) * S.low;
+        L.position.y = y;
+        // the hanger: from the trolley down to the load's beam
+        if (!T.userData.h) { T.userData.h = new THREE.Mesh(new THREE.BoxGeometry(0.12, 1, 0.12), getMat('dIron')); group.add(T.userData.h); }
+        const hm = T.userData.h, top = RY + 0.05, bot = y + 1.85, hl = Math.max(0.05, top - bot);
+        hm.scale.y = hl; hm.position.set(G.position.x + (along ? 0 : lz), bot + hl / 2, G.position.z + (along ? lz : 0));
+      };
+      group.add(upd); dyn.push(upd);
+    }
+    // the damp: one dark wet stain per bay (dynamic), shown bay by bay from the louvres' end
+    const mat = new THREE.MeshStandardMaterial({ color: 0x3a4a3a, roughness: 0.25, metalness: 0, transparent: true, opacity: 0.75, depthWrite: false });
+    const stains = bays.map(([bx0, bz0, bx1, bz1]) => { const m = new THREE.Mesh(new THREE.BoxGeometry(bx1 - bx0 - 0.1, 0.02, bz1 - bz0 - 0.1), mat); m.position.set((bx0 + bx1) / 2, 0.03, (bz0 + bz1) / 2); m.visible = false; m.renderOrder = 2; group.add(m); return m; });
+    damps.push({ stains, mat, lv: 0, show: 0, hit: -1e9 });
+    // the paired louvre lever: two square oak posts on the wall, a straight handle up out of each, an iron rod between them
+    const [la, lb2] = A.levers, handles = [];
+    for (const [lx, lz] of A.levers) {
+      b.add(box(0.6, 0.3, 0.6), 'dTimber', { p: [lx, 0.15, lz], c: TB2 });
+      b.add(box(0.4, 1.3, 0.4), 'dTimber', { p: [lx, 0.65, lz], c: TB });
+      b.add(box(0.5, 0.12, 0.5), 'dIron', { p: [lx, 1.32, lz], c: IR });
+      for (const [qx, qz, w, d] of [[lx, lz - 1.5, 3.2, 0.18], [lx, lz + 1.5, 3.2, 0.18], [lx - 1.5, lz, 0.18, 2.8], [lx + 1.5, lz, 0.18, 2.8]]) b.add(box(w, 0.02, d), 'snowPack', { p: [qx, 0.012, qz], c: '#e8c870' }); // (where to stand: a square painted round it)
+      const h = new THREE.Group(); h.position.set(lx, 1.38, lz);
+      const hb = new Builder(D.ox + Math.round(lx * 3 + lz)); hb.add(box(0.12, 1.5, 0.12), 'dIron', { p: [0, 0.75, 0], c: '#5a5854' }); hb.add(box(0.2, 0.2, 0.2), 'dTimber', { p: [0, 1.55, 0], c: '#8a6a48' });
+      h.add(hb.build()); group.add(h); handles.push(h);
+      col(lx, lz, 0.35);
+    }
+    if (along && Math.abs(lb2[1] - la[1]) < 0.01) {
+      // (the levers stand along the gantries' run: an iron rod down the middle of the bay between them would lie across under
+      // the girder and draw a '+' from straight above as the gantry passes over, so the rod runs tight along the wall's foot,
+      // where the girder's end truck stops over it as a T, and a short stub goes back from each post to it)
+      const wz = Math.abs(la[1] - z0) < Math.abs(la[1] - z1) ? z0 + 0.12 : z1 - 0.12, dzs = la[1] - wz;
+      b.add(box(Math.abs(lb2[0] - la[0]), 0.1, 0.1), 'dIron', { p: [(la[0] + lb2[0]) / 2, 0.95, wz], c: '#4a4844' });
+      for (const [lx] of A.levers) b.add(box(0.1, 0.1, Math.abs(dzs)), 'dIron', { p: [lx, 0.95, wz + dzs / 2], c: '#4a4844' });
+    } else {
+      // (a pair on opposite walls, across the loft: a rod between them would lie the width of the floor through the painted
+      // marks, its ends crossing their edges, so each handle's rod goes back into its own wall and runs inside it out of sight)
+      for (const [lx, lz] of A.levers) {
+        if (along) { const wz = Math.abs(lz - z0) < Math.abs(lz - z1) ? z0 : z1; b.add(box(0.1, 0.1, Math.abs(lz - wz)), 'dIron', { p: [lx, 0.95, (lz + wz) / 2], c: '#4a4844' }); }
+        else { const wx = Math.abs(lx - x0) < Math.abs(lx - x1) ? x0 : x1; b.add(box(Math.abs(lx - wx), 0.1, 0.1), 'dIron', { p: [(lx + wx) / 2, 0.95, lz], c: '#4a4844' }); }
+      }
+    }
+    levers.push({ handles, t: -1e9, along });
+  });
+  { const fl = new THREE.Group(); let last = performance.now(); fl.userData.update = () => {
+      const now = performance.now(), dt = Math.min(0.1, (now - last) / 1000); last = now;
+      for (const d of damps) { d.show += (d.lv - d.show) * Math.min(1, dt * 1.5); d.stains.forEach((m, k) => { const v = Math.max(0, Math.min(1, d.show - k)); m.visible = v > 0.02; m.scale.set(1, 1, 1); }); const ha = (now - d.hit) / 1000; d.mat.opacity = ha < 2.6 ? 0.6 + 0.3 * Math.sin(ha * 9) : 0.75; d.mat.emissive?.setHex(ha < 2.6 ? 0x1a2a14 : 0x000000); } // (the damp bays pulse while the damp comes: the warning is the square stains themselves, no circles)
+      for (const L of levers) { const age = (now - L.t) / 1000, k = age < 0 ? 0 : age < 0.6 ? age / 0.6 : age < 6 ? 1 : Math.max(0, 1 - (age - 6) / 2); for (const h of L.handles) h.rotation.x = -0.9 * k; }
+    }; group.add(fl); dyn.push(fl); }
+  // the server's damp: a loft's damp level, and the louvres thrown open
+  group.userData.damp = (a, lv, open) => { const d = damps[a]; if (!d) return; if (lv > 0 && !open) d.hit = performance.now(); d.lv = lv; if (lv === 0) d.show = 0; if (open && levers[a]) levers[a].t = performance.now(); };
+
+  // ---- the Loft Stair: the stair head and the way up, props of seasoned oak, two lamps
+  for (const z of [131, 137]) for (const s of [-1, 1]) b.add(box(0.4, 4.6, 0.4), 'dTimber', { p: [73 + s * 9.6, 2.3, z], c: TB });
+  for (let q = 0; q < 5; q++) b.add(box(6.2, 0.03, 0.8), 'dTimber', { p: [73, 0.015, 141.4 - q * 0.9], c: q % 2 ? '#7a5e44' : '#6e5440' }); // the stair head's worn treads, laid flush in the floor
+  post(64, 128, 3.0); post(82, 139, 3.0);
+  stackBlock(65.5, 136, 2.4, 2.2, 1.4); stackBlock(80.6, 130, 2.4, 2.2, 1.2);
+
+  // ---- the Gantry Loft: stacks against the walls between the marks, dust, lamps on posts
+  for (const x of [22, 46, 70, 94]) stackBlock(x, 111.6, 3.0, 2.2, 1.6);
+  for (const x of [34, 58, 82]) stackBlock(x, 82.6, 3.0, 2.2, 1.4);
+  for (const [x, z] of [[16, 100], [132, 92], [66, 112.6], [100, 82.4]]) post(x, z, 3.2);
+
+  // ---- passage west
+  post(42, 74, 2.8); stackBlock(32.4, 76, 2.0, 2.4, 1.2, PI / 2);
+
+  // ---- the Stack Loft: seasoning stacks in rows along the south wall and down the north side, out of the marks and the levers
+  for (const x of [52, 60, 68, 76]) stackBlock(x, 65.2, 5.0, 2.6, 2.4);
+  for (const x of [48, 60, 72]) stackBlock(x, 32.8, 5.0, 2.6, 2.2);
+  for (const [x, z] of [[12, 62], [84, 60], [46, 31], [12, 36]]) post(x, z, 3.2);
+
+  // ---- passage east
+  post(90, 46, 2.8);
+
+  // ---- the Engine Loft: the Louvre Engine's rods go up into the roof, stacks along the south wall, lamps on posts
+  for (const x of [100, 112, 124, 136]) stackBlock(x, 53.4, 4.0, 2.4, 1.8);
+  for (const [x, z] of [[92, 8], [142, 8], [92, 54], [142, 40]]) post(x, z, 3.4);
+  for (let i = 0; i < 6; i++) b.add(box(0.28, 0.9, 0.28), 'dIron', { p: [114.25 + i * 1.1, H_LOFT - 0.45, 9.4], c: IR }); // (the rods' guides under the roof cap)
+  addDyn(smoke({ rate: 2, life: 2.6, size: 1.2, rise: 0.4, color: 0xc8b494, opacity: 0.22 }), 108, 0.6, 16);
+  addDyn(smoke({ rate: 2, life: 2.6, size: 1.2, rise: 0.4, color: 0xc8b494, opacity: 0.22 }), 126, 0.6, 16);
+}
+const H_LOFT = 6.2;
+
 // ----------------------------------------------------------------------------------------- THE SEA GATE (raid 'barrage')
 // The galleries inside the Makers' barrage across the mouth of Tidewater Sound: five halls of wet grey dressed stone, south
 // to north. The Gatehouse Stair (stone steps down from the gatehouse door, a landing), the Winch Gallery (square winch
@@ -2580,6 +2757,8 @@ export function dungeonEntrance(D) {
   if (D.theme === 'seagate') { dark(2.1, 2.2, 0.012, 1.1, -0.22); return res; }
   // the Drain Adits: the middle adit's own square mouth in the north cliff (rainwardLayout: 3.2 x 3.0, dug open and propped)
   if (D.theme === 'adits') return res;
+  // the Drying Lofts: the first long shed's own big west gable door (wealdLayout longShed) is the doorway
+  if (D.theme === 'lofts') return res;
   // the Upper Cutting: the cutting's own mouth in the gorge's head wall (rainwardLayout) is the doorway, already dark inside
   if (D.theme === 'cutting') return res;
   if (D.door.bare) { dark(1.75, 2.95, 0.12, 0.9 + 1.48, 0.06); return res; }

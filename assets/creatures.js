@@ -18,6 +18,7 @@ import { buildGateWinder, buildTurbineHeart, buildFloodgate } from './sluiceBoss
 import { buildRodEngine, buildCisternWarden, buildGreatPump } from './pumpBosses.js';
 import { buildLogCarriage, buildFrameSaw, buildGreatUndershot } from './millRaces.js';
 import { buildSpoilTipper, buildSumpRam, buildAditDriver } from './drainAdits.js';
+import { buildStackTurner, buildLouvreJack, buildLouvreEngine } from './loftBosses.js';
 import { buildGateWinch, buildSiltRam, buildSluiceCarriage, buildTideEngine } from './seaGate.js';
 import { buildStumpPrime, buildSpoilConveyor, buildBedRam, buildTerraceEngine } from './upperCutting.js';
 import { buildBellowsEngine, buildCrucibleCrane, buildPatternCaster, buildFirstFurnace } from './furnaceRaid.js';
@@ -917,6 +918,7 @@ export function buildMachine(model, variant = 0, mob = null) {
   // the Mill Races (Part Thirteen dungeon): the Log Carriage, the Frame Saw and the Great Undershot
   // the Drain Adits (Part Fourteen dungeon): the Spoil Tipper, the Sump Ram and the Adit Driver
   if (model === 'spoiltipper') return buildSpoilTipper(); if (model === 'sumpram') return buildSumpRam(); if (model === 'aditdriver') return buildAditDriver();
+  if (model === 'stackturner') return buildStackTurner(); if (model === 'louvrejack') return buildLouvreJack(); if (model === 'louvreengine') return buildLouvreEngine();
   if (model === 'logcarriage') return buildLogCarriage(); if (model === 'framesaw') return buildFrameSaw(); if (model === 'greatundershot') return buildGreatUndershot();
   if (model === 'rodengine') return buildRodEngine(); if (model === 'cisternwarden') return buildCisternWarden(); if (model === 'greatpump') return buildGreatPump();
   // Part Eleven, the Rime Steps

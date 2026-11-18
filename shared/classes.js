@@ -301,6 +301,26 @@ for (const [cls, list] of Object.entries(SKILLS)) for (const s of list) { s.cls 
 
 export const LEVEL_CAP = 70; // 65 -> 70 with Part Fifteen (the Russet Weald, set with P15.1); 60 -> 65 with Part Fourteen (the Rainward Gorge, set with P14.1); 55 -> 60 with Part Thirteen (Tidewater Sound, set with P13.1); 50 -> 55 with Part Twelve (the Windward Heights); 45 -> 50 with Part Eleven (the Rime Steps); 40 -> 45 with Part Ten (the Cinder Reach); 25 -> 30 with Part Four (the Far Vale), 30 -> 35 with Part Six (the Glass Waste), 35 -> 40 with Part Eight (the Deepway)
 export const xpForLevel = (l) => Math.round(120 * Math.pow(l, 1.55));
+// Kill experience (P15.7, v127; docs/ai/xp_v127.md, measured with tools/xpcheck.mjs). Authored machine experience
+// (MOBS[k].xp) climbs about five times from level 40 to 69 while a level's need climbs a little over two, so before v127
+// an ordinary on-level machine paid a tenth of a level at 30, a third at 40 and over half at 67. The damp is a curve of
+// points (level, factor; straight between them) times, past level `from`, 1 / (1 + a (L - from)^pow): levels 1-4 as
+// authored, about a thirtieth of a level a machine from 10 to 35 (the Valley's quests ask for many kills) and a
+// twentieth (0.055) from 40 to 69. `share` is the same curve as a share of a level, which the quest bands in
+// shared/data.js count on for the machines a quest asks for.
+export const KILL_XP = { low: [[4, 1], [10, 0.38], [30, 0.38], [40, 0.55]], from: 30, a: 0.0269, pow: 1.41, share: [[1, 0.1], [10, 0.032], [30, 0.04], [40, 0.055]], run: 1, raid: 1, over: 2.5 };
+export const curveAt = (pts, L) => { if (L <= pts[0][0]) return pts[0][1]; for (let i = 1; i < pts.length; i++) if (L <= pts[i][0]) { const [x0, y0] = pts[i - 1], [x1, y1] = pts[i]; return y0 + ((y1 - y0) * (L - x0)) / (x1 - x0); } return pts[pts.length - 1][1]; };
+export const killXpDamp = (L) => curveAt(KILL_XP.low, L) * (L <= KILL_XP.from ? 1 : 1 / (1 + KILL_XP.a * Math.pow(L - KILL_XP.from, KILL_XP.pow)));
+// a machine of level mL (authored experience xp) killed by a hero of level pL, before party split and dungeon scale.
+// A machine more than 4 levels above the hero pays at most KILL_XP.over times the share of a level it pays an on-level hero (P15.7 review:
+// a level-10 hero partied with, or tagging for, a level-69 hero got a whole level a kill; now about a seventh)
+export const killXp = (xp, mL, pL) => {
+  const base = xp * (1 + 0.15 * (mL - 1)) * killXpDamp(mL), v = base * Math.max(0.2, Math.min(1.5, 1 + (mL - pL) * 0.1));
+  return mL > pL + 4 ? Math.min(v, (base * KILL_XP.over * xpForLevel(pL)) / xpForLevel(mL)) : v;
+};
+// a daily's experience: 0.08 of the hero's level, a tenth less for each level the hero is above the daily, at least a
+// fifth (P15.7 review: a level-69 hero did the valley's level-3 dailies for 0.08 of level 69 each, 1.4 levels a day)
+export const dailyXp = (Q, pL) => Math.round(xpForLevel(Math.max(pL, Q.lvl || 1)) * 0.08 * Math.max(0.2, Math.min(1, 1 + ((Q.lvl || 1) - pL) * 0.1)));
 export const skillsForLevel = (cls, level) => SKILLS[cls].filter((s) => s.lvl <= level);
 // base damage/heal per point of coefficient at a level
 export const powerAt = (level) => 9 + level * 3.2;

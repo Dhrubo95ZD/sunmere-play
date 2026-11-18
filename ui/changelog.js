@@ -1,6 +1,17 @@
 // What's new: shown once after an update (newest first). Bump `v` on the first entry whenever something is added.
 export const CHANGELOG = [
   {
+    v: 127, date: '18 November 2026', title: 'Twenty Winters',
+    items: [
+      ['Chapters 50 and 51', 'The Long Sheds and Twenty Winters: open the Makers’ seasoning sheds, find the oak that waited twenty winters, and climb into the lofts above the stacks.'],
+      ['The Drying Lofts', 'A new level 70 dungeon for five. Gantry cranes run the lofts on rails and drop oak into marked bays on a timer, and the damp spreads bay by bay from the jammed louvres until two of you work the paired louvre lever together (adventurers in your group take the second handle). Three new machines to break, ending with the Louvre Engine.'],
+      ['Levelling pace', 'Experience is rebalanced: quests carry you through each land at about its level, an ordinary machine is about a twentieth of a level, a dungeon run about one level, and events and dailies pay fairly at every level. Your level and experience are kept as they are.'],
+      ['Adventurers without the AI', 'Adventurers now speak only from hand-written lines, many more of them, filled with what they remember about you and what you did together. Nothing depends on an outside program any more, and they still tell you plainly that they are bots.'],
+      ['Cleaner from above', 'The village plaza and seven other junctions no longer cross in an X or a plus, the crystals are plain stone with no glow, and frosted machines no longer look like dice.'],
+      ['New portraits', 'Paintings for the Weald’s machines and the Drying Lofts’ bosses, and new art for the Drying Lofts and Chapter 51.'],
+    ],
+  },
+  {
     v: 126, date: '17 November 2026', title: 'The Ram Engine',
     items: [
       ['The Ram Engine', 'A new open event on the Harrow Coast below Harrowmouth (levels 28 to 30). A rogue machine, the Wall-Layer, has walled itself into an old Makers’ yard. Every half hour the yard crew raises steam in the Makers’ ram engine, and anyone nearby can work it together, no group needed.'],

@@ -230,6 +230,13 @@ export const ACHIEVEMENTS = [
   A('rainwardGorge', 'Quests', 'The Rainward Gorge', 'Finish Part Fourteen of the Main Story: stop the Terrace Engine so the hill holds, send the first load of young poles down the haul road and up the lift, and lay out a nursery of your own.', { c: 'quest:m_c48_after', n: 1 }, { title: 'of the Rainward Gorge', pts: 25 }),
   A('gorgeAll', 'Quests', 'Keeper of the Gorge', 'Do everything Part Fourteen asks: finish its story, set the drains running and the hill draining, and stop the Adit Driver, the Terrace Engine and the Hill Leveller.', { req: ['rainwardGorge', 'haulRoad', 'drainsRun', 'bedsDry', 'rDrainAdits', 'rUpperCutting', 'rHillLeveller'] }, { title: 'Keeper of the Gorge', pts: 50 }),
   A('ropeRide', 'Quests', 'Over the Ridge', 'Finish Chapter 49 of the Main Story: wind the Makers’ ropeway at the head of the Slip, ride it over the ridge into the Russet Weald, and meet the Woodwrights.', { c: 'quest:m_c49_count', n: 1 }, { pts: 25 }),
+  // the Drying Lofts (P15.4, dungeon) and Chapters 50-51
+  A('rStackTurner', 'Dungeons', 'Turned Out', 'Defeat the Stack Turner in the Drying Lofts.', { c: 'kill:stackturner', n: 1 }, { pts: 10 }),
+  A('rLouvreJack', 'Dungeons', 'Jack Down', 'Defeat the Louvre Jack in the Drying Lofts.', { c: 'kill:louvrejack', n: 1 }, { pts: 10 }),
+  A('rDryingLofts', 'Dungeons', 'The Lofts Breathe', 'Defeat the Louvre Engine in the Drying Lofts.', { c: 'kill:louvreengine', n: 1 }, { pts: 25 }),
+  A('rhDryingLofts', 'Dungeons', 'Heroic: The Drying Lofts', 'Defeat the Louvre Engine on Heroic.', { c: 'rhkill:louvreengine', n: 1 }, { title: 'the Loftman', pts: 50 }),
+  A('longSheds', 'Quests', 'The Long Sheds', 'Finish Chapter 50 of the Main Story: free the jammed louvres, sample the stacks, and learn where the best oak went.', { c: 'quest:m_c50_lofts', n: 1 }, { pts: 25 }),
+  A('twentyWinters', 'Quests', 'Twenty Winters', 'Finish Chapter 51 of the Main Story: open the loft door, stop the Louvre Engine, and find the loft oak sound.', { c: 'quest:m_c51_winters', n: 1 }, { pts: 25 }),
 ];
 
 export const ACH_BY_ID = Object.fromEntries(ACHIEVEMENTS.map((a) => [a.id, a]));

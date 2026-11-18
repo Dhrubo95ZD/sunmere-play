@@ -10,6 +10,8 @@
 //
 // Content rules hold here as everywhere: no magic or spiritual words, nothing a player could take as worship.
 
+import { xpForLevel } from './classes.js';
+
 export const STORY_TITLE = 'The Engines of Sunmere';
 export const STORY_PARTS = { 1: 'The Engines of Sunmere', 2: 'Storm over the Highreach', 3: 'The Brass Concord', 4: 'Over the Pass', 5: 'The Iron Tide', 6: 'The Glass Waste', 7: 'The Long Quiet', 8: 'The Deepway', 9: 'The Drawing Office', 10: 'The Far Shore', 11: 'The Long Road North', 12: 'The Windward Heights', 13: 'The Tidewater Yards', 14: 'The Rainward Gorge', 15: 'The Russet Weald' };
 
@@ -420,9 +422,27 @@ export const STORY = [
     ['m_c49_pits', 'Ridwan sent you to Sawyer Imran at the saw pits, who saws what the Woodwrights fell by hand: green wood, every board of it, and none seasoned.'],
     ['m_c49_count', 'Stackman Thabit showed you the Long Sheds, a quarter mile of them, their louvres jammed shut for a lifetime and the oak inside going to damp in the dark; and up on the Standards the Coppice Engine, which lost its count a lifetime ago, fells every winter instead of every twentieth.'],
   ] },
+  { id: 'c50', part: 15, name: 'The Long Sheds', art: 'longsheds', blurb: 'A quarter mile of the Makers’ seasoning sheds, every louvre jammed shut for a lifetime. Thabit has never seen inside one with the air going through it. Somewhere in them is oak that has waited twenty winters for a windshaft, if the damp has not had it all.', steps: [
+    ['m_c50_shed', 'Thabit sent you to Ridwan for the key to the first shed’s small door: stack on stack of the Makers’ oak on its ground floor, black with damp in the dark.'],
+    ['q_c50_louvres', 'You knocked four jammed louvre panels free along the sheds’ long walls, and for the first time in a lifetime air went into the sheds.'],
+    ['q_c50_cranes', 'You broke the stack cranes round the sheds, still turning the stacks to the old count and setting wet oak down on sound.'],
+    ['q_c50_pins', 'You gathered the square louvre pins the cranes had knocked out of the rods, and Thabit set them back.'],
+    ['q_c50_sample', 'You knocked a sample billet out of three stacks at the gables: soft and black, every one, all through.'],
+    ['m_c50_lofts', 'Thabit told Ridwan the ground floors are lost. The best oak always went up to the lofts, where the gantries put it, and up there the Louvre Engine still works the louvres to the old count and keeps them shut.'],
+  ] },
+  { id: 'c51', part: 15, name: 'Twenty Winters', art: 'twentywinters', blurb: 'The best of the Makers’ oak went up into the lofts over the stacks, to season twenty winters under the gantries. The loft door has been barred from the inside since the last Woodwright came down the stair, and something up there still works the louvres shut.', steps: [
+    ['m_c51_loftman', 'Ridwan sent you to Loftman Suhail at the lofts’ pad, whose grandfather was the last man up the loft stair.'],
+    ['q_c51_forwarders', 'You broke the log forwarders filling the sheds’ ground floors with green logs from the rides.'],
+    ['q_c51_rope', 'You brought Suhail hoist rope the wood’s machines had dragged off the shed hooks.'],
+    ['m_c51_door', 'Suhail and Thabit knocked the bar out from inside the swollen frame and swung the big loft door on the new rope.'],
+    ['q_c51_look', 'You climbed the Loft Stair and looked into the Drying Lofts: gantries running the length of them on their rails, the Stack Turner and the Louvre Jack at work, and the damp coming in from the jammed louvres.'],
+    ['m_c51_hands', 'Suhail sent you to Ridwan, who brought all the Woodwrights to the lofts’ pad with ropes and lamps.'],
+    ['q_c51_lofts', 'With four companions you went up into the Drying Lofts, past the Stack Turner and the Louvre Jack, worked the paired louvre levers together, and stopped the Louvre Engine.'],
+    ['m_c51_winters', 'The louvres opened the length of the Long Sheds, and the wind went through the lofts. Up there the stacks were sound: oak seasoned twenty winters, fit for a windshaft. But on the Standards the Coppice Engine still fells out of its count.'],
+  ] },
 ];
 // shown in the journal and the tracker once every step is done
-export const STORY_NEXT = 'Part Fifteen, the Russet Weald, has begun: Kamal has drawn the thirteenth wind engine, the valley wound the Makers’ ropeway at the head of the Slip and rode it over the ridge into the Russet Weald, and the Woodwrights showed the Long Sheds, their louvres jammed shut and the oak going to damp, while the Coppice Engine fells out of its count on the Standards. Chapter 50, The Long Sheds, comes in a future update. Part Fourteen, the Rainward Gorge, is complete: the valley wound a Makers’ log haulier to work and rode the haul road up into the gorge, cleared the Makers’ drains and stopped the Terrace Engine in the Upper Cutting, and the hill holds through the storms. The first load of young poles in a lifetime has gone down the haul road to the Sound and up the lift to the Heights, and the valley has laid out a nursery of its own. Part Thirteen, the Tidewater Yards, is complete: the Tide Engine is stopped, the Makers’ Sea Gate shuts on the flood and opens on the ebb again, the creeks run fresh, the valley has planted a row of its own on the headland, and the first new lift rope laid on the Makers’ walk carries the cage to the Heights. Part Twelve, the Windward Heights, is complete. Part Eleven, the Long Road North, is complete too: the Floodgate and the Great Dam’s Heart are stopped, and the men of the Rime Steps keep the dams in repair. On the Heights all twelve wind engines turn, the Great Pump lifts meltwater into the cisterns, and the Makers’ Rest is lit again. The Makers left their works in order for whoever came next; the valley keeps them, and now it makes them too, for whoever comes after. Until then: the Upper Cutting and the Drain Adits, the Sea Gate, the Mill Races, the Makers’ Rest and the Pump Works on Heroic, the Great Dam, the Sluice Galleries, the First Furnace and the Ore Galleries.';
+export const STORY_NEXT = 'Part Fifteen, the Russet Weald, has begun: Kamal has drawn the thirteenth wind engine, the valley wound the Makers’ ropeway at the head of the Slip and rode it over the ridge into the Russet Weald, and the Woodwrights showed the Long Sheds, their louvres jammed shut and the oak going to damp, while the Coppice Engine fells out of its count on the Standards. The valley opened the Long Sheds and went up into the Drying Lofts, stopped the Louvre Engine, and found the loft oak sound, seasoned twenty winters. Chapter 52, The Raising, comes in a future update. Part Fourteen, the Rainward Gorge, is complete: the valley wound a Makers’ log haulier to work and rode the haul road up into the gorge, cleared the Makers’ drains and stopped the Terrace Engine in the Upper Cutting, and the hill holds through the storms. The first load of young poles in a lifetime has gone down the haul road to the Sound and up the lift to the Heights, and the valley has laid out a nursery of its own. Part Thirteen, the Tidewater Yards, is complete: the Tide Engine is stopped, the Makers’ Sea Gate shuts on the flood and opens on the ebb again, the creeks run fresh, the valley has planted a row of its own on the headland, and the first new lift rope laid on the Makers’ walk carries the cage to the Heights. Part Twelve, the Windward Heights, is complete. Part Eleven, the Long Road North, is complete too: the Floodgate and the Great Dam’s Heart are stopped, and the men of the Rime Steps keep the dams in repair. On the Heights all twelve wind engines turn, the Great Pump lifts meltwater into the cisterns, and the Makers’ Rest is lit again. The Makers left their works in order for whoever came next; the valley keeps them, and now it makes them too, for whoever comes after. Until then: the Upper Cutting and the Drain Adits, the Sea Gate, the Mill Races, the Makers’ Rest and the Pump Works on Heroic, the Great Dam, the Sluice Galleries, the First Furnace and the Ore Galleries.';
 
 // the story's own quests: mostly "talk" steps that carry the tale from one place to the next ({ talk: 1 } is done the
 // moment you accept it; hand it in to the turn-in NPC)
@@ -1355,6 +1375,64 @@ export const STORY_QUESTS = {
     text: 'Walk east along the main ride to the Long Sheds. Thabit will be there, by the first shed. He knows the count better than any of us.',
     done: 'Look along them. A quarter mile of sheds, and every stack in them is the Makers’ oak, put up to season twenty winters. But the louvres have been jammed shut for a lifetime, and the damp has had it all in the dark. And the count? Up on the Standards the Coppice Engine fells the wood on a twenty-winter round. It lost its count a lifetime ago. It fells every winter now instead of every twentieth, half-cuts the great standards and leaves them standing dead, and every gale throws them across the rides. The count never comes round. Open the sheds, and stop that engine, and it might.' },
 };
+// Chapters 50-51: The Long Sheds and Twenty Winters (levels 67-68, the Long Sheds and the Drying Lofts). Thabit opens the
+// first shed (its ground floor gone to damp); you free the jammed louvre panels on the sheds' long walls (wdlouvre), break
+// the stack cranes setting wet oak on sound, gather the louvre pins (c50_pin) and sample three stacks at the gables
+// (wdstack): the ground floors are lost, and the best oak is up in the lofts, where the Louvre Engine keeps the louvres
+// shut. Loftman Suhail at the lofts' pad; the log forwarders filling the sheds with green logs; hoist rope off the wood's
+// machines (c51_rope); the loft door unbarred (the dungeon's door, need m_c51_door); a look up the stair; Ridwan brings the
+// Woodwrights; a company of five stops the Louvre Engine, working the paired louvre levers together. The louvres open,
+// the loft oak is sound, and the Coppice Engine still fells out of count (Chapter 52). Men only; the damp is the trouble.
+// Experience: each step takes a Chapter 49 (or 47) step of the same kind and carries it up the level curve, so a retune of
+// those numbers or of the curve carries over.
+{
+  const like = (q, lvl) => Math.round((STORY_QUESTS[q].xp * xpForLevel(lvl)) / xpForLevel(STORY_QUESTS[q].lvl) / 50) * 50;
+  const Q = (name, giver, turnin, lvl, goal, ref, gold, rewards, text, done, extra = {}) => ({ name, giver, turnin, lvl, goal, xp: like(ref, lvl), gold, rewards, text, done, ...extra });
+  Object.assign(STORY_QUESTS, {
+    m_c50_shed: Q('The First Shed', 'n_wd_thabit', 'n_wd_ridwan', 67, talk, 'm_c49_pits', 6200, [],
+      'Come and look inside, then. There is a small door in the first shed’s long wall, and Ridwan keeps its key, as the shed master always has. Ask him for it, and bring a lamp.',
+      'The key? Here. I went in once, as a boy, and came out again quickly. Stack on stack of the Makers’ oak, laid by their own hands, and every one gone black in the dark. The louvres in those walls should open to every wind. They have been jammed shut so long that the frames have grown into them.'),
+    q_c50_louvres: Q('Jammed Louvres', 'n_wd_ridwan', 'n_wd_thabit', 67, { use: 'wdlouvre', n: 4 }, 'q_c49_limbs', 6300, ['r_c50_gloves'],
+      'Each long wall is louvre panels, bay after bay, the slats all set one way. Four panels along the first sheds are only jammed, not grown in. Knock them free with a mallet and work the slats open, so the air goes through. Then go back to Thabit.',
+      'Feel that. Air going in at one wall and out at the other, through the stacks. My grandfather said the sheds used to breathe like that all winter long.'),
+    q_c50_cranes: Q('Wet on Sound', 'n_wd_thabit', 'n_wd_thabit', 67, { kill: 'stackcrane', n: 6 }, 'q_c47_cutters', 6300, ['r_c50_boots'],
+      'The stack cranes still turn the stacks on the old count, as the Makers set them. But they lift the wet oak off the ground floors and set it down on whatever is sound. Every stack they touch goes to damp. Break six of them.',
+      'Six. The stacks they had hold of stand where they were set. The damp can only creep now, not be carried.'),
+    q_c50_pins: Q('Louvre Pins', 'n_wd_thabit', 'n_wd_thabit', 67, { gather: 'c50_pin', n: 6 }, 'q_c49_wedges', 6300, ['r_c50_helm'],
+      'The cranes knock the louvre pins out of the rods as they go by, and the slats hang loose and swing shut again. Square iron pins, a finger long. They lie in the leaf litter round the sheds. Bring me six.',
+      'Six, and the rods take them as if they were made yesterday. The slats will hold open now.'),
+    q_c50_sample: Q('Sample Billets', 'n_wd_thabit', 'n_wd_thabit', 67, { use: 'wdstack', n: 3 }, 'q_c49_limbs', 6400, ['r_c50_coat'],
+      'Before we go any further I want to know what we have. Three stacks stand outside the gables, where the cranes left them. Knock a sample billet out of the middle of each, and look at the heart of it.',
+      'Soft. Black to the heart, all three. The ground floors are lost, then. I was afraid of it.'),
+    m_c50_lofts: Q('The Lofts', 'n_wd_thabit', 'n_wd_ridwan', 67, talk, 'm_c49_count', 6600, ['r_c50_maul'],
+      'The ground floors were only ever the common oak. The best went up, into the lofts over the stacks, where the gantries put it to season in the high air. Go and tell Ridwan what the billets showed.',
+      'Black to the heart? Then the lofts are the last hope, and the lofts are worse. Up there the Louvre Engine works every louvre rod in the sheds, and it works them to the old count: shut. Nobody has been up the loft stair since Suhail’s grandfather.', { ach: true }),
+    m_c51_loftman: Q('The Loftman', 'n_wd_ridwan', 'n_wd_suhail', 68, talk, 'm_c49_camp', 6600, [],
+      'Suhail keeps the lofts’ pad at the first shed’s west gable, as his fathers kept the lofts. He has never been up. Go and tell him you mean to go.',
+      'Up? My grandfather went up the loft stair every morning of his life, until the morning the louvres came down shut and the damp came in. He came down, and barred the door behind him, and nobody has opened it since. If you mean it, I will open it.'),
+    q_c51_forwarders: Q('Green Logs', 'n_wd_suhail', 'n_wd_suhail', 68, { kill: 'logforwarder', n: 6 }, 'q_c47_cutters', 6600, ['r_c51_legs'],
+      'The log forwarders drag green logs off the rides and push them into the sheds’ ground floors to season, by the old count. Green oak, wet through, stacked against the lofts’ stair posts. Break six of them before they fill the stair.',
+      'Six. The stair foot is clear, and nothing green goes in under the lofts again.'),
+    q_c51_rope: Q('Hoist Rope', 'n_wd_suhail', 'n_wd_suhail', 68, { item: 'c51_rope', n: 5 }, 'q_c47_props', 6700, ['r_c51_rod'],
+      'The loft door hangs on hoist rope over a sheave, and the rope rotted through long ago. The wood’s machines drag the old coils off the shed hooks and carry them about. Take five coils off them, and we will hang the door again.',
+      'Five, and sound enough to swing a door on. Now the bar.'),
+    m_c51_door: Q('The Loft Door', 'n_wd_suhail', 'n_wd_thabit', 68, talk, 'm_c47_mouth', 6600, [],
+      'The bar is inside, across the frame, and the door has swollen tight round it. Thabit has the long wedges. Go and fetch him, and we will knock it out together.',
+      'Out, at last, and the door swings on the new rope. Listen up the stair: a gantry running on its rail, and stopping, and running. Something up there is still working.'),
+    q_c51_look: Q('Up the Loft Stair', 'n_wd_thabit', 'n_wd_suhail', 68, { reach: 'dryinglofts' }, 'q_c47_look', 6700, [],
+      'Go up the stair and look, no further than the top. Then come down and tell Suhail what is up there.',
+      'Gantries, running the length of the lofts on their rails, and lowering loads onto marks by the old count? And the damp coming in from the louvres, bay by bay. Then the Louvre Engine is still at the north end, as my grandfather said, working the rods shut.'),
+    m_c51_hands: Q('Every Hand', 'n_wd_suhail', 'n_wd_ridwan', 68, talk, 'm_c47_ropes', 6700, [],
+      'Ridwan will want every Woodwright for this. Tell him the loft door is open.',
+      'Open? Then we all come, with ropes and lamps. Mind what Suhail’s grandfather said: the louvre levers up there are paired, a handle at each end, and it takes two men pulling together to throw them.'),
+    q_c51_lofts: Q('The Drying Lofts', 'n_wd_ridwan', 'n_wd_suhail', 68, { kill: 'louvreengine', n: 1 }, 'q_c47_adits', 6900, ['r_c51_mantle'],
+      'Take four with you. Go up through the Gantry Loft and the Stack Loft to the Engine Loft at the north end, and stop the Louvre Engine. Wherever the damp comes in, two of you to the paired lever together, and the louvres will open.',
+      'Stopped? Listen: every louvre in the sheds coming open, all the way down the rows. I can hear the wind going through the lofts.'),
+    m_c51_winters: Q('Twenty Winters', 'n_wd_suhail', 'n_wd_thabit', 68, talk, 'm_c47_dry', 7100, ['r_c51_charm', 'r_c51_cloak'],
+      'Go and find Thabit. He went up the stair with a lamp the moment the engine stopped.',
+      'Dry. Light in the hand, and hard as bone to the knuckle. Twenty winters seasoned, and some of it more: the lofts held what the ground floors lost. Kamal shall have his windshaft and his brake wheel. But the count still does not come round. Up on the Standards the Coppice Engine fells every winter, and every gale throws the standards across the rides.', { ach: true }),
+  });
+}
 
 // existing quests that change hands so the story flows from one person to the next: [quest, new giver]
 export const STORY_MOVES = [['q_quarry_road', 'n_smith'], ['q_forgemaster', 'n_chemist'], ['q_hr_up', 'n_marshal']];
@@ -1482,6 +1560,9 @@ export const STORY_SCENES = {
   q_c49_wind: 'In front of the upper station the winding drum takes the crank turn by turn. The rope comes up out of the mud along its whole length, shedding leaves and silt, and runs up taut over the towers into the cloud on the cliff, and the car on its one straight hanger swings once and is still.',
   q_c49_ride: 'The car swings out of the station and climbs the rope over the head of the Slip, up the cliff and into the cloud and the rain. Over the ridge the rain falls away behind, and the rope runs down over a dry wood in autumn, copper and gold leaf on grey trunks and mist lying in the hollows. Halfway down a sheave on a tower seizes and the car stops, swaying, until the crew climb the tower and free it, and at last the car comes down onto the pad at the ropeway foot.',
   m_c49_count: 'Evening at the Long Sheds. Low sun through the copper leaf along a quarter mile of shut timber walls, every louvre jammed, and the smell of damp oak. Far up the ridge, on the Standards, an engine thuds once in the quiet and a great oak comes down across a ride.',
+  q_c50_louvres: 'Along the first shed the freed louvre panels stand open, every slat set the same way, and the first wind in a lifetime goes in at one long wall and out at the other, stirring the dust off the stacks.',
+  q_c51_lofts: 'In the Engine Loft the Louvre Engine’s rods come over one last time and stop. Down the length of the Long Sheds every louvre swings open together, the gantries stand still on their rails, and the wind goes through the lofts.',
+  m_c51_winters: 'Morning at the Long Sheds. The louvres stand open down every wall, the wind going through, and up in the lofts the Woodwrights lower the first sound stack of shed oak to the pad on the gantry, dry and pale, twenty winters seasoned.',
 };
 
 // filled by applyStory(): every step in order, and where each quest sits in the story

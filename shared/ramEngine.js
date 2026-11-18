@@ -24,6 +24,8 @@
 // disc wheels and rollers, a square timber frame, a square ram head on parallel slides, flat lintels, no arches or X
 // bracing).
 import { MOBS, factionOfZone } from './data.js';
+import { xpForLevel } from './classes.js';
+import { killXp } from './xp.js';
 import { worldGap, walkHeight } from './terrain.js';
 
 export const RAM = {
@@ -465,7 +467,9 @@ export const RAM_METHODS = {
   },
   // a share's experience: xpKills Yard Menders as they pay a hero of this level (a mender's own level is the event's: a
   // hero above it gets the kill's usual tenth less per level, at least a fifth; one below it is paid as for on-level kills)
-  ramXp(level) { const T = RAM.reward.top, L = Math.min(level, T); return Math.round((MOBS.yardmender?.xp || 460) * (1 + 0.15 * (L - 1)) * clamp(1 + (T - level) * 0.1, 0.2, 1) * RAM.reward.xpKills); },
+  // P15.7 review: on the v127 kill curve (shared/xp.js), as Clear the Rides, and a hero below the coast gets that share of
+  // their own level (was the old formula at the hero's level: 0.42 of a level at 30 but 1 at 10, 2 at 5, 15 at 1, x3 shares)
+  ramXp(level) { const T = RAM.reward.top, L = Math.min(level, T), M = MOBS.yardmender?.xp || 460; return Math.round(killXp(M, T, T) * RAM.reward.xpKills * clamp(1 + (T - level) * 0.1, 0.2, 1) * xpForLevel(L) / xpForLevel(T)); },
   ramChest(p, o) {
     const S = p.ramOwed;
     if (!S?.k) return this.err(p, 'The chest is empty for you. Work the Ram Engine on its next run and Yusuf will fill it.');

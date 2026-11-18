@@ -346,6 +346,27 @@ function build(kind, seed) {
     for (let i = 0; i < 3; i++) a.add(lumpy(sphere(0.45, 7, 5), 0.25, 1.6, seed + i, { flatBottom: 0 }), 'cloth', { p: [-2.6 + i * 2.2, 0.35, 0.7 - (i % 2) * 1.2], s: [1.3, 0.45, 0.9], c: i % 2 ? '#a8582a' : '#c08a32' });
     for (let i = 0; i < 5; i++) d.add(cyl(0.2, 0.2, 1.1, 9), 'wood', { p: [-0.5 + (i % 3) * 0.42, 0.2 + Math.floor(i / 3) * 0.36, 2.2], r: [PI / 2, 0, 0], c: '#8a8680' });
     for (let i = 0; i < 4; i++) d.add(box(0.06, 0.02, 0.1), 'cloth', { p: [-2 + i * 1.2, 0.01, 0.3 - (i % 2) * 0.5], c: '#a8582a' });
+  } else if (kind === 'wdlouvre') {
+    // a jammed louvre panel against a long shed wall (Chapter 50): a square oak frame with parallel slats all set one way,
+    // shut flat and grown over with grey lichen at the foot; freed, the slats stand open at the same angle, a mallet by it
+    for (const k of [a, d]) {
+      for (const sx of [-1, 1]) k.add(box(0.14, 2.4, 0.16), 'woodDark', { p: [sx * 1.2, 1.2, 0], c: '#4a3a2c' });
+      for (const y of [0.1, 2.35]) k.add(box(2.54, 0.14, 0.16), 'woodDark', { p: [0, y, 0], c: '#4a3a2c' });
+    }
+    for (let y = 0.35; y < 2.2; y += 0.26) { a.add(box(2.26, 0.24, 0.04), 'wood', { p: [0, y, 0], r: [0.05, 0, 0], c: '#6e5a48' }); d.add(box(2.26, 0.22, 0.04), 'wood', { p: [0, y, 0.06], r: [0.75, 0, 0], c: '#7a6450' }); }
+    a.add(box(2.2, 0.3, 0.06), 'cloth', { p: [0, 0.32, 0.04], c: '#7a8070' });
+    d.add(box(0.12, 0.12, 0.6), 'woodDark', { p: [1.6, 0.06, 0.5], r: [0, 0.2, 0], c: '#5a4634' }); d.add(box(0.26, 0.2, 0.2), 'woodDark', { p: [1.64, 0.1, 0.84], r: [0, 0.2, 0], c: '#6a5440' });
+  } else if (kind === 'wdstack') {
+    // a seasoning stack outside a gable (Chapter 50): a solid block of oak on two bearers, its layer lines on the sides only
+    // (never a grid from above), dust on top; sampled, a billet knocked out of its middle laid beside it, black to the heart
+    for (const k of [a, d]) {
+      for (const sx of [-1, 1]) k.add(box(0.24, 0.24, 2.0), 'woodDark', { p: [sx * 0.9, 0.12, 0], c: '#3e3226' });
+      k.add(box(2.4, 1.4, 1.8), 'wood', { p: [0, 0.94, 0], c: '#6a5a48' });
+      for (let i = 1; i < 5; i++) k.add(box(2.42, 0.04, 1.82), 'woodDark', { p: [0, 0.24 + i * 0.28, 0], c: '#3a3028' });
+      k.add(box(2.3, 0.03, 1.7), 'cloth', { p: [0, 1.655, 0], c: '#8a8270' });
+    }
+    d.add(box(0.5, 0.16, 0.16), 'woodDark', { p: [0, 0.94, 0.91], c: '#141210' }); // (the hole the billet came out of)
+    d.add(box(0.9, 0.16, 0.16), 'wood', { p: [0.4, 0.08, 1.4], r: [0, 0.3, 0], c: '#2a2420' });
   } else if (kind === 'wdlog') {
     // a log waiting beside the saw pits (the Woodwrights' side quest): a long grey oak log on the ground, square chocks at
     // its ends; rolled, it lies up on two straight skids, the chocks set against it
@@ -476,6 +497,29 @@ export function billetNode() {
   return g;
 }
 
+// a louvre pin node (Chapter 50, item c50_pin): a square iron pin lying in the leaf litter, a few copper leaves by it, a soft
+// glint to spot it by
+export function louvrePinNode() {
+  const b = new Builder(89);
+  b.add(box(0.36, 0.07, 0.07), 'iron', { p: [0, 0.04, 0], r: [0, 0.8, 0], c: '#5a5c60' });
+  b.add(box(0.1, 0.1, 0.1), 'iron', { p: [Math.cos(0.8) * 0.18, 0.05, -Math.sin(0.8) * 0.18], r: [0, 0.8, 0], c: '#4a4c50' });
+  for (let i = 0; i < 3; i++) b.add(box(0.12, 0.02, 0.08), 'cloth', { p: [-0.25 + i * 0.25, 0.01, 0.22 - i * 0.12], r: [0, i, 0], c: i % 2 ? '#a8582a' : '#c08a32' });
+  const g = b.build();
+  const gl = glowSprite(0xfff0c8, 1.5, 0.45); gl.position.y = 0.8; g.add(gl);
+  g.userData.update = (dt, t) => gl.userData.update(dt, t);
+  return g;
+}
+// a stack sticker node (the Woodwrights' side quest, item wd_sticker): three thin square oak battens lying side by side the
+// same way (never crossed), a soft glint to spot them by
+export function stickerNode() {
+  const b = new Builder(90);
+  for (const o of [-0.14, 0, 0.14]) b.add(box(0.9, 0.04, 0.08), 'woodLight', { p: [Math.sin(1.1) * o, 0.02, Math.cos(1.1) * o], r: [0, 1.1, 0], c: '#c8a878' });
+  const g = b.build();
+  const gl = glowSprite(0xfff0c8, 1.5, 0.45); gl.position.y = 0.8; g.add(gl);
+  g.userData.update = (dt, t) => gl.userData.update(dt, t);
+  return g;
+}
+
 export class QuestObjects {
   constructor(scene, heightAt) {
     this.list = OBJECTS.map((o, i) => {
@@ -534,6 +578,7 @@ export class QuestObjects {
     else if (o.kind === 'rgspoil' || o.kind === 'rgshelf' || o.kind === 'rggrate' || o.kind === 'rgchannel' || o.kind === 'rgbed') { fx.emit('dust', p.setY(p.y - 0.4), { n: 12, color: '#6e4232' }); sfx?.play('thud'); }
     else if (o.kind === 'rgstation' || o.kind === 'wdlog') { fx.emit('dust', p.setY(p.y - 0.4), { n: 12, color: o.kind === 'wdlog' ? '#8a7a60' : '#6e4232' }); sfx?.play('thud'); }
     else if (o.kind === 'rgwind') { fx.emit('dust', p.setY(p.y + 0.4), { n: 8, color: '#5a5148' }); sfx?.play('chain'); }
+    else if (o.kind === 'wdlouvre' || o.kind === 'wdstack') { fx.emit('dust', p, { n: 12, color: o.kind === 'wdstack' ? '#3a3028' : '#c8b494' }); sfx?.play('thud'); }
     else if (o.kind === 'wdlimb' || o.kind === 'wdbough') { fx.emit('shards', p.setY(p.y - 0.4), { n: 12, color: '#c8a878' }); fx.emit('dust', p, { n: 6, color: '#a8582a' }); sfx?.play('thud'); }
     else if (o.kind === 'twscour') { fx.emit('dust', p.setY(p.y - 0.4), { n: 12, color: '#8a8478' }); fx.emit('shards', p, { n: 8, color: '#6a6458' }); sfx?.play('thud'); }
     else if (o.kind === 'rangeplate') { fx.emit('sparks', p.setY(p.y + 0.15), { n: 8, color: '#ffd090' }); fx.emit('smoke', p, { n: 3, size: 0.5, color: '#c8c4bc' }); sfx?.play('shot'); sfx?.play('clang'); }

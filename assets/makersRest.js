@@ -89,8 +89,12 @@ function swarf(b, cx, y, cz, w, d, n) {
   for (let i = 0; i < n; i++) b.add(ico(b.r(0.05, 0.08), 0), 'wIron', { p: [cx + b.r(-w / 2, w / 2), y + 0.025, cz + b.r(-d / 2, d / 2)], s: [b.r(1.2, 1.8), 0.35, b.r(0.8, 1.2)], r: [0, b.r(0, 3), 0], c: i % 3 === 0 ? '#9a6a3a' : i % 3 === 1 ? '#6a6e78' : '#8a7a5a' });
 }
 // a little frost where the workshop doors let the cold in: a few flattened pale lumps
+// (RF.7 review) one even cap of packed frost over nearly the whole face, never a scatter of separate pale lumps: on a
+// dark top those read as the pips of a die from straight above (the same fault the Rime Steps' machines had). n seeds the tint.
 function frost(b, cx, y, cz, w, d, n, s = 0.08) {
-  for (let i = 0; i < n; i++) b.add(ico(s * b.r(0.6, 1.1), 0), 'wPaint', { p: [cx + b.r(-w / 2, w / 2), y, cz + b.r(-d / 2, d / 2)], s: [1.6, 0.34, 1.3], r: [0, b.r(0, 3), 0], c: wear(FROST, 0.12, i) });
+  if (w * d < 0.4) return; // a small pale square on a dark top reads as a dot, or the centre of a target
+  const t = s * 0.5;
+  b.add(rb(w * 0.98, t, d * 0.96, t * 0.45), 'wPaint', { p: [cx, y, cz], c: wear(FROST, 0.08, n) });
 }
 // a short chain of flat links hanging down from the origin, one unit long (the caller scales it in y)
 function chain(b, x, z, n = 10) {

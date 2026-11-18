@@ -106,7 +106,9 @@ export function buildSpoilTipper() {
     // the spoil heaped inside, a flat mass with lumps (never a dome: a low lopsided slab)
     b.add(rb(Wd - 0.3, 0.6, L - 0.4, 0.2), 'wPaint', { p: [0, H - 0.2, -L / 2], c: wear(MUD, 0.16, 9) });
     mud(b, 0.2, H + 0.12, -L / 2 - 0.2, Wd - 0.6, L - 0.8, 12, 0.18);
-    for (let k = 0; k < 4; k++) b.add(ico(0.2 + 0.05 * k, 0), 'stoneDark', { p: [-0.9 + k * 0.6, H + 0.22, -1.0 - (k % 2) * 1.6], s: [1.2, 0.7, 1.0], c: '#5e5c56' });
+    // (RF.7 review) the stones in one touching heap to one side: four spread evenly in two rows over the square heap read as the
+    // pips of a die from straight above
+    for (const [x, z, r] of [[-0.75, -1.25, 0.32], [-0.4, -1.5, 0.24], [-0.85, -1.62, 0.2]]) b.add(ico(r, 0), 'stoneDark', { p: [x, H + 0.22, z], s: [1.2, 0.7, 1.0], c: '#5e5c56' });
     moss(b, 0, H + 0.02, -L + 0.07, Wd * 0.8, 0.1, 2, 0.1);
   }, 4125));
   const rams = pivot(body, 0, 2.7, -0.9);

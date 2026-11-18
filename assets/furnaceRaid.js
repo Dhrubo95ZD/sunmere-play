@@ -27,9 +27,11 @@ const rb = (w, h, d, r) => rbox(w, h, d, r, 1);
 const BASALT = '#6c6662', BASALT2 = '#58534f', SOOT = '#2a2828', IRONR = '#5c5650', BRASS = '#a88a52', ASH = '#a29e98', CANVAS = '#5a4c40';
 const G = 'wGlowOrange';
 
-// ash crusted on a top face: flat grey flakes scattered over a rectangle
+// ash crusted on a top face: one even cap of settled ash over the rectangle
+// (RF.7 review) never a scatter of separate pale flakes: on a dark top they read as the pips of a die from straight above
 function ash(b, x, y, z, w, d, n, seed = 0) {
-  for (let i = 0; i < n; i++) b.add(ico(b.r(0.08, 0.16), 0), 'wPaint', { p: [x + b.r(-w / 2, w / 2), y, z + b.r(-d / 2, d / 2)], s: [1.5, 0.35, 1.2], r: [0, b.r(0, 3), 0], c: wear(ASH, 0.3, seed + i) });
+  if (w * d < 0.4) return; // a small pale square on a dark top reads as a dot
+  b.add(rb(w * 0.98, 0.05, d * 0.96, 0.02), 'wPaint', { p: [x, y, z], c: wear(ASH, 0.08, seed + n) });
 }
 // a short glowing drip run down a face (molten metal that spilled and set hot)
 function seam(b, x, y, z, h, axis = 'y') {

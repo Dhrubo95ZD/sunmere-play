@@ -29,8 +29,12 @@ const pl = (w, h, d, o = {}) => plate(w, h, d, { br: Math.max(0.035, Math.min(0.
 const STONE = '#8c9296', STONE2 = '#70777c', BRZ = '#4a4038', BRZ2 = '#3a322c', TRIM = '#9a7a48', IRON = '#4c5056', FROST = '#eef5fa', ICE = '#cfe6f4', WATER = '#8cc4e2', WOOD = '#7a6048';
 
 // frost crust: flattened pale lumps over a top face
+// (RF.7 review) one even cap of packed frost over nearly the whole face, never a scatter of separate pale lumps: on a
+// dark top those read as the pips of a die from straight above (the same fault the Rime Steps' machines had). n seeds the tint.
 function frost(b, cx, y, cz, w, d, n, s = 0.1) {
-  for (let i = 0; i < n; i++) b.add(ico(s * b.r(0.6, 1.1), 0), 'wPaint', { p: [cx + b.r(-w / 2, w / 2), y, cz + b.r(-d / 2, d / 2)], s: [1.6, 0.36, 1.3], r: [0, b.r(0, 3), 0], c: wear(FROST, 0.12, i) });
+  if (w * d < 0.4) return; // a small pale square on a dark top reads as a dot, or the centre of a target
+  const t = s * 0.5;
+  b.add(rb(w * 0.98, t, d * 0.96, t * 0.45), 'wPaint', { p: [cx, y, cz], c: wear(FROST, 0.08, n) });
 }
 // icicles hanging off a lower edge from a to z
 function icicles(b, a, z, n, len, r = null) {

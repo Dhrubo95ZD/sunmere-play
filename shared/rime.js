@@ -49,18 +49,19 @@ export const RIME = {
     [[480, -1640], [518, -1636]], // the Icefall Landing up to the Flume Works
     [[552, -1658], [590, -1662]], // the Flume Works up to the Dam Crown
     [[596.5, -1670], [596.5, -1641, 40.5], [601, -1641, 40.5]], // up the dam's face, against its stonework, onto the crest
-    [[603, -1641, 40.5], [613, -1641]], // down from the crest onto the frozen lake
+    [[603, -1652, 40.5], [613, -1652]], // down from the crest onto the frozen lake ((RF.7) 11 m north of the way up: no + across the crest)
   ],
   // tracks (polylines [x, z]): the main road east from the pier to the dam crest, the camp's loops under the walls, the mills,
   // and the walk along the crest
   paths: [
-    [[431, -1650], [458, -1650], [480, -1640], [518, -1636], [540, -1645], [552, -1658], [590, -1662], [596.5, -1670], [596.5, -1641], [601, -1641], [613, -1641]],
+    [[431, -1650], [458, -1650], [480, -1640], [518, -1636], [540, -1645], [552, -1658], [590, -1662], [596.5, -1670], [596.5, -1641], [601, -1641]],
     [[468, -1645], [468, -1680], [474, -1712]], // north under the wall (leaves the main road east of the square: no tracks fanning out of one point, content rules) (crosses the north channel by a footbridge)
     [[446, -1650], [468, -1622], [474, -1590]], // south under the wall (crosses the south channel by a footbridge)
-    [[540, -1645], [548, -1678]], // to the north mill
-    [[540, -1645], [548, -1622]], // to the south mill
+    [[552, -1658], [548, -1678]], // to the north mill ((RF.7) from the ramp foot, 17 m on from the south mill's track: no X)
+    [[522, -1637.6], [523, -1625], [539, -1622]], // to the south mill ((RF.7) square off the road just past the ramp top, 30 m from the north mill's: the two met the road as an X)
     [[601, -1704], [601, -1596]], // along the dam crest
     [[450, -1671], [456, -1660]], // the graveyard to the camp
+    [[601, -1652], [613, -1652]], // (RF.7) off the crest walk down onto the lake (offset from the way up)
   ],
   bridges: [], // footbridges where a track crosses a channel (filled in below): { x, z, ux, uz, hl, hw, top }
 };

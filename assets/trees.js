@@ -290,25 +290,25 @@ export function pine(seed = 1, { scale = 1 } = {}) {
 // LILAC — twisted violet trunk, umbrella of lilac florets, crystals at its feet
 // ======================================================================
 export function crystalCluster(b, p, scale, mat = 'crystalPurple', seed = 1, n = 5) {
+  // (RF.7) a plain mineral outcrop, not a star: stubby flat-topped six-sided prisms (no pointed tips, whose facets met in a
+  // point and drew an asterisk from straight above), all leaning the same way and set out along one short staggered row (prisms
+  // round one centre read as a starburst). The material is plain stone-coloured mineral with no glow (client/engine/materials.js).
   const rng = new Builder(seed);
+  const a0 = rng.r(0, Math.PI * 2), lean = rng.r(0.06, 0.14); // the whole outcrop leans one way
+  const ux = Math.cos(a0 + 0.5), uz = Math.sin(a0 + 0.5); // the row runs across the lean
   for (let i = 0; i < n; i++) {
-    const h = scale * rng.r(0.5, 1.2) * (i === 0 ? 1.4 : 1);
-    const rad = scale * rng.r(0.09, 0.16) * (i === 0 ? 1.3 : 1);
-    // (RF.5) an upright offset clump: each prism leans a little its own way (prisms leaning out round one centre drew a
-    // starburst from straight above)
-    const tilt = i === 0 ? rng.r(-0.08, 0.08) : rng.r(0.05, 0.2);
-    const a = rng.r(0, Math.PI * 2);
-    const g = cyl(rad, rad, h, 6, 1);
+    const h = scale * rng.r(0.35, 0.75) * (i === 0 ? 1.45 : 1);
+    const rad = scale * rng.r(0.13, 0.2) * (i === 0 ? 1.25 : 1);
+    const g = cyl(rad, rad * 0.9, h, 6, 1);
+    g.rotateY(rng.r(0, Math.PI)); // facets turned at random in the prism itself, so the lean below stays one way for all
     g.translate(0, h / 2, 0);
-    const tip = cone(rad, rad * 2.2, 6);
-    tip.translate(0, h + rad * 1.1, 0);
-    const off = i === 0 ? [0, 0] : [rng.r(-0.3, 0.3) * scale, rng.r(-0.3, 0.3) * scale];
+    // along the row, alternating sides, with a small step off the line (never evenly round the main one)
+    const k = i === 0 ? 0 : Math.ceil(i / 2) * (i % 2 ? 1 : -1), along = k * scale * 0.3 + rng.r(-0.04, 0.04) * scale, off = rng.r(-0.09, 0.09) * scale;
     const o = {
-      p: [p[0] + off[0], p[1] - 0.05, p[2] + off[1]], r: [Math.sin(a) * tilt, a, Math.cos(a) * tilt], order: 'YXZ', flat: true,
-      c: (x, y, z, nx, ny) => { const k = 0.8 + ny * 0.3 + Math.abs(nx) * 0.1; return [k, k, k]; },
+      p: [p[0] + ux * along - uz * off, p[1] - 0.05, p[2] + uz * along + ux * off], r: [Math.sin(a0) * lean, 0, Math.cos(a0) * lean], flat: true,
+      c: (x, y, z, nx, ny) => { const k2 = 0.8 + ny * 0.25 + Math.abs(nx) * 0.1; return [k2, k2, k2]; },
     };
     b.add(g, mat, o);
-    b.add(tip, mat, o);
   }
 }
 

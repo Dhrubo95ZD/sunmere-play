@@ -67,6 +67,10 @@ export const ASSETS = {
   spoiltipper: { cat: 'Machines', make: () => buildMachine('spoiltipper') },
   sumpram: { cat: 'Machines', make: () => buildMachine('sumpram') },
   aditdriver: { cat: 'Machines', make: () => buildMachine('aditdriver') },
+  // the Drying Lofts dungeon bosses (client/assets/loftBosses.js)
+  stackturner: { cat: 'Machines', make: () => buildMachine('stackturner') },
+  louvrejack: { cat: 'Machines', make: () => buildMachine('louvrejack') },
+  louvreengine: { cat: 'Machines', make: () => buildMachine('louvreengine') },
   // the Sea Gate raid bosses (client/assets/seaGate.js)
   gatewinch: { cat: 'Machines', make: () => buildMachine('gatewinch') },
   siltram: { cat: 'Machines', make: () => buildMachine('siltram') },

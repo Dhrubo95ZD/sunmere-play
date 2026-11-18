@@ -29,12 +29,13 @@ function pal(v) {
   return v ? { mat: 'wBronze', paint: '#eadcc4', paint2: '#c8b494', iron: '#5a5048', trim: '#b89a62', glow: 'wGlowAmber', glowHex: 0xffb040, green: true }
     : { mat: 'wPaint', paint: '#8aa2b6', paint2: '#6c8498', iron: '#5c636c', trim: '#a8925e', glow: 'wGlowBlue', glowHex: 0x7ac8ff, green: false };
 }
-// frost crust: flattened pale lumps over a top face (on bronze, a few verdigris lumps mixed in)
+// frost crust over a top face: one even cap of packed frost over nearly the whole face, so the top simply reads as snow-covered.
+// (RF.7) It was a scatter of separate pale lumps, and on a dark top that read as the pips of a die from straight above (the
+// Great Dam Sentry); a smaller pale patch or a drift strip on a dark top read as a tile or a mark. Never spots or marks on a top
+// face. n and green are kept for the callers (n seeds the tint).
 function frost(b, cx, y, cz, w, d, n, s = 0.08, green = false) {
-  for (let i = 0; i < n; i++) {
-    const g = green && i % 3 === 1;
-    b.add(ico(s * b.r(0.6, 1.1), 0), g ? 'wVerdigris' : 'wPaint', { p: [cx + b.r(-w / 2, w / 2), y, cz + b.r(-d / 2, d / 2)], s: [1.6, 0.36, 1.3], r: [0, b.r(0, 3), 0], c: g ? 0xffffff : wear(FROST, 0.12, i) });
-  }
+  const t = s * 0.5;
+  b.add(rb(w * 0.98, t, d * 0.96, t * 0.45), 'wPaint', { p: [cx, y, cz], c: wear(FROST, 0.08, n) });
 }
 // icicles hanging off a lower edge from a to z
 function icicles(b, a, z, n, len, r = null) {

@@ -1,5 +1,5 @@
-// Living bots, part C (docs/ai/living_bots_design.md C.8): the content filter every bot chat line passes, rule lines and
-// local-AI lines alike. Pure (no World, no I/O), so the server, the offline worker and the tests all use the same code.
+// Living bots, part C (docs/ai/living_bots_design.md C.8): the content filter every bot chat line passes (all of them
+// pre-written, shared/botlines.js). Pure (no World, no I/O), so the server, the offline worker and the tests all use the same code.
 // filterLine(text, ctx) -> { ok, text, why }
 //   ctx = { channel: 'world'|'say'|'whisper'|'party'|'guild', names: Set|Array of allowed proper names (the bot, the people in
 //           the conversation, roster bots), disclose: true when the line answers a sincere "are you a bot?",

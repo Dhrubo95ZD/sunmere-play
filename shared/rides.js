@@ -19,6 +19,8 @@
 import { MOBS, ITEMS, factionOfZone } from './data.js';
 import { WEALD, galeState, fallState, fallPhase, rideAt } from './weald.js';
 import { areaOf, zoneAt } from './terrain.js';
+import { xpForLevel } from './classes.js';
+import { killXp } from './xp.js';
 
 export const RIDES = {
   name: 'Clear the Rides',
@@ -151,7 +153,9 @@ export const RIDES_METHODS = {
     this.botRemember?.(b, 'boss', { a: RIDES.name, ok: 1 });
     this.botsDirty = true;
   },
-  ridesXp(level) { return Math.round(W_XP * (1 + 0.15 * (level - 1)) * RIDES.reward.xpKills); },
+  // xpKills on-level machines of the wood (shared/xp.js), at most at the wood's top level; a lower hero gets the same
+  // share of their own level (P15.7: was W_XP x (1 + 0.15 (L - 1)) x 4, over two levels a share at 65-70)
+  ridesXp(level) { const T = W_LV, L = Math.min(level, T); return Math.round(killXp(W_XP, T, T) * RIDES.reward.xpKills * xpForLevel(L) / xpForLevel(T)); },
   // the chest at the camp: every share owed, then empty
   ridesChest(p, o) {
     const S = p.ridesOwed;
@@ -205,5 +209,5 @@ export const RIDES_METHODS = {
   },
 };
 // the experience of one ordinary machine of the wood, per level (a share is worth RIDES.reward.xpKills of them)
-const W_XP = MOBS.feller?.xp || 4250;
+const W_XP = MOBS.feller?.xp || 4250, W_LV = MOBS.feller?.lvl?.[0] || 69;
 const S_NAME = (id) => (id === 'main' ? 'main ride' : id && id[0] === 'n' ? 'north ride' : id && id[0] === 's' ? 'south ride' : 'ride');

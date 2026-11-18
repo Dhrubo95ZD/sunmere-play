@@ -1,7 +1,7 @@
 // HUD + windows (DOM). Frames, action bars, cast bar, xp, minimap, chat, quest tracker, nameplates,
 // floating combat text, character / bags / quests / skills / dialog / vendor / loot / map windows.
 import * as THREE from 'three';
-import { CLASSES, SKILLS, SKILL_BY_ID, xpForLevel, LEVEL_CAP } from '/sunmere-play/shared/classes.js';
+import { CLASSES, SKILLS, SKILL_BY_ID, xpForLevel, LEVEL_CAP, dailyXp } from '/sunmere-play/shared/classes.js';
 import { shownName } from '/sunmere-play/shared/social.js';
 import { ITEMS, QUESTS, MOBS, NPCS, QUALITY, QUALITY_NAME, PRISMATIC_STOPS, HOME_DECO, HOME_TROPHIES, HOME_SPOTS, HOME_MOVABLE, BAG_BASE } from '/sunmere-play/shared/data.js';
 import { ZONES, zoneAt, WORLD, REACH, RIME, HEIGHTS, TIDEWATER, RAINWARD, WEALD, AREA_BY_ID, areaOf, waterKind } from '/sunmere-play/shared/terrain.js';
@@ -2653,7 +2653,7 @@ export class UI {
       const Q = QUESTS[qid];
       let choice = 0;
       const C = Q.msq ? STORY[Q.msq.ch] : null;
-      const lv = Math.max(this.you.level, Q.lvl), xp = Q.daily ? Math.round(xpForLevel(lv) * 0.08) : Q.xp, money = (Q.daily ? 8 + lv * 3 : Q.gold) * 10;
+      const lv = Math.max(this.you.level, Q.lvl), xp = Q.daily && !Q.weekly ? dailyXp(Q, this.you.level) : Q.xp, money = (Q.daily ? 8 + lv * 3 : Q.gold) * 10;
       // reward cards: painted icon in a quality frame, name, slot and type, the main stats
       // a bow and its pistol twin (v107): show only the one your class can use (the hand-in swaps them anyway)
       const hide = (r) => { const it = ITEMS[r], W = it?.twin && ITEMS[it.twin]; return !!(W && it.classes && !it.classes.includes(this.you.cls) && W.classes?.includes(this.you.cls)); };

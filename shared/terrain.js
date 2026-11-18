@@ -141,13 +141,15 @@ export const ROADS = [
   [[0, 15], [0, 50], [-4, 64], [-14, 100], [-30, 140], [-40, 168]], // south avenue, gate, road to the desert outpost
   [[15, 0], [40, 4], [70, 10], [100, 12]], // east road to the farms (over the east bridge)
   [[-15, 0], [-30, -1], [-40, 1]], // west lane to the forge
-  [[-10, -11], [-24, -23], [-34, -30]], // north-west lane to the ranger lodge
+  // (RF.7) only the four square-on roads leave the plaza (N, S, E, W); the lanes that ran out of it diagonally (an X from
+  // straight above) now leave the west and east roads square-on at T junctions, the north and south ones offset by 10 m
+  [[-20, -0.33], [-20, -16], [-34, -30]], // north-west lane to the ranger lodge (off the west lane)
   [[-34, -30], [-50, -60], [-62, -88], [-96, -118], [-138, -142]], // on to the foundry
-  [[10, -11], [26, -26], [42, -46], [70, -88], [112, -126], [140, -140]], // north-east road to the glade
-  [[-11, 10], [-29, 14.5]], // south-west lane to the footbridge
+  [[22, 1.12], [22, -24], [42, -46], [70, -88], [112, -126], [140, -140]], // north-east road to the glade (off the east road)
+  [[-30, -1], [-29, 14.5]], // south-west lane to the footbridge (off the west lane)
   [[-35, 22.5], [-42, 33]], // and on to the cottages
   [[-35, 22.5], [-44, 18.5], [-50.5, 15.5]], // and along the bank to Sunmere Mill
-  [[-40, 172], [0, 196], [56, 216], [104, 228]], // outpost to raider camp
+  [[-40, 186], [0, 196], [56, 216], [104, 228]], // outpost to raider camp ((RF.7) off the south road below the post, a T 14 m from the west road's)
   [[100, 12], [128, 6], [152, -10], [172, -26], [183, -36]], // farms to Ironcliff Quarry
   [[-50.5, 15.5], [-72, 12], [-96, 0], [-112, -10]], // west road from the mill to Briarhold
   [[-62, -88], [-100, -74], [-150, -66], [-190, -62]], // the Rustwood road to the Old Sawmill

@@ -16,6 +16,7 @@
 // Bots speak only through botSay (part C) and write memory only through botRemember (part C).
 import { QUESTS, NODES, RECIPES, SPAWNS, MOBS, LOOT_TABLES, ITEMS, OBJECTS, CARAVANS, SAIL, sailRoutes, npcSeen, EMOTES } from './data.js';
 import { CLASSES, LEVEL_CAP, xpForLevel } from './classes.js';
+import { killXp, dungeonXpScale } from './xp.js';
 import { ZONES, areaOf, zoneAt, walkHeight, worldGap, inWorld, AREA_BY_ID } from './terrain.js';
 import { DUNGEONS, DUNGEON_MIN_X } from './dungeons.js';
 import { housePush, houseAt, houseCrosses } from './houses.js';
@@ -793,7 +794,7 @@ export const BOT_MIND_METHODS = {
     // a coarse fight is settled by a formula with no travel, rests or bag trips between: its XP is paced so a bot levels at
     // about persona.pace of a human (B.4); fights in full detail earn what a player would
     const pace = b.mind.lod === 'coarse' ? clamp((b.mind.persona.pace || 0.6) * 0.6, 0.2, 0.6) : 1;
-    const xp = Math.round(m.def.xp * (1 + 0.15 * (m.level - 1)) * clamp(1 + diff * 0.1, 0.2, 1.5) * (grp > 1 ? 1.25 / grp : 1) * pace);
+    const xp = Math.round(killXp(m.def.xp, m.level, b.level) * dungeonXpScale(m.sp?.dungeon) * (grp > 1 ? 1.25 / grp : 1) * pace); // the player's formula (shared/xp.js)
     this.giveXp(b, xp);
     for (const [qid, q] of Object.entries(b.quests)) {
       const Q = QUESTS[qid]; if (!Q) continue;

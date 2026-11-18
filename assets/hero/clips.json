@@ -1,0 +1,1851 @@
+{
+ "about": "Clip map for the shared base hero (hero rework stage 1). Clips from Quaternius Universal Animation Library (CC0, art_src/hero/ual/UAL_License.txt) plus ones authored in art_src/hero/build_body.py. peakHandR/L: seconds into the clip where that hand moves fastest (the contact frame for strikes, the release for throws and shots). travel: horizontal pelvis travel start to end (m): loops are in place; non-zero for one-shots that step or lunge.",
+ "fps": 24,
+ "glb": {
+  "desktop": "hero_base.glb",
+  "phone": "hero_base_lo.glb"
+ },
+ "bones": 35,
+ "sockets": [
+  "socket_helm",
+  "socket_shoulder_l",
+  "socket_shoulder_r",
+  "socket_chest",
+  "socket_back",
+  "socket_belt",
+  "socket_hand_l",
+  "socket_hand_r",
+  "socket_hip_l",
+  "socket_hip_r"
+ ],
+ "roles": {
+  "locomotion": {
+   "idle": [
+    "Idle_Loop"
+   ],
+   "walk": [
+    "Walk_Loop"
+   ],
+   "run": [
+    "Jog_Fwd_Loop"
+   ],
+   "sprint": [
+    "Sprint_Loop"
+   ],
+   "strafeL": [
+    "Strafe_L_Loop",
+    "Walk_Strafe_L_Loop"
+   ],
+   "strafeR": [
+    "Strafe_R_Loop",
+    "Walk_Strafe_R_Loop"
+   ],
+   "backpedal": [
+    "Walk_Back_Loop",
+    "Jog_Back_Loop"
+   ],
+   "jumpStart": [
+    "Jump_Start"
+   ],
+   "jumpLoop": [
+    "Jump_Loop"
+   ],
+   "fall": [
+    "Jump_Loop"
+   ],
+   "jumpLand": [
+    "Jump_Land"
+   ],
+   "doubleJump": [
+    "NinjaJump_Start",
+    "NinjaJump_Idle_Loop",
+    "NinjaJump_Land"
+   ],
+   "sit": [
+    "Sitting_Enter",
+    "Sitting_Idle_Loop",
+    "Sitting_Exit"
+   ],
+   "sitTalk": [
+    "Sitting_Talking_Loop"
+   ],
+   "swim": [
+    "Swim_Fwd_Loop"
+   ],
+   "swimIdle": [
+    "Swim_Idle_Loop"
+   ],
+   "mounted": [
+    "Mount_Sit_Loop"
+   ],
+   "mountedAlt": [
+    "Driving_Loop"
+   ],
+   "crouch": [
+    "Crouch_Idle_Loop",
+    "Crouch_Fwd_Loop"
+   ],
+   "dodge": [
+    "Roll"
+   ],
+   "slide": [
+    "Slide_Start",
+    "Slide_Loop",
+    "Slide_Exit"
+   ],
+   "climb": [
+    "ClimbUp_1m"
+   ]
+  },
+  "reactions": {
+   "hit": [
+    "Hit_Chest",
+    "Hit_Head"
+   ],
+   "knockback": [
+    "Hit_Knockback"
+   ],
+   "death": [
+    "Death01"
+   ],
+   "getUp": [
+    "LayToIdle"
+   ],
+   "shieldBreak": [
+    "Idle_Shield_Break"
+   ]
+  },
+  "world": {
+   "interact": [
+    "Interact"
+   ],
+   "loot": [
+    "Chest_Open",
+    "PickUp_Table"
+   ],
+   "drinkRemedy": [
+    "Consume"
+   ],
+   "push": [
+    "Push_Loop"
+   ],
+   "gatherWood": [
+    "TreeChopping_Loop"
+   ],
+   "gatherHerb": [
+    "Farm_Harvest"
+   ],
+   "plant": [
+    "Farm_PlantSeed"
+   ],
+   "water": [
+    "Farm_Watering"
+   ],
+   "craftKneel": [
+    "Fixing_Kneeling"
+   ],
+   "carry": [
+    "Walk_Carry_Loop"
+   ],
+   "emoteYes": [
+    "Yes"
+   ],
+   "emoteNo": [
+    "Idle_No_Loop"
+   ],
+   "talk": [
+    "Idle_Talking_Loop"
+   ],
+   "foldArms": [
+    "Idle_FoldArms_Loop"
+   ]
+  },
+  "townsfolk": {
+   "stroll": [
+    "Walk_Formal_Loop"
+   ],
+   "lantern": [
+    "Idle_Lantern_Loop"
+   ],
+   "torch": [
+    "Idle_Torch_Loop"
+   ],
+   "guardIdle": [
+    "Idle_FoldArms_Loop",
+    "Idle_Shield_Loop"
+   ],
+   "work": [
+    "Farm_Harvest",
+    "Farm_PlantSeed",
+    "Farm_Watering",
+    "Fixing_Kneeling",
+    "TreeChopping_Loop",
+    "Walk_Carry_Loop"
+   ]
+  },
+  "weapons": {
+   "swordShield": {
+    "classes": [
+     "knight",
+     "sandblade",
+     "warden (hammer and tower shield: same set, heavier timing)"
+    ],
+    "skillKinds": [
+     "slash",
+     "sweep",
+     "shield",
+     "sand",
+     "execute",
+     "parry",
+     "clang",
+     "pierce"
+    ],
+    "idle": [
+     "Sword_Idle",
+     "Idle_Shield_Loop"
+    ],
+    "attack": [
+     "Sword_Regular_A",
+     "Sword_Regular_B",
+     "Sword_Regular_C",
+     "Sword_Attack"
+    ],
+    "recover": [
+     "Sword_Regular_A_Rec",
+     "Sword_Regular_B_Rec"
+    ],
+    "combo": [
+     "Sword_Regular_Combo"
+    ],
+    "block": [
+     "Sword_Block"
+    ],
+    "bash": [
+     "Shield_OneShot"
+    ],
+    "charge": [
+     "Shield_Dash",
+     "Sword_Dash"
+    ]
+   },
+   "twoHand": {
+    "classes": [
+     "warden big slams",
+     "any two-handed weapon (battle axe, flanged mace)"
+    ],
+    "skillKinds": [
+     "blunt",
+     "earth",
+     "crater",
+     "shatter",
+     "crack",
+     "rock"
+    ],
+    "attack": [
+     "Sword_Heavy_Combo"
+    ],
+    "sweep": [
+     "TreeChopping_Loop"
+    ],
+    "note": "UAL Standard has no dedicated two-handed set: Sword_Heavy_Combo is cut into its three swings and TreeChopping_Loop gives the level side sweep; overhead slams are posed in choreo.js on top (upper body layer)"
+   },
+   "bow": {
+    "classes": [
+     "ranger"
+    ],
+    "skillKinds": [
+     "arrow",
+     "net",
+     "splinters"
+    ],
+    "draw": [
+     "Bow_Draw"
+    ],
+    "aim": [
+     "Bow_Aim_Loop"
+    ],
+    "shoot": [
+     "Bow_Shoot"
+    ],
+    "note": "authored in build_body.py (UAL Standard has no bow); contact = release frame (frame 16 of 25)"
+   },
+   "pistol": {
+    "classes": [
+     "deadeye"
+    ],
+    "skillKinds": [
+     "gunsmoke",
+     "ball",
+     "pierce"
+    ],
+    "idle": [
+     "Pistol_Idle_Loop"
+    ],
+    "shoot": [
+     "Pistol_Shoot"
+    ],
+    "reload": [
+     "Pistol_Reload"
+    ],
+    "aim": [
+     "Pistol_Aim_Up",
+     "Pistol_Aim_Neutral",
+     "Pistol_Aim_Down"
+    ],
+    "note": "aim clips are single poses: blend Up/Neutral/Down by the target pitch; twin pistols mirror the right arm onto the left in stage 2"
+   },
+   "staff": {
+    "classes": [
+     "herbalist (lantern staff)",
+     "chemist (reactor rod)"
+    ],
+    "skillKinds": [
+     "salve",
+     "heal",
+     "mist",
+     "chill",
+     "seaspray",
+     "water",
+     "steam"
+    ],
+    "enter": [
+     "Staff_Push_Enter"
+    ],
+    "hold": [
+     "Staff_Push_Idle_Loop"
+    ],
+    "release": [
+     "Staff_Push_Shoot"
+    ],
+    "exit": [
+     "Staff_Push_Exit"
+    ],
+    "note": "UAL Spell_Simple_* renamed to Staff_Push_* in build_body.py (content rule: no magic words in code or text)"
+   },
+   "throw": {
+    "classes": [
+     "chemist (flasks)"
+    ],
+    "skillKinds": [
+     "flask",
+     "smoke",
+     "mud",
+     "resin",
+     "dust"
+    ],
+    "throw": [
+     "OverhandThrow"
+    ]
+   },
+   "fists": {
+    "classes": [
+     "unarmed, brawls, Sandblade off-hand jabs"
+    ],
+    "skillKinds": [
+     "blunt"
+    ],
+    "attack": [
+     "Punch_Jab",
+     "Punch_Cross",
+     "Melee_Hook"
+    ],
+    "recover": [
+     "Melee_Hook_Rec"
+    ]
+   }
+  }
+ },
+ "order": [
+  "Bow_Aim_Loop",
+  "Bow_Draw",
+  "Bow_Shoot",
+  "Chest_Open",
+  "ClimbUp_1m",
+  "Consume",
+  "Crouch_Fwd_Loop",
+  "Crouch_Idle_Loop",
+  "Death01",
+  "Driving_Loop",
+  "Farm_Harvest",
+  "Farm_PlantSeed",
+  "Farm_Watering",
+  "Fixing_Kneeling",
+  "Hit_Chest",
+  "Hit_Head",
+  "Hit_Knockback",
+  "Idle_FoldArms_Loop",
+  "Idle_Lantern_Loop",
+  "Idle_Loop",
+  "Idle_No_Loop",
+  "Idle_Shield_Break",
+  "Idle_Shield_Loop",
+  "Idle_Talking_Loop",
+  "Idle_Torch_Loop",
+  "Interact",
+  "Jog_Back_Loop",
+  "Jog_Fwd_Loop",
+  "Jump_Land",
+  "Jump_Loop",
+  "Jump_Start",
+  "LayToIdle",
+  "Melee_Hook",
+  "Melee_Hook_Rec",
+  "Mount_Sit_Loop",
+  "NinjaJump_Idle_Loop",
+  "NinjaJump_Land",
+  "NinjaJump_Start",
+  "OverhandThrow",
+  "PickUp_Table",
+  "Pistol_Aim_Down",
+  "Pistol_Aim_Neutral",
+  "Pistol_Aim_Up",
+  "Pistol_Idle_Loop",
+  "Pistol_Reload",
+  "Pistol_Shoot",
+  "Punch_Cross",
+  "Punch_Jab",
+  "Push_Loop",
+  "Roll",
+  "Shield_Dash",
+  "Shield_OneShot",
+  "Sitting_Enter",
+  "Sitting_Exit",
+  "Sitting_Idle_Loop",
+  "Sitting_Talking_Loop",
+  "Slide_Exit",
+  "Slide_Loop",
+  "Slide_Start",
+  "Sprint_Loop",
+  "Staff_Push_Enter",
+  "Staff_Push_Exit",
+  "Staff_Push_Idle_Loop",
+  "Staff_Push_Shoot",
+  "Strafe_L_Loop",
+  "Strafe_R_Loop",
+  "Swim_Fwd_Loop",
+  "Swim_Idle_Loop",
+  "Sword_Attack",
+  "Sword_Block",
+  "Sword_Dash",
+  "Sword_Heavy_Combo",
+  "Sword_Idle",
+  "Sword_Regular_A",
+  "Sword_Regular_A_Rec",
+  "Sword_Regular_B",
+  "Sword_Regular_B_Rec",
+  "Sword_Regular_C",
+  "Sword_Regular_Combo",
+  "TreeChopping_Loop",
+  "Walk_Back_Loop",
+  "Walk_Carry_Loop",
+  "Walk_Formal_Loop",
+  "Walk_Loop",
+  "Walk_Strafe_L_Loop",
+  "Walk_Strafe_R_Loop",
+  "Yes"
+ ],
+ "clips": {
+  "Bow_Aim_Loop": {
+   "sec": 1,
+   "tracks": 105,
+   "peakHandR": 0,
+   "peakHandRSpeed": 0,
+   "peakHandL": 0,
+   "peakHandLSpeed": 0,
+   "travel": 0,
+   "loop": true,
+   "source": "authored",
+   "pelvisDrift": 0,
+   "pelvisDz": 0,
+   "roles": [
+    "weapons.bow.aim"
+   ]
+  },
+  "Bow_Draw": {
+   "sec": 0.417,
+   "tracks": 105,
+   "peakHandR": 0.183,
+   "peakHandRSpeed": 5.86,
+   "peakHandL": 0.25,
+   "peakHandLSpeed": 1.54,
+   "travel": 0,
+   "loop": false,
+   "source": "authored",
+   "pelvisDrift": 0,
+   "pelvisDz": 0,
+   "roles": [
+    "weapons.bow.draw"
+   ]
+  },
+  "Bow_Shoot": {
+   "sec": 1,
+   "tracks": 105,
+   "peakHandR": 0.833,
+   "peakHandRSpeed": 7,
+   "peakHandL": 0.817,
+   "peakHandLSpeed": 1.71,
+   "travel": 0,
+   "loop": false,
+   "source": "authored",
+   "pelvisDrift": 0,
+   "pelvisDz": 0,
+   "roles": [
+    "weapons.bow.shoot"
+   ]
+  },
+  "Chest_Open": {
+   "sec": 1.333,
+   "tracks": 105,
+   "peakHandR": 0.5,
+   "peakHandRSpeed": 0.4,
+   "peakHandL": 0.567,
+   "peakHandLSpeed": 2.15,
+   "travel": 0,
+   "loop": false,
+   "source": "UAL2",
+   "pelvisDrift": 0,
+   "pelvisDz": 0,
+   "roles": [
+    "world.loot"
+   ]
+  },
+  "ClimbUp_1m": {
+   "sec": 0.667,
+   "tracks": 105,
+   "peakHandR": 0.567,
+   "peakHandRSpeed": 5.38,
+   "peakHandL": 0.117,
+   "peakHandLSpeed": 4.68,
+   "travel": 0,
+   "loop": false,
+   "source": "UAL2",
+   "pelvisDrift": 0,
+   "pelvisDz": 0,
+   "roles": [
+    "locomotion.climb"
+   ]
+  },
+  "Consume": {
+   "sec": 1.333,
+   "tracks": 105,
+   "peakHandR": 0.2,
+   "peakHandRSpeed": 0.64,
+   "peakHandL": 1.167,
+   "peakHandLSpeed": 3.02,
+   "travel": 0,
+   "loop": false,
+   "source": "UAL2",
+   "pelvisDrift": 0,
+   "pelvisDz": 0,
+   "roles": [
+    "world.drinkRemedy"
+   ]
+  },
+  "Crouch_Fwd_Loop": {
+   "sec": 2,
+   "tracks": 105,
+   "peakHandR": 1.817,
+   "peakHandRSpeed": 0.38,
+   "peakHandL": 0.817,
+   "peakHandLSpeed": 0.23,
+   "travel": 0,
+   "loop": true,
+   "source": "UAL1",
+   "pelvisDrift": 0,
+   "pelvisDz": 0,
+   "roles": [
+    "locomotion.crouch"
+   ]
+  },
+  "Crouch_Idle_Loop": {
+   "sec": 2.917,
+   "tracks": 105,
+   "peakHandR": 2.45,
+   "peakHandRSpeed": 0.11,
+   "peakHandL": 2.433,
+   "peakHandLSpeed": 0.09,
+   "travel": 0,
+   "loop": true,
+   "source": "UAL1",
+   "pelvisDrift": 0,
+   "pelvisDz": 0,
+   "roles": [
+    "locomotion.crouch"
+   ]
+  },
+  "Death01": {
+   "sec": 2.375,
+   "tracks": 105,
+   "peakHandR": 0.997,
+   "peakHandRSpeed": 7.49,
+   "peakHandL": 0.98,
+   "peakHandLSpeed": 5.55,
+   "travel": 0.46,
+   "loop": false,
+   "source": "UAL1",
+   "pelvisDrift": 0.46,
+   "pelvisDz": -0.814,
+   "roles": [
+    "reactions.death"
+   ]
+  },
+  "Driving_Loop": {
+   "sec": 1.667,
+   "tracks": 105,
+   "peakHandR": 0.35,
+   "peakHandRSpeed": 0,
+   "peakHandL": 0.35,
+   "peakHandLSpeed": 0,
+   "travel": 0,
+   "loop": true,
+   "source": "UAL1",
+   "pelvisDrift": 0,
+   "pelvisDz": 0,
+   "roles": [
+    "locomotion.mountedAlt"
+   ]
+  },
+  "Farm_Harvest": {
+   "sec": 2.5,
+   "tracks": 105,
+   "peakHandR": 1.333,
+   "peakHandRSpeed": 2.46,
+   "peakHandL": 0.517,
+   "peakHandLSpeed": 1.07,
+   "travel": 0,
+   "loop": false,
+   "source": "UAL2",
+   "pelvisDrift": 0,
+   "pelvisDz": 0,
+   "roles": [
+    "world.gatherHerb",
+    "townsfolk.work"
+   ]
+  },
+  "Farm_PlantSeed": {
+   "sec": 2.75,
+   "tracks": 105,
+   "peakHandR": 1.283,
+   "peakHandRSpeed": 1.72,
+   "peakHandL": 2.033,
+   "peakHandLSpeed": 1.16,
+   "travel": 0,
+   "loop": false,
+   "source": "UAL2",
+   "pelvisDrift": 0,
+   "pelvisDz": 0,
+   "roles": [
+    "world.plant",
+    "townsfolk.work"
+   ]
+  },
+  "Farm_Watering": {
+   "sec": 3.792,
+   "tracks": 105,
+   "peakHandR": 3.309,
+   "peakHandRSpeed": 1.26,
+   "peakHandL": 3.376,
+   "peakHandLSpeed": 0.29,
+   "travel": 0,
+   "loop": false,
+   "source": "UAL2",
+   "pelvisDrift": 0,
+   "pelvisDz": 0,
+   "roles": [
+    "world.water",
+    "townsfolk.work"
+   ]
+  },
+  "Fixing_Kneeling": {
+   "sec": 5.167,
+   "tracks": 105,
+   "peakHandR": 4.417,
+   "peakHandRSpeed": 2.51,
+   "peakHandL": 4.65,
+   "peakHandLSpeed": 1.92,
+   "travel": 0,
+   "loop": false,
+   "source": "UAL1",
+   "pelvisDrift": 0,
+   "pelvisDz": 0,
+   "roles": [
+    "world.craftKneel",
+    "townsfolk.work"
+   ]
+  },
+  "Hit_Chest": {
+   "sec": 0.333,
+   "tracks": 105,
+   "peakHandR": 0.2,
+   "peakHandRSpeed": 1.09,
+   "peakHandL": 0.2,
+   "peakHandLSpeed": 1.18,
+   "travel": 0.027,
+   "loop": false,
+   "source": "UAL1",
+   "pelvisDrift": 0.027,
+   "pelvisDz": 0.021,
+   "roles": [
+    "reactions.hit"
+   ]
+  },
+  "Hit_Head": {
+   "sec": 0.417,
+   "tracks": 105,
+   "peakHandR": 0.2,
+   "peakHandRSpeed": 0.47,
+   "peakHandL": 0.183,
+   "peakHandLSpeed": 0.5,
+   "travel": 0,
+   "loop": false,
+   "source": "UAL1",
+   "pelvisDrift": 0,
+   "pelvisDz": 0,
+   "roles": [
+    "reactions.hit"
+   ]
+  },
+  "Hit_Knockback": {
+   "sec": 0.833,
+   "tracks": 105,
+   "peakHandR": 0.217,
+   "peakHandRSpeed": 13.66,
+   "peakHandL": 0.25,
+   "peakHandLSpeed": 12.46,
+   "travel": 0.048,
+   "loop": false,
+   "source": "UAL2",
+   "pelvisDrift": 0.048,
+   "pelvisDz": -0.553,
+   "roles": [
+    "reactions.knockback"
+   ]
+  },
+  "Idle_FoldArms_Loop": {
+   "sec": 2.5,
+   "tracks": 105,
+   "peakHandR": 1.75,
+   "peakHandRSpeed": 0.06,
+   "peakHandL": 0.5,
+   "peakHandLSpeed": 0.07,
+   "travel": 0,
+   "loop": true,
+   "source": "UAL2",
+   "pelvisDrift": 0,
+   "pelvisDz": 0,
+   "roles": [
+    "world.foldArms",
+    "townsfolk.guardIdle"
+   ]
+  },
+  "Idle_Lantern_Loop": {
+   "sec": 2.5,
+   "tracks": 105,
+   "peakHandR": 1.85,
+   "peakHandRSpeed": 0.13,
+   "peakHandL": 0.867,
+   "peakHandLSpeed": 0.11,
+   "travel": 0,
+   "loop": true,
+   "source": "UAL2",
+   "pelvisDrift": 0,
+   "pelvisDz": 0,
+   "roles": [
+    "townsfolk.lantern"
+   ]
+  },
+  "Idle_Loop": {
+   "sec": 2.5,
+   "tracks": 105,
+   "peakHandR": 0.95,
+   "peakHandRSpeed": 0.12,
+   "peakHandL": 0.25,
+   "peakHandLSpeed": 0.11,
+   "travel": 0,
+   "loop": true,
+   "source": "UAL1",
+   "pelvisDrift": 0,
+   "pelvisDz": 0,
+   "roles": [
+    "locomotion.idle"
+   ]
+  },
+  "Idle_No_Loop": {
+   "sec": 2.5,
+   "tracks": 105,
+   "peakHandR": 0.95,
+   "peakHandRSpeed": 0.12,
+   "peakHandL": 0.25,
+   "peakHandLSpeed": 0.11,
+   "travel": 0,
+   "loop": true,
+   "source": "UAL2",
+   "pelvisDrift": 0,
+   "pelvisDz": 0,
+   "roles": [
+    "world.emoteNo"
+   ]
+  },
+  "Idle_Shield_Break": {
+   "sec": 1.042,
+   "tracks": 105,
+   "peakHandR": 0.118,
+   "peakHandRSpeed": 6.14,
+   "peakHandL": 0.084,
+   "peakHandLSpeed": 9.98,
+   "travel": 0,
+   "loop": false,
+   "source": "UAL2",
+   "pelvisDrift": 0,
+   "pelvisDz": 0,
+   "roles": [
+    "reactions.shieldBreak"
+   ]
+  },
+  "Idle_Shield_Loop": {
+   "sec": 2.5,
+   "tracks": 105,
+   "peakHandR": 0.917,
+   "peakHandRSpeed": 0.11,
+   "peakHandL": 1.767,
+   "peakHandLSpeed": 0.11,
+   "travel": 0,
+   "loop": true,
+   "source": "UAL2",
+   "pelvisDrift": 0,
+   "pelvisDz": 0,
+   "roles": [
+    "townsfolk.guardIdle",
+    "weapons.swordShield.idle"
+   ]
+  },
+  "Idle_Talking_Loop": {
+   "sec": 2.917,
+   "tracks": 105,
+   "peakHandR": 0.483,
+   "peakHandRSpeed": 0.54,
+   "peakHandL": 2.6,
+   "peakHandLSpeed": 0.56,
+   "travel": 0,
+   "loop": true,
+   "source": "UAL1",
+   "pelvisDrift": 0,
+   "pelvisDz": 0,
+   "roles": [
+    "world.talk"
+   ]
+  },
+  "Idle_Torch_Loop": {
+   "sec": 1.25,
+   "tracks": 105,
+   "peakHandR": 0.183,
+   "peakHandRSpeed": 0.16,
+   "peakHandL": 0.167,
+   "peakHandLSpeed": 0.29,
+   "travel": 0,
+   "loop": true,
+   "source": "UAL1",
+   "pelvisDrift": 0,
+   "pelvisDz": 0,
+   "roles": [
+    "townsfolk.torch"
+   ]
+  },
+  "Interact": {
+   "sec": 2,
+   "tracks": 105,
+   "peakHandR": 0.15,
+   "peakHandRSpeed": 0.17,
+   "peakHandL": 0.433,
+   "peakHandLSpeed": 2.41,
+   "travel": 0,
+   "loop": false,
+   "source": "UAL1",
+   "pelvisDrift": 0,
+   "pelvisDz": 0,
+   "roles": [
+    "world.interact"
+   ]
+  },
+  "Jog_Back_Loop": {
+   "sec": 0.917,
+   "tracks": 105,
+   "peakHandR": 0.767,
+   "peakHandRSpeed": 4.38,
+   "peakHandL": 0.35,
+   "peakHandLSpeed": 4.08,
+   "travel": 0,
+   "loop": true,
+   "source": "authored",
+   "pelvisDrift": 0,
+   "pelvisDz": -0.023,
+   "roles": [
+    "locomotion.backpedal"
+   ]
+  },
+  "Jog_Fwd_Loop": {
+   "sec": 0.917,
+   "tracks": 105,
+   "peakHandR": 0.167,
+   "peakHandRSpeed": 4.38,
+   "peakHandL": 0.583,
+   "peakHandLSpeed": 4.08,
+   "travel": 0,
+   "loop": true,
+   "source": "UAL1",
+   "pelvisDrift": 0,
+   "pelvisDz": 0.023,
+   "roles": [
+    "locomotion.run"
+   ]
+  },
+  "Jump_Land": {
+   "sec": 1.25,
+   "tracks": 105,
+   "peakHandR": 0.083,
+   "peakHandRSpeed": 6.39,
+   "peakHandL": 0.083,
+   "peakHandLSpeed": 7.54,
+   "travel": 0.03,
+   "loop": false,
+   "source": "UAL1",
+   "pelvisDrift": 0.03,
+   "pelvisDz": -0.049,
+   "roles": [
+    "locomotion.jumpLand"
+   ]
+  },
+  "Jump_Loop": {
+   "sec": 2.5,
+   "tracks": 105,
+   "peakHandR": 0.567,
+   "peakHandRSpeed": 0.1,
+   "peakHandL": 0.25,
+   "peakHandLSpeed": 0.08,
+   "travel": 0,
+   "loop": true,
+   "source": "UAL1",
+   "pelvisDrift": 0,
+   "pelvisDz": 0,
+   "roles": [
+    "locomotion.jumpLoop",
+    "locomotion.fall"
+   ]
+  },
+  "Jump_Start": {
+   "sec": 1.333,
+   "tracks": 105,
+   "peakHandR": 0.017,
+   "peakHandRSpeed": 7.67,
+   "peakHandL": 0.017,
+   "peakHandLSpeed": 7.89,
+   "travel": 0.083,
+   "loop": false,
+   "source": "UAL1",
+   "pelvisDrift": 0.083,
+   "pelvisDz": 0.346,
+   "roles": [
+    "locomotion.jumpStart"
+   ]
+  },
+  "LayToIdle": {
+   "sec": 1.5,
+   "tracks": 105,
+   "peakHandR": 0.65,
+   "peakHandRSpeed": 4.75,
+   "peakHandL": 1.183,
+   "peakHandLSpeed": 1.96,
+   "travel": 0.153,
+   "loop": false,
+   "source": "UAL2",
+   "pelvisDrift": 0.153,
+   "pelvisDz": 0.834,
+   "roles": [
+    "reactions.getUp"
+   ]
+  },
+  "Melee_Hook": {
+   "sec": 0.458,
+   "tracks": 105,
+   "peakHandR": 0.246,
+   "peakHandRSpeed": 32.06,
+   "peakHandL": 0.229,
+   "peakHandLSpeed": 16.92,
+   "travel": 0.294,
+   "loop": false,
+   "source": "UAL2",
+   "pelvisDrift": 0.294,
+   "pelvisDz": -0.204,
+   "roles": [
+    "weapons.fists.attack"
+   ]
+  },
+  "Melee_Hook_Rec": {
+   "sec": 0.583,
+   "tracks": 105,
+   "peakHandR": 0.317,
+   "peakHandRSpeed": 2.63,
+   "peakHandL": 0.417,
+   "peakHandLSpeed": 3.45,
+   "travel": 0.332,
+   "loop": false,
+   "source": "UAL2",
+   "pelvisDrift": 0.332,
+   "pelvisDz": 0.271,
+   "roles": [
+    "weapons.fists.recover"
+   ]
+  },
+  "Mount_Sit_Loop": {
+   "sec": 1.667,
+   "tracks": 105,
+   "peakHandR": 0.35,
+   "peakHandRSpeed": 0,
+   "peakHandL": 0.35,
+   "peakHandLSpeed": 0,
+   "travel": 0,
+   "loop": true,
+   "source": "authored",
+   "pelvisDrift": 0,
+   "pelvisDz": 0,
+   "roles": [
+    "locomotion.mounted"
+   ]
+  },
+  "NinjaJump_Idle_Loop": {
+   "sec": 2,
+   "tracks": 105,
+   "peakHandR": 0.45,
+   "peakHandRSpeed": 0.12,
+   "peakHandL": 0.433,
+   "peakHandLSpeed": 0.12,
+   "travel": 0,
+   "loop": true,
+   "source": "UAL2",
+   "pelvisDrift": 0,
+   "pelvisDz": 0,
+   "roles": [
+    "locomotion.doubleJump"
+   ]
+  },
+  "NinjaJump_Land": {
+   "sec": 1.25,
+   "tracks": 105,
+   "peakHandR": 0.083,
+   "peakHandRSpeed": 7.14,
+   "peakHandL": 0.083,
+   "peakHandLSpeed": 10.41,
+   "travel": 0.063,
+   "loop": false,
+   "source": "UAL2",
+   "pelvisDrift": 0.063,
+   "pelvisDz": -0.001,
+   "roles": [
+    "locomotion.doubleJump"
+   ]
+  },
+  "NinjaJump_Start": {
+   "sec": 0.958,
+   "tracks": 105,
+   "peakHandR": 0.034,
+   "peakHandRSpeed": 9.05,
+   "peakHandL": 0.017,
+   "peakHandLSpeed": 7.87,
+   "travel": 0.133,
+   "loop": false,
+   "source": "UAL2",
+   "pelvisDrift": 0.133,
+   "pelvisDz": 0.355,
+   "roles": [
+    "locomotion.doubleJump"
+   ]
+  },
+  "OverhandThrow": {
+   "sec": 1.333,
+   "tracks": 105,
+   "peakHandR": 0.367,
+   "peakHandRSpeed": 22.31,
+   "peakHandL": 0.317,
+   "peakHandLSpeed": 17.9,
+   "travel": 0,
+   "loop": false,
+   "source": "UAL2",
+   "pelvisDrift": 0,
+   "pelvisDz": 0,
+   "roles": [
+    "weapons.throw.throw"
+   ]
+  },
+  "PickUp_Table": {
+   "sec": 0.833,
+   "tracks": 105,
+   "peakHandR": 0.167,
+   "peakHandRSpeed": 1.51,
+   "peakHandL": 0.75,
+   "peakHandLSpeed": 3.9,
+   "travel": 0,
+   "loop": false,
+   "source": "UAL1",
+   "pelvisDrift": 0,
+   "pelvisDz": 0,
+   "roles": [
+    "world.loot"
+   ]
+  },
+  "Pistol_Aim_Down": {
+   "sec": 0.167,
+   "tracks": 105,
+   "peakHandR": 0,
+   "peakHandRSpeed": 0,
+   "peakHandL": 0,
+   "peakHandLSpeed": 0,
+   "travel": 0,
+   "loop": false,
+   "source": "UAL1",
+   "pelvisDrift": 0,
+   "pelvisDz": 0,
+   "roles": [
+    "weapons.pistol.aim"
+   ]
+  },
+  "Pistol_Aim_Neutral": {
+   "sec": 0.167,
+   "tracks": 105,
+   "peakHandR": 0,
+   "peakHandRSpeed": 0,
+   "peakHandL": 0,
+   "peakHandLSpeed": 0,
+   "travel": 0,
+   "loop": false,
+   "source": "UAL1",
+   "pelvisDrift": 0,
+   "pelvisDz": 0,
+   "roles": [
+    "weapons.pistol.aim"
+   ]
+  },
+  "Pistol_Aim_Up": {
+   "sec": 0.167,
+   "tracks": 105,
+   "peakHandR": 0,
+   "peakHandRSpeed": 0,
+   "peakHandL": 0,
+   "peakHandLSpeed": 0,
+   "travel": 0,
+   "loop": false,
+   "source": "UAL1",
+   "pelvisDrift": 0,
+   "pelvisDz": 0,
+   "roles": [
+    "weapons.pistol.aim"
+   ]
+  },
+  "Pistol_Idle_Loop": {
+   "sec": 1.667,
+   "tracks": 105,
+   "peakHandR": 1.5,
+   "peakHandRSpeed": 0.02,
+   "peakHandL": 1.483,
+   "peakHandLSpeed": 0.02,
+   "travel": 0,
+   "loop": true,
+   "source": "UAL1",
+   "pelvisDrift": 0,
+   "pelvisDz": 0,
+   "roles": [
+    "weapons.pistol.idle"
+   ]
+  },
+  "Pistol_Reload": {
+   "sec": 1.667,
+   "tracks": 105,
+   "peakHandR": 0.867,
+   "peakHandRSpeed": 1.01,
+   "peakHandL": 0.533,
+   "peakHandLSpeed": 3.23,
+   "travel": 0,
+   "loop": false,
+   "source": "UAL1",
+   "pelvisDrift": 0,
+   "pelvisDz": 0,
+   "roles": [
+    "weapons.pistol.reload"
+   ]
+  },
+  "Pistol_Shoot": {
+   "sec": 0.625,
+   "tracks": 105,
+   "peakHandR": 0.033,
+   "peakHandRSpeed": 1.11,
+   "peakHandL": 0.033,
+   "peakHandLSpeed": 1.23,
+   "travel": 0,
+   "loop": false,
+   "source": "UAL1",
+   "pelvisDrift": 0,
+   "pelvisDz": 0,
+   "roles": [
+    "weapons.pistol.shoot"
+   ]
+  },
+  "Punch_Cross": {
+   "sec": 1,
+   "tracks": 105,
+   "peakHandR": 0.183,
+   "peakHandRSpeed": 9.84,
+   "peakHandL": 0.183,
+   "peakHandLSpeed": 1.86,
+   "travel": 0,
+   "loop": false,
+   "source": "UAL1",
+   "pelvisDrift": 0,
+   "pelvisDz": 0,
+   "roles": [
+    "weapons.fists.attack"
+   ]
+  },
+  "Punch_Jab": {
+   "sec": 0.833,
+   "tracks": 105,
+   "peakHandR": 0.2,
+   "peakHandRSpeed": 3.2,
+   "peakHandL": 0.15,
+   "peakHandLSpeed": 10.53,
+   "travel": 0.001,
+   "loop": false,
+   "source": "UAL1",
+   "pelvisDrift": 0,
+   "pelvisDz": 0,
+   "roles": [
+    "weapons.fists.attack"
+   ]
+  },
+  "Push_Loop": {
+   "sec": 2.667,
+   "tracks": 105,
+   "peakHandR": 1.917,
+   "peakHandRSpeed": 0.03,
+   "peakHandL": 1.75,
+   "peakHandLSpeed": 0.05,
+   "travel": 0,
+   "loop": true,
+   "source": "UAL1",
+   "pelvisDrift": 0,
+   "pelvisDz": 0,
+   "roles": [
+    "world.push"
+   ]
+  },
+  "Roll": {
+   "sec": 1.458,
+   "tracks": 105,
+   "peakHandR": 0.066,
+   "peakHandRSpeed": 13.77,
+   "peakHandL": 0.066,
+   "peakHandLSpeed": 12.64,
+   "travel": 0.099,
+   "loop": false,
+   "source": "UAL1",
+   "pelvisDrift": 0.099,
+   "pelvisDz": 0.367,
+   "roles": [
+    "locomotion.dodge"
+   ]
+  },
+  "Shield_Dash": {
+   "sec": 1.083,
+   "tracks": 105,
+   "peakHandR": 0.083,
+   "peakHandRSpeed": 12.21,
+   "peakHandL": 0.067,
+   "peakHandLSpeed": 8.72,
+   "travel": 0.071,
+   "loop": false,
+   "source": "UAL2",
+   "pelvisDrift": 0.071,
+   "pelvisDz": 0.39,
+   "roles": [
+    "weapons.swordShield.charge"
+   ]
+  },
+  "Shield_OneShot": {
+   "sec": 0.833,
+   "tracks": 105,
+   "peakHandR": 0.083,
+   "peakHandRSpeed": 2.52,
+   "peakHandL": 0.067,
+   "peakHandLSpeed": 8.55,
+   "travel": 0,
+   "loop": false,
+   "source": "UAL2",
+   "pelvisDrift": 0,
+   "pelvisDz": 0,
+   "roles": [
+    "weapons.swordShield.bash"
+   ]
+  },
+  "Sitting_Enter": {
+   "sec": 1.292,
+   "tracks": 105,
+   "peakHandR": 0.151,
+   "peakHandRSpeed": 1.41,
+   "peakHandL": 0.52,
+   "peakHandLSpeed": 0.83,
+   "travel": 0.245,
+   "loop": false,
+   "source": "UAL1",
+   "pelvisDrift": 0.245,
+   "pelvisDz": -0.336,
+   "roles": [
+    "locomotion.sit"
+   ]
+  },
+  "Sitting_Exit": {
+   "sec": 1,
+   "tracks": 105,
+   "peakHandR": 0.95,
+   "peakHandRSpeed": 1.76,
+   "peakHandL": 0.567,
+   "peakHandLSpeed": 1.42,
+   "travel": 0.245,
+   "loop": false,
+   "source": "UAL1",
+   "pelvisDrift": 0.245,
+   "pelvisDz": 0.336,
+   "roles": [
+    "locomotion.sit"
+   ]
+  },
+  "Sitting_Idle_Loop": {
+   "sec": 1.667,
+   "tracks": 105,
+   "peakHandR": 1.317,
+   "peakHandRSpeed": 0,
+   "peakHandL": 1.35,
+   "peakHandLSpeed": 0,
+   "travel": 0,
+   "loop": true,
+   "source": "UAL1",
+   "pelvisDrift": 0,
+   "pelvisDz": 0,
+   "roles": [
+    "locomotion.sit"
+   ]
+  },
+  "Sitting_Talking_Loop": {
+   "sec": 2.917,
+   "tracks": 105,
+   "peakHandR": 0.483,
+   "peakHandRSpeed": 0.52,
+   "peakHandL": 2.6,
+   "peakHandLSpeed": 0.53,
+   "travel": 0,
+   "loop": true,
+   "source": "UAL1",
+   "pelvisDrift": 0,
+   "pelvisDz": 0,
+   "roles": [
+    "locomotion.sitTalk"
+   ]
+  },
+  "Slide_Exit": {
+   "sec": 0.5,
+   "tracks": 105,
+   "peakHandR": 0.183,
+   "peakHandRSpeed": 6.07,
+   "peakHandL": 0.333,
+   "peakHandLSpeed": 6.09,
+   "travel": 0.067,
+   "loop": false,
+   "source": "UAL2",
+   "pelvisDrift": 0.068,
+   "pelvisDz": 0.78,
+   "roles": [
+    "locomotion.slide"
+   ]
+  },
+  "Slide_Loop": {
+   "sec": 2,
+   "tracks": 105,
+   "peakHandR": 1.767,
+   "peakHandRSpeed": 0.52,
+   "peakHandL": 1.85,
+   "peakHandLSpeed": 0.25,
+   "travel": 0,
+   "loop": true,
+   "source": "UAL2",
+   "pelvisDrift": 0,
+   "pelvisDz": 0,
+   "roles": [
+    "locomotion.slide"
+   ]
+  },
+  "Slide_Start": {
+   "sec": 0.833,
+   "tracks": 105,
+   "peakHandR": 0.35,
+   "peakHandRSpeed": 4.04,
+   "peakHandL": 0.15,
+   "peakHandLSpeed": 5.96,
+   "travel": 0.068,
+   "loop": false,
+   "source": "UAL2",
+   "pelvisDrift": 0.068,
+   "pelvisDz": -0.78,
+   "roles": [
+    "locomotion.slide"
+   ]
+  },
+  "Sprint_Loop": {
+   "sec": 0.667,
+   "tracks": 105,
+   "peakHandR": 0.4,
+   "peakHandRSpeed": 4.22,
+   "peakHandL": 0.067,
+   "peakHandLSpeed": 3.8,
+   "travel": 0,
+   "loop": true,
+   "source": "UAL1",
+   "pelvisDrift": 0,
+   "pelvisDz": 0,
+   "roles": [
+    "locomotion.sprint"
+   ]
+  },
+  "Staff_Push_Enter": {
+   "sec": 0.5,
+   "tracks": 105,
+   "peakHandR": 0.333,
+   "peakHandRSpeed": 0.92,
+   "peakHandL": 0.25,
+   "peakHandLSpeed": 3.11,
+   "travel": 0.025,
+   "loop": false,
+   "source": "UAL2",
+   "pelvisDrift": 0.025,
+   "pelvisDz": 0,
+   "roles": [
+    "weapons.staff.enter"
+   ]
+  },
+  "Staff_Push_Exit": {
+   "sec": 0.417,
+   "tracks": 105,
+   "peakHandR": 0.183,
+   "peakHandRSpeed": 1.18,
+   "peakHandL": 0.233,
+   "peakHandLSpeed": 3.96,
+   "travel": 0.025,
+   "loop": false,
+   "source": "UAL2",
+   "pelvisDrift": 0.025,
+   "pelvisDz": 0,
+   "roles": [
+    "weapons.staff.exit"
+   ]
+  },
+  "Staff_Push_Idle_Loop": {
+   "sec": 2.083,
+   "tracks": 105,
+   "peakHandR": 0.517,
+   "peakHandRSpeed": 0.09,
+   "peakHandL": 0.517,
+   "peakHandLSpeed": 0.03,
+   "travel": 0,
+   "loop": true,
+   "source": "UAL2",
+   "pelvisDrift": 0,
+   "pelvisDz": 0,
+   "roles": [
+    "weapons.staff.hold"
+   ]
+  },
+  "Staff_Push_Shoot": {
+   "sec": 0.5,
+   "tracks": 105,
+   "peakHandR": 0.067,
+   "peakHandRSpeed": 0.26,
+   "peakHandL": 0.033,
+   "peakHandLSpeed": 0.8,
+   "travel": 0,
+   "loop": false,
+   "source": "UAL2",
+   "pelvisDrift": 0,
+   "pelvisDz": 0,
+   "roles": [
+    "weapons.staff.release"
+   ]
+  },
+  "Strafe_L_Loop": {
+   "sec": 0.917,
+   "tracks": 105,
+   "peakHandR": 0.167,
+   "peakHandRSpeed": 4.3,
+   "peakHandL": 0.567,
+   "peakHandLSpeed": 4.12,
+   "travel": 0,
+   "loop": true,
+   "source": "authored",
+   "pelvisDrift": 0,
+   "pelvisDz": 0.023,
+   "roles": [
+    "locomotion.strafeL"
+   ]
+  },
+  "Strafe_R_Loop": {
+   "sec": 0.917,
+   "tracks": 105,
+   "peakHandR": 0.167,
+   "peakHandRSpeed": 4.3,
+   "peakHandL": 0.567,
+   "peakHandLSpeed": 4.12,
+   "travel": 0,
+   "loop": true,
+   "source": "authored",
+   "pelvisDrift": 0,
+   "pelvisDz": 0.023,
+   "roles": [
+    "locomotion.strafeR"
+   ]
+  },
+  "Swim_Fwd_Loop": {
+   "sec": 1.333,
+   "tracks": 105,
+   "peakHandR": 0.867,
+   "peakHandRSpeed": 5.05,
+   "peakHandL": 0.867,
+   "peakHandLSpeed": 5.04,
+   "travel": 0,
+   "loop": true,
+   "source": "UAL1",
+   "pelvisDrift": 0,
+   "pelvisDz": 0,
+   "roles": [
+    "locomotion.swim"
+   ]
+  },
+  "Swim_Idle_Loop": {
+   "sec": 3.333,
+   "tracks": 105,
+   "peakHandR": 2.317,
+   "peakHandRSpeed": 0.26,
+   "peakHandL": 2.583,
+   "peakHandLSpeed": 0.16,
+   "travel": 0,
+   "loop": true,
+   "source": "UAL1",
+   "pelvisDrift": 0,
+   "pelvisDz": 0,
+   "roles": [
+    "locomotion.swimIdle"
+   ]
+  },
+  "Sword_Attack": {
+   "sec": 1.5,
+   "tracks": 105,
+   "peakHandR": 0.4,
+   "peakHandRSpeed": 26.86,
+   "peakHandL": 0.35,
+   "peakHandLSpeed": 15.07,
+   "travel": 0,
+   "loop": false,
+   "source": "UAL1",
+   "pelvisDrift": 0,
+   "pelvisDz": 0,
+   "roles": [
+    "weapons.swordShield.attack"
+   ]
+  },
+  "Sword_Block": {
+   "sec": 1.208,
+   "tracks": 105,
+   "peakHandR": 0.116,
+   "peakHandRSpeed": 9.29,
+   "peakHandL": 0.116,
+   "peakHandLSpeed": 9.82,
+   "travel": 0,
+   "loop": false,
+   "source": "UAL2",
+   "pelvisDrift": 0,
+   "pelvisDz": 0,
+   "roles": [
+    "weapons.swordShield.block"
+   ]
+  },
+  "Sword_Dash": {
+   "sec": 1.542,
+   "tracks": 105,
+   "peakHandR": 0.335,
+   "peakHandRSpeed": 29.96,
+   "peakHandL": 0.335,
+   "peakHandLSpeed": 10.46,
+   "travel": 0.002,
+   "loop": false,
+   "source": "UAL2",
+   "pelvisDrift": 0,
+   "pelvisDz": 0,
+   "roles": [
+    "weapons.swordShield.charge"
+   ]
+  },
+  "Sword_Heavy_Combo": {
+   "sec": 4.333,
+   "tracks": 105,
+   "peakHandR": 0.4,
+   "peakHandRSpeed": 28.89,
+   "peakHandL": 0.5,
+   "peakHandLSpeed": 27.14,
+   "travel": 0.002,
+   "loop": false,
+   "source": "UAL2",
+   "pelvisDrift": 0.002,
+   "pelvisDz": -0.001,
+   "roles": [
+    "weapons.twoHand.attack"
+   ]
+  },
+  "Sword_Idle": {
+   "sec": 1.667,
+   "tracks": 105,
+   "peakHandR": 1.117,
+   "peakHandRSpeed": 0.23,
+   "peakHandL": 0.317,
+   "peakHandLSpeed": 0.14,
+   "travel": 0,
+   "loop": false,
+   "source": "UAL1",
+   "pelvisDrift": 0,
+   "pelvisDz": 0,
+   "roles": [
+    "weapons.swordShield.idle"
+   ]
+  },
+  "Sword_Regular_A": {
+   "sec": 0.417,
+   "tracks": 105,
+   "peakHandR": 0.25,
+   "peakHandRSpeed": 29.4,
+   "peakHandL": 0.233,
+   "peakHandLSpeed": 19.3,
+   "travel": 0.041,
+   "loop": false,
+   "source": "UAL2",
+   "pelvisDrift": 0.041,
+   "pelvisDz": -0.3,
+   "roles": [
+    "weapons.swordShield.attack"
+   ]
+  },
+  "Sword_Regular_A_Rec": {
+   "sec": 0.958,
+   "tracks": 105,
+   "peakHandR": 0.336,
+   "peakHandRSpeed": 6.01,
+   "peakHandL": 0.319,
+   "peakHandLSpeed": 2.44,
+   "travel": 0.048,
+   "loop": false,
+   "source": "UAL2",
+   "pelvisDrift": 0.048,
+   "pelvisDz": 0.305,
+   "roles": [
+    "weapons.swordShield.recover"
+   ]
+  },
+  "Sword_Regular_B": {
+   "sec": 0.5,
+   "tracks": 105,
+   "peakHandR": 0.25,
+   "peakHandRSpeed": 28.19,
+   "peakHandL": 0.25,
+   "peakHandLSpeed": 8.08,
+   "travel": 0.033,
+   "loop": false,
+   "source": "UAL2",
+   "pelvisDrift": 0.032,
+   "pelvisDz": -0.027,
+   "roles": [
+    "weapons.swordShield.attack"
+   ]
+  },
+  "Sword_Regular_B_Rec": {
+   "sec": 1,
+   "tracks": 105,
+   "peakHandR": 0.617,
+   "peakHandRSpeed": 1.15,
+   "peakHandL": 0.833,
+   "peakHandLSpeed": 1.87,
+   "travel": 0.049,
+   "loop": false,
+   "source": "UAL2",
+   "pelvisDrift": 0.049,
+   "pelvisDz": 0.333,
+   "roles": [
+    "weapons.swordShield.recover"
+   ]
+  },
+  "Sword_Regular_C": {
+   "sec": 2,
+   "tracks": 105,
+   "peakHandR": 0.65,
+   "peakHandRSpeed": 33.03,
+   "peakHandL": 0.65,
+   "peakHandLSpeed": 19.06,
+   "travel": 0.05,
+   "loop": false,
+   "source": "UAL2",
+   "pelvisDrift": 0.05,
+   "pelvisDz": 0.311,
+   "roles": [
+    "weapons.swordShield.attack"
+   ]
+  },
+  "Sword_Regular_Combo": {
+   "sec": 3,
+   "tracks": 105,
+   "peakHandR": 1.533,
+   "peakHandRSpeed": 30.5,
+   "peakHandL": 1.517,
+   "peakHandLSpeed": 20.94,
+   "travel": 0.001,
+   "loop": false,
+   "source": "UAL2",
+   "pelvisDrift": 0.001,
+   "pelvisDz": 0.005,
+   "roles": [
+    "weapons.swordShield.combo"
+   ]
+  },
+  "TreeChopping_Loop": {
+   "sec": 0.958,
+   "tracks": 105,
+   "peakHandR": 0.151,
+   "peakHandRSpeed": 14.56,
+   "peakHandL": 0.118,
+   "peakHandLSpeed": 7.48,
+   "travel": 0,
+   "loop": true,
+   "source": "UAL2",
+   "pelvisDrift": 0,
+   "pelvisDz": 0,
+   "roles": [
+    "world.gatherWood",
+    "townsfolk.work",
+    "weapons.twoHand.sweep"
+   ]
+  },
+  "Walk_Back_Loop": {
+   "sec": 1.333,
+   "tracks": 105,
+   "peakHandR": 1.1,
+   "peakHandRSpeed": 1.07,
+   "peakHandL": 0.433,
+   "peakHandLSpeed": 1,
+   "travel": 0,
+   "loop": true,
+   "source": "authored",
+   "pelvisDrift": 0,
+   "pelvisDz": 0,
+   "roles": [
+    "locomotion.backpedal"
+   ]
+  },
+  "Walk_Carry_Loop": {
+   "sec": 2,
+   "tracks": 105,
+   "peakHandR": 0.933,
+   "peakHandRSpeed": 0.57,
+   "peakHandL": 1.983,
+   "peakHandLSpeed": 0.54,
+   "travel": 0,
+   "loop": true,
+   "source": "UAL2",
+   "pelvisDrift": 0,
+   "pelvisDz": 0,
+   "roles": [
+    "world.carry",
+    "townsfolk.work"
+   ]
+  },
+  "Walk_Formal_Loop": {
+   "sec": 1.333,
+   "tracks": 105,
+   "peakHandR": 1.15,
+   "peakHandRSpeed": 0.42,
+   "peakHandL": 0.483,
+   "peakHandLSpeed": 0.31,
+   "travel": 0,
+   "loop": true,
+   "source": "UAL1",
+   "pelvisDrift": 0,
+   "pelvisDz": 0,
+   "roles": [
+    "townsfolk.stroll"
+   ]
+  },
+  "Walk_Loop": {
+   "sec": 1.333,
+   "tracks": 105,
+   "peakHandR": 0.25,
+   "peakHandRSpeed": 1.07,
+   "peakHandL": 0.917,
+   "peakHandLSpeed": 1,
+   "travel": 0,
+   "loop": true,
+   "source": "UAL1",
+   "pelvisDrift": 0,
+   "pelvisDz": 0,
+   "roles": [
+    "locomotion.walk"
+   ]
+  },
+  "Walk_Strafe_L_Loop": {
+   "sec": 1.333,
+   "tracks": 105,
+   "peakHandR": 0.25,
+   "peakHandRSpeed": 1.05,
+   "peakHandL": 0.917,
+   "peakHandLSpeed": 0.99,
+   "travel": 0,
+   "loop": true,
+   "source": "authored",
+   "pelvisDrift": 0,
+   "pelvisDz": 0,
+   "roles": [
+    "locomotion.strafeL"
+   ]
+  },
+  "Walk_Strafe_R_Loop": {
+   "sec": 1.333,
+   "tracks": 105,
+   "peakHandR": 0.25,
+   "peakHandRSpeed": 1.05,
+   "peakHandL": 0.917,
+   "peakHandLSpeed": 0.99,
+   "travel": 0,
+   "loop": true,
+   "source": "authored",
+   "pelvisDrift": 0,
+   "pelvisDz": 0,
+   "roles": [
+    "locomotion.strafeR"
+   ]
+  },
+  "Yes": {
+   "sec": 2.5,
+   "tracks": 105,
+   "peakHandR": 0.25,
+   "peakHandRSpeed": 0.3,
+   "peakHandL": 0.183,
+   "peakHandLSpeed": 3.14,
+   "travel": 0,
+   "loop": false,
+   "source": "UAL2",
+   "pelvisDrift": 0,
+   "pelvisDz": 0,
+   "roles": [
+    "world.emoteYes"
+   ]
+  }
+ }
+}

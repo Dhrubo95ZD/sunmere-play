@@ -413,13 +413,16 @@ export function crystalFountain() {
 // four straight planter beds round the fountain (gaps for the four avenues), local coordinates
 export function plazaPlanters() {
   const b = new Builder(44), res = newRes();
-  const r = 8.4, len = 9.2, dep = 1.4;
-  for (let q = 0; q < 4; q++) {
-    const am = q * PI / 2 + PI / 4, cx = Math.cos(am) * r, cz = -Math.sin(am) * r, ry = am - PI / 2;
+  // (RF.7 review) two long beds east and west of the fountain, running north-south, parallel to its sides: the four beds
+  // stood on the diagonals round it (an X from straight above, and with the four roads out of the plaza an eight-rayed star);
+  // they also break the east-west line through the plaza, so the four roads no longer read as one + across it
+  const r = 8.4, len = 6, dep = 1.4;
+  for (let q = 0; q < 2; q++) {
+    const cx = q ? r : -r, cz = 0, ry = PI / 2;
     b.add(rbox(len, 0.62, dep, 0.06), 'stoneLarge', { p: [cx, 0.31, cz], r: [0, ry, 0], uv: 'box', us: 0.4, c: PALE });
     b.add(box(len - 0.36, 0.06, dep - 0.36), 'dirtPlain', { p: [cx, 0.62, cz], r: [0, ry, 0], uv: 'box', c: '#7a5a3a' });
     const ux = Math.cos(ry), uz = -Math.sin(ry), nx = -uz, nz = ux;
-    const n = 11;
+    const n = 8;
     for (let i = 0; i < n; i++) {
       const t = ((i + 0.5) / n - 0.5) * (len - 0.8);
       for (const o of [-0.35, 0.35]) {

@@ -29,7 +29,9 @@ const pl = (w, h, d, o = {}) => plate(w, h, d, { br: Math.max(0.035, Math.min(0.
 // salt-eaten iron, its darker plate, tarred timber, old bronze, tar black, silt, salt
 const IRON = '#5a5e60', IRON2 = '#46494c', WOOD = '#5e4c3a', WOOD2 = '#4a3c2e', BRONZE = '#7a6a3e', TAR = '#2a2622', SILT = '#5a5148', SALT = '#dcd8ce';
 
+// (RF.7 review) one flattened slab over the face first, so the lumps never read as scattered dots (die pips) on a dark top
 function silt(b, cx, y, cz, w, d, n, s = 0.12) {
+  if (w > s && d > s) b.add(rb(w * 0.92 + s, s * 0.45, d * 0.92 + s, s * 0.2), 'wPaint', { p: [cx, y - s * 0.05, cz], c: wear(SILT, 0.14, n) });
   for (let i = 0; i < n; i++) b.add(ico(s * b.r(0.6, 1.2), 0), 'wPaint', { p: [cx + b.r(-w / 2, w / 2), y, cz + b.r(-d / 2, d / 2)], s: [1.7, 0.4, 1.3], r: [0, b.r(0, 3), 0], c: wear(SILT, 0.15, i) });
 }
 function saltLine(b, w, d, y, cx = 0, cz = 0) { b.add(rb(w + 0.04, 0.12, d + 0.04, 0.02), 'wPaint', { p: [cx, y, cz], c: SALT }); }

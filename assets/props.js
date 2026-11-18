@@ -155,8 +155,8 @@ export function crystals(seed = 12, mat = 'crystalTeal') {
   const b = new Builder(seed);
   crystalCluster(b, [0, 0, 0], 1.1, mat, seed, 7);
   for (let i = 0; i < 3; i++) addRock(b, [Math.cos(i * 2.1) * 0.9, 0, Math.sin(i * 2.1) * 0.9], [0.35, 0.25, 0.35], seed + i, { moss: 0.3 });
-  const color = { crystalTeal: 0x40e0d0, crystalPurple: 0xb070ff, crystalGreen: 0x8ee84a }[mat];
-  return { builder: b, collider: { r: 0.7 }, glows: [{ p: [0, 0.8, 0], color, size: 2.6, intensity: 0.5 }] };
+  // (RF.7) no glow sprite: plain stone (a lit halo round a crystal read as magic)
+  return { builder: b, collider: { r: 0.7 } };
 }
 
 export function raiderTent(seed = 13, big = 1, col = ['#8a3a2a', '#6a2a1e', '#a85a3a', '#5a2218']) {

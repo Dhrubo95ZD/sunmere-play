@@ -50,11 +50,12 @@ export const HEIGHTS = {
   // the three ridge crests, and the graveyard to the camp
   paths: [
     [[424, -2100], [456, -2100], [490, -2097], [520, -2100], [545, -2100], [567, -2100], [600, -2100], [630, -2100]],
-    [[456, -2100], [470, -2140], [488, -2172]], // north into the drifts
-    [[456, -2100], [470, -2060], [488, -2028]], // south into the drifts
-    [[534, -2166], [534, -2034]], // along the first row
-    [[556, -2166], [556, -2034]], // along the second row
-    [[578, -2166], [578, -2034]], // along the third row
+    [[458, -2099.8], [458, -2122], [470, -2140], [488, -2172]], // north into the drifts ((RF.7) square off the road, 28 m from the south loop: no X; (RF.7 review) at x 458, clear of Waleed and the crew's tent, which stood on it at x 462)
+    [[486, -2097.4], [486, -2060], [488, -2028]], // south into the drifts
+    // (RF.7) each ridge walk meets the road as two T's 10 m apart (it crossed it as a + from straight above)
+    [[534, -2166], [534, -2100]], [[524, -2100], [524, -2034]], // along the first row
+    [[556, -2166], [556, -2100]], [[546, -2100], [546, -2034]], // along the second row
+    [[578, -2166], [578, -2100]], [[568, -2100], [568, -2034]], // along the third row
     [[449, -2121], [455, -2111]], // the graveyard to the camp
   ],
 };

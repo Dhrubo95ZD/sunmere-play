@@ -35,7 +35,7 @@ import { NPCS, QUESTS, MOBS, ITEMS, npcSeen, enginesTurning } from '/sunmere-pla
 import { Builder, box, rbox, cyl, sphere, lathe } from '../assets/kit.js';
 import { glowSprite } from '../assets/dynamic.js';
 import { Townsfolk } from './townsfolk.js';
-import { QuestObjects, brassTagNode, tarBarrelNode, yarnHankNode, stopBoardNode, seedTrayNode, liningStoneNode, ropeClampNode, wedgeNode, billetNode } from './questObjects.js';
+import { QuestObjects, brassTagNode, tarBarrelNode, yarnHankNode, stopBoardNode, seedTrayNode, liningStoneNode, ropeClampNode, wedgeNode, billetNode, louvrePinNode, stickerNode } from './questObjects.js';
 import { ropeCarMesh, CAR_HANG } from './ropewayLayout.js';
 import { buildHaulTrain } from '../assets/haulWagon.js';
 import { QuestWalk } from './questwalk.js';
@@ -348,7 +348,7 @@ export async function startGame() {
     setTimeout(() => ui.maybeNews(), 2500);
     for (const n of m.npcs) entities.addNpc(n);
     for (const n of m.nodes) {
-      const mesh = n.item === 'c33_drift' ? driftwood() : n.item === 'c37_block' ? ironBlock() : n.item === 'c40_tag' ? brassTagNode() : n.item === 'c41_tar' ? tarBarrelNode() : n.item === 'c41_yarn' ? yarnHankNode() : n.item === 'c43_board' ? stopBoardNode() : n.item === 'c45_tray' ? seedTrayNode() : n.item === 'c46_stone' ? liningStoneNode() : n.item === 'c49_clamp' ? ropeClampNode() : n.item === 'c49_wedge' ? wedgeNode() : n.item === 'wd_billet' ? billetNode() : mushroom();
+      const mesh = n.item === 'c33_drift' ? driftwood() : n.item === 'c37_block' ? ironBlock() : n.item === 'c40_tag' ? brassTagNode() : n.item === 'c41_tar' ? tarBarrelNode() : n.item === 'c41_yarn' ? yarnHankNode() : n.item === 'c43_board' ? stopBoardNode() : n.item === 'c45_tray' ? seedTrayNode() : n.item === 'c46_stone' ? liningStoneNode() : n.item === 'c49_clamp' ? ropeClampNode() : n.item === 'c49_wedge' ? wedgeNode() : n.item === 'wd_billet' ? billetNode() : n.item === 'c50_pin' ? louvrePinNode() : n.item === 'wd_sticker' ? stickerNode() : mushroom();
       mesh.position.set(n.x, heightAt(n.x, n.z), n.z);
       mesh.visible = n.ready;
       engine.scene.add(mesh);
@@ -461,8 +461,8 @@ export async function startGame() {
       }
       case 'tele': { ui.unitCast(ev.id, ev.name || 'Attack', ev.t || 1.5);
         const v = entities.get(ev.id);
-        const wet = v?.def?.water || v?.def?.mud; // machines whose strikes are water (the Sluice Galleries): blue circles; mud (the Drain Adits): red-brown
-        for (const sp of ev.spots) fx.telegraph(V(sp.x, 0, sp.z), sp.r, ev.t, ev.kind === 'nova' ? (wet ? v.def.novaColor || '#6ad0ff' : '#ff7a20') : (wet ? v.def.teleColor || '#2f9cff' : '#ff3020'));
+        const wet = v?.def?.water || v?.def?.mud || v?.def?.dust; // machines whose strikes are water (the Sluice Galleries): blue circles; mud (the Drain Adits): red-brown; oak dust and damp (the Drying Lofts): pale gold
+        for (const sp of ev.spots) if (ev.kind !== 'cranes' && ev.kind !== 'damp') fx.telegraph(V(sp.x, 0, sp.z), sp.r, ev.t, ev.kind === 'damp' ? '#7a9a72' : ev.kind === 'nova' ? (wet ? v.def.novaColor || '#6ad0ff' : '#ff7a20') : (wet ? v.def.teleColor || '#2f9cff' : '#ff3020'));
         if (v?.machine) v.machine.attack(ev.t, 'slam'); else if (v?.anim) v.mobAttack(null, false, true, fx);
         if (v && local && v.pos.distanceTo(local.pos) < 45) sfx.play(ev.kind === 'nova' ? 'shout' : 'grind', 0.8);
         break;
@@ -471,6 +471,8 @@ export async function startGame() {
         const v = entities.get(ev.id);
         for (const sp of ev.spots) {
           const p = V(sp.x, heightAt(sp.x, sp.z), sp.z);
+          if (ev.kind === 'damp') { fx.emit('dust', p, { n: 12, spread: sp.r * 0.6, size: 1.3, color: '#4a4638' }); continue; } // the damp: a breath of dark dust over the square stains only (no rings: the damp's hit spots overlap down a bay, and overlapping circles draw crescents and four-point shapes from above)
+          if (v?.def?.dust || ev.kind === 'cranes') { fx.emit('dust', p, { n: 12, spread: sp.r * 0.5, size: 1.3, color: '#c8b494' }); fx.emit('ringdust', p, { n: 10, r: sp.r, speed: 1.2 + sp.r * 0.5, color: '#d8c8a4' }); if (ev.kind !== 'cranes') fx.ring(p, '#e0b860', sp.r, 0.5); continue; } // a load of oak set down, a breath of damp: dust, no crack
           if (v?.def?.mud || ev.kind === 'lanes' || ev.kind === 'sumps') { fx.emit('dust', p, { n: 14, spread: sp.r * 0.5, size: 1.3, color: '#6e4232' }); fx.emit('ringdust', p, { n: 10, r: sp.r, speed: 1.2 + sp.r * 0.5, color: '#8a5a40' }); fx.ring(p, '#c8682e', sp.r, 0.5); continue; } // a slap of wet mud, no crack
           if (v?.def?.water) { fx.emit('drops', p, { n: 22 }); fx.emit('steam', p, { n: 8 }); fx.emit('ringdust', p, { n: 12, r: sp.r, speed: 1.5 + sp.r * 0.6, color: '#dcecf6' }); fx.ring(p, '#8cd0ff', sp.r, 0.5); continue; } // a burst of water, no crack
           fx.impact('earth', p, { r: sp.r });
@@ -491,6 +493,7 @@ export async function startGame() {
       case 'ram': ramc.onEv(ev); break; // LF.6 the Ram Engine's state and tally (shared/ramEngine.js)
       case 'ramload': { const v = entities.get(ev.id); if (v) { fx.emit('dust', v.pos.clone().setY(v.pos.y + 1), { n: 8, color: ev.kind === 'coal' ? '#3a3632' : '#8a8a86' }); if (ev.id === me) sfx.play('thud'); } break; }
       case 'ramfix': { const v = entities.get(ev.id); if (v) fx.emit('sparks', v.pos.clone().setY(v.pos.y + 1.1), { n: 8, color: '#ffd090' }); break; }
+      case 'damp': world.dungeonViews?.get(ev.d)?.group.userData.damp?.(ev.a, ev.lv, ev.open); break; // P15.4 the Drying Lofts' damp, bay by bay, and the louvres thrown open (shared/sim.js 'damp')
       case 'rides': world.wealdCleared = ev.cl.map((c) => c > 0); ui.setRides?.(ev); break; // P15.3 Clear the Rides: the zone-wide tally (shared/rides.js)
       case 'wake': {
         // the First Engine rising: a short scene the first time each day, if you are down in the Deepway to see it
@@ -1034,7 +1037,7 @@ export async function startGame() {
     } else {
       sfx.loop('breeze', 0);
       // the Deepway and the Makers' Hall: running water everywhere, a low hum from the deep wells
-      const deep = D.theme === 'deep', furnace = D.theme === 'furnace', sluice = D.theme === 'sluice', dam = D.theme === 'dam', pump = D.theme === 'pump' || D.theme === 'mills' || D.theme === 'seagate' || D.theme === 'adits' || D.theme === 'cutting', shop = D.theme === 'workshop'; // the Makers' Rest: only the engines' hum in the walls // the Pump Works: dripping water and the hum of the engines // the casting hall: a low roar from the furnace and bellows; the sluices: running water and the turbines' hum; the Great Dam: heavier water and a deep hum from the lake behind it
+      const deep = D.theme === 'deep', furnace = D.theme === 'furnace', sluice = D.theme === 'sluice', dam = D.theme === 'dam', pump = D.theme === 'pump' || D.theme === 'mills' || D.theme === 'seagate' || D.theme === 'adits' || D.theme === 'cutting', shop = D.theme === 'workshop' || D.theme === 'lofts'; // the Makers' Rest: only the engines' hum in the walls // the Pump Works: dripping water and the hum of the engines // the casting hall: a low roar from the furnace and bellows; the sluices: running water and the turbines' hum; the Great Dam: heavier water and a deep hum from the lake behind it
       sfx.loop('water', deep ? 0.1 : sluice ? 0.16 : dam ? 0.2 : pump ? 0.12 : 0); sfx.loop('hum', deep ? 0.22 : furnace ? 0.24 : sluice ? 0.12 : dam ? 0.16 : pump ? 0.18 : shop ? 0.14 : 0);
       // nearby automata at work: brush drums swishing, counterweight chains clinking
       game.machT = (game.machT || 0) - dtRaw;

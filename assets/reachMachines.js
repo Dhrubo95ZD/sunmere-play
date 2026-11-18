@@ -29,9 +29,13 @@ function pal(v) {
   return v ? { paint: '#4a4646', paint2: '#383434', crust: '#9a9690', glow: 'wGlowRed', glowHex: 0xff4a20, trim: '#7a6a56' }
     : { paint: ASH, paint2: ASH2, crust: ASHL, glow: 'wGlowOrange', glowHex: 0xff8030, trim: BRASSO };
 }
-// ash crust: flattened lumps scattered over a top face
+// ash crust over a top face: one even cap of settled ash over nearly the whole face.
+// (RF.7 review) It was a scatter of separate pale lumps, and on a dark top (the cinder-glass variant, the Furnace Keeper)
+// that read as the pips of a die from straight above, the same fault as the Rime Steps' frost. n seeds the tint.
 function ash(b, cx, y, cz, w, d, n, col, s = 0.08) {
-  for (let i = 0; i < n; i++) b.add(ico(s * b.r(0.6, 1.1), 0), 'wPaint', { p: [cx + b.r(-w / 2, w / 2), y, cz + b.r(-d / 2, d / 2)], s: [1.5, 0.42, 1.25], r: [0, b.r(0, 3), 0], c: wear(col, 0.3, i) });
+  if (w * d < 0.4) return; // a small pale square on a dark top reads as a dot, or the centre of a target round a head
+  const t = s * 0.4;
+  b.add(rb(w * 0.98, t, d * 0.96, t * 0.45), 'wPaint', { p: [cx, y, cz], c: wear(col, 0.08, n) });
 }
 // slag drips hanging off a lower edge from a to z: dark glassy cones, every few one still glowing at the tip
 function drips(b, a, z, n, len, glow, every = 3, r = null) {

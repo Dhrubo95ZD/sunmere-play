@@ -1,8 +1,9 @@
 // Authoritative world simulation. Runs on the Node server, or in the browser for offline play.
 // Players move client-side (validated); combat, mobs, loot, quests and progression live here.
-import { CLASSES, SKILLS, SKILL_BY_ID, LEVEL_CAP, xpForLevel, powerAt } from './classes.js';
+import { CLASSES, SKILLS, SKILL_BY_ID, LEVEL_CAP, xpForLevel, powerAt, dailyXp } from './classes.js';
+import { killXp, dungeonXpScale, eventXp } from './xp.js';
 import { MOBS, SPAWNS, NPCS, QUESTS, ITEMS, LOOT_TABLES, VENDORS, NODES, GEAR_NAMES, GEAR_PREFIX, GRAVEYARDS, OBJECTS, OBJECT_KINDS, CARAVANS, WORLD_EVENTS, COMPANIONS, companionCost, MUSTER, HOME_DECO, HOME_TROPHIES, HOME_SPOTS, HOME_MOVABLE, WANDERERS, WANDERER_LINES, WANDERER_LINES_AREA, RUNABOUT, FACTIONS, REP_RANKS, REP_CAP, REP_SHOP, repRank, factionOfZone, EMOTES, SETS, RECIPES, RECIPE_BY_ID, SALVAGE, PAINTS, PETS, ARENA, ARENA_POOL, ESCORTS, DUR_LOSS, repairCost, DUEL, DUEL_YES, DUEL_NO, POST, TRADE, ORDER_FROM, tradeFair, BAG_BASE, BAG_V, RESTED, RECALL, mountSpeed, mountKind, LOADOUT_LEVEL, BOUNTY, PROF_NAME, PROF_MAX, profColor, TEMPEST, tempestMods, weekNumber, LEDGER, GUILD, GUILD_LINES, LEGENDARIES, DRAGONSLAYER, DS_BOSS, DS_NORMAL_CHANCE, DRAGONSLAYER_ARMOUR, DSA_SOURCE, DSA_HEROIC_CHANCE, DSA_NORMAL_CHANCE, DRAWINGS, MARK_SHOP, VALLEY, SAIL, sailRoutes , npcSeen, ENDGAME_LVL, UPGRADE_DROPS, QUALITY_NAME } from './data.js';
-import { DUNGEONS, DUNGEON_BY_ID, DUNGEON_MIN_X, dungeonAt, dungeonPush, dungeonSpot, dungeonTide, dungeonSlip } from './dungeons.js';
+import { DUNGEONS, DUNGEON_BY_ID, DUNGEON_MIN_X, dungeonAt, dungeonPush, dungeonSpot, dungeonTide, dungeonSlip, dungeonCrane, craneDrops, loftAt, loftBays } from './dungeons.js';
 import { heightAt, walkHeight, zoneAt, waterAt, waterNear, waterKind, LAKE, WORLD, AREA_BY_ID, islandAt, areaOf, inWorld, clampWorld, regionAt, worldGap } from './terrain.js';
 import { mulberry32 } from './noise.js';
 import { tpSpot } from './tpspot.js';
@@ -1791,6 +1792,8 @@ export class World {
       const bx = o.x - Math.sin(o.ry) * 2.6 + Math.cos(o.ry) * 1.8 * b.ai.side, bz = o.z - Math.cos(o.ry) * 2.6 - Math.sin(o.ry) * 1.8 * b.ai.side;
       goal = { x: bx, z: bz }; stopAt = dO < 4.5 ? 1.2 : 0.4;
     }
+    // the Drying Lofts: a bot told to a louvre lever's handle (loftLevers) stands on it, fighting from there
+    if (b.lever && this.time < b.lever.until && b.x >= DUNGEON_MIN_X) { goal = b.lever; stopAt = 0.3; } else if (b.lever) b.lever = null;
     b.speed = 0;
     { const w = this.houseWay(b, goal); if (w !== goal) { goal = w; stopAt = 0.25; } }
     if (!b.cast && !this.hasCC(b, 'stun') && !this.hasCC(b, 'root')) {
@@ -2355,8 +2358,10 @@ export class World {
       if (m.level >= p.level - 5) this.addRep(p, factionOfZone(zoneAt(m.x, m.z).id), Math.round((4 + Math.floor(m.level / 4)) * (m.def.boss ? 25 : m.def.rare ? 10 : m.def.elite ? 5 : 1)), true);
       if (p.tal?.killRes) p.res = Math.min(p.maxRes, p.res + p.tal.killRes);
       const diff = m.level - p.level;
-      const grp = p.party ? contributors.filter((q) => !q.bot && q.party === p.party).length : 1;
-      const xp = Math.round(m.def.xp * (1 + 0.15 * (m.level - 1)) * clamp(1 + diff * 0.1, 0.2, 1.5) * (grp > 1 ? 1.25 / grp : 1));
+      // the party split: people only inside a dungeon (muster volunteers carry a hero through a clear, which pays one level);
+      // in the open world party bots count too (P15.7 review: a hero who followed four bots got every bot's kill in full)
+      const grp = p.party ? contributors.filter((q) => (!q.bot || !m.sp.dungeon) && q.party === p.party).length : 1;
+      const xp = Math.round(killXp(m.def.xp, m.level, p.level) * dungeonXpScale(m.sp.dungeon) * (grp > 1 ? 1.25 / grp : 1)); // shared/xp.js (P15.7: a twentieth of a level at 40-69, a dungeon clear one level)
       const bonus = p.level < LEVEL_CAP ? Math.min(Math.round(p.rested || 0), xp) : 0;
       if (bonus > 0) { p.rested -= bonus; if (p.rested < 1) { p.rested = 0; this.msg(p, 'You no longer feel rested.', '#7ab0ff'); } }
       this.giveXp(p, xp + bonus, bonus);
@@ -3032,7 +3037,7 @@ export class World {
     delete p.quests[m.q];
     if (Q.daily) { p.daily = p.daily || {}; p.daily[m.q] = this.qPeriod(Q); } else p.done[m.q] = true;
     if (Q.bonusGear) { const g = this.makeGear(Q.bonusGear.ilvl, Q.bonusGear.q, p.cls, 'raid'); this.dropNotice(g, [p], null); this.addItem(p, { gear: g }); } // the weekly bonus piece: rolled on the raid table, never below its floor
-    if (Q.daily && !Q.weekly) { const L = Math.max(p.level, Q.lvl); Q.gold = 8 + L * 3; Q.xp = Math.round(xpForLevel(L) * 0.08); }
+    if (Q.daily && !Q.weekly) { const L = Math.max(p.level, Q.lvl); Q.gold = 8 + L * 3; Q.xp = dailyXp(Q, p.level); }
     p.gold += Q.gold * 10; this.achAdd(p, 'gold', Q.gold * 10); this.achAdd(p, 'quests'); if (Q.goal.escort) this.achAdd(p, 'escorts'); if (Q.ach) this.achAdd(p, 'quest:' + m.q);
     { const f = factionOfZone(zoneAt(n.x, n.z).id); this.addRep(p, f, Math.round((150 + (Q.lvl || 1) * 15) * (FACTIONS[f]?.questRep ?? 1))); } // the outer areas' long stories would otherwise open the whole shop at once (FACTIONS[f].questRep)
     if (Q.rewards.length) {
@@ -3358,7 +3363,7 @@ export class World {
       if (alive.length && !timeUp) continue;
       if (!alive.length) {
         this.eventNotice(E, E.win, '#7aff7a', true);
-        for (const pid of ev.live.fought) { const p = this.players.get(pid); if (!p) continue; p.gold += E.gold * 10; this.achAdd(p, 'gold', E.gold * 10); this.achAdd(p, 'events'); this.addRep(p, factionOfZone(zoneAt(E.target[0], E.target[1]).id), 250); this.msg(p, `${E.name} defended: +${E.gold * 10} copper.`, '#ffe08a'); this.giveXp(p, E.xp); this.pushSelf(p); }
+        for (const pid of ev.live.fought) { const p = this.players.get(pid); if (!p) continue; p.gold += E.gold * 10; this.achAdd(p, 'gold', E.gold * 10); this.achAdd(p, 'events'); this.addRep(p, factionOfZone(zoneAt(E.target[0], E.target[1]).id), 250); this.msg(p, `${E.name} defended: +${E.gold * 10} copper.`, '#ffe08a'); this.giveXp(p, eventXp(E, p.level)); this.pushSelf(p); }
       } else {
         this.eventNotice(E, E.lose, '#c8c8c8', false);
         for (const m of alive) { m.dead = true; m.respawnT = 0; m.loot = null; }
@@ -3406,7 +3411,16 @@ export class World {
         if (dist2(m, p) < aggro * aggro) { this.addThreat(m, p, 1); target = p; break; }
       }
     }
-    if (stunned) return;
+    if (m.damp && !target) { // the Drying Lofts: everyone fighting the boss is down (or gone): the louvres jam again and the stain goes
+      const D = DUNGEON_BY_ID[m.sp?.dungeon], A = D && loftAt(D, m.x - D.ox, m.z - D.oz);
+      if (m.damp.lv && A) this.broadcast({ k: 'damp', d: D.id, a: D.lofts.indexOf(A), lv: 0 });
+      m.damp = null;
+    }
+    if (stunned) { // (a stunned boss still keeps its loft's paired lever: the hold at the handles and the bots on them go on)
+      const dab = target && m.damp && def.abilities?.find((a) => a.kind === 'damp');
+      if (dab) this.loftDamp(m, dab, DUNGEON_BY_ID[m.sp.dungeon], dt);
+      return;
+    }
     if (target) {
       m.state = 'chase';
       m.target = target.id;
@@ -3497,6 +3511,48 @@ export class World {
 
   // a raid boss (and, from v120, a five-player dungeon boss) is made for a full company (5): a smaller group meets a smaller boss. Players count 1, companions and other
   // bots 0.3 (0.6 before v120); the share runs from 35% (one player alone) to 100%. It only changes while the boss stands idle at full health.
+  // the Drying Lofts' paired louvre lever (P15.4): bots in a party (volunteers, companions, the valley's bots) cannot read the
+  // damp, so the fight tells them. Someone at one handle: a bot goes to the other. Nobody at either once the damp is in:
+  // two bots go, one to each. Damage dealers first, then the healer; never the one the boss is on. Each order lasts a
+  // second and is renewed while it is needed (botFollow walks a bot with b.lever there and it keeps fighting from it).
+  // the paired lever, every tick of a fight (bossAbilities, and also while the boss is stunned: a stun must not freeze the
+  // hold at the handles or send the bots off them). A held character (connection dropped) is nobody at a handle.
+  loftDamp(m, ab, D, dt) {
+    const A = loftAt(D, m.x - D.ox, m.z - D.oz);
+    if (!A) return;
+    if (m.hp >= m.maxHp && m.damp && (m.damp.lv || m.damp.clr > -1e9)) { // a fresh pull: the louvres jam again
+      if (m.damp.lv) this.broadcast({ k: 'damp', d: D.id, a: D.lofts.indexOf(A), lv: 0 });
+      m.damp = null;
+    }
+    const st = (m.damp ||= { lv: 0, hold: 0, clr: -1e9 });
+    const L = A.levers.map(([lx, lz]) => ({ x: D.ox + lx, z: D.oz + lz }));
+    const at = L.map((l) => [...this.players.values()].filter((p) => !p.dead && !p.away && !p.held && Math.hypot(p.x - l.x, p.z - l.z) < 1.7));
+    const pair = at[0].length > 0 && at[1].length > 0 && at[0].some((p) => at[1].some((q) => q !== p));
+    st.hold = pair && st.lv > 0 ? st.hold + dt : 0;
+    if (st.hold >= (ab.hold || 2)) {
+      st.hold = 0; st.lv = 0; st.clr = this.time;
+      this.broadcast({ k: 'damp', d: D.id, a: D.lofts.indexOf(A), lv: 0, open: 1 });
+      this.broadcast({ k: 'yell', id: m.id, text: ab.cleared || 'The paired lever comes over, the louvres swing open along the loft, and the damp air goes out through them!' });
+    }
+    if (st.lv > 0) this.loftLevers(D, A, m, st, L);
+  }
+  loftLevers(D, A, m, st, L) {
+    const near = (p, q) => Math.hypot(p.x - q.x, p.z - q.z);
+    const here = [...this.players.values()].filter((p) => !p.dead && !p.away && !p.held && p.x >= DUNGEON_MIN_X && dungeonAt(p.x, p.z) === D && near(p, m) < 60);
+    const manned = L.map((l) => here.some((p) => !p.bot && near(p, l) < 3));
+    const want = manned[0] && manned[1] ? [] : manned[0] ? [1] : manned[1] ? [0] : st.lv >= 1 ? [0, 1] : [];
+    if (!want.length) return;
+    const rank = (b) => (b.cls === 'herbalist' ? 2 : TANK_CLS.has(b.cls) ? 3 : 1);
+    const free = here.filter((b) => b.bot && !b.escort && !b.wander && (b.lfg || b.owner || b.ai?.party) && b.id !== m.target && rank(b) < 3);
+    const used = new Set();
+    for (const li of want) {
+      const l = L[li];
+      let b = free.find((q) => !used.has(q) && q.lever && Math.abs(q.lever.x - l.x) < 0.01 && Math.abs(q.lever.z - l.z) < 0.01);
+      if (!b) b = free.filter((q) => !used.has(q) && !(q.lever && this.time < q.lever.until)).sort((p, q) => rank(p) - rank(q) || near(p, l) - near(q, l))[0];
+      if (!b) continue;
+      used.add(b); b.lever = { x: l.x, z: l.z, until: this.time + 1 };
+    }
+  }
   raidFighters(D) {
     let n = 0;
     for (const q of this.players.values()) if (!q.dead && q.x >= DUNGEON_MIN_X && dungeonAt(q.x, q.z) === D) n += q.bot ? 0.3 : 1; // v120: a bot counts 0.3 (a volunteer deals about a quarter of a geared hero's damage, and bosses are long fights now)
@@ -3548,6 +3604,27 @@ export class World {
         this.broadcast({ k: 'tele', id: m.id, kind: 'lanes', spots, t: SL.toBurst, name: 'Mud slip' });
         if (ab.text) this.broadcast({ k: 'yell', id: m.id, text: ab.text });
         return;
+      }
+      if (ab.kind === 'cranes') { // the gantry cranes (the Drying Lofts): each gantry's load near the mob comes down on its marked
+        const CR = TD0 ? dungeonCrane(TD0, this.time) : null; // bay on the crane clock (any mob fighting near it calls it, once a drop)
+        if (!CR || !CR.warn) return;
+        const done = (this.craneDone ||= {}), spots = [], own = TD0.lofts.indexOf(loftAt(TD0, m.x - TD0.ox, m.z - TD0.oz));
+        for (const L of craneDrops(TD0, CR.n)) {
+          if (own >= 0 && L.a !== own) continue; // (a machine in a loft calls that loft's gantries only, all of them)
+          const key = TD0.id + ':' + L.a + ':' + L.g, x = TD0.ox + L.x, z = TD0.oz + L.z;
+          if (done[key] === CR.n || Math.hypot(m.x - x, m.z - z) > (own >= 0 ? ab.reach || 60 : ab.reach || 34)) continue;
+          done[key] = CR.n; spots.push({ x: +x.toFixed(2), z: +z.toFixed(2), r: L.r });
+        }
+        if (!spots.length) return;
+        // (the load is on the hook: it comes down on the clock even if the machine that called it falls first)
+        this.aoes.push({ t: this.time + CR.toDrop, spots, dmg: abDmg(ab), src: m.id, kind: 'cranes', caller: m });
+        this.broadcast({ k: 'tele', id: m.id, kind: 'cranes', spots, t: CR.toDrop, name: 'Gantry load' });
+        if (ab.text) this.broadcast({ k: 'yell', id: m.id, text: ab.text });
+        return;
+      }
+      if (ab.kind === 'damp') { // the damp in the boss's loft: two people at the paired louvre lever together throw the louvres open
+        if (!TD0 || !loftAt(TD0, m.x - TD0.ox, m.z - TD0.oz)) return;
+        this.loftDamp(m, ab, TD0, dt);
       }
       if (ab.kind === 'sumps') { // the choked sumps of the mob's chamber: stand on a grate long enough and it runs clear for a while
         if (m.hp >= m.maxHp) m.sumps = null; // a fresh pull: every sump choked again
@@ -3618,6 +3695,17 @@ export class World {
           spots.push({ x, z, r: +(sr * (1 + 0.3 * st.lv)).toFixed(2) }); st.lv = Math.min(ab.max || 3, st.lv + 1);
         });
         if (!spots.length) return;
+      } else if (ab.kind === 'damp') {
+        // the damp spreads one more bay from the jammed louvres (up to ab.max), and every damp bay takes it at once
+        const A = TD0 ? loftAt(TD0, m.x - TD0.ox, m.z - TD0.oz) : null, st = m.damp;
+        if (!A || !st || this.time - st.clr < (ab.clear || 20)) return;
+        const bays = loftBays(A);
+        st.lv = Math.min(ab.max || bays.length, bays.length, st.lv + 1);
+        for (const [x0, z0, x1, z1] of bays.slice(0, st.lv)) {
+          const along = x1 - x0 < z1 - z0, w = along ? x1 - x0 : z1 - z0, Lg = along ? z1 - z0 : x1 - x0, r = w / 2 + 0.4;
+          for (let s = r * 0.7; s <= Lg - r * 0.5 + 0.01; s += r * 1.3) spots.push(along ? { x: +(TD0.ox + (x0 + x1) / 2).toFixed(2), z: +(TD0.oz + z0 + s).toFixed(2), r: +r.toFixed(2) } : { x: +(TD0.ox + x0 + s).toFixed(2), z: +(TD0.oz + (z0 + z1) / 2).toFixed(2), r: +r.toFixed(2) });
+        }
+        this.broadcast({ k: 'damp', d: TD0.id, a: TD0.lofts.indexOf(A), lv: st.lv });
       } else if (ab.kind === 'nova') spots.push({ x: +m.x.toFixed(2), z: +m.z.toFixed(2), r: ab.r + def.radius * 0.5 });
       else if (ab.kind === 'pits') {
         // the flooded pits of the boss's chamber (the dungeon's pits within reach): stand out of the water

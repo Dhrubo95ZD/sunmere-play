@@ -3,22 +3,41 @@
 // has a digit, so it can never be a character name, and the payload has no top-level `cls`, so server/store.js keeps it
 // as world state). botRemember is the only writer; parts A, B and C all call it.
 //   mem = { v: 1, people: { "<lowercase name>": { n, met, seen, times, rel, inv: { ask, yes, no, noDay, day }, did: [..4], told: [..3] } },
-//           log: [ { t, k, a } ] (ring of 30), said: [hash] (last 12 lines, anti-repeat) }
+//           log: [ { t, k, a } ] (ring of 30), said: [hash] (last 30 lines, anti-repeat) }
 // Told facts are pulled out of a player's words by rules only, and only facts about the game (class, level, where they are
 // heading, what they farm or need, their guild). Anything personal is dropped before it is stored, so no private detail can
-// reach a save or a prompt.
+// reach a save or a chat line.
 import { WANDERERS } from './data.js';
 import { CLASSES } from './classes.js';
 import { filterLine, gameNames } from './botfilter.js';
 import { AREA_BY_ID } from './areas.js';
+import { DUNGEON_BY_ID } from './dungeons.js';
 
-export const BOT_MEM = { v: 1, people: 60, did: 4, told: 3, log: 30, said: 12, forgetDays: 60, saveEvery: 300, keyGap: 15 };
+export const BOT_MEM = { v: 1, people: 60, did: 4, told: 3, log: 30, said: 30, forgetDays: 60, saveEvery: 300, keyGap: 15 };
 const DAY = 86400000;
 const KINDS = new Set(['met', 'invite', 'party', 'run', 'boss', 'quest', 'lvl', 'zone', 'death', 'craft', 'sold', 'duel', 'told']);
 export const memKey = (i) => 'bot1mem' + i;
 export const freshMem = () => ({ v: BOT_MEM.v, people: {}, log: [], said: [] });
 const lc = (s) => String(s ?? '').toLowerCase();
 const cleanName = (s) => String(s ?? '').replace(/[^A-Za-z]/g, '').slice(0, 14);
+// a dungeon id or name as it reads mid-line ("the Briar Warrens")
+export const placeName = (a) => String(DUNGEON_BY_ID[a]?.name || a || '').replace(/^The /, 'the ');
+// a place name as it reads mid-line: told facts are stored in lower case ("the briar warrens" -> "the Briar Warrens")
+const SMALL = new Set(['the', 'of', 'and', 'a', 'an', 'to', 'in', 'on', 'at']);
+export const nicePlace = (p) => String(p || '').replace(/[a-z][a-z']*/gi, (w, i) => (SMALL.has(w.toLowerCase()) ? w.toLowerCase() : w[0].toUpperCase() + w.slice(1)));
+// told facts ("mains a Warden", "was heading to the Briar Warrens"...) as line slots: main, alt, heading, need, farming
+export function toldSlots(facts) {
+  const S = {};
+  for (const s of facts || []) {
+    let m;
+    if ((m = s.match(/^mains an? (\w+)/))) S.main = m[1].toLowerCase();
+    else if ((m = s.match(/^has an? (\w+) alt/))) S.alt = m[1].toLowerCase();
+    else if ((m = s.match(/^was heading to (.+)/))) S.heading = nicePlace(m[1]);
+    else if ((m = s.match(/^needed (.+?) for /))) S.need = m[1];
+    else if ((m = s.match(/^was ((?:farming|crafting|gathering|grinding|levelling|leveling) .+)/))) S.farming = m[1];
+  }
+  return S;
+}
 
 // ------------------------------------------------------------------ told facts (rules only, game facts only)
 const CLS = Object.entries(CLASSES).map(([id, c]) => [id, lc(c.name)]);
@@ -135,7 +154,7 @@ export const BOT_MEMORY_METHODS = {
     this.botMemDirty(b);
   },
   botSaid(b, hash) { const mem = this.botMemOf(b); if (!mem) return; mem.said.push(hash); if (mem.said.length > BOT_MEM.said) mem.said.splice(0, mem.said.length - BOT_MEM.said); },
-  // up to 3 short sentences about a person, for a prompt ("you met Ahshan 3 times; ...")
+  // up to 3 short sentences about a person, in words (tests and debugging: "you have met Ahshan 3 times; ...")
   botMemFacts(b, name) {
     const P = this.botKnows(b, name);
     if (!P) return [];
@@ -148,12 +167,22 @@ export const BOT_MEMORY_METHODS = {
     if (t) out.push(`he said he ${t.s}`);
     return out.slice(0, 3);
   },
-  // the bot's own last 3 log entries in words
-  botMemLog(b) {
-    const mem = this.botMemOf(b);
-    if (!mem) return [];
-    const S = { lvl: (a) => `reached level ${a.level}`, zone: (a) => `moved to ${a.zone}`, run: (a) => `${a.ok ? 'cleared' : 'failed'} ${a.a || 'a dungeon'}`, boss: (a) => `${a.ok ? 'beat' : 'lost to'} ${a.a || 'a boss'}`, death: (a) => `was knocked down by ${a.mob || 'a machine'}`, craft: (a) => `made ${a.item || 'something'}`, sold: (a) => `sold ${a.item || 'some goods'} at a vendor`, quest: (a) => `finished ${a.a || 'a quest'}`, duel: (a) => `${a.won ? 'won' : 'lost'} a duel` };
-    return mem.log.slice(-3).map((e) => S[e.k]?.(e.a || {})).filter(Boolean);
+  // (v127, no AI) what the bot remembers about a person, as line slots for shared/botlines.js; only what is really in its
+  // memory, so a line that uses one is true: main, alt, heading, need, farming (told), runok / runbad / beatwith /
+  // lostwith / questwith / duelwon / duellost (the last thing done together, within 14 days), times (met more than once)
+  botMemSlots(b, name) {
+    const P = name ? this.botKnows(b, name) : null;
+    if (!P) return {};
+    const now = this.botNow(), S = toldSlots((P.told || []).map((x) => x.s));
+    if ((P.times || 0) > 1) S.times = P.times;
+    const d = (P.did || []).filter((x) => now - (x.t || 0) < 14 * DAY && x.k !== 'party').slice(-1)[0];
+    if (d) {
+      if (d.k === 'run' && d.a) S[d.ok ? 'runok' : 'runbad'] = placeName(d.a);
+      else if (d.k === 'boss' && d.a) S[d.ok ? 'beatwith' : 'lostwith'] = placeName(d.a);
+      else if (d.k === 'quest' && d.a) S.questwith = d.a;
+      else if (d.k === 'duel') S[d.a === 'won' ? 'duelwon' : 'duellost'] = 1;
+    }
+    return S;
   },
   // saves: every 5 min when changed (driven by botChatTick), each key at most once per 15 s; force on shutdown / log off
   botMemSave(force = false) {

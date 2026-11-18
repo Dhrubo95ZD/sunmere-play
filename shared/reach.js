@@ -30,9 +30,9 @@ export const REACH = {
   // tracks across the island (polylines [x, z]): the main road east, and a loop south and north through the regions
   paths: [
     [[431, -1200], [463, -1200], [488, -1201], [524, -1198], [562, -1194], [586, -1190], [590, -1172]], // pier, camp, terraces, works
-    [[463, -1200], [472, -1168], [496, -1146], [536, -1138], [568, -1150], [590, -1172]], // south: the dunes, the terraces, past the cone
+    [[500, -1200], [500, -1160], [496, -1146], [536, -1138], [568, -1150], [590, -1172]], // south: the dunes, the terraces, past the cone ((RF.7) leaves the road square-on, 12 m east of the north track: no X out of the camp; (RF.7 review) east of the camp's south wall, which it ran into at x 476 with the workshop's tank and pipe)
     [[586, -1190], [598, -1206], [594, -1224], [590, -1246], [576, -1262]], // across the plateau between the works
-    [[576, -1262], [542, -1264], [504, -1250], [476, -1230], [463, -1200]], // north: back down the terraces to the camp
+    [[576, -1262], [542, -1264], [504, -1250], [492, -1240], [488, -1228], [488, -1201]], // north: back down the terraces to the camp (a T on the road)
     [[453, -1214], [459, -1206]], // the graveyard to the camp
   ],
 };

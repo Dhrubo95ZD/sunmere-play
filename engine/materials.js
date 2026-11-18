@@ -705,11 +705,12 @@ const DEFS = {
   canopyBlue: () => std('canopyBlue', { tex: T.stripeTex('#2e4a92', '#efe0bf', 8), side: THREE.DoubleSide, wind: true, normalScale: 0.5 }),
   targetFace: () => std('targetFace', { tex: T.targetTex(), rough: 1 }),
   straw: () => std('straw', { tex: T.clothTex(), color: 0xd8b860, rough: 1, normalScale: 1.2 }),
-  // (crystals are plain cut glass and quartz: a faint inner light, never a magical glow)
-  crystalBlue: () => std('crystalBlue', { color: 0xa8d8ff, emissive: 0x3a7ae8, emissiveIntensity: 0.35, rough: 0.12, metal: 0.1, env: 2 }),
-  crystalPurple: () => std('crystalPurple', { color: 0xb88cff, emissive: 0x7a3ae0, emissiveIntensity: 0.3, rough: 0.15, metal: 0.1, env: 2 }),
-  crystalTeal: () => std('crystalTeal', { color: 0x8ff0e8, emissive: 0x2ab8b0, emissiveIntensity: 1.0, rough: 0.15, metal: 0.1, env: 2 }),
-  crystalGreen: () => std('crystalGreen', { color: 0xa8f070, emissive: 0x4aa82a, emissiveIntensity: 1.0, rough: 0.15, metal: 0.1, env: 2 }),
+  // (RF.7) crystals are plain minerals, lit only by the sun: no emissive glow at all (a glowing teal or purple crystal read as
+  // magic), muted natural colours (grey-blue quartz, dull amethyst, grey-green fluorite, pale olive) and a stony sheen
+  crystalBlue: () => std('crystalBlue', { color: 0x9aa8b4, rough: 0.35, metal: 0.05, env: 1.2 }),
+  crystalPurple: () => std('crystalPurple', { color: 0x8a7e8e, rough: 0.4, metal: 0.05, env: 1.2 }),
+  crystalTeal: () => std('crystalTeal', { color: 0x8a9e96, rough: 0.4, metal: 0.05, env: 1.2 }),
+  crystalGreen: () => std('crystalGreen', { color: 0x9aa486, rough: 0.4, metal: 0.05, env: 1.2 }),
   // nature
   bark: () => std('bark', { tex: T.barkTex('bark'), wind: true }),
   barkDark: () => std('barkDark', { tex: T.barkTex('barkDark', { base: '#4f3a28', light: '#7a5a3a' }), wind: true }),
