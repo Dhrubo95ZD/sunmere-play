@@ -31,43 +31,43 @@ export const GATES = {
 export const FUSIONS = {
   knight: [
     F('kf_stormfall', 'Stormfall', { cls: 'knight', icon: 'leap', from: 'k_rising', to: 'k_skybreaker', lvl: 5, need: 'hit', cd: 14, extra: 10, range: 9,
-      hit: { t: 0.72, kind: 'aoe', r: 4.5 }, fx: [['leap', 6], ['dmg', 2.3], ['air', 1.4], ['holdLift', 1.4], ['brk', 60], ['slow', 40, 3]],
+      hit: { t: 0.72, kind: 'aoe', r: 4.5 }, fx: [['leap', 6], ['dmg', 2.3], ['air', 1.4], ['slamDown', 0.6], ['brk', 60], ['slow', 40, 3]], // (S5: the plunge slams the machine down, a 0.3 m bounce, and it lies stunned 0.6 s; it no longer hangs 1.4 s over the crater)
       tags: ['air', 'slam', 'fusion'], cam: 'lift', choreo: 'kf_stormfall', gateText: 'Rising Cut must lift the foe', hint: 'Something rises, then something falls.',
       carry: { a: { aloft: { hang: 0.3, airMul: 0.25 }, gale: { allLifted: true } }, b: { higharc: { leap: 10, r: 1.3 } } }, ai: { role: 'burst', want: { state: 'lifted' } },
       desc: 'Vault straight up past the lifted machine, hang at the top and drive down through it into the ground.' }),
     F('kf_highledger', 'High Ledger', { cls: 'knight', icon: 'twin', from: 'k_rising', to: 'k_valiant', lvl: 7, need: 'state:lifted', cd: 10, extra: 10,
-      hit: { t: 0.24, kind: 'melee', n: 3, gap: 0.26 }, fx: [['dmg', 0.5], ['air', 1.5], ['brk', 8], ['holdLift', 0.35]], fxLast: [['holdLift', 0.6]], // (each cut keeps the machine up, review 18 Nov: Rising Cut's 1.0 s lift ran out before the third)
-      tags: ['air', 'fusion'], choreo: 'k_twin', hint: 'What is in the air can be cut again.', ai: { role: 'burst', want: { state: 'lifted' } },
+      hit: { t: 0.24, kind: 'melee', n: 3, gap: 0.26 }, fx: [['dmg', 0.5], ['air', 1.5], ['brk', 8], ['holdLift', 0.35]], fxLast: [['holdLift', 0.6]], tiers: [1, 1, 3], // (each cut keeps the machine up, review 18 Nov: Rising Cut's 1.0 s lift ran out before the third; S5: three T1 sparks, then a T3 with the camera kicked up, no slam)
+      tags: ['air', 'fusion'], choreo: 'kf_highledger', hint: 'What is in the air can be cut again.', ai: { role: 'burst', want: { state: 'lifted' } },
       desc: 'Follow the machine up with three cuts in the air; the last keeps it aloft.' }),
     F('kf_kingsfall', 'Kingsfall', { cls: 'knight', icon: 'crown', from: 'k_cleave', to: 'k_skybreaker', lvl: 9, need: 'hit', cd: 16, extra: 10, range: 10,
-      hit: { t: 0.32, kind: 'aoe', r: 5, n: 3, gap: 0.42 }, fx: [['dmg', 0.85], ['brk', 12]], fxLast: [['brk', 50], ['knock', 2]],
-      tags: ['leap', 'slam', 'fusion'], choreo: 'k_kingsfall', hint: 'A wide cut, then come down on what is left.', ai: { role: 'aoe' },
+      hit: { t: 0.32, kind: 'aoe', r: 5, n: 3, gap: 0.42 }, fx: [['dmg', 0.85], ['brk', 12]], fxLast: [['brk', 50], ['knock', 2]], tiers: [2, 2, 4], // (S5: cut 1 T2, cut 2 T2, the slam T4)
+      tags: ['leap', 'slam', 'fusion'], choreo: 'kf_kingsfall', hint: 'A wide cut, then come down on what is left.', ai: { role: 'aoe' },
       desc: 'Two wide cuts, then a leaping slam on the shield rim that knocks machines back.' }),
     F('kf_pierce', 'Pierce the Line', { cls: 'knight', icon: 'thrust', from: 'k_valiant', to: 'k_lunge', lvl: 11, need: 'hit', step: 3, cd: 12, extra: 5, range: 10,
       hit: { t: 0.32, kind: 'line', r: 9 }, fx: [['dash', 7], ['dmg', 1.8], ['debuff', 'armor', 20, 8], ['brk', 15]],
-      tags: ['line', 'fusion'], choreo: 'k_lunge', gateText: 'The third step of Valiant Strike must land', hint: 'Finish the chain, then go through them.', ai: { role: 'line' },
+      tags: ['line', 'fusion'], choreo: 'kf_pierce', gateText: 'The third step of Valiant Strike must land', hint: 'Finish the chain, then go through them.', ai: { role: 'line' },
       desc: 'A thrust through every machine on a 9 m line, opening their plating; you end behind them.' }),
     F('kf_battering', 'Battering Line', { cls: 'knight', icon: 'charge', from: 'k_lunge', to: 'k_bash', lvl: 13, need: 'hit', cd: 14, extra: 5,
-      hit: { t: 0.28, kind: 'melee' }, fx: [['dmg', 1.3], ['knock', 4], ['wallSlam', 2], ['brk', 45]],
+      hit: { t: 0.28, kind: 'melee' }, fx: [['dash', 3], ['dmg', 1.3], ['knock', 4], ['wallSlam', 2], ['brk', 45]], // (dash 3, S5: the Knight runs on behind the machine he carries, so his own move never interrupts it)
       tags: ['dash', 'fusion'], choreo: 'kf_battering', hint: 'Keep running, shield first.', ai: { role: 'control' },
       desc: 'The lunge runs on shield-first and carries the machine; into a wall or another machine, it is pinned.' }),
     F('kf_upheaval', 'Upheaval', { cls: 'knight', icon: 'rise', from: 'k_bash', to: 'k_rising', lvl: 16, need: 'state:staggered', cd: 12, extra: 5,
-      hit: { t: 0.3, kind: 'melee' }, fx: [['dmg', 2.0], ['launch', 1.4], ['brk', 40]],
-      tags: ['lift', 'fusion'], choreo: 'k_rising', hint: 'A machine that cannot stand can be lifted.', ai: { role: 'control', want: { state: 'staggered' } },
+      hit: { t: 0.3, kind: 'melee' }, fx: [['dmg', 2.0], ['launch', 1.4], ['brk', 40]], liftH: 2.6, // (2.6 m up, S5: it read weakly at 2.3)
+      tags: ['lift', 'fusion'], choreo: 'kf_upheaval', hint: 'A machine that cannot stand can be lifted.', ai: { role: 'control', want: { state: 'staggered' } },
       desc: 'Scoop the shield rim under the stunned machine and drive it up into the air.' }),
     F('kf_riposte', 'Turning Riposte', { cls: 'knight', icon: 'parry', from: 'k_guard', to: 'k_cleave', tree: 'riposte_drill', need: 'parry', cd: 12, target: 'self', range: 0,
       hit: { t: 0.35, kind: 'aoe', r: 4.5 }, fx: [['dmg', 1.8], ['parryBack', 0.5], ['taunt', 3], ['res', 20], ['brk', 30]],
       tags: ['sweep', 'spin', 'taunt', 'fusion'], choreo: 'kf_riposte', hint: 'Turn their blow into your swing.', ai: { role: 'tank' },
       desc: 'Answer a parry with a turning cut around you that adds half the blow you blocked and turns every machine on you.' }),
     F('kf_sidewind', 'Sidewind Cut', { cls: 'knight', icon: 'spin', from: 'dodge', to: 'k_valiant', tree: 'rolling_edge', need: 'dodge', cd: 8, extra: 5, target: 'self', range: 0,
-      hit: { t: 0.35, kind: 'aoe', r: 4.5 }, fx: [['dmg', 1.1], ['brk', 20]],
+      hit: { t: 0.35, kind: 'aoe', r: 4.5 }, fx: [['dmg', 1.1], ['brk', 20], ['knock', 1.5]], // (knock 1.5, S5: the cut throws machines back a step, so it reads; before it only flinched them)
       tags: ['spin', 'fusion'], choreo: 'kf_sidewind', hint: 'Come up out of the roll swinging.', ai: { role: 'aoe' },
       desc: 'The roll comes up into a wide turning cut.' }),
     // the triad (a deep tree notable): Stormfall > Shield Bash
     F('kt_anvilfall', 'Anvil Fall', { cls: 'knight', icon: 'disc', from: 'kf_stormfall', to: 'k_bash', tree: 'three_heights', need: 'hit', triad: true, cd: 50, extra: 10, range: 20,
-      hit: { t: 0.38, kind: 'proj', speed: 26 }, fx: [['dmg', 2.4], ['ricochet', 2, 8], ['brk', 120], ['slow', 40, 4]],
-      tags: ['shield', 'throw', 'triad'], tier: 5, choreo: 'kt_anvilfall', hint: 'From the crater, the shield has one more fall in it.', ai: { role: 'burst' },
-      desc: 'From the crater, bounce the shield off the ground into the lifted machine; it strikes two more and returns.' }),
+      hit: { t: 0.53, kind: 'proj', speed: 26 }, fx: [['dmg', 2.4], ['ricochet', 2, 8], ['brk', 120], ['slow', 40, 4]],
+      tags: ['shield', 'throw', 'triad'], tier: 5, choreo: 'kt_anvilfall', // (hit 0.53, S5: the shield leaves the hand at 0.4 s and lands about 0.13 s later; the damage at 0.38 came first and the machine waited) hint: 'From the crater, the shield has one more fall in it.', ai: { role: 'burst' },
+      desc: 'From the crater, bounce the shield off the ground into the slammed machine; it strikes two more and returns.' }),
   ],
 };
 
@@ -82,7 +82,9 @@ for (const [cls, list] of Object.entries(FUSIONS)) {
     f.cost = (B?.cost || 0) + (f.extra || 0); // (B's cost + its own extra; the sim adds B's cost with its modifiers)
     FUSION_BY_ID[f.id] = f; FUSE[cls][f.key] = f;
   }
-  for (const f of list) f.tags = [...new Set([...tagsOf(f.from), ...tagsOf(f.to), ...f.tags])];
+  // (a triad takes B's tags and its own, not its A fusion's: Anvil Fall is a shield throw, and Stormfall's leap tag gave it
+  // Iron Comet's range and Hard Landing's poise and radius; S5)
+  for (const f of list) f.tags = [...new Set([...(f.triad ? [] : tagsOf(f.from)), ...tagsOf(f.to), ...f.tags])];
 }
 
 // a skill record by id: the new kit (core skills, chain steps' first record, fusions) for a class on KIT_V2, else the legacy one

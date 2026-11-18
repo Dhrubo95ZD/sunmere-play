@@ -460,7 +460,11 @@ export async function startGame() {
       case 'air': case 'stag': case 'broken': entities.get(ev.id)?.startReact?.(ev.k, ev, fx);
         if (ev.k === 'broken' && ev.cut) { for (const c of game.teleCut?.get(ev.id) || []) c.visible = false; game.teleCut?.delete(ev.id); ui.ucast?.delete(ev.id); } // (its wind-up was cancelled)
         break;
-      case 'dodge': if (ev.id !== me) { const v = entities.get(ev.id); if (v) { v.ry = Math.atan2(ev.dx, ev.dz); v.playSkill('dodge_' + (v.cls || 'knight'), null, null, fx); } } break;
+      // a knockback (S5): the machine slides with a dust trail from its feet and a scrape (Battering Line, Sidewind Cut,
+      // Kingsfall); the move itself is the snapshot lerp
+      case 'knock': { const v = entities.get(ev.id); if (v && !v.dead && fx.after) { let acc = 0; fx.after(0.45, (k, t, dt) => { acc += dt * 28; while (acc > 1) { acc--; fx.emit('dust', v.pos.clone().setY(v.pos.y + 0.15), { n: 1, spread: 0.35, size: 0.75, alpha: 0.5 }); } }); fx.sound('scrape'); } }
+        break;
+      case 'dodge': if (ev.id !== me) { const v = entities.get(ev.id); if (v) { v.ry = Math.atan2(ev.dx, ev.dz); v.playSkill((ev.s ? 'dodges_' : 'dodge_') + (v.cls || 'knight'), null, null, fx); } } break;
       case 'pdodge': if (ev.id === me && local) {
         // a perfect dodge: the world holds for 0.06 s around you, a puff of dust at the feet, a crack, and Opening
         const near = [...entities.views.values()].filter((v) => v.pos.distanceTo(local.pos) < 30);
@@ -772,14 +776,14 @@ export async function startGame() {
   // at once (prediction) and tells the server the chain it cast (chain: A, accepted up to 0.15 s late); the server's cast
   // event swaps the clip if it decided otherwise
   function useSkill(id, qUntil, o = {}) {
-    const base = skillOf(id), y = game.you;
+    const y = game.you, base = (y?.web && ui.eff?.[id]) || skillOf(id); // (S5: the hero's compiled kit with the Web on it, as the server reads p.eff: High Arc's and Sightline's range, Short Hop's cooldown)
     if (!base || base.from || !y || !local || local.dead) return;
     if (!qUntil) { game.pressedSkill = id; setTimeout(() => { if (game.pressedSkill === id) game.pressedSkill = null; }, 120); }
     if (base.lvl > y.level) return ui.error(`Requires level ${base.lvl}.`);
     const now = game.serverTime();
     const fu = o.plain ? null : predictFusion(base, now);
     const ch = game.chain && game.chain.id === base.id && now - game.chain.at <= CHAIN_RESET ? game.chain : null;
-    const sk = fu?.f || (base.chain ? stepOf(base, ch ? (ch.step % base.chain.length) + 1 : 1) : base);
+    const sk = (fu && ((y.web && ui.eff?.[fu.f.id]) || fu.f)) || (base.chain ? stepOf(base, ch ? (ch.step % base.chain.length) + 1 : 1) : base);
     // a fusion key pressed while A still winds up is held to A's contact + the buffer (the server holds it the same way)
     const lc = game.lastCast;
     if (!fu && !o.plain && lc && !lc.done && now < lc.at && FUSE[game.cls]) {
@@ -790,7 +794,8 @@ export async function startGame() {
     // the clip playing (its contact + 0.12 s, or the end of a dodge's evade); a press inside the buffer is held, the
     // latest press wins (riding/sitting loops never block). A fusion skips A's lock
     const cutAt = local.anim.busy && local.anim.action?.clip?.mask === 'full' && !local.anim.action.clip.loop ? game.cutT || 0 : 0;
-    const legal = Math.max(y.cds[id] || 0, fu ? y.cds[fu.f.id] || 0 : 0, sk.gcd && !fu ? Math.max(y.gcd || 0, cutAt) : 0);
+    // (S5) a fusion waits for A's cancel point (its contact + 0.12 s, game.cutT) unless Hair Trigger fires it on the contact
+    const legal = Math.max(y.cds[id] || 0, fu ? Math.max(y.cds[fu.f.id] || 0, y.web && ui.tmods?.contactFire ? 0 : game.cutT || 0) : 0, sk.gcd && !fu ? Math.max(y.gcd || 0, cutAt) : 0);
     // (no early grace: the server holds a press that comes in early and fires it on its next tick, so a client that went
     // 0.05 s early ran its swing and contact 2-3 frames ahead of the server's damage, flinch and number; S1 feel review)
     if (legal > now + 0.005) {
@@ -801,7 +806,9 @@ export async function startGame() {
     }
     game.qSkill = null;
     const cost = fu ? skillCost(base, ui.tmods) + (fu.f.extra || 0) : skillCost(sk, ui.tmods);
+    if (y.res < cost && fu && y.res >= skillCost(base, ui.tmods)) return useSkill(id, qUntil, { ...o, plain: true }); // (enough for plain B, not the fusion: B plain, as the server does)
     if (y.res < cost) return ui.error(`Not enough ${CLASSES[game.cls].resource}.`);
+    if (!onGround && (sk.tags || []).includes('leap') && !sk.airCast) return ui.error('You must be on the ground to leap.'); // (Iron Comet lifts this, S5)
     if (y.mounted) { y.mounted = false; local.setMounted(false); }
     let tgtV = game.target ? entities.get(game.target) : null;
     let ground = null;
@@ -917,11 +924,12 @@ export async function startGame() {
     if (y.mounted) { y.mounted = false; local.setMounted(false); }
     game.casting = null; moveTo = null; interactTarget = null; qwalk.stop('manual');
     local.aimRy = null;
+    if (D.shieldStep) dir = V(Math.sin(local.ry), 0, Math.cos(local.ry)); // (Oathbound's Shield Step: 2 m forward behind the shield, S5)
     if (dir) local.ry = Math.atan2(dir.x, dir.z);
     const back = !dir, w = dir || V(-Math.sin(local.ry), 0, -Math.cos(local.ry));
     game.send({ t: 'dodge', dx: +w.x.toFixed(3), dz: +w.z.toFixed(3) });
-    local.playSkill((back ? 'dodgeb_' : 'dodge_') + game.cls, null, null, fx);
-    game.cutT = now + DODGE.evade; // (skills cut in once the evade is over)
+    local.playSkill((D.shieldStep ? 'dodges_' : back ? 'dodgeb_' : 'dodge_') + game.cls, null, null, fx);
+    game.cutT = now + (D.shieldStep ? D.block : DODGE.evade); // (skills cut in once the evade is over)
     game.chain = null; game.lastCast = null; if (KIT_V2[game.cls]) game.plink = { from: 'dodge', at: now, until: now + D.dur + LINK.win + (y.web ? ui.tmods?.linkWin || 0 : 0), landed: true, done: true, step: 0, tgt: null, parried: false, local: true }; // (S2: the dodge is an input)
     game.dodgeAt = now;
   }
@@ -1056,7 +1064,9 @@ export async function startGame() {
     // a push back such as Recoil Jump never ends inside or beyond a wall; shared/sweep.js)
     if (travel) sweepMove(local.pos, Math.sin(local.ry) * travel, Math.cos(local.ry) * travel, 0.45, (q, r) => world.collide(q, r), local.pos.x < 700 ? houseCrosses : null);
     else world.collide(local.pos, 0.45);
+    const through = local.anim.busy && local.anim.action?.clip?.through; // (Pierce the Line runs through the line, S5)
     for (const v of entities.views.values()) {
+      if (through) break;
       if (v === local || v.dead || v.ty === 'p' || v.root.visible === false) continue; // (story-hidden NPCs are not there yet)
       const rr = (v.radius || 0.5) + 0.45;
       const dx = local.pos.x - v.pos.x, dz = local.pos.z - v.pos.z, d2 = dx * dx + dz * dz;

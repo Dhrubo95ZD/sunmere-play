@@ -39,6 +39,9 @@ export const dodgeWith = (cls, tal) => {
   if (tal.evade) D.evade = tal.evade;
   if (tal.dodgeRecover) D.regen *= 1 + tal.dodgeRecover;
   if (tal.keys.includes('iron_comet')) D.evade = 0;
+  // Oathbound (S5): the dodge is Shield Step, 2 m forward behind the shield: no evade, but blows from the front are blocked
+  // for 0.4 s (a block in it counts as a perfect dodge: Opening)
+  if (tal.keys.includes('oathbound')) Object.assign(D, { name: 'Shield Step', shieldStep: true, dist: 2, dur: 0.4, evade: 0, block: 0.4, blockArc: 75 });
   return D;
 };
 
@@ -114,6 +117,9 @@ export function skillFeel(sk) {
 export function tierOf(sk, i = 0, ctx = {}) {
   if (!sk || ctx.dot) return tierInfo(0);
   const n = sk.hit?.n || 1;
+  // a record that names the tier of each contact (S5: Kingsfall's two cuts T2 then the slam T4, High Ledger's cuts T1 then
+  // T3). A kill on the last contact still makes T4+, and a Reaction makes at least T3
+  if (sk.tiers) { let t = sk.tiers[Math.min(i, sk.tiers.length - 1)]; if (i >= n - 1 && ctx.kill && t >= 4) t = 5; if (ctx.reaction) t = Math.max(t, 3); return tierInfo(t); }
   if (n > 2 && i > 0 && i < n - 1) return tierInfo(0); // a flurry stops only on its first and last contact
   const f = skillFeel(sk);
   let t = basic(sk) ? 1 : 2;

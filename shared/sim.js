@@ -21,7 +21,7 @@ import { BOT_MIND_METHODS } from './botmind.js';
 import { BOT_SOCIAL_METHODS, BOT_PARTY } from './botsocial.js';
 import { BOT_CHAT_METHODS } from './botchat.js';
 import { BOT_MEMORY_METHODS } from './botmemory.js';
-import { skillFeel, tierOf, poiseMax, liftable, isElite, dodgeFor, dodgeWith, POISE, BUFFER, CUT_KINDS } from './feel.js';
+import { skillFeel, tierOf, poiseMax, liftable, isElite, dodgeFor, dodgeWith, POISE, BUFFER, CUT_KINDS, CANCEL_AFTER } from './feel.js';
 import { KIT_V2, CORE, kitOf, stepOf, CHAIN_RESET, PARRY } from './kit.js';
 import { FUSIONS, compileKit, fusionUnlocked, gateOk, nameOf, MASTERY, LINK, DISCOVER_XP, DUEL_FUSE } from './fusions.js';
 import { TALENT_BY_ID, TALENTS, TALENT_ROW_REQ, talentMods, talentPoints, talentResetCost, pathSpent, totalSpent, skillCost, skillCd } from './talents.js';
@@ -2275,8 +2275,13 @@ export class World {
       const f2 = p.effFuse[p.cast.sk.id + '>' + base.id];
       if (f2 && fusionUnlocked(p, f2) && !((p.cds[f2.id] || 0) > castEnd)) { const u = queued && m.qUntil ? m.qUntil : castEnd + BUFFER; if (this.time <= u + 0.051) { p.qcast = { m: { ...m, qUntil: u }, until: u }; return; } }
     }
-    // (a fusion skips A's lock: the reward for landing)
-    const legalAt = Math.max(p.cast && !p.cast.channel ? castEnd + 0.001 : 0, p.cds[base.id] || 0, sk.gcd && !fu ? p.gcd || 0 : 0);
+    // a link to a core skill with no fusion keyed (L.open, S5): Iron Comet's landing to Shield Bash, Oathbound's parry to every
+    // core skill. The press skips the lock and lands as an answer (stronger, with a heavy stop)
+    const Lo = !fu && p.link?.open, answer = !!Lo && !base.from && base.id !== p.link.from && (Lo.to === '*' || Lo.to === base.id) && this.time <= Lo.until + LINK.tick + 1e-6;
+    // (a fusion skips A's lock: the reward for landing. It waits for A's cancel point, the contact + 0.12 s, unless Hair
+    // Trigger fires it on the contact frame, S5)
+    const cutAt = fu && !(p.tal?.contactFire) ? Math.max(p.cutAt || 0, p.cast && !p.cast.channel ? castEnd + CANCEL_AFTER / (p.cast.haste || 1) : 0) : 0;
+    const legalAt = Math.max(p.cast && !p.cast.channel ? castEnd + 0.001 : 0, cutAt, p.cds[base.id] || 0, sk.gcd && !fu && !answer ? p.gcd || 0 : 0);
     if (p.cast && p.cast.channel) return queued ? undefined : this.err(p, 'You are busy.');
     if (legalAt > this.time) {
       if (hold(legalAt)) return;
@@ -2298,7 +2303,12 @@ export class World {
       if (fu && tal.cleanEarly && p.link) { const el = this.time - (p.link.at ?? this.time); if (el <= tal.cleanEarly + 1e-6) { cost = 0; kmul = 1 + (tal.cleanBonus || 0); } else if (el > (tal.cleanLate || 9)) kmul = 1 - (tal.cleanPen || 0); }
       if (!fu && tal.encore && p.link?.encore && this.time <= p.link.until + LINK.tick + 1e-6) { encore = true; kmul *= 1 + tal.encore; }
     }
+    if (answer) { encore = true; kmul *= 1 + (Lo.mul || 0); }
+    // (S5 review) enough Valor for plain B but not for the fusion: B casts plain instead of the press being refused
+    if (p.res < cost && fu && !m.plain && p.res >= skillCost(base, tal)) return this.on_cast(p, { ...m, plain: true }, queued);
     if (p.res < cost) return this.err(p, `Not enough ${CLASSES[p.cls].resource}.`);
+    // a leap from the air (the client says it is airborne, m.air or its last pos): only with Iron Comet (S5)
+    if (p.air && !p.bot && (sk.tags || []).includes('leap') && !sk.airCast) return this.err(p, 'You must be on the ground to leap.');
     let target = null, gx = null, gz = null;
     if (sk.target === 'enemy') {
       target = this.foeOf(p, m.target) || (fu && p.link?.tgt ? this.foeOf(p, p.link.tgt) : null);
@@ -2431,9 +2441,11 @@ export class World {
     p.dodgeN--;
     if (!p.dodgeNext) p.dodgeNext = this.time + D.regen;
     p.evadeT = this.time + D.evade; p.dodgeAt = this.time;
+    p.blockT = D.block ? this.time + D.block : 0; // (Oathbound's Shield Step: a frontal block)
     p.chain = null;
     if (KIT_V2[p.cls]) p.link = { from: 'dodge', at: this.time, until: this.time + D.dur + LINK.win + (p.tal?.linkWin || 0), landed: true, done: true, step: 0, tgt: null, parried: false }; // (the dodge is an input: gate 'dodge')
     let dx = Number(m.dx), dz = Number(m.dz), l = Math.hypot(dx, dz);
+    if (D.shieldStep) { dx = Math.sin(p.ry); dz = Math.cos(p.ry); l = 1; } // (Shield Step: always forward, behind the shield)
     if (!isFinite(l) || l < 1e-3) { dx = -Math.sin(p.ry); dz = -Math.cos(p.ry); l = 1; } // no direction: backwards
     dx /= l; dz /= l;
     if (p.bot && D.dist > 0) {
@@ -2443,7 +2455,7 @@ export class World {
       else { [nx, nz] = clampWorld(nx, nz, ox, oz, 0); if (houseCrosses(ox, oz, nx, nz)) { nx = ox; nz = oz; } else [nx, nz] = housePush(nx, nz, 0.4); }
       p.x = nx; p.z = nz; p.y = walkHeight(nx, nz);
     }
-    this.broadcast({ k: 'dodge', id: p.id, dx: +dx.toFixed(2), dz: +dz.toFixed(2) });
+    this.broadcast({ k: 'dodge', id: p.id, dx: +dx.toFixed(2), dz: +dz.toFixed(2), s: D.shieldStep ? 1 : undefined });
     p.session?.send?.({ t: 'dodgeN', n: p.dodgeN, next: p.dodgeNext });
   }
 
@@ -2481,6 +2493,7 @@ export class World {
     while (c.hits < n && t >= sk.hit.t / c.haste + c.hits * gap) {
       this.applySkill(p, sk, c);
       c.hits++;
+      if (c.hits >= n) p.cutAt = this.time + CANCEL_AFTER / c.haste; // (A's cancel point: a fusion may cut its follow-through from here)
     }
     if (c.hits >= n && this.time >= c.end) p.cast = null;
   }
@@ -2548,6 +2561,9 @@ export class World {
         // the new kit's kinds (combat_design.md 3.7; launch, air and brk are read through feel.js above)
         case 'holdLift': for (const m of enemies) { if (m.type !== 'mob' || m.dead || !(m.airT > this.time)) continue; const add = Math.min(a, isElite(m.def) ? POISE.eliteAir : a); const until = Math.max(m.airT, this.time + add); const lb = m.buffs.find((bf) => bf.name === 'Lifted'); if (lb) { lb.t = until - this.time; lb.dur = Math.max(lb.dur, lb.t); } m.airT = until; m.swingT = Math.max(m.swingT || 0, until - this.time); this.broadcast({ k: 'air', id: m.id, dur: +(until - this.time).toFixed(2), h: 2.2, hold: 1, dir: [0, 0] }); } break; // (kept in the air: Stormfall, High Ledger)
         case 'zone': if (p.type === 'player' && !(c.hits || 0)) { const e = fxl.find((f) => f[0] === 'zone'); const Z = (p.zones ||= []); Z.push({ kind: a, coef: b, until: this.time + (cc || 4), r: e?.[4] || 4, x: center.x, z: center.z, slow: sk.zoneSlow || 0, next: this.time + 0.5, sk: sk.id }); if (Z.length > 6) Z.shift(); } break; // (a ground patch: Cinder Landing's cinders; at most 6 a hero, oldest goes, section 3.6)
+        // (S5) Stormfall's plunge drives the lifted machine into the ground: a 0.3 m bounce (still Lifted for its 0.8 s, so the
+        // air bonus holds), then it lies stunned for a s (Hold Aloft: longer). The client plays the slam on the 'air' hold
+        case 'slamDown': for (const m of enemies) { if (m.type !== 'mob' || m.dead) continue; const was = m.airT > this.time; const b = isElite(m.def) ? 0.5 : 0.8; if (was) { m.airT = this.time + b; const lb = m.buffs.find((bf) => bf.name === 'Lifted'); if (lb) { lb.t = b; lb.dur = Math.max(lb.dur, b); } this.broadcast({ k: 'air', id: m.id, dur: b, h: 0.3, hold: 1, slam: 1, dir: [0, 0] }); } if (!m.def.boss && (was || a > 0)) { const st = (was ? b : 0) + a * cc1; this.addBuff(m, { name: 'Slammed', cc: 'stun', t: st, dur: st, debuff: true, icon: 'stun' }); m.swingT = Math.max(m.swingT || 0, st); } } break;
         case 'parry': p.parryT = this.time + a; p.parryFrom = sk.id; break; // (Guard: a blow in this window is parried, see playerDamaged)
         case 'parryBack': if (c.blocked) for (const m of enemies) this.damage(p, m, c.blocked * a, sk.id); break; // (a share of the blocked blow back: Turning Riposte)
         case 'wallSlam': for (const m of enemies) { if (m.type !== 'mob' || m.dead || m._kb == null) continue; const blocked = m._kb < 0.6 || this.foesOf(p).some((o) => o !== m && !o.dead && dist(o, m) < this.rad(o) + this.rad(m) + 0.2); m._kb = undefined; if (blocked && !m.def.boss) { this.addBuff(m, { name: 'Pinned', cc: 'root', t: a, dur: a, debuff: true, icon: 'root' }); this.broadcast({ k: 'stag', id: m.id, dur: 0.4, dir: [0, 0] }); } } break; // (carried into a wall or a machine: Pinned)
@@ -2556,6 +2572,15 @@ export class World {
     }
     this._hc = null;
     if (KIT_V2[p.cls] && p.type === 'player') this.linkAfter(p, sk, c, enemies, allies); // (fusions: the link window, mastery)
+    // the end of a leap or a dash (its first contact is the landing): the keystones' onLand (Iron Comet's 0.6 s link to
+    // Shield Bash, S5; before, the hook was never called)
+    if (!(c.hits || 0) && p.type === 'player' && p.tal?.keys?.length && sk.fx.some((f) => f[0] === 'leap' || f[0] === 'dash')) {
+      const lc = runKeys(this, p, 'onLand', { sk, x: p.x, z: p.z }).link;
+      if (lc && !p.dead) {
+        const open = { to: lc.to, until: this.time + lc.t, mul: lc.mul ?? 0.3 };
+        p.link = p.link && p.link.at >= c.t0 ? { ...p.link, open, until: Math.max(p.link.until, open.until) } : { from: sk.id, at: this.time, until: open.until, landed: enemies.length > 0, done: true, step: 0, tgt: c.target || null, parried: false, open };
+      }
+    }
     // any hostile touch (a stun, root, slow or debuff with no damage) still starts the fight
     for (const m of enemies) if (m.type === 'mob' && !m.dead) this.provoke(m, p, 1);
     if (enemies.length || allies.length) this.pushSelf(p);
@@ -2629,7 +2654,7 @@ export class World {
         this.addBuff(m, { name: 'Lifted', cc: 'stun', t: dur, dur, debuff: true, icon: 'stun' });
         m.pending = null; m.swingT = Math.max(m.swingT || 0, dur);
         const d = Math.hypot(m.x - src.x, m.z - src.z) || 1;
-        this.broadcast({ k: 'air', id: m.id, dur: +dur.toFixed(2), h: +(1.6 + Math.min(1, dur - 0.7) * 1).toFixed(2), dir: [+((m.x - src.x) / d).toFixed(2), +((m.z - src.z) / d).toFixed(2)] });
+        this.broadcast({ k: 'air', id: m.id, dur: +dur.toFixed(2), h: +(hc.sk?.liftH || 1.6 + Math.min(1, dur - 0.7) * 1).toFixed(2), dir: [+((m.x - src.x) / d).toFixed(2), +((m.z - src.z) / d).toFixed(2)] });
         out.launched = true;
       }
     }
@@ -3721,6 +3746,16 @@ export class World {
       }
       return;
     }
+    // Shield Step (Oathbound's dodge, S5): a blow from in front of the shield is blocked; the first one gives Opening, as a
+    // perfect dodge does
+    if (p.blockT > this.time && src.type === 'mob' && skill !== 'dot' && skill !== 'thorns') {
+      const ax = src.x - p.x, az = src.z - p.z, al = Math.hypot(ax, az) || 1;
+      if ((ax * Math.sin(p.ry) + az * Math.cos(p.ry)) / al >= Math.cos((this.dodgeOf(p).blockArc || 75) * Math.PI / 180)) {
+        this.broadcast({ k: 'miss', src: src.id, tgt: p.id, text: 'Block' });
+        if (p.openT !== p.dodgeAt) { p.openT = p.dodgeAt; const D = this.dodgeOf(p); this.addBuff(p, { name: 'Opening', stat: 'opening', pct: 0, t: D.opening, dur: D.opening, icon: 'evade' }); this.broadcast({ k: 'pdodge', id: p.id, src: src.id }); }
+        return;
+      }
+    }
     // a parry (Guard's first 0.25 s): the blow is turned aside, the machine staggers, Valor back, and the link from Guard
     // is marked parried (the gate of Turning Riposte), with the blocked damage for its counter
     if (p.parryT > this.time && src.type === 'mob' && skill !== 'dot' && skill !== 'thorns') {
@@ -3732,6 +3767,7 @@ export class World {
       // review: five machines' raw blows summed made Turning Riposte hit everything for 13x a Stormfall)
       const blow = Math.min(p.maxHp * 0.5, amt * (1 - (p.armorPct || 0)));
       p.link = { ...L0, parried: true, blocked: Math.max(L0.blocked || 0, blow), until: Math.max(L0.until || 0, this.time + LINK.win), tgt: src.id };
+      if (p.tal?.parryLinksAll) p.link.open = { to: '*', until: this.time + LINK.win + (p.tal.linkWin || 0), mul: 0.25 }; // (Oathbound: a parry opens links to every core skill, S5)
       p.combatT = this.time;
       this.pushSelf(p);
       return;

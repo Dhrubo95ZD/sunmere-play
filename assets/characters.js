@@ -158,21 +158,23 @@ function pauldron(rb, s, o) {
   const bone = 'arm' + s;
   const metal = o.metal, trim = o.trim;
   const big = o.size ?? 1;
-  // big top dome + overlapping lower lames (own mesh, hidden while worn shoulder armour covers it)
-  const plates = [[0.155, 0.03, 0.075, 0.32], [0.13, 0.06, -0.01, 0.62], [0.115, 0.085, -0.075, 0.86]].slice(0, o.lames ?? 2);
-  for (const [r0, ox, oy, rz] of plates) {
-    const r = r0 * big;
-    const p = [sx * ox * big, oy * big, 0];
+  // squared, layered lames stepping down the arm (own mesh, hidden while worn shoulder armour covers it). (S5 review: the
+  // round domes with a trim ring round each read from straight above as discs inside rings; now flat-topped rounded
+  // rectangles, each overlapping the one below, with the trim a straight strip on the outer edge only, never a ring)
+  const plates = [[0.18, 0.034, 0.235, 0.02, 0.05, 0.48], [0.16, 0.03, 0.215, 0.07, -0.02, 0.78], [0.145, 0.028, 0.195, 0.1, -0.08, 1.02]].slice(0, o.lames ?? 2);
+  for (const [w0, h0, d0, ox, oy, rz] of plates) {
+    const w = w0 * big, h = h0 * big, d = d0 * big;
     const rot = [0, 0, -sx * rz];
-    const [d, t] = plateGeo(r, 1.06, 0.58, 1.16, 0.009 * big, sx);
-    rb.add(d, 'pmetal', bone, { p, r: rot, c: metal, paint: 0.5, us: 1.2 });
-    rb.add(t, 'pmetal', bone, { p, r: rot, c: trim, paint: 0.3 });
+    rb.add(rbox(w, h, d, 0.014 * big), 'pmetal', bone, { p: [sx * ox * big, oy * big, 0], r: rot, c: metal, paint: 0.5, us: 1.2 });
+    rb.add(rbox(0.018 * big, h * 1.15, d * 1.02, 0.006), 'pmetal', bone, { p: [sx * (ox * big + (w / 2) * Math.cos(rz)), oy * big - (w / 2) * Math.sin(rz), 0], r: rot, c: trim, paint: 0.3 });
   }
   if (o.gem) {
-    rb.add(cyl(0.04 * big, 0.04 * big, 0.02, 12), 'pmetal', bone, { p: [sx * 0.07 * big, 0.135 * big, 0.06 * big], r: [0.9, 0, -sx * 0.5], c: trim });
+    // a small square boss with a flat polished stone (it was a round stud in a round setting: a disc in a ring from above)
+    const gp = [sx * 0.03 * big, 0.075 * big, 0.07 * big];
+    rb.add(rbox(0.05 * big, 0.016, 0.05 * big, 0.006), 'pmetal', bone, { p: gp, r: [0, 0, -sx * 0.48], c: trim });
     // (a polished stone that does not glow: two glowing blue points, one on each shoulder, broke "no glow on characters",
     // combat_design 10.2; review 18 Nov)
-    rb.add(ico(0.026 * big, 0), 'pmetal', bone, { p: [sx * 0.075 * big, 0.143 * big, 0.067 * big], c: o.gem });
+    rb.add(rbox(0.026 * big, 0.012, 0.026 * big, 0.004), 'pmetal', bone, { p: [gp[0], gp[1] + 0.01, gp[2]], r: [0, 0, -sx * 0.48], c: o.gem });
   }
   if (o.spike) rb.add(cone(0.035 * big, 0.12 * big, 8), 'pmetal', bone, { p: [sx * 0.08 * big, 0.16 * big, 0], r: [0, 0, -sx * 0.5], c: trim });
 }
@@ -189,7 +191,9 @@ function breastplate(rb, metal, trim, { heavy = false } = {}) {
   rb.addW(shell([[0.2 * k, 1.1], [0.205 * k, 1.2], [0.235 * k, 1.33], [0.255 * k, 1.44], [0.24 * k, 1.52], [0.17, 1.58]], 22), 'metal', (x, y) => torsoW(y), { s: [1, 1, 0.7], c: metal, paint: 0.5, ao: [1.05, 1.5, 0.7] });
   // central ridge + trims
   rb.addW(torus(0.235 * k, 0.012, 6, 28), 'metal', (x, y) => torsoW(y), { p: [0, 1.11, 0], r: [PI / 2, 0, 0], s: [0.86, 0.6, 1], c: trim });
-  rb.addW(torus(0.175, 0.014, 6, 28), 'metal', () => [['chest', 1]], { p: [0, 1.575, 0], r: [PI / 2, 0, 0], s: [1, 0.72, 1], c: trim });
+  // (no gold band round the neck opening: from straight above it ringed the helm, S5 review; the front collar keeps a short
+  // straight edge)
+  rb.addW(rbox(0.16, 0.022, 0.03, 0.008), 'metal', () => [['chest', 1]], { p: [0, 1.57, 0.12 * k], c: trim });
   // abdomen bands (fauld)
   for (let i = 0; i < 3; i++) {
     const y = 1.06 - i * 0.055;
@@ -397,26 +401,27 @@ function robeTop(rb, color, trim, sleeveColor) {
 function clothShoulders(rb, color, trim) {
   // soft cowl around the collar
   rb.addW(shell([[0.2, 1.5], [0.19, 1.55], [0.15, 1.6], [0.1, 1.645]], 22), 'cloth', () => [['chest', 1]], { s: [1, 1, 0.8], c: color, paint: 0.25 });
-  rb.addW(torus(0.198, 0.016, 6, 30), 'cloth', () => [['chest', 1]], { p: [0, 1.5, 0], r: [PI / 2, 0, 0], s: [1, 0.8, 1], c: color });
-  if (trim) rb.addW(torus(0.2, 0.007, 5, 30), 'metal', () => [['chest', 1]], { p: [0, 1.488, 0], r: [PI / 2, 0, 0], s: [1, 0.8, 1], c: trim });
+  // (S5 review: no rolled cloth ring and gold band round the collar; from straight above they ringed the helm)
 }
 
 // helm types (all faceless)
 function greatHelm(rb, metal, trim) {
-  rb.add(lathe([[0.01, -0.02], [0.135, -0.02], [0.145, 0.06], [0.147, 0.16], [0.128, 0.23], [0.075, 0.265], [0.01, 0.272]], 22), 'metal', 'head', { s: [1, 1, 1.06], c: metal, paint: 0.45, us: 1.2 });
+  rb.add(lathe([[0.01, -0.02], [0.135, -0.02], [0.145, 0.06], [0.147, 0.16], [0.13, 0.225], [0.1, 0.243], [0.01, 0.25]], 22), 'metal', 'head', { s: [1, 1, 1.06], c: metal, paint: 0.45, us: 1.2 });
   // flat face plate with a recessed eye slit between a brow ridge and a lower plate
   rb.add(rbox(0.2, 0.2, 0.05, 0.02), 'metal', 'head', { p: [0, 0.08, 0.13], c: metal, paint: 0.4, us: 1.2 });
   rb.add(rbox(0.215, 0.034, 0.06, 0.012), 'metal', 'head', { p: [0, 0.158, 0.135], c: trim });
   rb.add(box(0.17, 0.026, 0.03), 'dark', 'head', { p: [0, 0.133, 0.147] });
   rb.add(rbox(0.18, 0.02, 0.055, 0.008), 'metal', 'head', { p: [0, 0.112, 0.14], c: metal, paint: 0.4 });
-  rb.add(torus(0.146, 0.011, 6, 26), 'metal', 'head', { p: [0, -0.012, 0], r: [PI / 2, 0, 0], s: [1, 1.06, 1], c: trim });
+  // (S5 review, from straight above: the gold band round the helm's foot made the dome a disc inside a ring. It is gone, and
+  // the crown is a flat, squared top plate, so from above the helm reads as a rounded square with a ridge across it)
+  rb.add(rbox(0.22, 0.03, 0.235, 0.014), 'metal', 'head', { p: [0, 0.238, -0.006], c: metal, paint: 0.45, us: 1.2 });
   rb.add(rbox(0.05, 0.05, 0.02, 0.006), 'metal', 'head', { p: [0, 0.215, 0.13], r: [-0.45, 0, PI / 4], c: trim });
   // crest ridge front-to-back over the top
   rb.add(torus(0.14, 0.01, 6, 20, PI), 'metal', 'head', { p: [0, 0.13, 0], r: [0, PI / 2, 0], s: [1, 1, 1.06], c: trim });
   // and a raised ridge along the flat top, so from straight above the crest runs front to back across the dome instead of
   // a short dash inside a dome in a gold ring (review 18 Nov; it stops short of the brow, so no upright line meets the
   // brow bar from the front)
-  rb.add(rbox(0.024, 0.03, 0.17, 0.008), 'metal', 'head', { p: [0, 0.272, -0.01], c: trim });
+  rb.add(rbox(0.024, 0.03, 0.2, 0.008), 'metal', 'head', { p: [0, 0.272, -0.01], c: trim });
 }
 
 function bucketHelm(rb, metal, trim, { stepped = false } = {}) {
@@ -426,7 +431,9 @@ function bucketHelm(rb, metal, trim, { stepped = false } = {}) {
   // with the lathe's centre point as a dot. A straight ridge runs front to back over the top instead, and the boss on the
   // brow is a plain metal rivet (a single glowing blue stone in the middle of the face read as an eye)
   rb.add(rbox(0.03, 0.022, 0.27, 0.008), 'metal', 'head', { p: [0, 0.27, 0.0], s: [1, 1, 1.05], c: trim });
-  rb.add(torus(0.152, 0.016, 6, 24), 'metal', 'head', { p: [0, -0.02, 0], r: [PI / 2, 0, 0], s: [1, 1.05, 1], c: trim });
+  // (S5 review: no bronze band round the helm's foot, from above the flat top sat inside it as a disc in a ring; a short
+  // straight brow strip on the front instead)
+  rb.add(rbox(0.2, 0.026, 0.03, 0.008), 'metal', 'head', { p: [0, -0.01, 0.15], c: trim });
   rb.add(rbox(0.07, 0.07, 0.025, 0.008), 'metal', 'head', { p: [0, 0.06, 0.155], r: [0, 0, PI / 4], c: trim });
   rb.add(ico(0.018, 0), 'metal', 'head', { p: [0, 0.06, 0.168], c: trim });
   // gorget (a stepped, two-shell gorget on the heavy helm)

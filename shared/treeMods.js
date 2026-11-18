@@ -136,7 +136,7 @@ const fxSet = (r, kind, f) => { let hit = false; r.fx = r.fx.map((e) => { if (e[
 export function applyMods(r, mods = {}) {
   for (const [k, v] of Object.entries(mods)) {
     switch (k) {
-      case 'hang': r.hang = (r.hang || 0) + v; if (!fxSet(r, 'holdLift', (e) => [e[0], e[1] + v])) r.fx.push(['holdLift', v]); break;
+      case 'hang': r.hang = (r.hang || 0) + v; if (!fxSet(r, 'slamDown', (e) => [e[0], +(e[1] + v).toFixed(3)]) && !fxSet(r, 'holdLift', (e) => [e[0], e[1] + v])) r.fx.push(['holdLift', v]); break; // (Stormfall slams the machine down: the hang is the hero's at the top and the machine lies down longer, S5)
       case 'airMul': if (!fxSet(r, 'air', (e) => [e[0], +(e[1] * (1 + v)).toFixed(3)])) r.fx.push(['air', +(1 + v).toFixed(3)]); break;
       case 'leap': fxSet(r, 'leap', () => ['leap', v]); r.range = Math.max(r.range || 0, v); break;
       case 'range': r.range = v; break;
@@ -188,6 +188,9 @@ export function compileEff(rec, tal, ctx = {}) {
     if (T.radius && r.hit?.r) r.hit.r = +(r.hit.r * (1 + T.radius)).toFixed(2);
     if (T.cost) r.cost = Math.max(0, Math.round((r.cost || 0) * (1 - T.cost)));
   }
+  // the Web's range nodes (Sightline on the bridges, +4% each; S5 review: they did nothing for the Knight): every reach past
+  // melee, a leap's or a dash's distance with it (melee reach and self skills stay as they are)
+  if (tal.range && (r.range || 0) > 5) { r.range = +(r.range * (1 + tal.range)).toFixed(2); fxSet(r, 'leap', (e) => [e[0], +(e[1] * (1 + tal.range)).toFixed(2)]); fxSet(r, 'dash', (e) => [e[0], +(e[1] * (1 + tal.range)).toFixed(2)]); }
   for (const f of tal.skfx?.[r.id] || []) r.fx.push([...f]);
   if (r.from && tal.fuse) fxSet(r, 'dmg', (e) => [e[0], +(e[1] * (1 + tal.fuse)).toFixed(3), ...e.slice(2)]);
   return r;

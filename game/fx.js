@@ -632,7 +632,13 @@ export class FX {
     return m;
   }
 
+  // a fusion's debris budget (combat_design.md 10.3, S5): from the fusion's first frame to a second after its clip, its
+  // beats share at most 18 rocks (8 on phones), and the live rocks stay under the same cap: the oldest (an earlier skill's,
+  // already lying on the ground) are taken out first. entities.js playSkill opens it for a fusion's clip
+  fuseBudget(dur) { const cap = GFX.mobile ? 8 : 18; this._fb = { until: (this.clockT || 0) + dur + 1, left: cap, cap }; }
   rocks(pos, n = 10, power = 1) {
+    const fb = this._fb && (this.clockT || 0) <= this._fb.until ? this._fb : null;
+    if (fb) { n = Math.min(n, fb.left); fb.left -= n; if (n > 0) this.debrisList.splice(0, Math.max(0, this.debrisList.length + n - fb.cap)); }
     for (let i = 0; i < n; i++) {
       if (this.debrisList.length >= 120) break;
       const v = rv(r(2, 6) * power); v.y = Math.abs(v.y) * 1.2 + 3 * power;

@@ -1,6 +1,15 @@
 // What's new: shown once after an update (newest first). Bump `v` on the first entry whenever something is added.
 export const CHANGELOG = [
   {
+    v: 130, date: '18 November 2026', title: 'The Knight',
+    items: [
+      ['The Knight, finished', 'Every Knight fusion now has its own motion, its own weight and its own effects. High Ledger hops into three quick cuts; Kingsfall cuts twice and slams; Pierce the Line drives clean through and out past the machine; Battering Line charges behind the shield over a wake of dust; Upheaval throws the machine high; Turning Riposte and Sidewind Cut spin and knock machines aside; Anvil Fall hurls the shield and lands it on the beat; Stormfall slams the machine into the ground and leaves it stunned.'],
+      ['Keystones that change how you fight', 'Iron Comet lets you leap from a jump and turns the landing into a heavier Shield Bash. Oathbound widens your parry, lets a good parry open into any skill, and swaps your roll for a Shield Step that blocks from the front. Hair Trigger fires your fusions on the very frame the first blow lands.'],
+      ['Fairer fights', 'Skybreaker now casts on its own when you have Valor for it but not for the fusion. Each fusion keeps its flying rubble within a set limit so big fights stay clear and smooth on phones.'],
+      ['New armour shapes', 'The Knight’s and Warden’s shoulder plates are now squared, layered plates, and the Knight’s helm has a flat top.'],
+    ],
+  },
+  {
     v: 129, date: '18 November 2026', title: 'Stormfall',
     items: [
       ['Stormfall, in full', 'The Knight’s Rising Cut into Skybreaker now plays as it should: the Knight crouches and leaps five metres up past the machine he just launched, hangs at the top, dives and drives it into the ground in a crater of dust, with the camera rising to follow. Anvil Fall, Turning Riposte, Sidewind Cut and Battering Line have new motion of their own.'],

@@ -26,6 +26,8 @@ export const KEYSTONES = {
     price: 'Leap damage is 15% lower.',
     renames: { kf_stormfall: { name: 'Cinderfall', fx: 'cinders' } },
     onCompile(rec) {
+      // Anvil Fall is a throw, not a leap (S5), but it comes out of the hot crater: the shield's bounce leaves cinders too
+      if (rec.id === 'kt_anvilfall') { rec.fx = [...(rec.fx || []), ['zone', 'fire', 0.2, 4, 3]]; rec.zoneSlow = 20; addTag(rec, 'heat'); rec.groundFx = 'cinders'; return rec; }
       if (!has(rec, 'leap')) return rec;
       fxMul(rec, 'dmg', 0.85);
       rec.fx = [...(rec.fx || []), ['zone', 'fire', 0.2, 4, 4]]; // ['zone', kind, coef, dur, r] (3.7); the cinders slow 20% while stood in
@@ -51,7 +53,7 @@ export const KEYSTONES = {
   },
   iron_comet: {
     name: 'Iron Comet', cls: 'knight',
-    desc: 'Leaps can be cast in the air from a jump and reach 50% further. A landing opens a 0.6 s link to Shield Bash.',
+    desc: 'Leaps can be cast in the air from a jump and reach 50% further. A landing opens a 0.6 s link to Shield Bash: the bash skips its recovery and lands 30% harder with a heavy stop.',
     price: 'The roll still moves you but no longer evades.',
     mods: { airCast: 1 },
     onCompile(rec) {

@@ -427,6 +427,42 @@ const DEF = {};
   ], [{ t: 0.05, e: 'trail', on: true, color: '#fff0b0', w: 1.4 }, { t: 'hit', e: 'impact', kind: 'slash', shake: 0.3, stop: 0.05 }, { t: 'hit2', e: 'impact', kind: 'slash', shake: 0.35, stop: 0.06 }, { t: 0.5, e: 'leap' },
     { t: 'hit3', e: 'impact', kind: 'earth', at: 'self', r: 5, shake: 1.2, stop: 0.12 }, { t: 'hit3', e: 'decal', kind: 'crater', r: 4.5 }, { t: 'hit3', e: 'ring', color: '#ffe0a0', r: 7 }, { t: 0.92, e: 'trail', on: false }], { endRoot: [0, 0, 3.2] });
 
+  // ---- S5 fusion clips (combat_design.md 5.1): each fusion on its own DEF, so its contacts time from the fusion's hit
+  // (a borrowed DEF timed itself by the legacy skill's) and its beats sit inside the 18-rock budget (fx.js fuseBudget).
+  // High Ledger: a keyed hop (root +1.6 m) with three flat cuts that stay parallel (forehand, backhand, forehand a hand
+  // lower), contacts at the fusion's 0.24 / 0.50 / 0.76 s on the floating machine; no slam, so no crater and no rocks
+  {
+    const HL = 1.15, hop = (t) => (t < 0.08 ? 0 : t < 0.24 ? 1.6 * Math.sin(((t - 0.08) / 0.16) * Math.PI / 2) : t < 0.78 ? 1.6 - 0.25 * ((t - 0.24) / 0.54) : t < 0.98 ? 1.35 * (1 - ((t - 0.78) / 0.2) ** 2) : 0);
+    const cut3 = swing(HL, 0.76, { wind: -95, mid: -45, hit: 5, follow: 60, end: 40 }, (a, role, e) => [P(SH, arc(a, { lead: role === 'wind' ? -30 : role === 'follow' ? 20 : -5, dy: -0.32 }), L.air), { root: [0, -0.04, 0.14], e }], 1400);
+    const keys = [...twin(HL, 0.24, 0.5, L.air, L.air), ...cut3].map((q) => ({ ...q, root: [q.root?.[0] || 0, (q.root?.[1] || 0) + hop(q.t * HL), q.root?.[2] || 0] }));
+    DEF.kf_highledger = C('knight', HL, 'full', [k(0, GL), ...keys, k(1, GL, { root: R.guard })],
+      [{ t: 0.02, e: 'dust' }, { t: 0.08, e: 'leap' }, { t: 0.1, e: 'trail', on: true, color: T }, { t: 'hit', e: 'impact', kind: 'slash', at: 'target', shake: 0.2 }, { t: 'hit2', e: 'impact', kind: 'slash', at: 'target', shake: 0.2 },
+        { t: 'hit3', e: 'impact', kind: 'slash', at: 'target', shake: 0.4 }, { t: 0.82, e: 'trail', on: false }, { t: 0.97, e: 'dust' }]);
+  }
+  // Kingsfall: the old clip, on the fusion's timing; the two cuts are T2 (fusions.js tiers) so the slam keeps 10 rocks
+  DEF.kf_kingsfall = { ...DEF.k_kingsfall };
+  // Pierce the Line: the chain's overhead drops into a low thrust that runs on through the line and stops 1.6 m past the
+  // machine it was aimed at (toTarget behind; through: the hero is not pushed back by the machines it passes), a dust lane
+  // along the ground, the trail a short smear, and the Knight ends behind them facing on
+  DEF.kf_pierce = C('knight', 0.9, 'full', [
+    k(0, GL),
+    k(0.18, P(SH, { spine: [4, -30, 0], armR: [10, -30, -30], foreR: [-80, 0, 0], handR: [-10, 0, 0] }, L.stepBack), { root: [0, -0.14, -0.1] }),
+    k(0.32 / 0.9, P(SH, { spine: [30, 22, 0], chest: [6, 10, 0], armR: [-92, 10, -4], foreR: [0, 0, 0], handR: [0, 0, 0], head: [-20, -10, 0] }, P(L.lungeL, { thighL: [-80, 0, 6], shinL: [70] })), { root: [0, -0.26, 1.6], e: 'snap' }),
+    k(0.5, P(SH, { spine: [26, 18, 0], armR: [-88, 10, -4] }, L.lungeR), { root: [0, -0.24, 3.4], e: 'linear' }),
+    k(0.66, P(SH, { spine: [20, 12, 0], armR: [-80, 10, -4] }, L.lungeL), { root: [0, -0.2, 4.4], e: 'out' }),
+    k(1, GL, { root: [0, 0, 4.6], e: 'smooth' }),
+  ], [{ t: 0.16, e: 'dash' }, { t: 0.2, e: 'wave', kind: 'dust', len: 7 }, { t: 0.28, e: 'trail', on: true, color: T, w: 0.7 }, { t: 'hit', e: 'impact', kind: 'pierce', shake: 0.4 }, { t: 0.48, e: 'trail', on: false }, { t: 0.7, e: 'dust' }],
+  { endRoot: [0, 0, 4.6], toTarget: { gap: -1.6, max: 9, behind: true }, through: true });
+  // Upheaval: the shield rim scoops low under the stunned machine (a deep crouch, shield arm driving up), then the rising cut
+  // carries it up; the machine goes 2.6 m (fusions.js liftH) with gravel falling off it
+  DEF.kf_upheaval = C('knight', 0.95, 'full', [
+    k(0, GL),
+    k(0.16, P(SH, { spine: [34, -10, 0], chest: [10, -6, 0], armL: [-20, 60, 40], foreL: [-60, 0, 0], armR: [20, -10, -30], foreR: [-20, 0, 0], handR: [40, 0, 0], head: [-6, 10, 0] }, L.deep), { root: [0, -0.42, 0.05] }),
+    k(0.3 / 0.95, P(SH, { spine: [6, 6, 0], chest: [-4, 4, 0], armL: [-120, 40, 20], foreL: [-30, 0, 0], armR: [-80, 14, -24], foreR: [-14, 0, 0], handR: [36, 0, 0], head: [-14, 2, 0] }, L.stepL), { root: [0, -0.08, 0.14], e: 'snap' }),
+    k(0.5, P(SH, { spine: [-16, 20, -6], chest: [-12, 14, 0], armL: [-150, 30, 20], foreL: [-20, 0, 0], armR: [-160, 30, -10], foreR: [-10, 0, 0], handR: [-10, 0, 0], head: [-24, -6, 0] }, P(L.stand, { thighR: [-20, 0, -4], shinR: [10] })), { root: [0, 0.2, 0.14] }),
+    k(0.7, P(SH, { spine: [-6, 14, 0], armL: [-110, 40, 20], armR: [-150, 20, -20], foreR: [-30, 0, 0] }), { root: [0, 0.05, 0.1] }),
+    k(1, GL, { root: R.guard }),
+  ], [{ t: 0.1, e: 'dust' }, { t: 0.18, e: 'trail', on: true, color: T, w: 1.2 }, { t: 'hit', e: 'impact', kind: 'shield', shake: 0.5 }, { t: 'hit', e: 'sound', s: 'scrape' }, { t: 0.6, e: 'trail', on: false }]); // (one contact, one light: the budget's 1 per fusion)
   // ---- level 42 and 45 (the Cinder Reach) ----
   // Breaching Cut: the sword lifted high over the right shoulder on a back step, then a steep diagonal cut stepping in;
   // the contact is held a beat (the plate splits) before the blade is carried on down past the left hip
@@ -618,7 +654,12 @@ function leapRoot(dur, o) {
   // Battering Line: the lunge runs on into the shield charge (body), the keyed bash on the arms; Anvil Fall: the throw comes
   // up out of Stormfall's kneeling landing; Turning Riposte: the parry beat before the turn; Sidewind Cut: the turn itself
   // is the authored spin (the keys' whole-body turn taken out, or it would turn twice)
-  DEF.kf_battering = { ...DEF.k_bash, ual: { mask: 'body', segs: [['Shield_Charge_Loop', 0, 0.42, 0, 0.42]], end: 0.42 } };
+  // (S5: from the game camera it read as a plain bash; the Knight now runs on 3 m shield-first behind the machine he carries,
+  // over a dust wake, and the machine slides with its own dust trail, game.js 'knock')
+  const carry = (t) => 3 * Math.min(1, Math.max(0, (t - 0.38) / 0.42)) ** 0.8;
+  DEF.kf_battering = { ...DEF.k_bash, keys: DEF.k_bash.keys.map((q) => ({ ...q, root: [q.root?.[0] || 0, q.root?.[1] || 0, (q.root?.[2] || 0) + carry(q.t)] })),
+    events: [...DEF.k_bash.events, { t: 0.04, e: 'dash' }, { t: 0.4, e: 'wave', kind: 'dust', len: 4 }, { t: 0.8, e: 'dust' }], endRoot: [0, 0, 3],
+    ual: { mask: 'body', segs: [['Shield_Charge_Loop', 0, 0.42, 0, 0.42]], end: 0.42 } };
   DEF.kt_anvilfall = { ...DEF.k_shieldthrow, ual: { mask: 'body', segs: [['Slam_Land', 0, 0.36, 0.04, 0.4]], end: 0.3 } };
   DEF.kf_riposte = { ...DEF.k_spin, ual: { mask: 'full', segs: [['Parry_Riposte', 0, 0.17, 0.06, 0.2]], end: 0.15 } };
   const sd = DEF.k_spin.dur;
@@ -2506,6 +2547,15 @@ for (const cls of Object.keys(TRAIL)) {
     k(0.34 / 0.5, P(G, { spine: [18, 0, 0] }, L.deep), { root: [0, -0.28, -dist * 0.95], e: 'in' }),
     k(1, GL, { root: [0, 0, -dist] }),
   ], [{ t: 0.02, e: 'sound', s: 'gust' }, { t: 0.1 / 0.5, e: 'dust' }, { t: 0.34 / 0.5, e: 'dust' }], { endRoot: [0, 0, -dist], dodge: true });
+  // Shield Step (Oathbound, S5): a low push-off, then 2 m forward behind the raised shield (Guard's arms), feet planted
+  const SHL = { armL: [-84, 76, 30], foreL: [-110, 0, 0], armR: [-40, 0, -20], foreR: [-90, 0, 0], handR: [40, 0, 0], head: [10, 0, 0] };
+  DEF['dodges_' + cls] = C(cls, 0.4, 'full', [
+    k(0, GL),
+    k(0.1 / 0.4, P(G, SHL, { spine: [22, -8, 0] }, L.deep), { root: [0, -0.3, 0.1] }),
+    k(0.24 / 0.4, P(G, SHL, { spine: [20, -10, 0] }, L.lungeL), { root: [0, -0.22, 1.3], e: 'out' }),
+    k(0.34 / 0.4, P(G, SHL, { spine: [18, -10, 0] }, L.deep), { root: [0, -0.3, 1.95] }),
+    k(1, GL, { root: [0, 0, 2] }),
+  ], [{ t: 0.02, e: 'sound', s: 'gust' }, { t: 0.1 / 0.4, e: 'dust' }, { t: 0.34 / 0.4, e: 'dust' }, { t: 0.34 / 0.4, e: 'sound', s: 'scrape' }], { endRoot: [0, 0, 2], dodge: true });
 }
 
 // compile: resolve 'hit', 'hit2'.. into normalized times from the skill's impact timing
@@ -2542,6 +2592,7 @@ for (const [id, def] of Object.entries(DEF)) {
   for (let i = 1; i < keys.length; i++) if (keys[i].t < keys[i - 1].t) console.warn(`[choreo] ${id}: key ${i} out of order (${keys[i - 1].t.toFixed(3)} > ${keys[i].t.toFixed(3)})`);
   const mask = BLEND.has(id) ? 'blend' : def.mask;
   const clip = compileClip({ dur: def.dur, mask, keys, events, travel: !!def.endRoot, plant: true, channel: def.channel, ual: def.ual });
+  if (def.through) clip.through = true; // (S5 Pierce the Line: runs through the machines it passes, game.js)
   CHOREO[id] = { ...def, mask, clip, events };
 }
 

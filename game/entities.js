@@ -537,7 +537,9 @@ export class EntityView {
     if (this.anim.holster || this.anim.pistolsIn) this.holsterSync(false, true);
     // S4: a leap that lands at its target (choreo.js toTarget): the root travel scaled to the distance less the gap
     let travelK = 1;
-    if (ch.toTarget && ch.endRoot?.[2] > 0 && tgt?.pos) travelK = Math.max(0, Math.min(ch.toTarget.max, Math.hypot(tgt.pos.x - this.pos.x, tgt.pos.z - this.pos.z) - ch.toTarget.gap)) / ch.endRoot[2];
+    // (toTarget.behind, S5 Pierce the Line: the gap is past the machine, its own radius further, so the hero ends clear of it)
+    if (ch.toTarget && ch.endRoot?.[2] > 0 && tgt?.pos) travelK = Math.max(0, Math.min(ch.toTarget.max, Math.hypot(tgt.pos.x - this.pos.x, tgt.pos.z - this.pos.z) - ch.toTarget.gap + (ch.toTarget.behind ? tgt.radius || 0.6 : 0))) / ch.endRoot[2];
+    if (skillOf(id)?.from) fx.fuseBudget?.(ch.dur / (haste || 1)); // (a fusion's beats share 18 rocks, fx.js; S5)
     this.anim.play(ch.clip, { speed: haste, fadeIn: cut ? 0.06 : undefined, travelK, onEvent: (ev) => { ctx.yaw = this.ry; fx.run(ev, ctx); } });
     if (this.char.userData.dsList && !(this.dist > 45)) dsAttack(this.char, fx); // Dragonslayer pieces vent steam
     heatAttack(this); // a +10 piece: the phones' and Simple's sparks and wisp follow your own attacks (heat.js)
@@ -656,7 +658,9 @@ export class EntityView {
       return;
     }
     // a stagger on a machine in the air jolts it there (sparks, a vent puff) instead of dropping it to the floor mid-arc
-    if (kind === 'stag' && was?.kind === 'air' && !was.landed && was.y > 0.05) {
+    // (S5: also a stagger in the same moment as the lift, a poise break on the launching blow; it used to replace the lift,
+    // so Upheaval's machine never left the ground on screen)
+    if (kind === 'stag' && was?.kind === 'air' && !was.landed && (was.y > 0.05 || was.t < 0.15)) {
       if (fx) { fx.emit('sparks', this.pos.clone().setY(this.pos.y + was.y + H * 0.55).addScaledVector(d, -0.25), { n: 12, dir: d }); fx.emit('steam', this.pos.clone().setY(this.pos.y + was.y + H * 0.8), { n: 5, size: 0.8 }); }
       return;
     }
