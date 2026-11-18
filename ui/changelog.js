@@ -1,6 +1,15 @@
 // What's new: shown once after an update (newest first). Bump `v` on the first entry whenever something is added.
 export const CHANGELOG = [
   {
+    v: 129, date: '18 November 2026', title: 'Stormfall',
+    items: [
+      ['Stormfall, in full', 'The Knight’s Rising Cut into Skybreaker now plays as it should: the Knight crouches and leaps five metres up past the machine he just launched, hangs at the top, dives and drives it into the ground in a crater of dust, with the camera rising to follow. Anvil Fall, Turning Riposte, Sidewind Cut and Battering Line have new motion of their own.'],
+      ['Sixteen new moves', 'The new hero body learned sixteen combat moves (leaps, a dive and slam, a backflip, a pole vault, a spin, a shield charge, a parry and riposte, an overhead hammer blow, twin pistol shots and more) for the classes to use as they are rebuilt.'],
+      ['Sharper looks', 'The Deadeye’s hat, coat and bandolier were tidied, and the Chemist’s cap and mask were remade to fit the new body. A few spark sprays that fanned out too wide were narrowed.'],
+      ['Skill Web fixes', 'Long Breath, Practised Links and Hair Trigger now lengthen every link, Momentum and its kind only count fusions that land, and Heavy Hand now costs its slower swings as it says.'],
+    ],
+  },
+  {
     v: 128, date: '18 November 2026', title: 'Feel of the Fight',
     items: [
       ['A new hero', 'Every hero, adventurer and townsman now stands on a new body with real movement: proper runs, strafes, jumps and landings, and you keep running while you swing or shoot. The Deadeye has a new look to match: a cloth cowl and scarf, a flat-crowned hat, a long coat whose tails swing as you turn, and both pistols holstered.'],

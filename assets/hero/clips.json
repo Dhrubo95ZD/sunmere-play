@@ -113,6 +113,56 @@
    ],
    "shieldBreak": [
     "Idle_Shield_Break"
+   ],
+   "juggled": [
+    "Air_Juggle_Loop"
+   ],
+   "knockdown": [
+    "Knockdown"
+   ]
+  },
+  "combat": {
+   "leapRise": [
+    "Leap_Rise"
+   ],
+   "airHang": [
+    "Air_Hang_Loop"
+   ],
+   "diveStrike": [
+    "Dive_Strike"
+   ],
+   "slamLand": [
+    "Slam_Land"
+   ],
+   "backflip": [
+    "Backflip"
+   ],
+   "spin": [
+    "Spin_Attack_Loop"
+   ],
+   "kick": [
+    "Kick_Front"
+   ],
+   "vault": [
+    "Pole_Vault"
+   ],
+   "shieldCharge": [
+    "Shield_Charge_Loop"
+   ],
+   "overheadSlam": [
+    "Hammer_Overhead"
+   ],
+   "throwUnder": [
+    "Throw_Underhand"
+   ],
+   "parryRiposte": [
+    "Parry_Riposte"
+   ],
+   "kneelAim": [
+    "Kneel_Aim"
+   ],
+   "twinShoot": [
+    "Pistols_Twin_Shoot"
    ]
   },
   "world": {
@@ -356,6 +406,9 @@
   }
  },
  "order": [
+  "Air_Hang_Loop",
+  "Air_Juggle_Loop",
+  "Backflip",
   "Bow_Aim_Loop",
   "Bow_Draw",
   "Bow_Shoot",
@@ -365,11 +418,13 @@
   "Crouch_Fwd_Loop",
   "Crouch_Idle_Loop",
   "Death01",
+  "Dive_Strike",
   "Driving_Loop",
   "Farm_Harvest",
   "Farm_PlantSeed",
   "Farm_Watering",
   "Fixing_Kneeling",
+  "Hammer_Overhead",
   "Hit_Chest",
   "Hit_Head",
   "Hit_Knockback",
@@ -387,7 +442,11 @@
   "Jump_Land",
   "Jump_Loop",
   "Jump_Start",
+  "Kick_Front",
+  "Kneel_Aim",
+  "Knockdown",
   "LayToIdle",
+  "Leap_Rise",
   "Melee_Hook",
   "Melee_Hook_Rec",
   "Mount_Sit_Loop",
@@ -395,6 +454,7 @@
   "NinjaJump_Land",
   "NinjaJump_Start",
   "OverhandThrow",
+  "Parry_Riposte",
   "PickUp_Table",
   "Pistol_Aim_Down",
   "Pistol_Aim_Neutral",
@@ -402,19 +462,24 @@
   "Pistol_Idle_Loop",
   "Pistol_Reload",
   "Pistol_Shoot",
+  "Pistols_Twin_Shoot",
+  "Pole_Vault",
   "Punch_Cross",
   "Punch_Jab",
   "Push_Loop",
   "Roll",
+  "Shield_Charge_Loop",
   "Shield_Dash",
   "Shield_OneShot",
   "Sitting_Enter",
   "Sitting_Exit",
   "Sitting_Idle_Loop",
   "Sitting_Talking_Loop",
+  "Slam_Land",
   "Slide_Exit",
   "Slide_Loop",
   "Slide_Start",
+  "Spin_Attack_Loop",
   "Sprint_Loop",
   "Staff_Push_Enter",
   "Staff_Push_Exit",
@@ -435,6 +500,7 @@
   "Sword_Regular_B_Rec",
   "Sword_Regular_C",
   "Sword_Regular_Combo",
+  "Throw_Underhand",
   "TreeChopping_Loop",
   "Walk_Back_Loop",
   "Walk_Carry_Loop",
@@ -445,6 +511,54 @@
   "Yes"
  ],
  "clips": {
+  "Air_Hang_Loop": {
+   "sec": 0.5,
+   "tracks": 105,
+   "peakHandR": 0.1,
+   "peakHandRSpeed": 0.17,
+   "peakHandL": 0.417,
+   "peakHandLSpeed": 0.17,
+   "travel": 0,
+   "loop": true,
+   "source": "authored",
+   "pelvisDrift": 0,
+   "pelvisDz": 0,
+   "roles": [
+    "combat.airHang"
+   ]
+  },
+  "Air_Juggle_Loop": {
+   "sec": 0.583,
+   "tracks": 105,
+   "peakHandR": 0.433,
+   "peakHandRSpeed": 1.53,
+   "peakHandL": 0.15,
+   "peakHandLSpeed": 0.58,
+   "travel": 0,
+   "loop": true,
+   "source": "authored",
+   "pelvisDrift": 0,
+   "pelvisDz": 0,
+   "roles": [
+    "reactions.juggled"
+   ]
+  },
+  "Backflip": {
+   "sec": 0.792,
+   "tracks": 105,
+   "peakHandR": 0.198,
+   "peakHandRSpeed": 13.05,
+   "peakHandL": 0.346,
+   "peakHandLSpeed": 10.94,
+   "travel": 0,
+   "loop": false,
+   "source": "authored",
+   "pelvisDrift": 0,
+   "pelvisDz": 0,
+   "roles": [
+    "combat.backflip"
+   ]
+  },
   "Bow_Aim_Loop": {
    "sec": 1,
    "tracks": 105,
@@ -589,6 +703,22 @@
     "reactions.death"
    ]
   },
+  "Dive_Strike": {
+   "sec": 0.333,
+   "tracks": 105,
+   "peakHandR": 0.183,
+   "peakHandRSpeed": 7.13,
+   "peakHandL": 0.183,
+   "peakHandLSpeed": 7.51,
+   "travel": 0.04,
+   "loop": false,
+   "source": "authored",
+   "pelvisDrift": 0.04,
+   "pelvisDz": 0,
+   "roles": [
+    "combat.diveStrike"
+   ]
+  },
   "Driving_Loop": {
    "sec": 1.667,
    "tracks": 105,
@@ -671,6 +801,22 @@
    "roles": [
     "world.craftKneel",
     "townsfolk.work"
+   ]
+  },
+  "Hammer_Overhead": {
+   "sec": 0.875,
+   "tracks": 105,
+   "peakHandR": 0.429,
+   "peakHandRSpeed": 17.01,
+   "peakHandL": 0.396,
+   "peakHandLSpeed": 18.63,
+   "travel": 0,
+   "loop": false,
+   "source": "authored",
+   "pelvisDrift": 0,
+   "pelvisDz": 0,
+   "roles": [
+    "combat.overheadSlam"
    ]
   },
   "Hit_Chest": {
@@ -948,6 +1094,54 @@
     "locomotion.jumpStart"
    ]
   },
+  "Kick_Front": {
+   "sec": 0.583,
+   "tracks": 105,
+   "peakHandR": 0.483,
+   "peakHandRSpeed": 2.34,
+   "peakHandL": 0.5,
+   "peakHandLSpeed": 0.47,
+   "travel": 0,
+   "loop": false,
+   "source": "authored",
+   "pelvisDrift": 0,
+   "pelvisDz": 0,
+   "roles": [
+    "combat.kick"
+   ]
+  },
+  "Kneel_Aim": {
+   "sec": 1,
+   "tracks": 105,
+   "peakHandR": 0.95,
+   "peakHandRSpeed": 1.69,
+   "peakHandL": 0.1,
+   "peakHandLSpeed": 4.81,
+   "travel": 0,
+   "loop": false,
+   "source": "authored",
+   "pelvisDrift": 0,
+   "pelvisDz": 0,
+   "roles": [
+    "combat.kneelAim"
+   ]
+  },
+  "Knockdown": {
+   "sec": 1,
+   "tracks": 105,
+   "peakHandR": 0.417,
+   "peakHandRSpeed": 8.29,
+   "peakHandL": 0.417,
+   "peakHandLSpeed": 8.43,
+   "travel": 0.8,
+   "loop": false,
+   "source": "authored",
+   "pelvisDrift": 0.8,
+   "pelvisDz": -0.8,
+   "roles": [
+    "reactions.knockdown"
+   ]
+  },
   "LayToIdle": {
    "sec": 1.5,
    "tracks": 105,
@@ -962,6 +1156,22 @@
    "pelvisDz": 0.834,
    "roles": [
     "reactions.getUp"
+   ]
+  },
+  "Leap_Rise": {
+   "sec": 0.458,
+   "tracks": 105,
+   "peakHandR": 0.196,
+   "peakHandRSpeed": 14.51,
+   "peakHandL": 0.196,
+   "peakHandLSpeed": 5.41,
+   "travel": 0,
+   "loop": false,
+   "source": "authored",
+   "pelvisDrift": 0,
+   "pelvisDz": 0.1,
+   "roles": [
+    "combat.leapRise"
    ]
   },
   "Melee_Hook": {
@@ -1076,6 +1286,22 @@
     "weapons.throw.throw"
    ]
   },
+  "Parry_Riposte": {
+   "sec": 0.667,
+   "tracks": 105,
+   "peakHandR": 0.2,
+   "peakHandRSpeed": 9.97,
+   "peakHandL": 0.25,
+   "peakHandLSpeed": 6.91,
+   "travel": 0,
+   "loop": false,
+   "source": "authored",
+   "pelvisDrift": 0,
+   "pelvisDz": 0,
+   "roles": [
+    "combat.parryRiposte"
+   ]
+  },
   "PickUp_Table": {
    "sec": 0.833,
    "tracks": 105,
@@ -1188,6 +1414,38 @@
     "weapons.pistol.shoot"
    ]
   },
+  "Pistols_Twin_Shoot": {
+   "sec": 0.5,
+   "tracks": 105,
+   "peakHandR": 0.083,
+   "peakHandRSpeed": 0.96,
+   "peakHandL": 0.233,
+   "peakHandLSpeed": 1.56,
+   "travel": 0,
+   "loop": false,
+   "source": "authored",
+   "pelvisDrift": 0,
+   "pelvisDz": 0,
+   "roles": [
+    "combat.twinShoot"
+   ]
+  },
+  "Pole_Vault": {
+   "sec": 1,
+   "tracks": 105,
+   "peakHandR": 0.433,
+   "peakHandRSpeed": 8.74,
+   "peakHandL": 0.5,
+   "peakHandLSpeed": 9.87,
+   "travel": 0,
+   "loop": false,
+   "source": "authored",
+   "pelvisDrift": 0,
+   "pelvisDz": 0,
+   "roles": [
+    "combat.vault"
+   ]
+  },
   "Punch_Cross": {
    "sec": 1,
    "tracks": 105,
@@ -1250,6 +1508,22 @@
    "pelvisDz": 0.367,
    "roles": [
     "locomotion.dodge"
+   ]
+  },
+  "Shield_Charge_Loop": {
+   "sec": 0.5,
+   "tracks": 105,
+   "peakHandR": 0.067,
+   "peakHandRSpeed": 4.19,
+   "peakHandL": 0.333,
+   "peakHandLSpeed": 3.96,
+   "travel": 0,
+   "loop": true,
+   "source": "authored",
+   "pelvisDrift": 0,
+   "pelvisDz": 0.023,
+   "roles": [
+    "combat.shieldCharge"
    ]
   },
   "Shield_Dash": {
@@ -1348,6 +1622,22 @@
     "locomotion.sitTalk"
    ]
   },
+  "Slam_Land": {
+   "sec": 0.583,
+   "tracks": 105,
+   "peakHandR": 0.267,
+   "peakHandRSpeed": 2.43,
+   "peakHandL": 0.267,
+   "peakHandLSpeed": 2.49,
+   "travel": 0.06,
+   "loop": false,
+   "source": "authored",
+   "pelvisDrift": 0.06,
+   "pelvisDz": 0.44,
+   "roles": [
+    "combat.slamLand"
+   ]
+  },
   "Slide_Exit": {
    "sec": 0.5,
    "tracks": 105,
@@ -1394,6 +1684,22 @@
    "pelvisDz": -0.78,
    "roles": [
     "locomotion.slide"
+   ]
+  },
+  "Spin_Attack_Loop": {
+   "sec": 0.417,
+   "tracks": 105,
+   "peakHandR": 0.267,
+   "peakHandRSpeed": 9.81,
+   "peakHandL": 0.283,
+   "peakHandLSpeed": 5.59,
+   "travel": 0,
+   "loop": true,
+   "source": "authored",
+   "pelvisDrift": 0,
+   "pelvisDz": 0,
+   "roles": [
+    "combat.spin"
    ]
   },
   "Sprint_Loop": {
@@ -1714,6 +2020,22 @@
    "pelvisDz": 0.005,
    "roles": [
     "weapons.swordShield.combo"
+   ]
+  },
+  "Throw_Underhand": {
+   "sec": 0.667,
+   "tracks": 105,
+   "peakHandR": 0.317,
+   "peakHandRSpeed": 8.35,
+   "peakHandL": 0.333,
+   "peakHandLSpeed": 4.96,
+   "travel": 0,
+   "loop": false,
+   "source": "authored",
+   "pelvisDrift": 0,
+   "pelvisDz": 0,
+   "roles": [
+    "combat.throwUnder"
    ]
   },
   "TreeChopping_Loop": {

@@ -2323,7 +2323,7 @@ export class World {
     this.dismount(p); p.sit = false; if (p.salv) this.endSalvage(p, false);
     p.qcast = null; // (a cast that goes off replaces any press still held)
     p.res -= cost;
-    const haste = 1 + p.hastePct + this.buffVal(p, 'haste');
+    const haste = (1 + p.hastePct + this.buffVal(p, 'haste')) * (tal.animMul || 1); // (Heavy Hand's price: animations at 0.9x; review 18 Nov: it was never applied)
     // a fusion starts B's own cooldown and its own; A's was spent by A
     if (base.cd) p.cds[base.id] = this.time + skillCd(base, tal);
     if (fu) p.cds[fu.id] = this.time + skillCd(fu, tal);
@@ -2340,7 +2340,7 @@ export class World {
     p.cast = { sk, t0: this.time, end: this.time + Math.max(hitT, (sk.channel || 0)), target: target?.id, gx, gz, hits: 0, channel: !!sk.channel, haste, opening: opening >= 0, fused: !!fu, blocked: fu ? L?.blocked || 0 : 0, mul: kmul, encore };
     if (target && target.type === 'mob') this.addThreat(target, p, 1);
     this.broadcast({ k: 'cast', id: p.id, skill: sk.id, base: fu ? base.id : undefined, step: sk.step || undefined, target: target?.id, gx, gz, haste });
-    if (fu) { this.fusionFound(p, fu); if (tal.keys) runKeys(this, p, 'onLink', { fusion: fu }); } // (Momentum, Shared Courage, Rolling Start)
+    if (fu) this.fusionFound(p, fu); // (the keystones' onLink runs when the fusion lands: linkAfter)
     this.pushSelf(p);
   }
 
@@ -2386,8 +2386,9 @@ export class World {
       p.fmastery ||= {};
       const n = (p.fmastery[sk.id] = (p.fmastery[sk.id] || 0) + 1);
       if (MASTERY.includes(n) && !p.bot) this.msg(p, `${sk.name}: mastery rank ${['I', 'II', 'III'][MASTERY.indexOf(n)]}.`, '#ffd870');
+      if (p.tal?.keys) runKeys(this, p, 'onLink', { fusion: sk }); // (Momentum, Shared Courage, Rolling Start: a landed fusion; review 18 Nov: they ran on the cast, so a whiffed fusion stacked Momentum)
       const tri = hit && (FUSIONS[p.cls] || []).find((t) => t.triad && t.from === sk.id && fusionUnlocked(p, t));
-      if (tri) p.link = { from: sk.id, at: this.time, until: this.time + LINK.win, landed: true, done: true, step: 0, tgt: c.target, encore: !!p.tal?.chainwork };
+      if (tri) p.link = { from: sk.id, at: this.time, until: this.time + LINK.win + (p.tal?.linkWin || 0), landed: true, done: true, step: 0, tgt: c.target, encore: !!p.tal?.chainwork }; // (linkWin: Long Breath, Practised Links, Hair Trigger apply to every link)
       else if (hit && p.tal?.chainwork && !sk.triad) p.link = { from: sk.id, at: this.time, until: this.time + p.tal.chainwork, landed: true, done: true, step: 0, tgt: c.target, encore: true }; // (Chainwork: an Encore link; no fusion is keyed from it)
       return;
     }
@@ -2431,7 +2432,7 @@ export class World {
     if (!p.dodgeNext) p.dodgeNext = this.time + D.regen;
     p.evadeT = this.time + D.evade; p.dodgeAt = this.time;
     p.chain = null;
-    if (KIT_V2[p.cls]) p.link = { from: 'dodge', at: this.time, until: this.time + D.dur + LINK.win, landed: true, done: true, step: 0, tgt: null, parried: false }; // (the dodge is an input: gate 'dodge')
+    if (KIT_V2[p.cls]) p.link = { from: 'dodge', at: this.time, until: this.time + D.dur + LINK.win + (p.tal?.linkWin || 0), landed: true, done: true, step: 0, tgt: null, parried: false }; // (the dodge is an input: gate 'dodge')
     let dx = Number(m.dx), dz = Number(m.dz), l = Math.hypot(dx, dz);
     if (!isFinite(l) || l < 1e-3) { dx = -Math.sin(p.ry); dz = -Math.cos(p.ry); l = 1; } // no direction: backwards
     dx /= l; dz /= l;

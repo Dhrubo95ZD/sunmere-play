@@ -922,7 +922,7 @@ export async function startGame() {
     game.send({ t: 'dodge', dx: +w.x.toFixed(3), dz: +w.z.toFixed(3) });
     local.playSkill((back ? 'dodgeb_' : 'dodge_') + game.cls, null, null, fx);
     game.cutT = now + DODGE.evade; // (skills cut in once the evade is over)
-    game.chain = null; game.lastCast = null; if (KIT_V2[game.cls]) game.plink = { from: 'dodge', at: now, until: now + D.dur + LINK.win, landed: true, done: true, step: 0, tgt: null, parried: false, local: true }; // (S2: the dodge is an input)
+    game.chain = null; game.lastCast = null; if (KIT_V2[game.cls]) game.plink = { from: 'dodge', at: now, until: now + D.dur + LINK.win + (y.web ? ui.tmods?.linkWin || 0 : 0), landed: true, done: true, step: 0, tgt: null, parried: false, local: true }; // (S2: the dodge is an input)
     game.dodgeAt = now;
   }
   // (a plain { x, z } from a script or the touch layer is made a vector: the buffer clones it)

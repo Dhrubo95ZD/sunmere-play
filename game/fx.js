@@ -785,7 +785,7 @@ export class FX {
         this.light(up, '#ffe0a0', 4, 0.12, 8, true); this.sound('hit'); break;
       case 'sweep':
         this.hitCore(up, 0.9, '#fff2d0');
-        this.emit('fan', up, { n: 12, dir, color: '#ffe6a8', width: 6 });
+        this.emit('fan', up, { n: 10, dir, color: '#ffe6a8', width: 3.2 }); // (review 18 Nov: width 6 fanned out of the spin's contact like rays)
         this.emit('flecks', up, { n: 4, dir, color: '#ffc070' });
         this.emit('ringdust', at, { n: 12, r: o.r || 1.2, speed: 1.6 + (o.r || 1.2) * 0.6 });
         this.sound('hit'); break;
@@ -800,7 +800,9 @@ export class FX {
         this.hitCore(up, 1.2, '#cfe0ff', 0.1);
         // one-sided: everything flies off along the blow, so the spray never reads as a radiating burst
         this.emit('sparks', up, { n: 6, color: '#ffffff', size: 1.15, dir });
-        this.emit('fan', up, { n: 18, dir, color: '#f4f8ff', width: 6 });
+        // (review 18 Nov) a narrower spray: at width 6 a thrown shield's clang, seen along the throw from behind the hero,
+        // splayed into rays round a point behind his head (a sunburst; Anvil Fall's return)
+        this.emit('fan', up, { n: 14, dir, color: '#f4f8ff', width: 2.6 });
         this.emit('flecks', up, { n: 4, color: '#fff4e0', c2: '#ff7020' });
         this.light(up, '#d8e8ff', 6, 0.12, 9); this.sound('clang'); break;
       // blunt: thud of dust thrown along the floor under the target, grit, a small soft light pop
@@ -1173,6 +1175,7 @@ export class FX {
           let T = tierOf(sk, ev.hi || 0);
           if ((ctx.pendHt || 0) > T.tier) T = tierInfo(ctx.pendHt); // (the server already said: a break or a lift, T3)
           ctx.pendHt = 0;
+          if (ctx.targetEnt) { ctx.targetEnt.slamHitAt = performance.now(); if (ctx.targetEnt.react?.slam) ctx.targetEnt.react.slam.go = true; } // (a fusion's slam starts on the blade's contact, entities.js)
           this.impact(ev.kind, p, { r: spinOn ? undefined : ev.r, dir, who: [char, ctx.targetEnt] });
           const tp = ctx.targetEnt?.pos && (spinOn || !(ev.at === 'self' && ev.r)) ? ctx.targetEnt.pos.clone() : p.clone();
           this.tierHit(T, { at: p, feet: tp, dir, who: [char, ctx.targetEnt], local: !!ctx.local, kind: ev.kind, slam: ev.kind === 'earth' || (ev.at === 'self' && !!ev.r && !spinOn) });
@@ -1195,6 +1198,10 @@ export class FX {
         if (ev.e === 'leap') this.emit('ringdust', f, { n: 8, r: 0.4, speed: 2.2, size: 0.7 });
         this.sound('whoosh'); break;
       }
+      // S4 (Stormfall's take-off): a dust column up to ev.h m over the take-off point with a few rocks, and the camera's lift
+      // for the own hero (camera.js lift: up, back, for dur s)
+      case 'column': { const f = feet(), h = ev.h || 2; for (let i = 0; i < 5; i++) this.emit('dust', f.clone().add(V(0, 0.2 + (i / 4) * (h - 0.2), 0)), { n: 3, spread: 0.25 + i * 0.05, size: 0.8, speed: 1.2 }); if (ev.rocks) this.rocks(f.clone().add(V(0, 0.3, 0)), ev.rocks, 0.5); break; }
+      case 'camlift': if (ctx.local) this.rig?.lift?.(ev.up ?? 2, ev.back ?? 2.5, ev.dur ?? 1); break;
       case 'flash': { const p = ev.at ? where(ev.at) : feet().add(V(0, 1.2, 0)); this.emit('flash', p, { size: ev.big ? 7 : 3, color: ev.color, life: ev.big ? 0.35 : 0.2 }); this.light(p, ev.color, ev.big ? 20 : 8, 0.35, 16); if (ev.big) this.sound('boom'); break; }
       case 'motes': {
         const dur = ev.dur || 0.01, n = ev.n || 20;

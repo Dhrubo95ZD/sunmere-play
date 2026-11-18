@@ -599,23 +599,27 @@ function bandolier(rb, colors) {
   }
 }
 
-// leather cap + goggles with dark lenses + respirator: the face is fully covered
+// leather cap + goggles with dark lenses + respirator: the face is fully covered. (review 18 Nov) The cap, its band and the
+// visor are a size up for the new hero body's head, whose dark top showed through the old cap (from straight above a
+// black disc inside the brown cap and the collar)
 function goggleMask(rb, cap, brass) {
-  rb.add(sphere(0.135, 18, 12, 0, PI * 2, 0, PI * 0.62), 'leather', 'head', { p: [0, 0.1, -0.005], s: [1, 1.05, 1.08], c: '#5a3a24' });
+  rb.add(sphere(0.135, 18, 12, 0, PI * 2, 0, PI * 0.62), 'leather', 'head', { p: [0, 0.104, 0.014], s: [1.07, 1.21, 1.21], c: '#5a3a24' });
+  rb.add(sphere(0.115, 16, 8, 0, PI * 2, 0, PI * 0.5), 'leather', 'head', { p: [0, 0.15, 0.012], s: [1.12, 1.25, 1.2], c: '#5a3a24' }); // (the crown: the phone body's head top is higher)
   rb.add(sphere(0.124, 16, 12), 'leather', 'head', { p: [0, 0.095, 0.0], s: [0.98, 1.05, 1.0], c: '#2a2220' });
-  rb.add(torus(0.128, 0.012, 5, 24), 'leather', 'head', { p: [0, 0.135, 0], r: [PI / 2 + 0.1, 0, 0], s: [1, 1.08, 1], c: '#3a2616' });
+  rb.add(torus(0.142, 0.012, 5, 24), 'leather', 'head', { p: [0, 0.14, 0.006], r: [PI / 2 + 0.1, 0, 0], s: [1, 1.1, 1], c: '#3a2616' });
   // one wrap-round visor band, not two round lenses (a pair of rimmed circles reads as eyes): a brass frame arc
   // round the front of the head with a single dark lens strip set in it
-  for (const [R, t, arc, kind, c, sz] of [[0.128, 0.026, 1.9, 'metal', brass, 0.75], [0.136, 0.018, 1.6, 'dark', undefined, 0.7]]) {
-    rb.add(torus(R, t, 6, 24, arc), kind, 'head', { p: [0, 0.135, 0], r: [PI / 2, 0, PI / 2 - arc / 2], s: [1, 1, sz], c });
+  for (const [R, t, arc, kind, c, sz] of [[0.142, 0.026, 1.9, 'metal', brass, 0.75], [0.15, 0.018, 1.6, 'dark', undefined, 0.7]]) {
+    rb.add(torus(R, t, 6, 24, arc), kind, 'head', { p: [0, 0.14, 0.008], r: [PI / 2, 0, PI / 2 - arc / 2], s: [1, 1.1, sz], c });
   }
   // respirator snout + twin filter canisters
   rb.add(lathe([[0.001, -0.02], [0.06, -0.02], [0.075, 0.03], [0.065, 0.06], [0.001, 0.07]], 14), 'leather', 'head', { p: [0, 0.03, 0.1], r: [PI / 2 - 0.25, 0, 0], c: '#3a3036' });
   for (const sx of [-1, 1]) {
     rb.add(cyl(0.03, 0.03, 0.06, 12), 'metal', 'head', { p: [sx * 0.075, 0.02, 0.135], r: [PI / 2, 0, sx * 0.6], c: '#8a8a90' });
-    rb.add(torus(0.03, 0.005, 4, 12), 'metal', 'head', { p: [sx * 0.093, 0.01, 0.16], r: [PI / 2, 0, sx * 0.6], c: brass });
   }
-  rb.add(cyl(0.025, 0.025, 0.02, 12), 'metal', 'head', { p: [0, 0.03, 0.17], r: [PI / 2 - 0.25, 0, 0], c: brass });
+  // (review 18 Nov) no brass rims on the canisters' ends and a square valve between them, not a round one: two rimmed
+  // circles with a disc between them read as a face under the visor (and each rim as a disc in a ring)
+  rb.add(rbox(0.04, 0.03, 0.02, 0.006), 'metal', 'head', { p: [0, 0.03, 0.17], r: [-0.25, 0, 0], c: brass });
 }
 
 function pressureTank(rb, brass) {
@@ -623,7 +627,8 @@ function pressureTank(rb, brass) {
   rb.addW(cyl(0.085, 0.085, 0.42, 16), 'metal', w, { p: [0, 1.34, -0.25], c: '#c0703a', paint: 0.4 });
   rb.addW(sphere(0.085, 16, 8, 0, PI * 2, 0, PI / 2), 'metal', w, { p: [0, 1.55, -0.25], c: '#c0703a' });
   rb.addW(sphere(0.085, 16, 8, 0, PI * 2, PI / 2, PI / 2), 'metal', w, { p: [0, 1.13, -0.25], c: '#c0703a' });
-  for (const y of [1.2, 1.34, 1.48]) rb.addW(torus(0.087, 0.008, 5, 18), 'metal', w, { p: [0, y, -0.25], r: [PI / 2, 0, 0], c: brass });
+  // (review 18 Nov) the bands sit flush (no wider than the tank), so from straight above the dome is not ringed by them
+  for (const y of [1.2, 1.34, 1.48]) rb.addW(torus(0.08, 0.007, 5, 18), 'metal', w, { p: [0, y, -0.25], r: [PI / 2, 0, 0], c: brass });
   // pressure gauge dial
   rb.addW(cyl(0.035, 0.035, 0.02, 14), 'metal', w, { p: [0.07, 1.42, -0.2], r: [0, 0, PI / 2], c: brass });
   rb.addW(cyl(0.028, 0.028, 0.022, 14), 'cloth', w, { p: [0.075, 1.42, -0.2], r: [0, 0, PI / 2], c: '#f0e8d0' });
@@ -644,13 +649,18 @@ function roadCoat(rb, coat, accent, brass) {
   rb.addW(shell([[0.215, 0.96], [0.22, 1.1], [0.24, 1.3], [0.252, 1.44], [0.232, 1.53], [0.16, 1.6]], 22), 'cloth', (x, y) => torsoW(y), { s: [1, 1, 0.71], c: coat });
   // the waistcoat between the lapels
   // (Deadeye look pass) a panel that follows the coat's curve, not a flat slab on the chest
-  const wc = new THREE.LatheGeometry([[0.226, 1.11], [0.234, 1.2], [0.246, 1.32], [0.256, 1.44], [0.244, 1.5]].map(([r, y]) => new THREE.Vector2(r, y)), 8, -0.38, 0.76);
+  // (review 18 Nov) a little further out at the waist and finer, so the coat shell no longer pokes through its lower edge
+  // as a row of dark diamonds
+  const wc = new THREE.LatheGeometry([[0.233, 1.11], [0.238, 1.2], [0.247, 1.32], [0.256, 1.44], [0.244, 1.5]].map(([r, y]) => new THREE.Vector2(r, y)), 14, -0.38, 0.76);
   rb.addW(wc, 'cloth', (x, y) => torsoW(y), { s: [1, 1, 0.71], c: dark, paint: 0.15 });
   for (const sx of [-1, 1]) {
     for (let i = 0; i < 4; i++) rb.addW(sphere(0.011, 8, 6), 'metal', (x, y) => torsoW(y), { p: [sx * 0.045, 1.47 - i * 0.075, 0.176], c: brass });
     // lapels: two broad strips in a V, stopping above the waist (Deadeye look pass: so the bandolier, right shoulder to left
-    // hip, passes their ends and never crosses one)
-    rb.addW(box(0.05, 0.33, 0.014), 'cloth', (x, y) => torsoW(y), { p: [sx * 0.096, 1.365, 0.17], r: [-0.06, 0, sx * 0.16], c: accent });
+    // hip, passes their ends and never crosses one). (review 18 Nov) Full length, the left lapel (+x) still ran under the
+    // strap's front run and read as an X with it in every coat colour: it now stops above the strap, and the right one
+    // starts below the strap's turn over the shoulder
+    const [lh, ly] = sx > 0 ? [0.15, 1.458] : [0.17, 1.278];
+    rb.addW(box(0.05, lh, 0.014), 'cloth', (x, y) => torsoW(y), { p: [sx * (0.096 + (sx > 0 ? 0.01 : 0)), ly, 0.17], r: [-0.06, 0, sx * 0.16], c: accent });
   }
   // a turned-up collar standing at the back and sides, open at the front (theta 0 is +z)
   const cgap = PI * 0.62;
@@ -830,11 +840,12 @@ function roadHat(rb, hat, band) {
   const crease = (x, y, z) => { const o = sq(x, y, z); if (y > 0.118) o[1] -= 0.02 * Math.exp(-((o[0] / 0.032) ** 2)) * (0.75 + 0.25 * Math.max(0, o[2] / 0.14)); return o; };
   rb.add(hatPiece(lathe([[0.001, 0], [0.122, 0], [0.12, 0.05], [0.126, 0.1], [0.134, 0.117], [0.126, 0.126], [0.095, 0.127], [0.06, 0.128], [0.03, 0.128], [0.001, 0.128]], 32), crease), 'leather', 'head', { c: hat, paint: 0.3, us: 2 });
   rb.add(hatPiece(lathe([[0.1235, 0.0], [0.1245, 0.012], [0.1235, 0.028]], 32), sq), 'cloth', 'head', { c: band, paint: 0.2 });
-  // the brim: a thin long oval with a rounded edge, the sides curled well up, the front and back dipping
+  // the brim: a thin long oval with a rounded edge, the sides curled well up, the front and back dipping. (review 18 Nov)
+  // Longer in front than behind, so from straight above the crown sits off the brim's centre (not two nested ovals)
   const brim = lathe([[0.104, -0.007], [0.17, -0.007], [0.235, -0.006], [0.284, -0.004], [0.292, 0.001], [0.285, 0.006], [0.235, 0.007], [0.17, 0.007], [0.104, 0.007]], 44);
   rb.add(hatPiece(brim, (x, y, z) => {
     const X = x * 0.84, side = Math.max(0, (Math.abs(X) - 0.1) / 0.145);
-    return [X * (1 - 0.12 * side * side), y + 0.085 * side * side - 0.018 * (z / 0.29) ** 2 - (z > 0 ? 0.01 * z / 0.29 : 0), z * 1.02];
+    return [X * (1 - 0.12 * side * side), y + 0.085 * side * side - 0.018 * (z / 0.29) ** 2 - (z > 0 ? 0.01 * z / 0.29 : 0), z * (z > 0 ? 1.13 : 0.93)];
   }), 'leather', 'head', { c: hat, paint: 0.3, us: 2 });
 }
 function scarfHead(rb, cowl, scarf) {

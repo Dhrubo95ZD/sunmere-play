@@ -5,6 +5,7 @@
 // root: hips offset [x, y, z] (z forward). turn: whole-body spin (deg, + = to the left).
 import { compileClip } from './anim.js';
 import { SKILLS, SKILL_BY_ID } from '/sunmere-play/shared/classes.js';
+import { FUSION_BY_ID } from '/sunmere-play/shared/fusions.js'; // (S4: a fusion's own clip times itself by the fusion's hit)
 import { STANCES } from './anim.js';
 import * as THREE from 'three';
 import { HUMANOID } from '../assets/rig.js';
@@ -331,7 +332,9 @@ const DEF = {};
     k(0.55, P(SH, arc(-88, { lead: 12, dy: -0.22, twist: -20 }), L.wide), { root: [0, -0.24, 0], turn: -300, e: 'linear' }),
     k(0.72, P(SH, arc(-40, { lead: 25, dy: -0.24, twist: 10 }), L.wide), { root: [0, -0.18, 0], turn: -360, e: 'out' }),
     k(1, GL, { root: R.guard, turn: -360 }),
-  ], [{ t: 0.22, e: 'trail', on: true, color: T, w: 1.4 }, { t: 'hit', e: 'impact', kind: 'sweep', at: 'self', r: 4, shake: 0.35 }, { t: 0.4, e: 'ring', color: '#ffe6a0', r: 4.5 }, { t: 0.7, e: 'trail', on: false }, { t: 0.3, e: 'dust' }]);
+  ], [{ t: 0.22, e: 'trail', on: true, color: T, w: 1.4 }, { t: 'hit', e: 'impact', kind: 'sweep', at: 'self', r: 4, shake: 0.35 }, { t: 0.64, e: 'ring', color: '#ffe6a0', r: 4.5 }, { t: 0.58, e: 'trail', on: false }, { t: 0.3, e: 'dust' }]);
+  // (review 18 Nov) the trail stops at about 300 deg (0.58) and the ring opens only once it has faded: from straight above
+  // the ring round the arc of the trail read as an arc inside a ring (Turning Riposte, Sidewind Cut)
 
   // Pommel Strike: the hilt drawn back by the right ear with the blade turned up and back over the shoulder, then the
   // fist punched straight out so the pommel lands on the hit, the blade riding back along the forearm. Solved poses:
@@ -565,6 +568,61 @@ const DEF = {};
     ], [{ t: 'hit', e: 'impact', kind: 'shield', at: 'front1', shake: 0.55, stop: 0.09 }, { t: 'hit', e: 'impact', kind: 'stonechip', at: 'front1', r: 5 }, { t: 'hit', e: 'decal', kind: 'crack', r: 1.2, at: 'front1' },
       { t: 0.52, e: 'sound', s: 'swing' }, { t: 'hit2', e: 'impact', kind: 'sweep', at: 'self', r: 5, shake: 0.5, stop: 0.08 }, { t: 'hit2', e: 'cloud', kind: 'mud', r: 5, at: 'self' }], { endRoot: [0, 0, 0.08] }); // no swing trail: the sweep round the front read as a ring round him
   }
+}
+
+// ============================== S4: authored clips and root curves (combat_design.md 7) ==============================
+// A DEF may carry `ual`: the hero body's authored clips (art_src/hero/build_body.py) over its keys, { mask: 'full' | 'body'
+// (arms left to the keys), segs: [[clip, t0, t1, c0?, c1?], ...] in seconds, end?: s after which the keys take over }
+// (heroBody.js ualPose). `toTarget` { gap, max }: the root travel is scaled so the hero lands gap m short of the target
+// (entities.js playSkill). Old body (?herobody=0): the keys alone, as before.
+// leapRoot: a leap's root curve (7.1) { t0 take-off, t1 top, t2 leaving the top, t3 landing (s), h height (m), float
+// (extra rise while hanging), dist (m), atTop / atEnd (share of the travel at the top and when leaving it) }: ease-out up,
+// ease-in down, keyed every 1/60 s. Height is the client's; the travel is real movement (endRoot).
+function leapRoot(dur, o) {
+  const { t0, t1, t2, t3, h, float = 0, dist = 0, atTop = 0.35, atEnd = 0.45 } = o;
+  const y = (t) => (t <= t0 ? 0 : t < t1 ? h * (1 - (1 - (t - t0) / (t1 - t0)) ** 2) : t < t2 ? h + float * Math.sin((Math.PI * (t - t1)) / (t2 - t1)) : t < t3 ? h * (1 - ((t - t2) / (t3 - t2)) ** 2) : 0);
+  const z = (t) => (t <= t0 ? 0 : t < t1 ? dist * atTop * (1 - (1 - (t - t0) / (t1 - t0)) ** 2) : t < t2 ? dist * (atTop + ((atEnd - atTop) * (t - t1)) / (t2 - t1)) : t < t3 ? dist * (atEnd + (1 - atEnd) * ((t - t2) / (t3 - t2)) ** 2) : dist);
+  const keys = [];
+  for (let t = t0; t < t3 - 1e-6; t += 1 / 60) keys.push(k(t / dur, {}, { root: [0, +y(t).toFixed(4), +z(t).toFixed(4)], e: 'linear' }));
+  keys.push(k(t3 / dur, {}, { root: [0, 0, dist], e: 'linear' }));
+  return keys;
+}
+{
+  const G = P(guard('knight'), { spine: [8, 0, 0], chest: [0, 0, 0] }), GL = P(G, LG), T = TRAIL.knight;
+  // Stormfall (5.1, the owner's dragoon move), 1.25 s, its beat sheet: 0.00 crouch, dust, whoosh; 0.12 take-off, root 0 to
+  // 5 m in 0.26 s, a 2 m dust column, rocks, camera lift, cloak streaming down; 0.38-0.58 the hang (its clip at 0.6x), a
+  // short line of light along the edge; 0.58 the plunge (0.12 s to the ground, trail); 0.70-0.72 the T4 contact (the
+  // server's hit at 0.72): earth, two rings 80 ms apart, crater, the machine slammed down; 0.82 crack (the tier's release);
+  // 1.25 back to guard. The travel lands it 1 m short of the machine it vaults past. (S4 review: the plunge smear only covers
+  // the last 0.04 s, or from 5 m it read as an upright beam; the camera lifts 3.5 m, not 2, so the 5 m top stays in view)
+  const SF = 1.25, SFD = 4.0;
+  DEF.kf_stormfall = C('knight', SF, 'full', [
+    k(0, GL),
+    ...leapRoot(SF, { t0: 0.12, t1: 0.38, t2: 0.58, t3: 0.70, h: 5, float: 0.12, dist: SFD }),
+    k(1, GL, { root: [0, 0, SFD], e: 'smooth' }),
+  ], [{ t: 0, e: 'sound', s: 'whoosh' }, { t: 0.02 / SF, e: 'dust' }, { t: 0.12 / SF, e: 'leap' }, { t: 0.12 / SF, e: 'column', h: 2, rocks: 5 },
+    { t: 0.12 / SF, e: 'camlift', up: 3.5, back: 3, dur: 1.0 },
+    { t: 0.46 / SF, e: 'trail', on: true, color: T, w: 0.5 }, { t: 0.5 / SF, e: 'trail', on: false },
+    { t: 0.66 / SF, e: 'trail', on: true, color: T, w: 0.9 }, { t: 'hit', e: 'impact', kind: 'earth', at: 'self', r: 2.3 },
+    { t: 'hit', e: 'ring', color: '#e8d8c0', r: 5, delay: 0.08 }, { t: 'hit', e: 'decal', kind: 'crater', r: 3.5 }, { t: 0.7 / SF, e: 'trail', on: false }],
+  { endRoot: [0, 0, SFD], toTarget: { gap: 1.0, max: 6 },
+    ual: { mask: 'full', segs: [['Leap_Rise', 0, 0.38], ['Air_Hang_Loop', 0.38, 0.58, 0, 0.12], ['Dive_Strike', 0.56, 0.70], ['Slam_Land', 0.70, SF]] } });
+  // Skybreaker on the same clips and root curve (2.2 m, lands 1.4 m short of the target; the old fixed 4 m landed short or long)
+  const SB = DEF.k_skybreaker.dur;
+  DEF.k_skybreaker = C('knight', SB, 'full', [
+    k(0, GL),
+    ...leapRoot(SB, { t0: 0.16, t1: 0.42, t2: 0.52, t3: 0.72, h: 2.2, float: 0.05, dist: 4.0, atTop: 0.5, atEnd: 0.6 }),
+    k(1, GL, { root: [0, 0, 4.0], e: 'smooth' }),
+  ], DEF.k_skybreaker.events, { endRoot: [0, 0, 4.0], toTarget: { gap: 1.4, max: 9 },
+    ual: { mask: 'full', segs: [['Leap_Rise', 0, 0.42, 0, 0.42], ['Air_Hang_Loop', 0.42, 0.52, 0, 0.06], ['Dive_Strike', 0.5, 0.72], ['Slam_Land', 0.72, SB]] } });
+  // Battering Line: the lunge runs on into the shield charge (body), the keyed bash on the arms; Anvil Fall: the throw comes
+  // up out of Stormfall's kneeling landing; Turning Riposte: the parry beat before the turn; Sidewind Cut: the turn itself
+  // is the authored spin (the keys' whole-body turn taken out, or it would turn twice)
+  DEF.kf_battering = { ...DEF.k_bash, ual: { mask: 'body', segs: [['Shield_Charge_Loop', 0, 0.42, 0, 0.42]], end: 0.42 } };
+  DEF.kt_anvilfall = { ...DEF.k_shieldthrow, ual: { mask: 'body', segs: [['Slam_Land', 0, 0.36, 0.04, 0.4]], end: 0.3 } };
+  DEF.kf_riposte = { ...DEF.k_spin, ual: { mask: 'full', segs: [['Parry_Riposte', 0, 0.17, 0.06, 0.2]], end: 0.15 } };
+  const sd = DEF.k_spin.dur;
+  DEF.kf_sidewind = { ...DEF.k_spin, keys: DEF.k_spin.keys.map(({ turn, ...q }) => q), ual: { mask: 'full', segs: [['Spin_Attack_Loop', 0.19 * sd, 0.7 * sd, 0, 0.417]], end: 0.7 * sd } };
 }
 
 // ============================== RANGER ====================================
@@ -2453,7 +2511,7 @@ for (const cls of Object.keys(TRAIL)) {
 // compile: resolve 'hit', 'hit2'.. into normalized times from the skill's impact timing
 export const CHOREO = {};
 for (const [id, def] of Object.entries(DEF)) {
-  const sk = SKILL_BY_ID[def.skill || id]; // (a mirrored twin, e.g. 'd_snap_l', times itself by its skill)
+  const sk = SKILL_BY_ID[def.skill || id] || FUSION_BY_ID[def.skill || id]; // (a mirrored twin, e.g. 'd_snap_l', times itself by its skill; S4: a fusion's own DEF by the fusion)
   const hit = sk?.hit || { t: def.dur * 0.4 };
   const n = hit.n || 1, gap = hit.gap || 0;
   const resolveT = (t) => {
@@ -2483,7 +2541,7 @@ for (const [id, def] of Object.entries(DEF)) {
   if (def.cls === 'chemist' || def.cls === 'herbalist') keys = robeLegs(keys);
   for (let i = 1; i < keys.length; i++) if (keys[i].t < keys[i - 1].t) console.warn(`[choreo] ${id}: key ${i} out of order (${keys[i - 1].t.toFixed(3)} > ${keys[i].t.toFixed(3)})`);
   const mask = BLEND.has(id) ? 'blend' : def.mask;
-  const clip = compileClip({ dur: def.dur, mask, keys, events, travel: !!def.endRoot, plant: true, channel: def.channel });
+  const clip = compileClip({ dur: def.dur, mask, keys, events, travel: !!def.endRoot, plant: true, channel: def.channel, ual: def.ual });
   CHOREO[id] = { ...def, mask, clip, events };
 }
 

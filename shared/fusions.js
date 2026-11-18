@@ -2,7 +2,8 @@
 // casts the fusion A>B, a new named move with its own rules. Fusions and triads are ordinary skill records with from, to,
 // need, lvl or tree, carry, ai and tier. FUSE[cls]['a>b'] finds one. compileKit(p) builds p.eff (every skill a player can
 // cast, by id) and p.effFuse (its fusions by pair); the sim, the bar, tooltips and bots read those, not SKILL_BY_ID.
-// Choreography: each fusion names an existing clip (choreo) until S4/S5 give the authored clips and beats.
+// Choreography: each fusion names its clip (choreo); S4 gave Stormfall, Battering Line, Turning Riposte, Sidewind Cut and
+// Anvil Fall their own DEFs on the authored hero clips (client/game/choreo.js, 'ual'); the rest still name an existing one.
 // Imports only from shared/.
 import { SKILLS, SKILL_BY_ID } from './classes.js';
 import { KIT_V2, CORE, CORE_BY_ID, DODGES } from './kit.js';
@@ -31,7 +32,7 @@ export const FUSIONS = {
   knight: [
     F('kf_stormfall', 'Stormfall', { cls: 'knight', icon: 'leap', from: 'k_rising', to: 'k_skybreaker', lvl: 5, need: 'hit', cd: 14, extra: 10, range: 9,
       hit: { t: 0.72, kind: 'aoe', r: 4.5 }, fx: [['leap', 6], ['dmg', 2.3], ['air', 1.4], ['holdLift', 1.4], ['brk', 60], ['slow', 40, 3]],
-      tags: ['air', 'slam', 'fusion'], cam: 'lift', choreo: 'k_skybreaker', gateText: 'Rising Cut must lift the foe', hint: 'Something rises, then something falls.',
+      tags: ['air', 'slam', 'fusion'], cam: 'lift', choreo: 'kf_stormfall', gateText: 'Rising Cut must lift the foe', hint: 'Something rises, then something falls.',
       carry: { a: { aloft: { hang: 0.3, airMul: 0.25 }, gale: { allLifted: true } }, b: { higharc: { leap: 10, r: 1.3 } } }, ai: { role: 'burst', want: { state: 'lifted' } },
       desc: 'Vault straight up past the lifted machine, hang at the top and drive down through it into the ground.' }),
     F('kf_highledger', 'High Ledger', { cls: 'knight', icon: 'twin', from: 'k_rising', to: 'k_valiant', lvl: 7, need: 'state:lifted', cd: 10, extra: 10,
@@ -48,7 +49,7 @@ export const FUSIONS = {
       desc: 'A thrust through every machine on a 9 m line, opening their plating; you end behind them.' }),
     F('kf_battering', 'Battering Line', { cls: 'knight', icon: 'charge', from: 'k_lunge', to: 'k_bash', lvl: 13, need: 'hit', cd: 14, extra: 5,
       hit: { t: 0.28, kind: 'melee' }, fx: [['dmg', 1.3], ['knock', 4], ['wallSlam', 2], ['brk', 45]],
-      tags: ['dash', 'fusion'], choreo: 'k_bash', hint: 'Keep running, shield first.', ai: { role: 'control' },
+      tags: ['dash', 'fusion'], choreo: 'kf_battering', hint: 'Keep running, shield first.', ai: { role: 'control' },
       desc: 'The lunge runs on shield-first and carries the machine; into a wall or another machine, it is pinned.' }),
     F('kf_upheaval', 'Upheaval', { cls: 'knight', icon: 'rise', from: 'k_bash', to: 'k_rising', lvl: 16, need: 'state:staggered', cd: 12, extra: 5,
       hit: { t: 0.3, kind: 'melee' }, fx: [['dmg', 2.0], ['launch', 1.4], ['brk', 40]],
@@ -56,16 +57,16 @@ export const FUSIONS = {
       desc: 'Scoop the shield rim under the stunned machine and drive it up into the air.' }),
     F('kf_riposte', 'Turning Riposte', { cls: 'knight', icon: 'parry', from: 'k_guard', to: 'k_cleave', tree: 'riposte_drill', need: 'parry', cd: 12, target: 'self', range: 0,
       hit: { t: 0.35, kind: 'aoe', r: 4.5 }, fx: [['dmg', 1.8], ['parryBack', 0.5], ['taunt', 3], ['res', 20], ['brk', 30]],
-      tags: ['sweep', 'spin', 'taunt', 'fusion'], choreo: 'k_spin', hint: 'Turn their blow into your swing.', ai: { role: 'tank' },
+      tags: ['sweep', 'spin', 'taunt', 'fusion'], choreo: 'kf_riposte', hint: 'Turn their blow into your swing.', ai: { role: 'tank' },
       desc: 'Answer a parry with a turning cut around you that adds half the blow you blocked and turns every machine on you.' }),
     F('kf_sidewind', 'Sidewind Cut', { cls: 'knight', icon: 'spin', from: 'dodge', to: 'k_valiant', tree: 'rolling_edge', need: 'dodge', cd: 8, extra: 5, target: 'self', range: 0,
       hit: { t: 0.35, kind: 'aoe', r: 4.5 }, fx: [['dmg', 1.1], ['brk', 20]],
-      tags: ['spin', 'fusion'], choreo: 'k_spin', hint: 'Come up out of the roll swinging.', ai: { role: 'aoe' },
+      tags: ['spin', 'fusion'], choreo: 'kf_sidewind', hint: 'Come up out of the roll swinging.', ai: { role: 'aoe' },
       desc: 'The roll comes up into a wide turning cut.' }),
     // the triad (a deep tree notable): Stormfall > Shield Bash
     F('kt_anvilfall', 'Anvil Fall', { cls: 'knight', icon: 'disc', from: 'kf_stormfall', to: 'k_bash', tree: 'three_heights', need: 'hit', triad: true, cd: 50, extra: 10, range: 20,
       hit: { t: 0.38, kind: 'proj', speed: 26 }, fx: [['dmg', 2.4], ['ricochet', 2, 8], ['brk', 120], ['slow', 40, 4]],
-      tags: ['shield', 'throw', 'triad'], tier: 5, choreo: 'k_shieldthrow', hint: 'From the crater, the shield has one more fall in it.', ai: { role: 'burst' },
+      tags: ['shield', 'throw', 'triad'], tier: 5, choreo: 'kt_anvilfall', hint: 'From the crater, the shield has one more fall in it.', ai: { role: 'burst' },
       desc: 'From the crater, bounce the shield off the ground into the lifted machine; it strikes two more and returns.' }),
   ],
 };

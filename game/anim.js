@@ -396,11 +396,11 @@ export class Animator {
     this.initChains();
   }
 
-  // play an action clip once. o: { speed, fadeIn, fadeOut, onEvent }
+  // play an action clip once. o: { speed, fadeIn, fadeOut, onEvent, travelK (root travel scale) }
   play(clip, o = {}) {
     if (this.dead) return;
     this.prevAction = this.action ? { ...this.action, outT: 0 } : null;
-    this.action = { clip, time: 0, speed: o.speed ?? 1, fadeIn: o.fadeIn ?? 0.08, fadeOut: o.fadeOut ?? 0.18, fired: new Set(), onEvent: o.onEvent, onEnd: o.onEnd };
+    this.action = { clip, time: 0, speed: o.speed ?? 1, fadeIn: o.fadeIn ?? 0.08, fadeOut: o.fadeOut ?? 0.18, fired: new Set(), onEvent: o.onEvent, onEnd: o.onEnd, travelK: o.travelK ?? 1 };
     this.stopT = 0;
     this.combatTarget = 1;
     this.combatTimer = 6;
@@ -673,7 +673,7 @@ export class Animator {
         // forward root motion becomes real movement of the character (dash, leap, charge)
         const dz = r[2] - (act.lastZ ?? 0);
         act.lastZ = r[2];
-        this.travel += dz;
+        this.travel += dz * act.travelK; // (S4: a leap scaled to land at its target, entities.js playSkill)
         this.rootOffset.x += r[0] * rw; this.rootOffset.y += r[1] * rw;
       } else {
         this.rootOffset.x += r[0] * rw; this.rootOffset.y += r[1] * rw; this.rootOffset.z += r[2] * rw;

@@ -444,7 +444,7 @@ class HeroRig {
     W.set('Jump_Loop', air);
     // (S0 review) UAL's Jog and Sprint lean the trunk 26 and 40 deg forward: at the game's run speeds (5.9-6.8 m/s, always
     // Sprint_Loop) every hero ran head-down like a sprinter. Stood back up at spine_01 to about 14-16 deg, the MMO run.
-    const leanFix = (W.get('Jog_Fwd_Loop') || 0) * 0.2 + (W.get('Sprint_Loop') || 0) * 0.5;
+    let leanFix = (W.get('Jog_Fwd_Loop') || 0) * 0.2 + (W.get('Sprint_Loop') || 0) * 0.5;
     // (S0 review: no pose may leak on from a skill or the last frame: sampleInto writes every bone, rest-blended)
     this.tClip = (this.tClip + dt) % 3600;
     const sl = this.sl;
@@ -456,12 +456,23 @@ class HeroRig {
       it[0] = e.s; it[1] = e.loco ? this.phase * e.dur : this.tClip % e.dur; it[2] = w; nl++;
     }
     sampleInto(ub, sl, nl);
+    // ---- 1b. S4: the skill's authored clips (choreo.js `ual`) over the locomotion; they take the bones from the keys
+    const act = anim && !anim.dead ? anim.action : null;
+    const uW = act?.clip?.ual ? this.ualPose(act) : 0, uFull = uW > 0 && act.clip.ual.mask !== 'body';
+    leanFix *= 1 - uW;
     // ---- 2. retarget weights: upper body from the skill, legs when the skill owns them
     const dead = anim?.dead ? 1 : 0;
-    const wU = anim ? clamp(Math.max(anim.actW || 0, dead, (anim.flinch || 0) * 0.6), 0, 1) : 1;
-    const wL = anim ? clamp(Math.max(anim.actLegW || 0, dead), 0, 1) : 1;
-    const wA = this.clipArms ? wU : 1;
+    const wU = anim ? clamp(Math.max(anim.actW || 0, dead, (anim.flinch || 0) * 0.6), 0, 1) * (1 - uW) : 1;
+    const wL = anim ? clamp(Math.max(anim.actLegW || 0, dead), 0, 1) * (1 - uW) : 1;
+    const wA = this.clipArms ? wU : uFull ? 1 - uW : 1;
     this.inAnim = false; this.lastWL = wL;
+    // S4 cancel (combat_design.md 2.2 / 7.1): a skill cut by another (anim.play with the 0.06 s fade) cross-fades the whole
+    // body from the pose it was cut in, so neither the keys nor an authored clip pop back to the stance first
+    if (anim && anim.action !== this.lastAct) {
+      const a = anim.action;
+      if (a && this.lastAct && a.fadeIn <= 0.061) { this.Qx ||= H.B.map(() => new THREE.Quaternion()); this.Px ||= H.B.map(() => new THREE.Vector3()); for (let i = 0; i < nB; i++) { this.Qx[i].copy(this.Qf[i]); this.Px[i].copy(this.Pf[i]); } this.xf = { t: 0, d: a.fadeIn }; } else this.xf = null;
+      this.lastAct = a;
+    }
     // ---- 3. the old pose in character space
     const OB = this.obArr, Qo = this.Qo, nO = OB.length;
     const Qroot = this.Qroot.copy(this.ob.root.quaternion);
@@ -472,7 +483,7 @@ class HeroRig {
     const wrap = this.wrap;
     if (anim) { const ro = anim.rootOffset; wrap.position.set(ro.x, ro.y - (anim.locoHipsY || 0), ro.z).applyQuaternion(Qroot); } else wrap.position.set(0, 0, 0);
     let yaw = anim ? anim.turnOffset || 0 : 0;
-    if (H.yaw) { yaw -= (H.yaw.Idle_Loop || 0) * (W.get('Idle_Loop') || 0) * (1 - wL); if (ci && H.yaw[ci]) yaw -= H.yaw[ci] * (W.get(ci) || 0) * (1 - wL); }
+    if (H.yaw) { const k = (1 - wL) * (1 - uW); yaw -= (H.yaw.Idle_Loop || 0) * (W.get('Idle_Loop') || 0) * k; if (ci && H.yaw[ci]) yaw -= H.yaw[ci] * (W.get(ci) || 0) * k; }
     wrap.quaternion.set(0, Math.sin(yaw / 2), 0, Math.cos(yaw / 2));
     const Qwrap = wrap.quaternion, Pwrap = wrap.position;
     // ---- 5. the final pose top-down (character space)
@@ -509,6 +520,12 @@ class HeroRig {
       }
       if (i === T.i03) anchor.copy(q).multiply(B[i].RrefInv).multiply(q1.copy(Qo[T.iChest]).invert());
     }
+    // the cancel cross-fade (character space, eased out over the fade)
+    if (this.xf) {
+      const X = this.xf, k = 1 - Math.min(1, X.t / X.d), kk = k * k * (3 - 2 * k);
+      if (k <= 0) this.xf = null; else for (let i = 0; i < nB; i++) { Qf[i].slerp(this.Qx[i], kk); Pf[i].lerp(this.Px[i], kk); }
+      X.t += dt;
+    }
     // ---- 6. the old bones onto the new body: rotation Qf * Rref^-1, joint at the UAL joint plus the landmark offset
     const Qn = this.Qn, Pn = this.Pn, dOff = this.dOffArr;
     for (let k = 0; k < nO; k++) {
@@ -532,6 +549,43 @@ class HeroRig {
     // matrices: the old rig by its own walk, the new bones straight from the character-space pose
     this.ob.root.updateMatrixWorld(true);
     this.wrapUpdate();
+  }
+  // S4 (combat_design.md 7.1-7.2): the playing skill's authored clips. act.clip.ual = { mask: 'full' | 'body', segs:
+  // [[clip, t0, t1, c0?, c1?], ...] } in the skill's own seconds; each clip is time-warped from [c0, c1] (default the whole
+  // clip; past its length a loop wraps) onto [t0, t1] and holds its last frame after. A later span eases in over 0.06 s over
+  // the one before. The whole layer follows the action's own fade in and out (and fades out over 0.12 s after ual.end). Writes the blend into the UAL bones ('body'
+  // leaves the arms and fingers to the keys) and returns its weight (0..1).
+  ualPose(act) {
+    const U = act.clip.ual, c = act.clip, T = act.time, list = (this.ul ||= []), segs = U.segs;
+    let n = 0;
+    for (let i = 0; i < segs.length; i++) {
+      const [name, t0, t1, c0 = 0, c1x] = segs[i], tb = clipTable(name);
+      if (!tb || T < t0) continue;
+      const c1 = c1x ?? tb.dur;
+      let ct = c0 + (Math.min(T, t1) - t0) / Math.max(1e-3, t1 - t0) * (c1 - c0);
+      if (ct > tb.dur) ct %= tb.dur; // (a loop played past its length)
+      const w = i === 0 ? 1 : Math.min(1, (T - t0) / 0.06);
+      for (let j = 0; j < n; j++) list[j][2] *= 1 - w;
+      const it = list[n] || (list[n] = [null, 0, 0]);
+      it[0] = tb; it[1] = Math.min(ct, tb.dur - 1e-4); it[2] = w; n++;
+    }
+    if (!n) return 0;
+    let sum = 0;
+    for (let j = 0; j < n; j++) sum += list[j][2];
+    if (sum < 1e-4) return 0;
+    for (let j = 0; j < n; j++) list[j][2] /= sum;
+    const us = (this.us ||= H.B.map(() => ({ quaternion: new THREE.Quaternion(), position: new THREE.Vector3() })));
+    sampleInto(us, list, n);
+    let e = Math.max(0, Math.min(1, T / Math.max(1e-3, act.fadeIn), (c.dur - T) / Math.max(1e-3, act.fadeOut)));
+    if (U.end != null) e *= Math.max(0, Math.min(1, (U.end + 0.12 - T) / 0.12)); // (end: the clips hand back to the keys)
+    const w = e * Math.min(1, sum), body = U.mask === 'body', ub = this.ub, grp = HeroRig.tables().grp;
+    if (w <= 0) return 0;
+    for (let i = 0; i < ub.length; i++) {
+      if (body && grp[i] >= 3) continue;
+      ub[i].quaternion.slerp(us[i].quaternion, w);
+      ub[i].position.lerp(us[i].position, w);
+    }
+    return w;
   }
   // the UAL bones' world matrices from the pose post() computed (cheaper than three's walk); the scene walk and the
   // Animator's own refresh reach them through wrap.updateMatrixWorld

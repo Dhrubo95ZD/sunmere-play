@@ -535,7 +535,10 @@ export class EntityView {
     // a holstered Deadeye draws at once: the pistols come into the fists as the clip lifts them from the hips
     this.skillAt = performance.now();
     if (this.anim.holster || this.anim.pistolsIn) this.holsterSync(false, true);
-    this.anim.play(ch.clip, { speed: haste, fadeIn: cut ? 0.06 : undefined, onEvent: (ev) => { ctx.yaw = this.ry; fx.run(ev, ctx); } });
+    // S4: a leap that lands at its target (choreo.js toTarget): the root travel scaled to the distance less the gap
+    let travelK = 1;
+    if (ch.toTarget && ch.endRoot?.[2] > 0 && tgt?.pos) travelK = Math.max(0, Math.min(ch.toTarget.max, Math.hypot(tgt.pos.x - this.pos.x, tgt.pos.z - this.pos.z) - ch.toTarget.gap)) / ch.endRoot[2];
+    this.anim.play(ch.clip, { speed: haste, fadeIn: cut ? 0.06 : undefined, travelK, onEvent: (ev) => { ctx.yaw = this.ry; fx.run(ev, ctx); } });
     if (this.char.userData.dsList && !(this.dist > 45)) dsAttack(this.char, fx); // Dragonslayer pieces vent steam
     heatAttack(this); // a +10 piece: the phones' and Simple's sparks and wisp follow your own attacks (heat.js)
   }
@@ -584,6 +587,7 @@ export class EntityView {
     this.machine?.hit();
     if (this.machine && away && !this.dead) { const d = this.toLocal(away); this.mTilt = { d, t: 0, w, x: this.mTilt?.x || 0, z: this.mTilt?.z || 0 }; }
     this.lastHit = { at: performance.now(), away, src, fx, w };
+    if (ev?.ht >= 4 && ev.skill !== 'kf_highledger') this.heavyAt = performance.now(); // (a fusion's finishing blow: a hold that follows it slams first, startReact; High Ledger's last cut lifts, so not that one)
     if (src && src !== this && !dot) heatHit(src, this, fx); // sparks where a +10 weapon struck (capped, heat.js)
     this.flashT = 0.22; this.flashK = ev?.crit ? 1.25 : w >= 0.8 ? 1.12 : 1; // warm flash, eased out (see update)
     const melee = away && src.pos.distanceTo(this.pos) < 5.5;
@@ -600,7 +604,7 @@ export class EntityView {
       // the server's contact came first (offline, or a tick ahead of the clip): the clip's own contact frame plays it, at the
       // higher of the two tiers, so the stop never lands twice or holds the swing before its contact
       const act = src.anim?.action;
-      if (act && src.ctx?.src === src && act.clip.events?.some((e) => e.e === 'impact' && (src.ctx.as || e.sk) === ev.skill && !act.fired.has(e))) { src.ctx.pendHt = Math.max(src.ctx.pendHt || 0, ev.ht); return; }
+      if (act && src.ctx?.src === src && act.clip.events?.some((e) => e.e === 'impact' && (src.ctx.as || e.sk) === ev.skill && !act.fired.has(e))) { src.ctx.pendHt = Math.max(src.ctx.pendHt || 0, ev.ht); if (this.heavyAt) this.slamWait = true; return; }
       const L = src.lastImpact, fresh = L && performance.now() - L.at < 400 && (L.tgt === this.id || L.tgt === '*');
       const T = tierInfo(ev.ht), local = src.id === this.mgr.localId;
       const dir = away ? away.clone() : null, at = this.pos.clone().setY(this.pos.y + (this.height || 1.6) * 0.6);
@@ -634,6 +638,19 @@ export class EntityView {
     // hold restarted the arc from the floor, so the machine dropped and jumped again on every cut)
     const was = this.react;
     if (kind === 'air' && ev?.hold && was?.kind === 'air' && !was.landed && was.y > 0.05) {
+      // (review 18 Nov) a hold that comes with a fusion's finishing blow (Stormfall's plunge, T4+) is a slam: the machine is
+      // driven into the ground under the blade and bounces up off it, still Lifted, instead of hanging 2 m over the
+      // crater while the Knight lands beneath it (the plunge never touched it)
+      if (this.heavyAt && performance.now() - this.heavyAt < 300) {
+        this.heavyAt = 0;
+        const go = !this.slamWait || performance.now() - (this.slamHitAt || 0) < 300; this.slamWait = false; // (the server's word came before the clip's contact: wait for it, fx 'impact')
+        const rem = Math.max(0.3, (ev.dur || 1) - 0.06), t1 = Math.min(0.9, rem * 0.68), t2 = rem - t1;
+        // it bounces away from the hero who landed on it (the leap ends on the machine's spot, so it would sit on them)
+        const away = this.lastHit?.away, dir = away && performance.now() - this.lastHit.at < 300 ? away.clone() : was.dir;
+        const b0 = was.back0 ?? Math.min(0.7, 0.7 * was.t / was.dur), ox = was.dir.x * b0 - dir.x * b0, oz = was.dir.z * b0 - dir.z * b0;
+        this.react = { ...was, t: 0, dur: ev.dur || 1, y0: was.y, dir, back0: b0, slam: { ts: 0.06, t1, t2, h1: 4.9 * t1 * t1 / 4, h2: Math.min(0.4, 4.9 * t2 * t2 / 4), hit: false, ox, oz, go, w: 0 }, held: true };
+        return;
+      }
       const u0 = Math.min(1, was.t / was.dur);
       this.react = { ...was, t: 0, dur: ev.dur || 0.6, y0: was.y, back0: (was.back0 ?? 0) + (0.7 - (was.back0 ?? 0)) * u0, h: Math.max(0.35, (was.h - was.y) * 0.45), held: true };
       return;
@@ -657,13 +674,34 @@ export class EntityView {
       fx.sound('scrape');
     }
   }
-  updateReact(dt) {
+  updateReact(dt, dtRaw = dt) {
     const R = this.react, d = R.dir;
     R.t += dt;
+    // (a slam's drive into the ground runs on real time through the contact's hit-stop, so the freeze holds the machine
+    // on the ground under the blade, not still hanging over it)
+    if (R.slam?.go && R.t < R.slam.ts) R.t = Math.min(R.slam.ts, R.t + Math.max(0, dtRaw - dt));
     let y = 0, back = 0, tilt = 0;
     if (R.kind === 'air') {
       const u = Math.min(1, R.t / R.dur);
-      if (u < 1 && R.held) { y = R.y0 * (1 - u * u) + R.h * 4 * u * (1 - u); back = R.back0 + (0.7 - R.back0) * u; tilt = 0.75 * Math.sin((0.5 + 0.4 * u) * Math.PI); }
+      const S = R.slam;
+      if (S && !S.go) { R.t = 0; S.w += dtRaw; if (S.w > 0.25) S.go = true; } // (hangs until the blade arrives)
+      if (u < 1 && S) {
+        // driven down in 0.06 s, then two falling bounces (heights from the time left: gravity, not a float)
+        const t = R.t;
+        back = R.back0 + 0.9 * Math.min(1, Math.max(0, t - S.ts) / Math.max(0.1, S.t1)) ** 0.6; tilt = 0.75 * Math.max(0, 1 - t / S.ts) + 0.3 * Math.sin(Math.min(1, t / R.dur) * Math.PI);
+        this.root.position.x += S.ox; this.root.position.z += S.oz; // (where it hung, whichever way it now bounces)
+        if (t < S.ts) y = R.y0 * (1 - (t / S.ts) ** 2);
+        else {
+          if (!S.hit) {
+            S.hit = true;
+            const f = this.pos.clone();
+            R.fx?.emit('dust', f.clone().setY(f.y + 0.2), { n: 10, spread: 0.7, size: 1.1 });
+            R.fx?.sound('clang'); // (no rocks of its own: the fusion's contact already throws the debris budget's worth)
+          }
+          const b = t - S.ts;
+          if (b < S.t1) { const v = b / S.t1; y = S.h1 * 4 * v * (1 - v); } else { const v = Math.min(1, (b - S.t1) / Math.max(0.05, S.t2)); y = S.h2 * 4 * v * (1 - v); }
+        }
+      } else if (u < 1 && R.held) { y = R.y0 * (1 - u * u) + R.h * 4 * u * (1 - u); back = R.back0 + (0.7 - R.back0) * u; tilt = 0.75 * Math.sin((0.5 + 0.4 * u) * Math.PI); }
       else if (u < 1) { y = R.h * 4 * u * (1 - u) * (u < 0.5 ? 1 : 1 - 0.25 * (u - 0.5)); back = 0.7 * u; tilt = 0.75 * Math.sin(u * Math.PI * 0.9); }
       else {
         if (!R.landed) {
@@ -675,7 +713,7 @@ export class EntityView {
           R.fx?.sound('thud');
         }
         const b = R.t - R.dur;
-        y = b < 0.26 ? 0.3 * Math.sin((b / 0.26) * Math.PI) : 0; back = 0.7; tilt = b < 0.3 ? 0.2 * (1 - b / 0.3) : 0;
+        y = b < 0.26 ? 0.3 * Math.sin((b / 0.26) * Math.PI) : 0; back = S ? (R.back0 + 0.9) * (1 - Math.min(1, b / 0.5) ** 2) : 0.7; if (S) { const k = 1 - Math.min(1, b / 0.5) ** 2; this.root.position.x += S.ox * k; this.root.position.z += S.oz * k; } tilt = b < 0.3 ? 0.2 * (1 - b / 0.3) : 0;
         if (b > 0.5) { this.react = null; }
       }
     } else if (R.kind === 'stag') {
@@ -748,7 +786,7 @@ export class EntityView {
       this.root.scale.set(1 / Math.sqrt(sq), sq, 1 / Math.sqrt(sq));
       if (u >= 1) { this.leanDir = null; this.root.scale.set(1, 1, 1); this.root.rotation.set(0, this.ry, 0); }
     }
-    if (this.react) this.updateReact(dt); // (S1: lifted, staggered, broken)
+    if (this.react) this.updateReact(dt, dtRaw); // (S1: lifted, staggered, broken)
     let fresh = false; // the animator refreshed the whole rig and nothing moved it afterwards
     if (this.anim) {
       if (this.eating && !this.anim.busy) this.anim.play(EAT, { fadeIn: 0.3 });
