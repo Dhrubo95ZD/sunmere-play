@@ -23,7 +23,7 @@ import { BOT_CHAT_METHODS } from './botchat.js';
 import { BOT_MEMORY_METHODS } from './botmemory.js';
 import { skillFeel, tierOf, poiseMax, liftable, isElite, dodgeFor, dodgeWith, POISE, BUFFER, CUT_KINDS, CANCEL_AFTER } from './feel.js';
 import { KIT_V2, CORE, kitOf, stepOf, CHAIN_RESET, PARRY } from './kit.js';
-import { FUSIONS, compileKit, fusionUnlocked, gateOk, nameOf, MASTERY, LINK, DISCOVER_XP, DUEL_FUSE } from './fusions.js';
+import { FUSIONS, FUSION_BY_ID, compileKit, fusionUnlocked, gateOk, nameOf, MASTERY, LINK, DISCOVER_XP, DUEL_FUSE } from './fusions.js';
 import { TALENT_BY_ID, TALENTS, TALENT_ROW_REQ, talentMods, talentPoints, talentResetCost, pathSpent, totalSpent, skillCost, skillCd } from './talents.js';
 import { onWeb, treeMods, treeCompile, treePoints, treeSpent, allocBlock, isLeaf, pruneAlloc, freeRespec, formAllowed, leafRefundCost, treeResetCost, TREE_V, TREE_FREE_DAYS } from './treeMods.js';
 import { TREE_BY_ID } from './tree.js';
@@ -79,6 +79,11 @@ const MOVERS = new Set([...Object.values(SKILLS), ...Object.values(CORE), ...Obj
 // a class on the new kit (S2): talent and set modifiers naming a legacy skill move to the skill it became (a Form to its
 // core skill, an old skill that is now a fusion to that fusion); a notable, zone or retired one becomes a plain +damage of
 // a seventh of its size (spread over the seven core skills)
+// the distance from (x, z) to a segment [x0, z0, x1, z1] (Afterwake's sand wake, S8)
+function segDist(x, z, s) {
+  const vx = s[2] - s[0], vz = s[3] - s[1], t = Math.max(0, Math.min(1, ((x - s[0]) * vx + (z - s[1]) * vz) / (vx * vx + vz * vz || 1)));
+  return Math.hypot(x - s[0] - vx * t, z - s[1] - vz * t);
+}
 function remapSk(tal) {
   for (const id of Object.keys(tal.sk)) {
     const o = OLD_TO_NEW[id];
@@ -328,7 +333,7 @@ export class World {
       stats: p.stats, power: Math.round(p.power), armorPct: p.armorPct, cds: p.cds, gcd: p.gcd, dead: p.dead, grave: p.dead ? this.graveName(p) : null, x: p.x, z: p.z,
       buffs: p.buffs.map((b) => ({ name: b.name, icon: b.icon, t: b.t, dur: b.dur, debuff: !!b.debuff })), absorb: Math.round(p.absorb),
       duel: p.duel ? { with: p.duel.with, start: p.duel.start, end: p.duel.end } : null, mailNew: (p.mail || []).filter((m) => !m.read).length, bagSize: this.bagMax(p), rested: Math.round(p.rested || 0), home: CARAVANS.find((c) => c.id === p.home)?.name || 'Sunmere Village', recallReady: p.recallReady || 0, recalling: !!p.recall, looks: p.looks || [], wlook: p.wlook || null, ohlooks: p.ohlooks || [], ohlook: p.ohlook || null, shines: p.shines || [], wshine: p.wshine || null, shlooks: p.shlooks || [], shlook: p.shlook || null, cklooks: p.cklooks || [], cklook: p.cklook || null, heats: p.heats || [], wheat: p.wheat ?? null, temper: this.temperState(p), homeDeco: p.homeDeco || {}, homePos: p.homePos || {}, buyback: (p.buyback || []).map((b) => ({ it: b.it, value: b.value })), compGear: p.compGear || {}, comps: this.myBots(p).filter((b) => !b.escort).map((b) => ({ id: b.id, name: b.name, cls: b.cls, power: Math.round(b.power), hp: b.maxHp, armor: Math.round(b.armorPct * 100) })), guild: p.guild ? { name: p.guild.name, rank: p.guild.rank, roster: this.guildRoster(p) } : null, ledger: p.ledger || [], ridesOwed: p.ridesOwed?.k || 0, ramOwed: p.ramOwed?.k || 0, prof: p.prof || {}, lo: p.lo || 0, loadouts: this.loadouts(p), lgear: (p.lgear || [null, null]).map((g) => (g ? Object.keys(g).length : 0)), runaboutMk: p.runaboutMk || 1, runabout: !!p.runabout, crawler: !!p.crawler, mountKind: mountKind(p), mounted: !!p.mounted, paint: p.paint || 'brass', pets: p.pets || {}, pet: p.pet || null, rep: p.rep || {}, daily: p.daily || {}, today: this.today(),
-      link: p.link ? { from: p.link.from, until: p.link.until, landed: !!p.link.landed, parried: !!p.link.parried, step: p.link.step || 0, tgt: p.link.tgt || null } : null, chain: p.chain || null, fusions: p.fusions || [], fmastery: p.fmastery || {}, tree: p.tree || {}, kitV: p.kitV || 0, forms: p.forms || {}, web: onWeb(p.cls) ? 1 : 0, treePts: onWeb(p.cls) ? treePoints(p.level, p.done) - treeSpent(p.tree) : 0, treeFree: onWeb(p.cls) && freeRespec(p) ? 1 : 0, webSets: onWeb(p.cls) && p.webSets ? p.webSets.map((w) => Object.keys(w?.tree || {}).length) : null,
+      link: p.link ? { from: p.link.from, until: p.link.until, landed: !!p.link.landed, parried: !!p.link.parried, step: p.link.step || 0, tgt: p.link.tgt || null } : null, chain: p.chain || null, fusions: p.fusions || [], fmastery: p.fmastery || {}, tree: p.tree || {}, kitV: p.kitV || 0, skc: p.skc ? Object.fromEntries(Object.entries(p.skc).map(([k, c]) => [k, c.n])) : null, forms: p.forms || {}, web: onWeb(p.cls) ? 1 : 0, treePts: onWeb(p.cls) ? treePoints(p.level, p.done) - treeSpent(p.tree) : 0, treeFree: onWeb(p.cls) && freeRespec(p) ? 1 : 0, webSets: onWeb(p.cls) && p.webSets ? p.webSets.map((w) => Object.keys(w?.tree || {}).length) : null,
       talents: p.talents, talentPts: talentPoints(p.level) - totalSpent(p.talents), speedMul: 1 + (p.tal?.speed || 0), crit: 0.1 + (p.tal?.crit || 0), dodge: p.tal?.dodge || 0, hastePct: p.hastePct || 0, title: p.title || '',
       mods: Object.fromEntries(['dmg', 'critDmg', 'heal', 'leech', 'cdr', 'thorns', 'regen', 'hp', 'armor', 'haste', 'crit', 'dodge', 'speed', 'absorb'].filter((k) => typeof p.tal?.[k] === 'number' && p.tal[k]).map((k) => [k, p.tal[k]])),
     };
@@ -1910,6 +1915,22 @@ export class World {
     }
     if (!tgt) return null;
     const dT = dist(b, tgt);
+    // (S8) a bot on the new kit presses B in the link its last skill opened, and the server fuses it as it does a player's:
+    // companions 85%, volunteers 80%, the rest 60% of the time (combat_design.md 8; the opener tables are S15). A fusion
+    // that moves the hero (a dash or a leap) is left to players, as the plain movers are
+    if (KIT_V2[b.cls] && b.link && b.effFuse && !b.link.open) {
+      const rate = b.botRole === 'Volunteer' ? 0.8 : b.owner ? 0.85 : 0.6;
+      for (const f of FUSIONS[b.cls] || []) {
+        if (f.from !== b.link.from || f.fx.some((e) => e[0] === 'dash' || e[0] === 'leap')) continue;
+        const B = b.eff?.[f.to];
+        if (!B || B.lvl > b.level || (b.cds[B.id] || 0) > this.time || b.res < skillCost(B, tal) + (f.extra || 0)) continue;
+        if (f.target === 'enemy' && dT > (f.range || 4) + this.rad(tgt) + 0.4) continue;
+        if (this.fusionOf(b, B, { target: tgt.id }) !== b.effFuse[f.key]) continue;
+        if (b.fuseLink !== b.link.at) { b.fuseLink = b.link.at; b.fuseOk = rand() < rate; } // (one roll a link)
+        if (!b.fuseOk) continue;
+        return { skill: B.id, target: tgt.id, gx: tgt.x, gz: tgt.z };
+      }
+    }
     // tanks pull enemies off the others
     // (and taunt before losing it: when someone else's threat on a boss comes within a tenth of the tank's own; and a taunt
     // round the tank also takes back the boss's adds that went for the others, the healer most of all)
@@ -2283,6 +2304,7 @@ export class World {
     // (a fusion skips A's lock: the reward for landing. It waits for A's cancel point, the contact + 0.12 s, unless Hair
     // Trigger fires it on the contact frame, S5)
     const cutAt = fu && !(p.tal?.contactFire) ? Math.max(p.cutAt || 0, p.cast && !p.cast.channel ? castEnd + CANCEL_AFTER / (p.cast.haste || 1) : 0) : 0;
+    if (base.charges > 1) this.chargeRegen(p, base); // (S8: Desert Step's charges; the cooldown stands only when none is left)
     const legalAt = Math.max(p.cast && !p.cast.channel ? castEnd + 0.001 : 0, cutAt, p.cds[base.id] || 0, sk.gcd && !fu && !answer ? p.gcd || 0 : 0);
     if (p.cast && p.cast.channel) return queued ? undefined : this.err(p, 'You are busy.');
     if (legalAt > this.time) {
@@ -2337,7 +2359,8 @@ export class World {
     p.res -= cost;
     const haste = (1 + p.hastePct + this.buffVal(p, 'haste')) * (tal.animMul || 1); // (Heavy Hand's price: animations at 0.9x; review 18 Nov: it was never applied)
     // a fusion starts B's own cooldown and its own; A's was spent by A
-    if (base.cd) p.cds[base.id] = this.time + skillCd(base, tal);
+    if (base.charges > 1) this.chargeSpend(p, base, skillCd(base, tal));
+    else if (base.cd) p.cds[base.id] = this.time + skillCd(base, tal);
     if (fu) p.cds[fu.id] = this.time + skillCd(fu, tal);
     // the recovery before another plain skill: the skill's own lock (feel.js, 0.45-0.9 s from its contact), not a flat GCD
     if (sk.gcd) p.gcd = this.time + (FEEL_ON ? skillFeel(sk).win.lock : GCD) / haste;
@@ -2349,13 +2372,35 @@ export class World {
     // Opening (a perfect dodge): the next harmful skill crits on every contact
     const opening = sk.fx.some((f) => f[0] === 'dmg' || f[0] === 'execute' || f[0] === 'stun' || f[0] === 'knock') ? p.buffs.findIndex((b) => b.name === 'Opening') : -1; // (a heal or a buff never spends it)
     if (opening >= 0) p.buffs.splice(opening, 1);
-    p.cast = { sk, t0: this.time, end: this.time + Math.max(hitT, (sk.channel || 0)), target: target?.id, gx, gz, hits: 0, channel: !!sk.channel, haste, opening: opening >= 0, fused: !!fu, blocked: fu ? L?.blocked || 0 : 0, mul: kmul, encore };
+    const cloak = sk.fx.some((f) => f[0] === 'dmg') ? p.buffs.findIndex((b) => b.name === 'Dust Cloak') : -1; // (S8 Dust Cloak: the next skill after a dodge crits)
+    if (cloak >= 0) p.buffs.splice(cloak, 1);
+    // (S8) out of reach while the move plays (Thousand Cuts, Whiteout); a Counter Stance's counter and Shield Step's block
+    if (sk.untarget) p.untargT = Math.max(p.untargT || 0, this.time + sk.untarget);
+    if (sk.guardNext) p.guardT = this.time + sk.guardNext;
+    p.castFrom = { x: p.x, z: p.z };
+    const unseen = !!target && target.type === 'mob' && target.target !== p.id; // (S8 Desert Step: it had not turned on him yet)
+    p.cast = { sk, t0: this.time, unseen, end: this.time + Math.max(hitT, (sk.channel || 0)), target: target?.id, gx, gz, hits: 0, channel: !!sk.channel, haste, opening: opening >= 0 || cloak >= 0, fused: !!fu, blocked: fu ? L?.blocked || 0 : 0, mul: kmul, encore };
     if (target && target.type === 'mob') this.addThreat(target, p, 1);
-    this.broadcast({ k: 'cast', id: p.id, skill: sk.id, base: fu ? base.id : undefined, step: sk.step || undefined, target: target?.id, gx, gz, haste });
+    this.broadcast({ k: 'cast', id: p.id, skill: sk.id, base: fu ? base.id : undefined, step: sk.step || undefined, fc: sk.formChoreo || undefined, target: target?.id, gx, gz, haste }); // (fc: a Form's clip, S8)
     if (fu) this.fusionFound(p, fu); // (the keystones' onLink runs when the fusion lands: linkAfter)
     this.pushSelf(p);
   }
 
+  // skill charges (S8: Desert Step's two, Three Charges' three): p.skc[id] = { n, next }; a charge comes back every cooldown,
+  // and the skill's cooldown (p.cds) stands only while no charge is left, so the bar and the buffer read it as before
+  chargeRegen(p, sk) {
+    const max = sk.charges, c = ((p.skc ||= {})[sk.id] ||= { n: max, next: 0, cd: sk.cd });
+    if (c.n > max) c.n = max;
+    while (c.n < max && c.next && this.time >= c.next - 1e-6) { c.n++; c.next = c.n < max ? c.next + (c.cd || sk.cd) : 0; }
+    p.cds[sk.id] = c.n > 0 ? 0 : c.next;
+    return c;
+  }
+  chargeSpend(p, sk, cd) {
+    const c = this.chargeRegen(p, sk);
+    c.n = Math.max(0, c.n - 1); c.cd = cd;
+    if (!c.next) c.next = this.time + cd;
+    p.cds[sk.id] = c.n > 0 ? 0 : c.next;
+  }
   // the fusion B makes after the link p.link, or null (B plain): an authored pair, unlocked, not cooling (then B casts
   // plain and the bar shows a grey rim), inside the window (one 20 Hz tick of grace; up to 0.15 s more when the client
   // claims the chain, m.chain, and it is the link's own A: a client cannot claim a chain it did not cast), A's target
@@ -2442,7 +2487,9 @@ export class World {
     if (p.cast) this.cancelCast(p);
     p.dodgeN--;
     if (!p.dodgeNext) p.dodgeNext = this.time + D.regen;
-    p.evadeT = this.time + D.evade; p.dodgeAt = this.time;
+    p.evadeT = this.time + D.evade; p.dodgeAt = this.time; p.dodgeFrom = { x: p.x, z: p.z };
+    if (D.parry) { p.parryT = this.time + D.parry; p.parryFrom = 's_counter'; p.parryCounter = 0; } // (Counter Guard, S8: the sidestep is a parry that opens Riptide)
+    if (p.tal?.hooks?.length) runKeys(this, p, 'onDodge', {}); // (Dust Cloak)
     p.blockT = D.block ? this.time + D.block : 0; // (Oathbound's Shield Step: a frontal block)
     p.chain = null;
     if (KIT_V2[p.cls]) p.link = { from: 'dodge', at: this.time, until: this.time + D.dur + LINK.win + (p.tal?.linkWin || 0), landed: true, done: true, step: 0, tgt: null, parried: false }; // (the dodge is an input: gate 'dodge')
@@ -2503,7 +2550,7 @@ export class World {
   applySkill(p, sk, c) {
     const target = c.target ? this.entity(c.target) : null;
     const h = sk.hit;
-    const center = sk.target === 'ground' ? { x: c.gx, z: c.gz } : (h.kind === 'aoe' || h.kind === 'self') ? p : target || p;
+    const center = sk.target === 'ground' ? { x: c.gx, z: c.gz } : h.at === 'target' && target ? target : (h.kind === 'aoe' || h.kind === 'self') ? p : target || p; // (h.at 'target': round the machine, Thousand Cuts, S8)
     // gather affected entities
     let enemies = [], allies = [];
     if (h.kind === 'melee' || h.kind === 'proj') { if (target && sk.target === 'enemy' && (target.type === 'mob' ? !target.dead : this.foeOf(p, target.id))) enemies = [target]; if (sk.target === 'ally' || sk.target === 'self') allies = [target || p]; }
@@ -2540,7 +2587,8 @@ export class World {
     this._hc = fe ? { sk, i: c.hits || 0, opening: !!c.opening, brk: fe.brk, launch: fe.launch, bash: fe.bash, air: sk.fx.find((f) => f[0] === 'air')?.[1] || 0, src: p, broke: new Set(), encore: !!c.encore } : null;
     // a fusion's last contact may add its own effects (fxLast: Kingsfall's slam, High Ledger's re-lift)
     const lastHit = (c.hits || 0) >= (h.n || 1) - 1;
-    const fxl = lastHit && sk.fxLast ? [...sk.fx, ...sk.fxLast] : sk.fx;
+    // (S8: a finisher's added damage joins the contact's own, one blow and one number: Sandspout's dive)
+    const fxl = lastHit && sk.fxLast ? (sk.fxLast.some((f) => f[0] === 'dmg') ? [...sk.fx.map((f) => (f[0] === 'dmg' ? ['dmg', f[1] + sk.fxLast.filter((g) => g[0] === 'dmg').reduce((t, g) => t + g[1], 0), ...f.slice(2)] : f)), ...sk.fxLast.filter((f) => f[0] !== 'dmg')] : [...sk.fx, ...sk.fxLast]) : sk.fx;
     if (lastHit && sk.fxLast && this._hc) { const b2 = sk.fxLast.find((f) => f[0] === 'brk'); if (b2) this._hc.brk = b2[1]; }
     for (const [type, a, b, cc] of fxl) {
       switch (type) {
@@ -2572,6 +2620,21 @@ export class World {
         case 'parryBack': if (c.blocked) for (const m of enemies) this.damage(p, m, c.blocked * a, sk.id); break; // (a share of the blocked blow back: Turning Riposte)
         // (carried into a wall or a machine: the knock's wall slam is held Pinned for a s; Battering Line)
         case 'wallSlam': for (const m of enemies) { if (m.type !== 'mob' || m.dead || m._wall !== this.time || m.def.boss) continue; m._kb = undefined; this.addBuff(m, { name: 'Pinned', cc: 'root', t: a, dur: a, debuff: true, icon: 'root' }); m.pinT = Math.max(m.pinT || 0, this.time + a); } break;
+        // ---- the Sandblade's kinds (S8)
+        // a pull: every machine reached that is not a boss or a big machine is dragged up to a m toward the centre (Sandspout,
+        // Drawing Spin); the client's snapshot slides it in
+        case 'pull': for (const m of enemies) { if (m.type !== 'mob' || m.dead || !liftable(m.def) || m.def.dummy) continue; this.pullMob(m, center, a); } break;
+        // Desert Step: arriving behind a machine that is not fighting you gives Opening for a s
+        case 'unseen': if (!(c.hits || 0) && c.unseen && target?.type === 'mob') this.addBuff(p, { name: 'Opening', stat: 'opening', pct: 0, t: a, dur: a, icon: 'evade' }); break;
+        // Counter Stance: the first blow turned in the stance is answered with a cut of a x power (playerDamaged)
+        case 'counter': p.parryCounter = a; p.parryCut = sk.id; break;
+        // Dust Whirl's column: a sand zone that travels with the hero for a s (radius b, coef cc a second), blinds and drags
+        // small machines in, and throws them up when it falls. One at a time
+        case 'column': if (p.type === 'player' && !(c.hits || 0)) { const Z = (p.zones ||= []).filter((z) => !z.follow); Z.push({ kind: sk.hotSand ? 'hotsand' : 'sand', coef: cc, until: this.time + a, r: b, x: p.x, z: p.z, follow: true, blind: 40, pull: 0.5 * (sk.colPull || 1), lift: 1.0 * (sk.colLift || 1), next: this.time + 0.5, sk: sk.id }); if (Z.length > 6) Z.shift(); p.zones = Z; this.broadcast({ k: 'column', id: p.id, dur: a, r: b }); } break;
+        // Sandstorm Drop rides the column up: it ends here
+        case 'endColumn': if (p.zones?.some((z) => z.follow)) { p.zones = p.zones.filter((z) => !z.follow); this.broadcast({ k: 'column', id: p.id, dur: 0 }); } break;
+        // Whiteout: a second cloud where the sidestep began blinds what stands there too
+        case 'cloudAt': if (!(c.hits || 0) && p.dodgeFrom) { this.broadcast({ k: 'sandcloud', x: +p.dodgeFrom.x.toFixed(2), z: +p.dodgeFrom.z.toFixed(2), r: a }); const de = sk.fx.find((f) => f[0] === 'debuff'); for (const m of this.foesOf(p)) if (!enemies.includes(m) && m.type === 'mob' && Math.hypot(m.x - p.dodgeFrom.x, m.z - p.dodgeFrom.z) <= a + this.rad(m)) { if (de) this.addBuff(m, { name: sk.name, stat: de[1], pct: de[2], t: de[3], dur: de[3], debuff: true, icon: sk.icon }); this.provoke(m, p, 1); } } break;
         case 'ricochet': { const t0 = enemies[0]; if (!t0) break; const coef = sk.fx.find((f) => f[0] === 'dmg')?.[1] || 1; const near = this.foesOf(p).filter((o) => !o.dead && !enemies.includes(o) && dist(o, t0) <= b).sort((x, y) => dist(x, t0) - dist(y, t0)).slice(0, Math.min(a, 2)); for (const o of near) this.damage(p, o, power * coef * 0.7 * R(0.9, 1.1), sk.id); break; } // (at most 2 bounces a shot, section 3.6)
       }
     }
@@ -2580,6 +2643,16 @@ export class World {
     const ck = enemies.length && p.type === 'player' ? coatOf(sk) : null;
     if (ck) for (const m of enemies) this.applyCoat(p, m, ck.kind, ck.dur);
     if (KIT_V2[p.cls] && p.type === 'player') this.linkAfter(p, sk, c, enemies, allies); // (fusions: the link window, mastery)
+    // Afterwake (S8): a dash leaves a wake of churned sand along its path (castFrom to here) that cuts what crosses it
+    if (sk.wake && !(c.hits || 0) && p.type === 'player') {
+      const W = sk.wake, f = p.castFrom || p, Z = (p.zones ||= []);
+      let ex = p.x, ez = p.z;
+      if (Math.hypot(ex - f.x, ez - f.z) < 2) { const d = (sk.fx.find((e) => e[0] === 'dash')?.[1]) || 4; const tx = target ? target.x - f.x : Math.sin(p.ry), tz = target ? target.z - f.z : Math.cos(p.ry), tl = Math.hypot(tx, tz) || 1; ex = f.x + (tx / tl) * Math.min(d, target ? tl + 1.6 : d); ez = f.z + (tz / tl) * Math.min(d, target ? tl + 1.6 : d); }
+      Z.push({ kind: sk.hotSand ? 'hotsand' : 'sand', coef: W.coef, until: this.time + W.dur, r: W.r, x: (f.x + ex) / 2, z: (f.z + ez) / 2, seg: [f.x, f.z, ex, ez], next: this.time + 0.5, sk: sk.id, wake: true });
+      if (Z.length > 6) Z.shift();
+      this.addBuff(p, { name: 'Afterwake', stat: 'speed', pct: W.speed, t: W.dur, dur: W.dur, icon: 'haste' });
+      this.broadcast({ k: 'wake', id: p.id, seg: [f.x, f.z, ex, ez].map((v) => +v.toFixed(2)), dur: W.dur });
+    }
     // the end of a leap or a dash (its first contact is the landing): the keystones' onLand (Iron Comet's 0.6 s link to
     // Shield Bash, S5; before, the hook was never called)
     if (!(c.hits || 0) && p.type === 'player' && p.tal?.keys?.length && sk.fx.some((f) => f[0] === 'leap' || f[0] === 'dash')) {
@@ -2603,7 +2676,8 @@ export class World {
     }
     const tal = src.type === 'player' ? src.tal : null;
     const hc = this._hc && skill === this._hc.sk.id ? this._hc : null; // a skill contact being resolved (applySkill): feel.js
-    let crit = !!hc?.opening || (skill !== 'galvanic' && rand() < 0.1 + (src.type === 'player' ? this.buffVal(src, 'crit') + (tal?.crit || 0) : 0)); // (S7: Galvanic's jump is a share of a blow that already rolled)
+    let crit = !!hc?.opening || !!hc?.sk.sureCrit || (skill !== 'galvanic' && rand() < 0.1 + (hc?.sk.critAdd || 0) + (src.type === 'player' ? this.buffVal(src, 'crit') + (tal?.crit || 0) : 0)); // (S7: Galvanic's jump is a share of a blow that already rolled; S8: Needle Thrust's +30%, Glasscutter's certain crit)
+    if (hc?.sk.behindMul && m.type === 'mob' && fromBehind(m, src.x, src.z)) amt *= hc.sk.behindMul; // (S8: Needle Thrust, Glasscutter from behind)
     if (tal?.noCrit && !hc?.opening) crit = false; // (Heavy Hand)
     if (crit) amt *= 1.6 + (tal?.critDmg || 0);
     if (tal) { const f = m.hp / m.maxHp; if (f < 0.35) amt *= 1 + tal.execute; else if (f > 0.9) amt *= 1 + tal.opener; }
@@ -2649,7 +2723,7 @@ export class World {
   // the blow's kinds (its record's tags, or the legacy table; a fire patch's tick is heat) against the machine's coats: the
   // first coat it sets off is consumed. -> { kind, coat, mul } or null
   reactCheck(m, hc, skill) {
-    const el = hc ? elemsOf(hc.sk) : skill === 'zone' && this._zk === 'fire' ? HEAT_ONLY : null;
+    const el = hc ? elemsOf(hc.sk) : skill === 'zone' && (this._zk === 'fire' || this._zk === 'hotsand') ? HEAT_ONLY : null; // (S8: Hot Sand's column and wake are heat)
     if (!el?.length) return null;
     for (let i = 0; i < m.buffs.length; i++) {
       const b = m.buffs[i];
@@ -2672,6 +2746,18 @@ export class World {
     }
     this.broadcast({ k: 'react', id: m.id, kind: rx.kind, src: src.id, ...(to ? { to: to.id } : {}) });
     if (to) this.damage(src, to, amt * REACTIONS.galvanic.share, 'galvanic');
+  }
+  // a pull (S8): the machine is dragged up to a m toward c (never closer than its radius + 0.6), with the same clamps as a
+  // knockback (dungeon walls, house walls, the world's edge)
+  pullMob(m, c, a) {
+    const d = Math.hypot(m.x - c.x, m.z - c.z), keep = Math.min(1.2, m.def.radius || 1) + 0.6;
+    if (d <= keep + 0.05) return;
+    const s = Math.min(a, d - keep), kx = m.x, kz = m.z;
+    m.x += ((c.x - m.x) / d) * s; m.z += ((c.z - m.z) / d) * s;
+    if (m.x >= DUNGEON_MIN_X) [m.x, m.z] = dungeonPush(m.x, m.z, Math.min(1.2, m.def.radius));
+    else { [m.x, m.z] = clampWorld(m.x, m.z, kx, kz, 0); if (houseCrosses(kx, kz, m.x, m.z)) { m.x = kx; m.z = kz; } else [m.x, m.z] = housePush(m.x, m.z, Math.min(1.2, m.def.radius)); }
+    m.y = walkHeight(m.x, m.z);
+    this.broadcast({ k: 'pull', id: m.id, d: +s.toFixed(1) });
   }
   // a knockback of a m: the machine slides away from p, clamped by dungeon walls, house walls and the world's edge, and
   // stopped where the ground rises into a rock face. Stopped short, or carried into another machine: a wall slam (T3):
@@ -3824,22 +3910,41 @@ export class World {
   // a hero's ground patches (['zone', kind, coef, dur, r]): every 0.5 s each foe standing in one takes coef x power a
   // second and is slowed while it stands there
   tickZones(p) {
-    p.zones = p.zones.filter((z) => z.until > this.time);
     let foes = null;
+    // (S8) the Sandblade's column travels with him and, when it falls, throws up the small machines inside it
+    for (const z of p.zones) if (z.follow && z.until <= this.time && z.lift && !z.done) { z.done = true; this.columnFall(p, z, (foes ||= this.foesOf(p))); }
+    p.zones = p.zones.filter((z) => z.until > this.time);
+    const inZ = (z, m) => (z.seg ? segDist(m.x, m.z, z.seg) : Math.hypot(m.x - z.x, m.z - z.z)) <= z.r + this.rad(m);
     for (const z of p.zones) {
+      if (z.follow) { z.x = p.x; z.z = p.z; }
       if (this.time < z.next) continue;
       z.next += 0.5;
       const tal = p.tal || {};
       for (const m of (foes ||= this.foesOf(p))) {
-        if (m.dead || Math.hypot(m.x - z.x, m.z - z.z) > z.r + this.rad(m)) continue;
+        if (m.dead || !inZ(z, m)) continue;
         this._zk = z.kind; this.damage(p, m, p.power * (1 + (tal.dmg || 0)) * z.coef * 0.5, 'zone'); this._zk = null; // (a fire patch is heat: Ignite)
         if (z.slow && m.type === 'mob') this.addBuff(m, { name: 'Cinders', stat: 'slow', pct: z.slow, t: 0.6, dur: 0.6, debuff: true, icon: 'slow' });
+        if (z.blind && m.type === 'mob' && !m.dead) this.addBuff(m, { name: 'Blinded', stat: 'miss', pct: z.blind, t: 1.0, dur: 1.0, debuff: true, icon: 'cloak' });
+        if (z.pull && m.type === 'mob' && !m.dead && liftable(m.def) && !m.def.dummy) this.pullMob(m, z, z.pull);
       }
     }
+  }
+  // the column falls (Dust Whirl, S8): every small machine still inside is thrown up (a poise contact of the fusion with a
+  // launch), the rest staggered by its poise; the client plays a ring where it stood
+  columnFall(p, z, foes) {
+    const rec = p.eff?.[z.sk] || FUSION_BY_ID[z.sk];
+    if (!rec) return;
+    this.broadcast({ k: 'column', id: p.id, dur: 0, fall: 1, x: +p.x.toFixed(2), z: +p.z.toFixed(2) });
+    this._hc = { sk: rec, i: 0, opening: false, brk: 20, launch: z.lift, bash: false, air: 0, src: p, broke: new Set() };
+    for (const m of foes) if (!m.dead && m.type === 'mob' && Math.hypot(m.x - p.x, m.z - p.z) <= z.r + 0.6 + this.rad(m)) this.damage(p, m, p.power * (1 + (p.tal?.dmg || 0)) * 0.3, rec.id);
+    this._hc = null;
   }
 
   playerDamaged(p, src, amt, skill) {
     if (p.held) return; // its connection dropped and it waits for a reconnect: nothing lands on it (a swing in the air, a slam, a burn)
+    // (S8) out of reach in a Thousand Cuts or a Whiteout; Desert Step's Shield Step Form blocks the next blow within 1 s
+    if (p.untargT > this.time && skill !== 'dot') { this.broadcast({ k: 'miss', src: src.id, tgt: p.id, text: 'Dodge' }); return; }
+    if (p.guardT > this.time && src.type === 'mob' && skill !== 'dot' && skill !== 'thorns') { p.guardT = 0; this.broadcast({ k: 'miss', src: src.id, tgt: p.id, text: 'Block' }); return; }
     // a dodge's evade (0.3 s): every hit misses; a machine's swing or telegraph caught in it is a perfect dodge (Opening, 2 s)
     if (p.evadeT > this.time) {
       this.broadcast({ k: 'miss', src: src.id, tgt: p.id, text: 'Dodge' });
@@ -3873,6 +3978,13 @@ export class World {
       const blow = Math.min(p.maxHp * 0.5, amt * (1 - (p.armorPct || 0)));
       p.link = { ...L0, parried: true, blocked: Math.max(L0.blocked || 0, blow), until: Math.max(L0.until || 0, this.time + LINK.win), tgt: src.id };
       if (p.tal?.parryLinksAll) p.link.open = { to: '*', until: this.time + LINK.win + (p.tal.linkWin || 0), mul: 0.25 }; // (Oathbound: a parry opens links to every core skill, S5)
+      // Counter Stance (S8): the first blow turned is answered at once with a cut, and the stance ends (one answer a stance)
+      if (p.parryCounter && !src.dead) {
+        const rec = p.eff?.[p.parryCut] || null, coef = p.parryCounter;
+        p.parryCounter = 0; p.parryT = 0;
+        this.broadcast({ k: 'counter', id: p.id, tgt: src.id });
+        if (rec) { this._hc = { sk: rec, i: 0, opening: false, brk: 20, launch: 0, bash: false, air: 0, src: p, broke: new Set() }; this.damage(p, src, p.power * (1 + (p.tal?.dmg || 0)) * coef * R(0.9, 1.1), rec.id); this._hc = null; }
+      }
       p.combatT = this.time;
       this.pushSelf(p);
       return;

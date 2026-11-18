@@ -2514,7 +2514,7 @@ function robeLegs(keys) {
 }
 // Clips that play on the upper body while the legs keep running: every basic attack, and the instant shots and throws.
 const BLEND = new Set([
-  'k_valiant', 'k_pommel', 'k_shieldthrow', 's_slash', 's_shieldspin', 'w_blow', 'w_toss', 'c_staff', 'h_sweep',
+  'k_valiant', 'k_pommel', 'k_shieldthrow', 's_slash', 's_slash_2', 's_slash_3', 's_slash_4', 's_shieldspin', 'w_blow', 'w_toss', 'c_staff', 'h_sweep',
   'r_quick', 'r_twin', 'r_pierce', 'r_explosive', 'r_smoke', 'r_arcing', 'r_fan', 'r_pin', 'r_mark', 'r_volley', 'r_barrage',
   'c_acid', 'c_tar', 'c_shrapnel', 'c_corrosive', 'c_chain', 'c_flash',
   'h_dart', 'h_poultice', 'h_net', 'h_antidote', 'h_bark', 'h_sap', 'h_seed',
@@ -2523,6 +2523,179 @@ const BLEND = new Set([
   'd_lastround', 'd_splitter', 'd_hotshot', 'd_dry', 'd_storm', 'd_pressure', 'd_saltshot', 'd_gravel',
 ]);
 const MELEE = new Set(['slash', 'blunt', 'pierce', 'sweep', 'shield', 'sand', 'execute', 'shatter', 'earth']);
+
+// ============================== S8: the Sandblade's new kit (combat_design.md 5.3) ==============================
+// The four steps of Sand Slash each have a clip (s_slash, s_slash_2..4: forehand, backhand, a jab with the shield rim, a
+// stepping diagonal; each trail is off before the next starts, so no two cross); Counter Stance is a held stance and its
+// answer a clip of its own (s_counter_hit, the server's 'counter'); Desert Step lands behind the machine; and the nine
+// fusions. Spins that turn faster than the trail fades leave no blade trail (it would close into a ring from above): the
+// sand carries them. Every effect is sand, grit, sparks or heat; at most two rings a beat; rocks within fx.js fuseBudget.
+{
+  const G = P(guard('sandblade'), { spine: [10, 0, 0] }), GL = P(G, LG), T = TRAIL.sandblade;
+  const SH = { armL: [-44, 70, 24], foreL: [-98, 0, 0] };
+  const SHUP = { armL: [-86, 74, 28], foreL: [-108, 0, 0] }; // (the round shield raised in front)
+  const S8 = (id, dur, keys, ev, o = {}) => (DEF[id] = C('sandblade', dur, 'full', keys, ev, o));
+  // ---- Sand Slash, steps 2-4 (step 1 is the old s_slash clip, a flat forehand)
+  S8('s_slash_2', 0.55, [
+    k(0, GL),
+    ...swing(0.55, 0.2, { wind: 92, mid: 46, hit: -5, follow: -62, end: -78 }, (a, role, e) => [P(SH, arc(a, { lead: role === 'wind' ? 30 : role === 'follow' || role === 'end' ? -20 : 5, dy: -0.28, r: role === 'wind' ? 0.36 : 0.44 }), role === 'wind' ? L.stepL : L.lungeR), { root: [0, -0.06, role === 'wind' ? 0.04 : 0.2], e }], 1100),
+    k(1, GL, { root: R.guard }),
+  ], [{ t: 0.04, e: 'trail', on: true, color: T }, { t: 'hit', e: 'impact', kind: 'slash' }, { t: 0.62, e: 'trail', on: false }], { skill: 's_slash', hit: { t: 0.2 }, step: 2 });
+  // the shield rim driven straight out at the seam (left arm), the blade held back low
+  S8('s_slash_3', 0.5, [
+    k(0, GL),
+    k(0.14, P(G, { spine: [6, 30, 0], chest: [2, 14, 0], armL: [-40, 60, 50], foreL: [-120, 0, 0], armR: [-20, 0, -40], foreR: [-40, 0, 0], head: [0, -20, 0] }, L.stepBack), { root: [0, -0.06, -0.06] }),
+    k(0.36, P(G, { spine: [18, -26, 0], chest: [6, -14, 0], armL: [-92, 14, 6], foreL: [-12, 0, 0], armR: [-10, 0, -50], foreR: [-50, 0, 0], head: [6, 18, 0] }, L.lungeL), { root: [0, -0.16, 0.34], e: 'snap' }),
+    k(0.6, P(G, { spine: [14, -18, 0], armL: [-84, 20, 10], foreL: [-30, 0, 0] }, L.lungeL), { root: [0, -0.12, 0.32] }),
+    k(1, GL, { root: [0, 0, 0.3], e: 'smooth' }),
+  ], [{ t: 0.08, e: 'sound', s: 'whoosh' }, { t: 'hit', e: 'impact', kind: 'shield', at: 'target' }, { t: 'hit', e: 'dust' }], { skill: 's_slash', hit: { t: 0.18 }, step: 3, endRoot: [0, 0, 0.3] });
+  // a stepping cut down from high on the right to low on the left, the heavier last step
+  S8('s_slash_4', 0.7, [
+    k(0, GL),
+    k(0.12, P(SH, arc(-72, { lead: -30, dy: 0.12, r: 0.38, tilt: -32, bend: 2 }), L.stepBack), { root: [0, -0.02, -0.04] }),
+    ...swing(0.7, 0.3, { wind: -100, mid: -52, hit: 4, follow: 56, end: 70 }, (a, role, e) => {
+      const f = Math.min(1, Math.max(0, (a + 100) / 170));
+      return [P(SH, arc(a, { lead: role === 'wind' ? -28 : role === 'follow' || role === 'end' ? 22 : -4, dy: 0.14 - 0.56 * f, tilt: -36 + 66 * f, bend: 4 + 20 * f, r: role === 'wind' ? 0.38 : 0.46 }), role === 'wind' ? L.stepBack : P(L.lungeL, { thighL: [-72, 0, 6], shinL: [70] })), { root: role === 'wind' ? [0, -0.02, -0.04] : [0, -0.22, 0.42], e }];
+    }, 1150),
+    k(1, GL, { root: [0, 0, 0.4], e: 'smooth' }),
+  ], [{ t: 0.1, e: 'trail', on: true, color: T, w: 1.2 }, { t: 'hit', e: 'impact', kind: 'slash' }, { t: 'hit', e: 'impact', kind: 'sand', at: 'target' }, { t: 0.7, e: 'trail', on: false }], { skill: 's_slash', hit: { t: 0.3 }, step: 4, endRoot: [0, 0, 0.4] });
+  // ---- Desert Step: the blur ends 1.6 m behind the machine (through it), low; sand where it starts, along it and where it ends
+  DEF.s_step = { ...DEF.s_step, events: [{ t: 0.03, e: 'dash' }, { t: 0.03, e: 'cloud', kind: 'sand', r: 1.6, at: 'self' }, { t: 0.05, e: 'sandtrail', dur: 0.22, rate: 90 }, { t: 0.5, e: 'cloud', kind: 'sand', r: 1.6, at: 'self' }, { t: 'hit', e: 'impact', kind: 'slash', at: 'target' }],
+    toTarget: { gap: -1.6, max: 8, behind: true }, through: true, ual: { mask: 'body', segs: [['Slide_Start', 0, 0.22, 0.1, 0.5], ['Slide_Exit', 0.22, 0.55, 0, 0.5]], end: 0.5 } };
+  // ---- Searing Edge (the Needle Thrust Form): the same thrust with the edge heated, a dull red that cools over 2 s
+  DEF.s_needle_hot = { ...DEF.s_needle, skill: 's_needle', events: [...DEF.s_needle.events, { t: 0.02, e: 'bladeGlow', color: '#e0602a', dur: 2 }] };
+  // ---- Counter Stance: low behind the raised round shield, blade drawn back, held for the second; the answer is its own clip
+  DEF.s_counter = C('sandblade', 1.15, 'full', [
+    k(0, GL),
+    k(0.12, P(arc(-84, { lead: -30, dy: -0.32, twist: -20 }), SHUP, L.deep), { root: [0, -0.32, -0.04], e: 'out' }),
+    k(0.85, P(arc(-86, { lead: -30, dy: -0.32, twist: -22 }), SHUP, L.deep), { root: [0, -0.32, -0.04] }),
+    k(1, GL, { root: R.guard, e: 'smooth' }),
+  ], [{ t: 0.05, e: 'dust' }, { t: 0.1, e: 'sound', s: 'scrape' }], { skill: 's_counter' });
+  DEF.s_counter_hit = C('sandblade', 0.7, 'full', [
+    k(0, P(arc(-86, { lead: -30, dy: -0.32, twist: -22 }), SHUP, L.deep), { root: [0, -0.32, -0.04] }),
+    k(0.12, P(arc(-90, { lead: -30, dy: -0.3, twist: -26 }), SHUP, L.stepBack), { root: [-0.35, -0.24, 0] }),
+    ...swing(0.7, 0.28, { wind: -100, mid: -48, hit: 6, follow: 62, end: 78 }, (a, role, e) => [P(SH, arc(a, { lead: role === 'wind' ? -30 : role === 'follow' || role === 'end' ? 22 : 0, dy: -0.2 }), role === 'wind' ? L.deep : L.lungeL), { root: role === 'wind' ? [-0.4, -0.26, 0] : [-0.45, -0.16, 0.34], e }], 1300),
+    k(1, GL, { root: [-0.45, 0, 0.3], e: 'smooth' }),
+  ], [{ t: 0, e: 'impact', kind: 'parry', at: 'shieldL' }, { t: 0.1, e: 'trail', on: true, color: T }, { t: 'hit', e: 'impact', kind: 'slash', at: 'target' }, { t: 0.7, e: 'trail', on: false }], { skill: 's_counter', hit: { t: 0.28 }, endRoot: [-0.45, 0, 0.3] });
+
+  // ---- the fusions
+  // Sandspout (1.4 s): a crouch, three rising spins (root 0 to 3.5 m) inside a column of sand puffs, one at the top, a dive
+  // cut down onto the machines (T4 at 0.90, the server's fifth contact): a ring r4 and sand thrown out as puffs. The spins
+  // turn faster than a trail fades, so the blade leaves none until the dive
+  {
+    const D = 1.4;
+    S8('sf_sandspout', D, [
+      k(0, GL),
+      ...leapRoot(D, { t0: 0.1, t1: 0.66, t2: 0.78, t3: 0.9, h: 3.5, float: 0.1, dist: 0 }),
+      k(1, GL, { root: [0, 0, 0], e: 'smooth' }),
+    ], [{ t: 0, e: 'sound', s: 'whoosh' }, { t: 0.02 / D, e: 'dust' }, { t: 0.1 / D, e: 'leap' }, { t: 0.1 / D, e: 'sandcol', dur: 0.7, h: 3.8, r: 1.6 },
+      { t: 0.1 / D, e: 'camlift', up: 2.2, back: 2.6, dur: 1.1 }, { t: 0.12 / D, e: 'sound', s: 'whirr' }, { t: 0.42 / D, e: 'sound', s: 'whirr' },
+      { t: 'hit', e: 'impact', kind: 'slash', at: 'target' }, { t: 'hit2', e: 'impact', kind: 'slash', at: 'target' }, { t: 'hit3', e: 'impact', kind: 'slash', at: 'target' }, { t: 'hit4', e: 'impact', kind: 'slash', at: 'target' },
+      { t: 0.7 / D, e: 'cloud', kind: 'sand', r: 3.5, at: 'self' }, { t: 0.79 / D, e: 'trail', on: true, color: T, w: 0.9 },
+      { t: 'hit5', e: 'impact', kind: 'sand', at: 'self', r: 4 }, { t: 'hit5', e: 'ring', color: '#d8c090', r: 4 }, { t: 'hit5', e: 'sandburst', r: 4, n: 30 }, { t: 0.98 / D, e: 'trail', on: false }],
+    { ual: { mask: 'full', segs: [['Leap_Rise', 0, 0.12, 0, 0.12], ['Spin_Attack_Loop', 0.12, 0.3], ['Spin_Attack_Loop', 0.3, 0.48], ['Spin_Attack_Loop', 0.48, 0.66], ['Spin_Attack_Loop', 0.66, 0.8], ['Dive_Strike', 0.78, 0.9], ['Slam_Land', 0.9, D]] } });
+  }
+  // Glasscutter (0.75 s): the slide's last stride into a straight thrust at the seam; a hot line along the blade, a stop
+  // of 0.1 s, a thin spray of dark oil and sparks off the edge
+  S8('sf_glasscutter', 0.75, [
+    k(0, P(SH, { spine: [26, 0, 0], armR: [0, 0, -40], foreR: [-30, 0, 0] }, L.lungeR), { root: [0, -0.2, 0] }),
+    k(0.12 / 0.75, P(SH, wield({ spine: [6, -30, 0], chest: [-2, -10, 0], head: [0, 30, 0] }, [-0.36, 1.18, -0.12], [0.08, 0.06, 1], [-0.7, 1.0, -0.2]), L.deep), { root: [0, -0.3, 0.1] }),
+    k(0.2 / 0.75, P(SH, wield({ spine: [24, 22, 0], chest: [6, 6, 0], head: [0, -22, 0] }, [-0.06, 1.26, 0.66], [0.04, -0.02, 1], [-0.6, 1.0, 0.2]), P(L.lungeL, { thighL: [-80, 0, 6], shinL: [80] })), { root: [0, -0.26, 0.5], e: 'snap' }),
+    k(0.6, P(SH, wield({ spine: [22, 20, 0], chest: [6, 6, 0], head: [0, -20, 0] }, [-0.06, 1.25, 0.64], [0.04, -0.03, 1], [-0.6, 1.0, 0.2]), P(L.lungeL, { thighL: [-78, 0, 6], shinL: [78] })), { root: [0, -0.26, 0.5] }),
+    k(1, GL, { root: [0, 0, 0.5], e: 'smooth' }),
+  ], [{ t: 0.02, e: 'bladeGlow', color: '#ff9a40', dur: 0.7 }, { t: 0.1, e: 'trail', on: true, color: '#ffb070', w: 0.55 }, { t: 'hit', e: 'impact', kind: 'pierce', at: 'target' },
+    { t: 'hit', e: 'sparks', at: 'weaponTip', dur: 0.18 }, { t: 'hit', e: 'impact', kind: 'oil', at: 'target' }, { t: 0.5, e: 'trail', on: false }],
+  { endRoot: [0, 0, 0.5], ual: { mask: 'body', segs: [['Slide_Exit', 0, 0.2, 0.2, 0.5]], end: 0.2 } });
+  // Sirocco (1.0 s): three dashes through the machine on a W seen from above (always on forward, never crossing itself),
+  // a flat cut each (forehand, backhand, forehand at three heights), three fading sand shapes left behind; the third a T4
+  {
+    const D = 1.0, pts = [[1.1, 1.7], [-1.0, 3.2], [0.9, 4.7]], hits = [0.16, 0.34, 0.52];
+    const keys = [k(0, GL), k(0.06 / D, P(SH, arc(-60, { lead: -20, dy: -0.2 }), L.deep), { root: [0, -0.3, 0], e: 'smooth' })];
+    pts.forEach(([x, z], i) => {
+      const fore = i % 2 === 0;
+      keys.push(k((hits[i] - 0.05) / D, P(SH, arc(fore ? -70 : 70, { lead: fore ? -20 : 20, dy: -0.15 - 0.1 * i, bend: 18 }), fore ? L.lungeR : L.lungeL), { root: [x * 0.6, -0.18, z - 0.7], turn: fore ? -12 : 12, e: 'in' }));
+      keys.push(k(hits[i] / D, P(SH, arc(fore ? 30 : -30, { lead: fore ? 20 : -20, dy: -0.15 - 0.1 * i, bend: 18 }), fore ? L.lungeL : L.lungeR), { root: [x, -0.16, z], turn: fore ? -12 : 12, e: 'snap' }));
+    });
+    keys.push(k(0.72, P(SH, arc(30, { lead: 20, dy: -0.36, bend: 24 }), L.deep), { root: [0.6, -0.36, 4.9], turn: 0, e: 'out' }));
+    keys.push(k(1, GL, { root: [0.5, 0, 4.9], e: 'smooth' }));
+    S8('sf_sirocco', D, keys, [{ t: 0.04, e: 'dash' }, { t: 0.06, e: 'sandtrail', dur: 0.55, rate: 70 },
+      ...hits.map((h, i) => [{ t: (h - 0.09) / D, e: 'trail', on: true, color: T, w: 0.8 }, { t: i ? 'hit' + (i + 1) : 'hit', e: 'impact', kind: 'slash', at: 'target' }, { t: (h + 0.07) / D, e: 'trail', on: false }]).flat(),
+      { t: 'hit3', e: 'impact', kind: 'sand', at: 'target' }, { t: 0.74, e: 'dust' }],
+    { endRoot: [0.5, 0, 4.9], toTarget: { gap: -2.4, max: 7, behind: true }, through: true });
+  }
+  // Dust Whirl (0.9 s): the kick throws the sand, then one turn on the authored spin as the sand rises into a column round
+  // him (fx 'vortex', 4 s, follows the hero; the server's 'column' event ends it); a soft top, no disc; T0 ticks from the zone
+  S8('sf_dustwhirl', 0.9, [
+    k(0, GL),
+    k(0.1, P(SH, { spine: [10, 0, 0] }, { thighR: [30, 0, -6], shinR: [60], footR: [40], thighL: [-30, 0, 4], shinL: [50] }), { root: [0, -0.16, 0] }),
+    k(0.2, P(SH, { spine: [-14, 0, 0], armR: [-20, 0, -60] }, { thighR: [-80, 0, -6], shinR: [20], footR: [-10], thighL: [-20, 0, 4], shinL: [40] }), { root: [0, -0.12, 0.06], e: 'snap' }),
+    k(1, GL, { root: R.guard }),
+  ], [{ t: 0.2, e: 'cloud', kind: 'sand', r: 3, cone: true }, { t: 0.25, e: 'sound', s: 'whirr' }, { t: 0.28, e: 'vortex', r: 3, dur: 4, hold: true }, { t: 'hit', e: 'impact', kind: 'sand', at: 'self', r: 3.5 }],
+  { ual: { mask: 'full', segs: [['Kick_Front', 0, 0.24, 0.1, 0.36], ['Spin_Attack_Loop', 0.24, 0.62]], end: 0.62 } });
+  // Thousand Cuts (1.3 s): five short dashes through the machine on a zig-zag that never crosses itself (low sand streaks,
+  // no blade trail), out of reach; down on one knee at 0.8 with the blade held out flat to the right; 0.1 s of nothing; at
+  // 0.9 every cut lands at once: five spark sprays on the machine, T4, crack, camera punch
+  {
+    const D = 1.3, pts = [[1.0, 1.1], [-1.0, 2.1], [1.0, 3.1], [-1.0, 4.1], [0.5, 4.9]];
+    const keys = [k(0, GL), k(0.08 / D, P(SH, { spine: [30, 0, 0] }, L.deep), { root: [0, -0.4, 0] })];
+    pts.forEach(([x, z], i) => keys.push(k((0.14 + i * 0.12) / D, P(SH, arc(i % 2 ? -40 : 40, { lead: i % 2 ? -20 : 20, dy: -0.2, bend: 20 }), i % 2 ? L.lungeR : L.lungeL), { root: [x, -0.18, z], turn: i % 2 ? 15 : -15, e: 'snap' })));
+    const KNEEL = P(wield({ spine: [24, 30, 0], chest: [8, 12, 0], head: [10, -20, 0] }, [-0.62, 1.0, 0.1], [-0.98, -0.05, 0.15], [-0.9, 1.2, -0.2]), SH, L.kneel);
+    keys.push(k(0.78 / D, KNEEL, { root: [0.3, -0.44, 5.1], turn: 0, e: 'out' }));
+    keys.push(k(0.88, KNEEL, { root: [0.3, -0.44, 5.1] }));
+    keys.push(k(1, GL, { root: [0.3, 0, 5.1], e: 'smooth' }));
+    S8('sf_thousand', D, keys, [{ t: 0.06 / D, e: 'dash' }, { t: 0.12 / D, e: 'sandtrail', dur: 0.62, rate: 80 }, { t: 0.12 / D, e: 'fadeSelf', to: 0.55, dur: 0.66 },
+      { t: 'hit5', e: 'multispark', n: 5 }, { t: 'hit5', e: 'impact', kind: 'slash', at: 'target' }, { t: 'hit5', e: 'sandburst', r: 2.5, n: 14 }],
+    { endRoot: [0.3, 0, 5.1], toTarget: { gap: -2.6, max: 7, behind: true }, through: true });
+  }
+  // Riptide (0.85 s): the parry beat (sparks off the rim), then six short flat cuts alternating sides at two heights (so the
+  // trails lie in parallel bands, never an X); the last a step-in that knocks it down
+  {
+    const D = 0.85, hits = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6];
+    const keys = [k(0, P(arc(-86, { lead: -30, dy: -0.3, twist: -22 }), SHUP, L.deep), { root: [0, -0.3, 0] })];
+    hits.forEach((h, i) => {
+      const fore = i % 2 === 0, dy = fore ? -0.12 : -0.3;
+      keys.push(k((h - 0.045) / D, P(SH, arc(fore ? -60 : 60, { lead: fore ? -20 : 20, dy, bend: 14 }), i === 5 ? L.lungeL : L.stepL), { root: [0, -0.14, 0.1 + 0.05 * i], e: 'in' }));
+      keys.push(k(h / D, P(SH, arc(fore ? 20 : -20, { lead: fore ? 10 : -10, dy, bend: 14 }), i === 5 ? P(L.lungeL, { thighL: [-72, 0, 6], shinL: [70] }) : L.stepL), { root: [0, i === 5 ? -0.24 : -0.14, 0.12 + 0.05 * i + (i === 5 ? 0.3 : 0)], e: 'snap' }));
+    });
+    keys.push(k(1, GL, { root: [0, 0, 0.5], e: 'smooth' }));
+    S8('sf_riptide', D, keys, [{ t: 0, e: 'impact', kind: 'parry', at: 'shieldL' }, { t: 0.04 / D, e: 'trail', on: true, color: T, w: 0.7 },
+      ...['hit', 'hit2', 'hit3', 'hit4', 'hit5'].map((h, i) => ({ t: h, e: 'impact', kind: i % 2 ? 'nick' : 'slash', at: 'target' })), { t: 'hit6', e: 'impact', kind: 'sand', at: 'target' }, { t: 'hit6', e: 'impact', kind: 'slash', at: 'target' }, { t: 0.64 / D, e: 'trail', on: false }],
+    { endRoot: [0, 0, 0.5] });
+  }
+  // Sand Line (0.85 s): two turns of the authored spin carried 7 m along the line (the travel is the dash's), puffs of sand
+  // spiralling off along it; no blade trail (the turn outruns its fade)
+  S8('sf_sandline', 0.85, [
+    k(0, GL),
+    k(0.08 / 0.85, P(SH, { spine: [24, 0, 0] }, L.deep), { root: [0, -0.3, 0] }),
+    k(0.2 / 0.85, {}, { root: [0, -0.1, 2.0], e: 'linear' }),
+    k(0.5 / 0.85, {}, { root: [0, -0.1, 5.0], e: 'linear' }),
+    k(0.72 / 0.85, {}, { root: [0, -0.2, 7.0], e: 'out' }),
+    k(1, GL, { root: [0, 0, 7.0], e: 'smooth' }),
+  ], [{ t: 0.04, e: 'dash' }, { t: 0.09, e: 'sandtrail', dur: 0.62, rate: 90 }, { t: 0.1, e: 'sound', s: 'whirr' }, { t: 'hit', e: 'impact', kind: 'sweep', at: 'self', r: 3 }, { t: 'hit2', e: 'impact', kind: 'sweep', at: 'self', r: 3 }, { t: 'hit2', e: 'impact', kind: 'sand', at: 'self', r: 3 }, { t: 0.86, e: 'dust' }],
+  { endRoot: [0, 0, 7.0], toTarget: { gap: -2.5, max: 9, behind: true }, through: true, ual: { mask: 'full', segs: [['Spin_Attack_Loop', 0.08, 0.38], ['Spin_Attack_Loop', 0.38, 0.68]], end: 0.7 } });
+  // Whiteout (0.75 s): the kick out of the sidestep throws a thick wall of pale sand where he lands (the server's 'sandcloud'
+  // puts the other where the step began), and he fades into it for the second he is out of reach
+  S8('sf_whiteout', 0.75, [
+    k(0, P(G, { spine: [24, 0, 0] }, L.deep), { root: [0, -0.3, 0] }),
+    k(0.14, P(SH, { spine: [10, 0, 0] }, { thighR: [30, 0, -6], shinR: [60], footR: [40], thighL: [-30, 0, 4], shinL: [50] }), { root: [0, -0.16, 0] }),
+    k(0.3, P(SH, { spine: [-14, 0, 0], armR: [-20, 0, -60] }, { thighR: [-80, 0, -6], shinR: [20], footR: [-10], thighL: [-20, 0, 4], shinL: [40] }), { root: [0, -0.12, 0.06], e: 'snap' }),
+    k(1, GL, { root: R.guard }),
+  ], [{ t: 0.3, e: 'cloud', kind: 'sand', r: 4.5, at: 'self', thick: true }, { t: 0.3, e: 'sandburst', r: 3, n: 20 }, { t: 0.32, e: 'fadeSelf', to: 0.3, dur: 1.0 }, { t: 'hit', e: 'impact', kind: 'sand', at: 'self', r: 4.5 }],
+  { ual: { mask: 'full', segs: [['Kick_Front', 0, 0.42, 0.06, 0.4]], end: 0.42 } });
+  // Sandstorm Drop (1.3 s): up the column (4.5 m), a beat at the top, then head-first down through it onto the machines: T4+,
+  // one ring (the column's fall made the other), sand thrown out
+  {
+    const D = 1.3;
+    S8('st_sandstorm', D, [
+      k(0, GL),
+      ...leapRoot(D, { t0: 0.1, t1: 0.42, t2: 0.6, t3: 0.78, h: 4.5, float: 0.12, dist: 1.0 }),
+      k(1, GL, { root: [0, 0, 1.0], e: 'smooth' }),
+    ], [{ t: 0, e: 'sound', s: 'whoosh' }, { t: 0.1 / D, e: 'leap' }, { t: 0.1 / D, e: 'sandcol', dur: 0.62, h: 4.8, r: 1.8, rate: 90 }, { t: 0.1 / D, e: 'camlift', up: 2.8, back: 3, dur: 1.0 },
+      { t: 0.6 / D, e: 'trail', on: true, color: T, w: 0.9 }, { t: 'hit', e: 'impact', kind: 'sand', at: 'self', r: 4.5 }, { t: 'hit', e: 'ring', color: '#d8c090', r: 4.5 },
+      { t: 'hit', e: 'sandburst', r: 4.5, n: 34 }, { t: 'hit', e: 'decal', kind: 'crack', r: 2.5 }, { t: 0.8 / D, e: 'trail', on: false }],
+    { endRoot: [0, 0, 1.0], ual: { mask: 'full', segs: [['Leap_Rise', 0, 0.42], ['Air_Hang_Loop', 0.42, 0.6, 0, 0.12], ['Dive_Strike', 0.58, 0.78], ['Slam_Land', 0.78, D]] } });
+  }
+}
 
 // ============================== DODGE (S1, combat_design.md 2.4) ==============================
 // Every class: a low shoulder roll the way you move (4 m, the evade covers the first 0.3 s; the push-off crouch comes
@@ -2558,11 +2731,24 @@ for (const cls of Object.keys(TRAIL)) {
   ], [{ t: 0.02, e: 'sound', s: 'gust' }, { t: 0.1 / 0.4, e: 'dust' }, { t: 0.34 / 0.4, e: 'dust' }, { t: 0.34 / 0.4, e: 'sound', s: 'scrape' }], { endRoot: [0, 0, 2], dodge: true });
 }
 
+// the Sandblade's Sidestep (S8, 5.3): not a roll but a quick low hop 2.5 m the way you move, sand kicked off the push and
+// the landing; the blade stays out and the round shield up
+{
+  const G = P(guard('sandblade'), { spine: [8, 0, 0] }), GL = P(G, LG), SHUP = { armL: [-80, 70, 28], foreL: [-104, 0, 0] };
+  DEF.dodge_sandblade = C('sandblade', 0.42, 'full', [
+    k(0, GL),
+    k(0.07 / 0.42, P(G, SHUP, { spine: [22, 0, 0] }, L.deep), { root: [0, -0.32, 0.1] }),
+    k(0.18 / 0.42, P(G, SHUP, { spine: [6, 0, 0] }, L.tuck), { root: [0, 0.32, 1.25], e: 'out' }),
+    k(0.29 / 0.42, P(G, SHUP, { spine: [18, 0, 0] }, L.deep), { root: [0, -0.3, 2.4], e: 'in' }),
+    k(1, GL, { root: [0, 0, 2.5] }),
+  ], [{ t: 0.02, e: 'sound', s: 'gust' }, { t: 0.07 / 0.42, e: 'cloud', kind: 'sand', r: 1.2, at: 'self' }, { t: 0.29 / 0.42, e: 'cloud', kind: 'sand', r: 1.2, at: 'self' }], { endRoot: [0, 0, 2.5], dodge: true });
+}
+
 // compile: resolve 'hit', 'hit2'.. into normalized times from the skill's impact timing
 export const CHOREO = {};
 for (const [id, def] of Object.entries(DEF)) {
   const sk = SKILL_BY_ID[def.skill || id] || FUSION_BY_ID[def.skill || id]; // (a mirrored twin, e.g. 'd_snap_l', times itself by its skill; S4: a fusion's own DEF by the fusion)
-  const hit = sk?.hit || { t: def.dur * 0.4 };
+  const hit = def.hit || sk?.hit || { t: def.dur * 0.4 }; // (S8: a chain step's clip carries its own contact time)
   const n = hit.n || 1, gap = hit.gap || 0;
   const resolveT = (t) => {
     if (typeof t !== 'string') return t;
@@ -2574,7 +2760,7 @@ for (const [id, def] of Object.entries(DEF)) {
     const o = { ...e, t: resolveT(e.t) };
     if (e.e === 'impact' && typeof e.t === 'string' && MELEE.has(e.kind) && !e.stop) o.selfStop = (e.shake || 0) >= 0.4 ? 0.07 : 0.045;
     // S1: a contact names its skill and hit, so fx.js takes the stop, shake, camera and sound from the tier (shared/feel.js)
-    if (sk && typeof e.t === 'string' && /^hit\d*$/.test(e.t)) { o.sk = sk.id; o.hi = e.t === 'hit' ? 0 : Number(e.t.slice(3)) - 1; }
+    if (sk && typeof e.t === 'string' && /^hit\d*$/.test(e.t)) { o.sk = sk.id; o.hi = e.t === 'hit' ? 0 : Number(e.t.slice(3)) - 1; if (def.step) o.step = def.step; }
     return o;
   });
   // S1 sound timing (combat_design.md 2.9): the whoosh 0.08-0.12 s before a melee contact, never on the key press
@@ -2597,6 +2783,8 @@ for (const [id, def] of Object.entries(DEF)) {
 }
 
 export function choreoFor(id) { return CHOREO[id]; }
+// the clip a cast plays (S8): a Form's clip where one exists (Twin Cut: s_twin), else a chain step's own (s_slash_2..4)
+export const clipOf = (id, step, form) => (form && CHOREO[form] ? form : step > 1 && CHOREO[id + '_' + step] ? id + '_' + step : id);
 export function skillClipsFor(cls) {
   const out = {};
   for (const s of SKILLS[cls] || []) if (CHOREO[s.id]) out[s.name] = CHOREO[s.id].clip;

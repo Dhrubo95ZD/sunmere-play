@@ -22,7 +22,7 @@ export const LOCK_MIN = 0.45, LOCK_MAX = 0.9;
 // (the pilot class, combat_design.md section 11): a shorter lock changes each class's damage by how much resource it
 // has spare (deadeyetest: the Deadeye fell to x0.82 of the Ranger with every class on it), so the others move over with
 // their own slices (S8-S13) where their numbers are tuned with it
-export const LOCK_CLASSES = new Set(['knight']);
+export const LOCK_CLASSES = new Set(['knight', 'sandblade']); // (S8: the Sandblade's slice)
 export const OLD_GCD = 1.0;
 
 export const DODGE = { charges: 2, regen: 3.5, dist: 4, dur: 0.35, evade: 0.3, opening: 2, worldStop: 0.06 };
@@ -42,6 +42,8 @@ export const dodgeWith = (cls, tal) => {
   // Oathbound (S5): the dodge is Shield Step, 2 m forward behind the shield: no evade, but blows from the front are blocked
   // for 0.4 s (a block in it counts as a perfect dodge: Opening)
   if (tal.keys.includes('oathbound')) Object.assign(D, { name: 'Shield Step', shieldStep: true, dist: 2, dur: 0.4, evade: 0, block: 0.4, blockArc: 75 });
+  // Counter Guard (the Sandblade, S8): the sidestep is a 0.3 s parry instead of an evade; a blow turned in it opens Riptide
+  if (tal.keys.includes('counter_guard')) Object.assign(D, { evade: 0, parry: 0.3 });
   return D;
 };
 

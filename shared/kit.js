@@ -8,7 +8,7 @@
 import { SKILLS } from './classes.js';
 
 // classes on the new kit. Knight first (the pilot slice); the old path goes at S16
-export const KIT_V2 = { knight: true };
+export const KIT_V2 = { knight: true, sandblade: true }; // (S8: the Sandblade's slice)
 export const onKit2 = (cls) => !!KIT_V2[cls];
 
 const K = (id, name, o) => ({ id, name, gcd: true, cast: 0, cost: 15, cd: 0, range: 4, target: 'enemy', kit: 2, ...o });
@@ -36,9 +36,25 @@ export const CORE = {
     K('k_lunge', 'Lunge', { icon: 'thrust', slot: 6, lvl: 11, cost: 15, cd: 9, range: 10, hit: { t: 0.32, kind: 'melee' }, fx: [['dash', 7], ['dmg', 1.2], ['brk', 15]], tags: ['strike', 'blade', 'dash'], tier: 2, desc: 'Close 7 m with a piercing thrust.' }),
     K('k_guard', 'Guard', { icon: 'stance', slot: 7, lvl: 14, cost: 10, cd: 10, target: 'self', range: 0, hit: { t: 0.3, kind: 'self' }, fx: [['buff', 'armor', 60, 1.0], ['parry', 0.25]], tags: ['shield', 'guard'], tier: 2, desc: 'Shield up for 1 s, taking 60% less. A blow in the first 0.25 s is parried: the attacker staggers and you gain 20 Valor.' }),
   ],
+  // the Sandblade (combat_design.md 5.3, S8): the fastest blade, the shortest locks (0.42 s chain steps) and the most cancels.
+  // Hit times match the clips (choreo.js: the chain has a clip per step, s_slash_2..4; the rest keep their ids' clips)
+  sandblade: [
+    chain(K('s_slash', 'Sand Slash', { icon: 'slash', slot: 1, lvl: 1, cost: 0, cd: 0, hit: { t: 0.22, kind: 'melee' }, tags: ['strike', 'blade', 'chain'], desc: 'A four-step chain: a flat forehand, a backhand, a jab with the shield rim and a stepping cut. Costs nothing and builds Energy.' }), [
+      { fx: [['dmg', 0.96], ['brk', 3], ['res', 5]], win: { lock: 0.42 }, tier: 1 },
+      { hit: { t: 0.2, kind: 'melee' }, fx: [['dmg', 0.96], ['brk', 3], ['res', 5]], win: { lock: 0.42 }, tier: 1 },
+      { hit: { t: 0.18, kind: 'melee' }, fx: [['dmg', 0.96], ['brk', 3], ['res', 5]], win: { lock: 0.42 }, tier: 1, rim: true },
+      { hit: { t: 0.3, kind: 'melee' }, fx: [['dmg', 1.8], ['brk', 8], ['res', 8]], win: { lock: 0.55 }, tier: 2 },
+    ]),
+    K('s_whirl', 'Whirling Scimitar', { icon: 'spin', slot: 2, lvl: 1, cost: 20, cd: 6, target: 'self', range: 0, hit: { t: 0.25, kind: 'aoe', r: 4, n: 2, gap: 0.3 }, fx: [['dmg', 0.78], ['brk', 6]], tags: ['strike', 'blade', 'spin', 'sweep'], tier: 2, desc: 'Spin twice with the blade held out, cutting everything around you.' }),
+    K('s_leap', 'Dune Leap', { icon: 'leap', slot: 3, lvl: 3, cost: 25, cd: 10, range: 12, hit: { t: 0.62, kind: 'aoe', r: 3 }, fx: [['leap', 9], ['dmg', 2.04], ['brk', 15]], tags: ['strike', 'blade', 'leap', 'slam', 'sand'], tier: 2, desc: 'Bound up to 9 m and land cutting, throwing sand round the landing.' }),
+    K('s_step', 'Desert Step', { icon: 'step', slot: 4, lvl: 5, cost: 10, cd: 10, charges: 2, range: 8, hit: { t: 0.18, kind: 'melee' }, fx: [['unseen', 2], ['dash', 6], ['dmg', 0.78], ['brk', 6]], tags: ['dash', 'sand', 'blade'], tier: 2, desc: 'A 6 m blur of sand that ends behind the machine with a cut. Two charges. Arriving behind one that is not fighting you gives Opening.' }),
+    K('s_dust', 'Dust Kick', { icon: 'kick', slot: 5, lvl: 8, cost: 15, cd: 9, hit: { t: 0.28, kind: 'cone', r: 5, cone: 70 }, fx: [['dmg', 0.78], ['debuff', 'miss', 40, 3], ['brk', 15]], tags: ['sand', 'cc', 'blunt'], tier: 2, desc: 'Kick a cone of sand 5 m into the joints and vents of the machines in front: their swings miss 40% of the time for 3 s.' }),
+    K('s_needle', 'Needle Thrust', { icon: 'thrust', slot: 6, lvl: 11, cost: 15, cd: 7, hit: { t: 0.24, kind: 'melee' }, fx: [['dmg', 2.34], ['dot', 0.8, 6], ['brk', 12]], critAdd: 0.3, behindMul: 1.5, tags: ['strike', 'blade'], tier: 2, desc: 'A precise thrust at a seam: 30% more likely to strike critically, 50% harder from behind, and it bleeds for 6 s.' }),
+    K('s_counter', 'Counter Stance', { icon: 'parry', slot: 7, lvl: 14, cost: 10, cd: 12, target: 'self', range: 0, hit: { t: 0.15, kind: 'self' }, fx: [['parry', 1.0], ['counter', 2.5], ['buff', 'evade', 50, 1.5]], tags: ['guard', 'blade'], tier: 2, desc: 'Hold a low stance for 1 s. The first blow that comes is turned aside on the shield: the machine staggers and you slip aside and cut back (2.5x). For 1.5 s other blows land only half the time.' }),
+  ],
 };
 // the dodge (feel.js DODGE does the move): it counts as an input, and always as landed (gate 'dodge')
-export const DODGES = { knight: { id: 'dodge', name: 'Shoulder Roll', icon: 'evade', tags: ['dash'] } };
+export const DODGES = { knight: { id: 'dodge', name: 'Shoulder Roll', icon: 'evade', tags: ['dash'] }, sandblade: { id: 'dodge', name: 'Sidestep', icon: 'evade', tags: ['dash'] } };
 export const PARRY = { res: 20, stagger: 1.2 }; // a parry: Valor back and the attacker Staggered
 
 export const CORE_BY_ID = {};

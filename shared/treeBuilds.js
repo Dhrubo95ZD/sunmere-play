@@ -13,6 +13,14 @@ export const TREE_BUILDS = {
     { id: 'blade', name: 'The Long Edge', desc: 'The chain and the sweep: Twin Edge, Arc Wave, Rolling Edge out of the roll, and the Common Ground\'s fusion power.',
       want: ['k_platedrills', 'kf_form_valiant', 'k_hardlanding', 'kf_form_cleave', 'k_veteran', 'rolling_edge', 'cg_practised', 'cg_follow', 'cg_keen', 'cg_wide'] },
   ],
+  sandblade: [
+    { id: 'storm', name: 'The Long Column', desc: 'Spins and sand: Drawing Spin, Sand Line, Hot Sand, and The Long Column for Sandstorm Drop.',
+      want: ['s_heat', 'sf_form_whirl', 'rolling_sand', 's_lightfeet', 'sand_veil', 'long_column', 'sf_form_slash', 's_evasion', 'afterwake', 'hot_sand'] },
+    { id: 'duel', name: 'The Duelist', desc: 'Parries and answers: Counter Guard opens Riptide from the sidestep, Dust Cloak and Evasion keep you untouched.',
+      want: ['s_evasion', 'sf_form_slash', 's_heat', 'sf_form_whirl', 's_cloak', 'rolling_sand', 's_lightfeet', 'counter_guard', 'sand_veil', 's_rend'] },
+    { id: 'blade', name: 'Behind You', desc: 'Steps and thrusts: Three Charges, Searing Edge, Finishing Blow, Afterwake and the Common Ground\'s fusion power.',
+      want: ['sf_form_needle', 'sf_form_step', 's_finish', 's_evasion', 'sf_form_slash', 's_rend', 'afterwake', 's_joints', 'cg_practised', 'cg_follow'] },
+  ],
 };
 
 // the node ids a suggested path takes from what the hero holds, in order, at most `pts` of them. pathTo(cls, alloc, id) is

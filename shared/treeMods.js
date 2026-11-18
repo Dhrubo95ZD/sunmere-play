@@ -18,7 +18,7 @@ import { STORY } from './story.js';
 import { LINK, compileKit } from './fusions.js';
 
 export { TREE_V };
-export const TREE_CLASSES = new Set(['knight']); // classes on the Web (the others keep talents until their slice: S8-S13)
+export const TREE_CLASSES = new Set(['knight', 'sandblade']); // classes on the Web (the others keep talents until their slice: S8-S13)
 export const onWeb = (cls) => TREE_CLASSES.has(cls);
 export const TREE_FREE_LEVEL = 20; // refunds and resets are free at this level and below
 export const TREE_FREE_DAYS = 14; // after the move from talents
@@ -151,6 +151,9 @@ export function applyMods(r, mods = {}) {
       case 'brk': if (!fxSet(r, 'brk', (e) => [e[0], e[1] + v])) r.fx.push(['brk', v]); break;
       case 'slow': if (!fxSet(r, 'slow', () => ['slow', ...v])) r.fx.push(['slow', ...v]); break;
       case 'hits': if (r.hit) r.hit.n = v; r.hits = v; break;
+      // (S8, the Sandblade) a heated blade: a heat dot and the heat tag (Ignite); a pull toward the hero
+      case 'heat': r.fx.push(['dot', v, 4]); if (!r.tags.includes('heat')) r.tags.push('heat'); break;
+      case 'pull': if (!fxSet(r, 'pull', () => ['pull', v])) r.fx.unshift(['pull', v]); break;
       case 'gap': if (r.hit) r.hit.gap = v; break;
       default: r[k] = v; // noTarget, single, allLifted, step3, shape, field, onRun, charges, split, pierce, chain, coat, parryWin...
     }
@@ -167,7 +170,8 @@ export function compileEff(rec, tal, ctx = {}) {
   if (opt && !r.from) {
     const node = TREE_BY_ID[tal.formNode?.[r.id]], o = node?.form.opts.find((x) => x.id === opt);
     // (an option for one step of a chain, mods.step, patches only that step's record)
-    if (o) { if (!o.mods.step || r.step === o.mods.step) { applyMods(r, o.mods); if (o.choreo) r.formChoreo = o.choreo; } r.form = opt; r.formName = o.name; }
+    if (o) { if (!o.mods.step || [].concat(o.mods.step).includes(r.step)) { // (a list of steps: Twin Cut's 1 and 2, S8)
+      applyMods(r, o.mods); if (o.choreo) r.formChoreo = o.choreo; } r.form = opt; r.formName = o.name; }
   }
   // 3. a fusion carries its inputs' Forms through its own carry rules
   if (r.from && r.carry) {

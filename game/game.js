@@ -30,7 +30,7 @@ import { connect, botPrefsMsg } from './net.js';
 // living bots C.11: a bot's line on a channel the player hid in Options is not shown (also guards older servers)
 const botHid = (ev, ch) => !!ev.bot && !ev.out && (SETTINGS.botChat?.[ch] === 0 || SETTINGS.botChat?.[ch] === false);
 import { UI } from '../ui/ui.js';
-import { CHOREO } from './choreo.js';
+import { CHOREO, clipOf } from './choreo.js';
 import { CLASSES, SKILLS, SKILL_BY_ID } from '/sunmere-play/shared/classes.js';
 import { KIT_V2, kitOf, stepOf, CHAIN_RESET } from '/sunmere-play/shared/kit.js';
 import { FUSE, skillOf, fusionUnlocked, gateOk, LINK } from '/sunmere-play/shared/fusions.js';
@@ -422,13 +422,13 @@ export async function startGame() {
         if (ev.id === me) {
           const pr = game.pred, now = game.serverTime();
           if (pr && (ev.base || ev.skill) === pr.base && ev.skill !== pr.as && now - pr.at < 1.5 && local) {
-            pr.as = ev.skill; local.playSkill(ev.skill, ev.target ? entities.get(ev.target) : null, ev.gx != null ? { x: ev.gx, z: ev.gz } : null, fx, ev.haste);
+            pr.as = ev.skill; local.playSkill(clipOf(ev.skill, ev.step, ev.fc), ev.target ? entities.get(ev.target) : null, ev.gx != null ? { x: ev.gx, z: ev.gz } : null, fx, ev.haste);
             const k = skillOf(ev.skill); if (game.lastCast) { game.lastCast.sk = k; game.lastCast.id = ev.skill; game.lastCast.done = !!k?.from; }
           }
           break;
         }
         const v = entities.get(ev.id);
-        if (v) { if (ev.target) { const t = entities.get(ev.target); if (t) v.ry = Math.atan2(t.pos.x - v.pos.x, t.pos.z - v.pos.z); } v.playSkill(ev.skill, ev.target ? entities.get(ev.target) : null, ev.gx != null ? { x: ev.gx, z: ev.gz } : null, fx, ev.haste); }
+        if (v) { if (ev.target) { const t = entities.get(ev.target); if (t) v.ry = Math.atan2(t.pos.x - v.pos.x, t.pos.z - v.pos.z); } v.playSkill(clipOf(ev.skill, ev.step, ev.fc), ev.target ? entities.get(ev.target) : null, ev.gx != null ? { x: ev.gx, z: ev.gz } : null, fx, ev.haste); }
         break;
       }
       case 'buff': ui.unitBuff(ev); if (ev.debuff && ev.id?.[0] === 'm') fx.coat?.(entities.get(ev.id), ev.name, ev.dur); break; // (S7: a coat's look on the machine)
@@ -466,6 +466,14 @@ export async function startGame() {
       // Kingsfall); the move itself is the snapshot lerp
       // S7: a Reaction (the word and its effects), a wall slam (crunch, sparks, dust burst); a raider thrown far goes down
       case 'react': fx.react?.(ev); break;
+      // the Sandblade (S8): Counter Stance's answer (its own clip on the hero, the machine it turned), Dust Whirl's column
+      // falling or ended by Sandstorm Drop (a ring where it stood and sand thrown out), Whiteout's second cloud where the
+      // sidestep began, Afterwake's sand wake along a dash, a machine dragged in by a pull
+      case 'counter': { const v = entities.get(ev.id), t = entities.get(ev.tgt); if (v) { if (t) v.ry = Math.atan2(t.pos.x - v.pos.x, t.pos.z - v.pos.z); v.playSkill('s_counter_hit', t || null, null, fx); } break; }
+      case 'column': { const v = entities.get(ev.id); if (v?.column && !(ev.dur > 0)) { v.column.t = v.column.dur; v.column = null; } if (ev.fall && v) { const p = new THREE.Vector3(ev.x, fx.ground?.(new THREE.Vector3(ev.x, 0, ev.z)) ?? v.pos.y, ev.z); fx.ring(p, '#d8c090', 3.5, 0.6); fx.emit('sand', p.clone().setY(p.y + 0.5), { n: 22, spread: 1.6 }); fx.sound('puff'); } break; }
+      case 'sandcloud': fx.cloud('sand', new THREE.Vector3(ev.x, fx.ground?.(new THREE.Vector3(ev.x, 0, ev.z)) ?? 0, ev.z), ev.r || 4, 1.2); break;
+      case 'wake': { const [x0, z0, x1, z1] = ev.seg, n = Math.max(2, Math.round(Math.hypot(x1 - x0, z1 - z0) / 1.2)); let acc = 0; fx.after?.(ev.dur || 3, (k, t, dt) => { acc += dt * 10; while (acc > 1) { acc--; const f = Math.random(), p = new THREE.Vector3(x0 + (x1 - x0) * f, 0, z0 + (z1 - z0) * f); p.y = (fx.ground?.(p) ?? 0) + 0.15; fx.emit('dust', p, { n: 1, size: 0.7, color: '#d8bc88', alpha: 0.4, speed: 0.4 }); } }); for (let i = 0; i <= n; i++) { const f = i / n, p = new THREE.Vector3(x0 + (x1 - x0) * f, 0, z0 + (z1 - z0) * f); p.y = (fx.ground?.(p) ?? 0) + 0.2; fx.emit('sand', p, { n: 3, spread: 0.4 }); } break; }
+      case 'pull': { const v = entities.get(ev.id); if (v && !v.dead) fx.emit('dust', v.pos.clone().setY(v.pos.y + 0.2), { n: 4, size: 0.8, color: '#d8bc88' }); break; }
       case 'wall': fx.wallSlam?.(ev); break;
       case 'knock': { const v = entities.get(ev.id); if (v?.def?.humanoid && ev.d >= 2.5) fx.foeClip?.(v, 'down'); if (v && !v.dead && fx.after) { let acc = 0; fx.after(0.45, (k, t, dt) => { acc += dt * 28; while (acc > 1) { acc--; fx.emit('dust', v.pos.clone().setY(v.pos.y + 0.15), { n: 1, spread: 0.35, size: 0.75, alpha: 0.5 }); } }); fx.sound('scrape'); } }
         break;
@@ -853,7 +861,8 @@ export async function startGame() {
     }
     // optimistic local cooldown so the bar reacts instantly
     y.res -= cost;
-    if (base.cd) y.cds[id] = now + base.cd;
+    if (base.charges > 1) { const n = Math.max(0, (y.skc?.[id] ?? base.charges) - 1); (y.skc ||= {})[id] = n; if (!n) y.cds[id] = now + base.cd; } // (S8: Desert Step's charges; the server's word follows)
+    else if (base.cd) y.cds[id] = now + base.cd;
     if (fu) y.cds[fu.f.id] = now + fu.f.cd;
     const fe = skillFeel(sk);
     if (sk.gcd) y.gcd = now + fe.win.lock;
@@ -866,7 +875,7 @@ export async function startGame() {
     game.lastCast = { id: sk.id, sk, t0: now, at: now + (sk.hit?.t || 0), end: now + hitEnd, lock: fe.win.lock, tgt: tgtId, done: !KIT_V2[game.cls] || !!sk.from };
     game.pred = { base: id, as: sk.id, at: now };
     game.send({ t: 'cast', skill: id, chain: fu ? fu.L.from : undefined, plain: o.plain || undefined, target: tgtId, gx: ground?.x, gz: ground?.z });
-    local.playSkill(sk.id, tgtV && tgtV !== local ? tgtV : tgtV === local ? local : null, ground, fx);
+    local.playSkill(clipOf(sk.id, sk.step, sk.formChoreo), tgtV && tgtV !== local ? tgtV : tgtV === local ? local : null, ground, fx);
     if (sk.cast) game.casting = { name: sk.name, cast: sk.cast, t0: performance.now() / 1000 };
     moveTo = null;
     qwalk.stop('manual'); // (a skill means a fight, or something you chose to do here)

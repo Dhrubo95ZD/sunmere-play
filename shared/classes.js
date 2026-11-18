@@ -340,7 +340,12 @@ const MIG = {
     k_rally: ['notable', 'shared_courage'], k_unbreakable: ['notable', 'unyielding'], k_shout: ['keystone', 'oathbound'], k_wind: ['notable', 'second_breath'],
   },
   warden: { core: ['w_blow', 'w_uppercut', 'w_pound', 'w_slam', 'w_bulwark', 'w_split', 'w_challenge'], fusion: ['w_colossus', 'w_piledriver', 'w_icefall', 'w_triphammer', 'w_breakwater', 'w_intercept', 'w_combo'], form: ['w_toss', 'w_stomp'], notable: ['w_iron', 'w_fortify', 'w_laststand', 'w_deflect'] },
-  sandblade: { core: ['s_slash', 's_whirl', 's_leap', 's_step', 's_dust', 's_needle', 's_counter'], fusion: ['s_thousand', 's_sirocco', 's_glass', 's_devil'], form: ['s_twin', 's_scorch', 's_sweep'], notable: ['s_evasion', 's_finish', 's_cloak', 's_rend'] },
+  sandblade: {
+    core: ['s_slash', 's_whirl', 's_leap', 's_step', 's_dust', 's_needle', 's_counter'],
+    s_thousand: ['fusion', 'sf_thousand'], s_sirocco: ['fusion', 'sf_sirocco'], s_glass: ['fusion', 'sf_glasscutter'], s_devil: ['fusion', 'sf_dustwhirl'], s_riptide: ['fusion', 'sf_riptide'], s_whiteout: ['fusion', 'sf_whiteout'],
+    s_twin: ['form', 's_slash'], s_scorch: ['form', 's_needle'], s_sweep: ['form', 's_whirl'], s_ram: ['form', 's_step'],
+    s_evasion: ['notable', 's_evasion'], s_finish: ['notable', 's_finish'], s_cloak: ['notable', 's_cloak'], s_rend: ['notable', 's_rend'],
+  },
   ranger: { core: ['r_quick', 'r_disengage', 'r_volley', 'r_trap', 'r_aimed', 'r_pierce', 'r_explosive'], fusion: ['r_deadweight', 'r_ripsaw', 'r_kick', 'r_roll'], form: ['r_arcing', 'r_fan'], notable: ['r_mark', 'r_rapid', 'r_smoke', 'r_thousand'] },
   deadeye: { core: ['d_snap', 'd_pair', 'd_recoil', 'd_knee', 'd_scatter', 'd_fan', 'd_quick'], fusion: ['d_chain', 'd_rollingfire', 'd_lastround', 'd_breach', 'd_slide'], form: ['d_hotshot', 'd_saltshot', 'd_slug'], notable: ['d_reload', 'd_cartridge', 'd_chalk', 'd_priming', 'd_smoke'] },
   chemist: { core: ['c_staff', 'c_smokebomb', 'c_fire', 'c_acid', 'c_chill', 'c_tar', 'c_concussion'], fusion: ['c_thermite', 'c_chain', 'c_boiler'], triad: ['c_grand'], form: ['c_volatile', 'c_naphtha'], notable: ['c_catalyst', 'c_flash', 'c_spark', 'c_draught'], retired: ['c_clockwork'] },

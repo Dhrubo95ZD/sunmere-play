@@ -1,6 +1,14 @@
 // What's new: shown once after an update (newest first). Bump `v` on the first entry whenever something is added.
 export const CHANGELOG = [
   {
+    v: 132, date: '18 November 2026', title: 'The Sandblade',
+    items: [
+      ['The Sandblade, rebuilt', 'The second class on the new combat. Seven skills and a Sidestep you can use three times in a row: Sand Slash is a four-cut chain, Desert Step takes you behind the machine, Needle Thrust bites hardest from behind, and Counter Stance turns a blow aside and cuts back. Old Sandblades get their talent points back with a letter from the trainer.'],
+      ['Sandblade fusions', 'Nine new moves: Sandspout spins you up inside a rising column of sand, Dust Whirl drags machines into a whirling column that throws them up as it falls, Thousand Cuts and Whiteout carry you through untouchable, and Sandstorm Drop finishes it all. Find them all for the Fusion Book.'],
+      ['The Skill Web, painted', 'The Skill Web is now a painted map: pastures and keeps for the Knight, dunes for the Sandblade, forest, canyon, pools, terraces and farmland for the rest, with gold roads for your path and framed points for every kind. The Sandblade has its own region with keystones like Hot Sand, which turns Dust Whirl to Glass Whirl. Everyone gets a free reset of their Web.'],
+    ],
+  },
+  {
     v: 131, date: '18 November 2026', title: 'Coats and Combos',
     items: [
       ['A bar that shows the combo', 'For the Knight, the skill bar now changes as you fight: when a blow lands, the skills that would fuse with it light up as the fusion for a moment, with its name above the bar. A hit counter and the target’s poise bar show how close it is to breaking. Two pinned slots (Q and E) hold your favourite fusions, and Alt casts a skill plain. On phones, slide your thumb from one skill onto another to fuse them.'],

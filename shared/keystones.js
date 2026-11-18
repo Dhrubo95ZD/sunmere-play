@@ -64,6 +64,38 @@ export const KEYSTONES = {
     onLand(w, p, ctx) { if (has(ctx.sk || {}, 'leap')) ctx.link = { to: 'k_bash', t: 0.6 }; },
   },
 
+  // ------------------------------------------------------------------ Sandblade (5.3, S8)
+  afterwake: {
+    name: 'Afterwake', cls: 'sandblade',
+    desc: 'Every dash leaves a wake of churned sand along its path for 3 s that cuts machines crossing it (0.4 a second), and the dash speeds you 15% for 3 s.',
+    price: 'Single strikes deal 10% less.',
+    onCompile(rec) {
+      if (has(rec, 'dash')) rec.wake = { coef: 0.4, dur: 3, r: 1.3, speed: 15 };
+      else if (rec.hit?.kind === 'melee' && !rec.from && (rec.hit.n || 1) === 1) fxMul(rec, 'dmg', 0.9);
+      return rec;
+    },
+  },
+  counter_guard: {
+    name: 'Counter Guard', cls: 'sandblade',
+    desc: 'The sidestep becomes a 0.3 s parry: a blow turned in it staggers the machine and opens Riptide without Counter Stance.',
+    price: 'The sidestep recovers 25% slower.',
+    mods: { dodgeRecover: 0.25 },
+  },
+  hot_sand: {
+    name: 'Hot Sand', cls: 'sandblade',
+    desc: 'Sand skills carry heat (they Ignite Tarred machines), and the sand fuses into glass grit that cuts: a bleed for 4 s. Dust Whirl becomes Glass Whirl and Sandspout becomes Glass Spout.',
+    price: 'Blinds last half as long.',
+    renames: { sf_dustwhirl: { name: 'Glass Whirl', fx: 'glass' }, sf_sandspout: { name: 'Glass Spout', fx: 'glass' } },
+    onCompile(rec) {
+      if (!has(rec, 'sand')) return rec;
+      addTag(rec, 'heat');
+      rec.fx = (rec.fx || []).map((e) => (e[0] === 'debuff' && e[1] === 'miss' ? [e[0], e[1], e[2], e[3] * 0.5] : e));
+      if ((rec.fx || []).some((e) => e[0] === 'dmg')) rec.fx = [...rec.fx, ['dot', 0.3, 4]];
+      rec.hotSand = true; // (the column and the wake are heat too: a Tarred machine in them Ignites)
+      return rec;
+    },
+  },
+
   // ------------------------------------------------------------------ Common Ground (4.4)
   chainwork: {
     name: 'Chainwork', cls: 'common', desc: 'A landed fusion opens a 0.8 s link: the next core skill is an Encore, 25% stronger with a heavy stop.',
@@ -110,6 +142,8 @@ export const KEYSTONES = {
 
 // notables that need an event rather than a number
 export const NOTABLE_HOOKS = {
+  // the Sandblade's Dust Cloak (S8): after a dodge the next skill strikes critically (sim.js on_dodge gives the buff)
+  dust_cloak: { onDodge(w, p) { w?.addBuff?.(p, { name: 'Dust Cloak', stat: 'cloak', pct: 0, t: 3, dur: 3, icon: 'cloak' }); } },
   shared_courage: { onLink(w, p) { for (const q of w?.partyMembers ? w.partyMembers(p) : [p]) w?.addBuff?.(q, { name: 'Shared Courage', stat: 'dmg', pct: 8, t: 6, dur: 6, icon: 'shout' }); } },
   rolling_start: { onLink(w, p) { w?.addBuff?.(p, { name: 'Rolling Start', stat: 'speed', pct: 10, t: 3, dur: 3, icon: 'haste' }); } },
   second_breath: {
@@ -123,7 +157,7 @@ export const NOTABLE_HOOKS = {
   },
 };
 
-export const KEY_HOOKS = ['onCast', 'onHit', 'onLand', 'onLink', 'onKill', 'onTaken'];
+export const KEY_HOOKS = ['onCast', 'onHit', 'onLand', 'onLink', 'onKill', 'onTaken', 'onDodge'];
 
 // patch a compiled record with every keystone the hero holds (step 4 of compileKit), then apply the renames
 export function keyCompile(rec, keys = [], ctx = {}) {

@@ -883,6 +883,8 @@ export class FX {
       }
       case 'acid': this.emit('drops', at, { n: 22, color: '#8ee04a', additive: true }); this.emit('smoke', at, { n: 8, color: '#7ab040', alpha: 0.4 }); this.emit('shards', at, { n: 8 }); this.sound('glass'); this.sound('hiss'); break;
       case 'acidcloud': this.emit('shards', at, { n: 10 }); this.cloud('acid', pos, 5, 6); this.sound('glass'); this.sound('hiss'); break;
+      case 'nick': this.hitCore(up, 0.7, '#fff2d0'); this.emit('fan', up, { n: 10, dir, color: '#ffe6a8' }); this.sound('hit'); break; // (S8: a quick cut in a flurry, no light)
+      case 'oil': this.emit('drops', at, { n: 9, color: '#1a1410' }); this.emit('sparks', up, { n: 8, color: '#ffb070', dir }); break; // (S8 Glasscutter: a thin spray of dark oil off the seam)
       case 'tar': this.emit('drops', at, { n: 18, color: '#1a1410' }); this.decal('tar', pos, 3.4, 6); this.sound('splat'); break;
       case 'shrapnel': this.hitCore(up, 1.6, '#fff0c0'); this.emit('sparks', up, { n: 22, color: '#ffc060' }); this.emit('flecks', up, { n: 6, color: '#ffb060' }); this.emit('grit', up, { n: 6 }); this.emit('ringdust', pos.clone().setY(g), { n: 8, r: 0.8, speed: 3 }); this.emit('smoke', at, { n: 8, size: 0.9 }); this.light(up, '#ffb060', 8, 0.2); this.shake(0.3); this.sound('boom'); break;
       case 'smoke': this.cloud('smoke', pos, 5, 5); this.sound('puff'); break;
@@ -1175,7 +1177,8 @@ export class FX {
         const p = spinT ? where('target').setY(feet().y + 1.1) : spinOn ? where('weaponTip') : ev.at ? where(ev.at) : where('target');
         const dir = spinOn ? p.clone().sub(feet()).setY(0).normalize() : fwd.clone();
         if (spinOn && dir.lengthSq() < 0.5) dir.copy(fwd);
-        const sk = ctx.as ? skillOf(ctx.as) : ev.sk ? skillOf(ev.sk) : null; // (a fusion playing another clip: its own tier)
+        let sk = ctx.as ? skillOf(ctx.as) : ev.sk ? skillOf(ev.sk) : null; // (a fusion playing another clip: its own tier)
+        if (ev.step && sk?.chain) sk = sk.chain[ev.step - 1] || sk; // (S8: a chain step's own clip, its own tier)
         if (sk) {
           // S1: the skill's tier (shared/feel.js) owns the stop, shake, camera and sound layers; the kind keeps its look
           let T = tierOf(sk, ev.hi || 0);
@@ -1270,11 +1273,58 @@ export class FX {
       case 'vortex': {
         const c = feet();
         let acc = 0;
-        this.after(ev.dur || 2, (k, t, dt) => {
+        const h = this.after(ev.dur || 2, (k, t, dt) => {
           const p = feet();
           acc += dt * 40;
           while (acc > 1) { acc--; const a = r(0, 6.28), d = r(0.8, ev.r || 4); this.alpha.spawn({ pos: p.clone().add(V(Math.cos(a) * d, r(0.1, 2.2), Math.sin(a) * d)), vel: V(0, r(0.3, 1.2), 0), age: 0, life: r(0.6, 1.1), size: r(0.4, 0.8), tex: TEX.puff, alpha: 0.55, grow: 0.8, color: col('#dcc08a'), swirl: 7, cx: p.x, cz: p.z, rot: r(0, 6), fadeIn: 0.1 }); }
         });
+        if (ev.hold && ctx.src) ctx.src.column = h; // (S8 Dust Whirl: the server's word ends it early, game.js 'column')
+        break;
+      }
+      // ---- the Sandblade (S8): sand, grit and heat only
+      // a column of sand puffs rising with the hero over dur s, up to h m, thinning to a soft top (no disc, no streaks)
+      case 'sandcol': {
+        let acc = 0;
+        const hips = bones.hips, top = ev.h || 3;
+        this.after(ev.dur || 0.6, (k, t, dt) => {
+          const f = feet(), y0 = this.ground(f), hy = hips ? hips.getWorldPosition(V()).y - y0 : top * k;
+          acc += dt * (ev.rate || 70);
+          while (acc > 1) {
+            acc--;
+            const h = r(0, Math.max(0.4, Math.min(top, hy + 0.6))), a = r(0, 6.28), d = r(0.3, ev.r || 1.3) * (1 - 0.35 * (h / top));
+            this.alpha.spawn({ pos: V(f.x + Math.cos(a) * d, y0 + h, f.z + Math.sin(a) * d), vel: V(-Math.sin(a) * 1.4, r(0.6, 1.8), Math.cos(a) * 1.4), age: 0, life: r(0.7, 1.2), size: r(0.5, 1.0) * (1 - 0.3 * (h / top)), tex: TEX.puff, alpha: 0.55, grow: 1.1, color: col(rnd() < 0.5 ? '#d8b880' : '#c8a46a'), drag: 1.2, spin: r(-1, 1) });
+          }
+        });
+        break;
+      }
+      // fading sand shapes left along the hero's path (a dash, a zig-zag): puffs dropped where the body was, low and soft
+      case 'sandtrail': {
+        let acc = 0;
+        const hips = bones.hips;
+        this.after(ev.dur || 0.5, (k, t, dt) => {
+          const p = hips ? hips.getWorldPosition(V()) : feet().add(V(0, 1, 0));
+          acc += dt * (ev.rate || 50);
+          while (acc > 1) { acc--; this.alpha.spawn({ pos: p.clone().add(V(r(-0.25, 0.25), r(-0.8, 0.5), r(-0.25, 0.25))), vel: V(r(-0.2, 0.2), r(0.05, 0.35), r(-0.2, 0.2)), age: 0, life: r(0.5, 0.9), size: r(0.45, 0.8), tex: TEX.puff, alpha: 0.45, grow: 0.7, color: col('#d8bc88'), drag: 2 }); }
+        });
+        break;
+      }
+      // several short spark sprays at once at scattered points on the machine (Thousand Cuts), never a radial wheel
+      case 'multispark': {
+        const c = tgt(), n = ev.n || 5;
+        for (let i = 0; i < n; i++) {
+          const p = c.clone().add(V(r(-0.6, 0.6), r(0.5, 1.9), r(-0.6, 0.6)));
+          const d = V(r(-1, 1), r(-0.2, 0.6), r(-1, 1)).normalize();
+          this.emit('sparks', p, { n: 5 + (i % 3), color: '#ffd890', dir: d });
+          this.hitCore(p, 0.5, '#fff0d0', 0.08);
+        }
+        this.emit('sand', c.clone().add(V(0, 0.4, 0)), { n: 10, spread: 1 });
+        break;
+      }
+      // sand thrown outward as puffs from the feet at the finish (not rays): an uneven scatter of slow puffs
+      case 'sandburst': {
+        const f = feet(), y0 = this.ground(f), n = ev.n || 26, R0 = ev.r || 3;
+        for (let i = 0; i < n; i++) { const a = r(0, 6.28), sp = r(1.5, 4) * (R0 / 3); this.alpha.spawn({ pos: V(f.x + Math.cos(a) * r(0.3, 1), y0 + r(0.2, 0.9), f.z + Math.sin(a) * r(0.3, 1)), vel: V(Math.cos(a) * sp, r(0.4, 1.6), Math.sin(a) * sp), age: 0, life: r(0.8, 1.5), size: r(0.6, 1.2), tex: TEX.puff, alpha: 0.55, grow: 1.3, color: col(rnd() < 0.5 ? '#e0c490' : '#c8a46a'), drag: 2.2, spin: r(-1, 1) }); }
+        this.sound('puff');
         break;
       }
       case 'sparks': {
