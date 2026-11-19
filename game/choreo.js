@@ -3371,6 +3371,131 @@ for (const cls of Object.keys(TRAIL)) {
   hop('dodge_chemist', 1); hop('dodgeb_chemist', -1);
 }
 
+// ============================== S13: the Herbalist's new kit (combat_design_fusion.md 4.6) ==============================
+// The lantern staff stays in the right hand (the kettle-lantern at its head: an oil flame behind glass); jars, poultices,
+// nets and the smoke pot go out of the left on the authored clips (Throw_Underhand, OverhandThrow, Staff_Push_Enter/_Shoot,
+// Consume, Pole_Vault) with the arms keyed. Contact times come from the new kit (kit.js / fusions.js; the legacy DEFs share
+// the ids, so every DEF names its hit). Herb zones, Lantern Haze's light in the smoke, Bitterroot's splash to the ally and
+// Field Hospital's save are drawn from the server's words (game.js 'hzone', 'hhaze', 'hsplash', 'hsave'). Every effect is
+// physical: green remedy splashes, steam, herb smoke, sap and resin, a soft warm glow behind the lantern's glass (never
+// beams, rays or rings round it); at most one ring a beat
+{
+  const K13 = (id, step) => { const s = CORE_BY_ID[id]; return step && s?.chain ? s.chain[step - 1] : s; };
+  const TS = (h, i) => (h.ts ? h.ts[Math.min(i, h.ts.length - 1)] : h.t + i * (h.gap || 0));
+  const G = P(guard('herbalist'), { spine: [6, 0, 0] }), GL = P(G, LG);
+  const STF = { armR: [-28, 0, -10], foreR: [-70, 0, 0], handR: [10, 0, 0] };
+  const H13 = (id, dur, keys, ev, o) => (DEF[id] = C('herbalist', dur, 'full', keys, ev, o));
+  const PUSHW = P({ spine: [-4, 30, 0], chest: [-4, 12, 0], head: [0, -26, 0], armR: [-60, 0, -10], foreR: [-60, 0, 0], armL: [-60, 0, 30], foreL: [-80, 0, 0] });
+  const PUSH = P({ spine: [16, -12, 0], chest: [6, -6, 0], head: [4, 10, 0], armR: [-92, 0, -6], foreR: [0, 0, 0], handR: [30, 0, 0], armL: [-88, 0, 10], foreL: [-20, 0, 0] });
+  const UND0 = P(STF, { spine: [28, 18, 0], armL: [30, 0, 20], foreL: [-30, 0, 0], head: [18, 0, 0] }), UND1 = P(STF, { spine: [22, -18, 0], armL: [-72, 0, 10], foreL: [-10, 0, 0], handL: [-30, 0, 0] });
+  const OVW = P(STF, { spine: [-6, 40, 0], chest: [-8, 18, 0], armL: [-150, 30, 50], foreL: [-90, 0, 0], handL: [-30, 0, 0], head: [0, -28, 0] });
+  const OVR = P(STF, { spine: [22, -28, 0], chest: [10, -18, 0], armL: [-110, -10, 10], foreL: [-10, 0, 0], handL: [20, 0, 0], head: [8, 10, 0] });
+  const out = (pose, legs, g = 0.5) => mixPose(P(pose, legs), GL, g);
+  const toss = (t, item, fly, o = {}) => ({ t, e: 'proj', kind: 'salve', item, from: 'L', arc: 0.5, impact: 'remedy', spin: 8, time: Math.max(0.1, fly), ...o });
+  const shake = (t, amt) => ({ t, e: 'shake', amt });
+  // a staff push with a dart out of the hollow haft at the contact (the dart flies to the machine: fx 'dart', a thorn puff)
+  const dartPush = (id, h, D, ev, o = {}) => H13(id, D, [k(0, GL), k(Math.max(0.05, h.t - 0.18) / D, P(PUSHW, L.stepBack), { root: [0, -0.03, -0.05] }), k(h.t / D, P(PUSH, L.lungeL), { root: [0, -0.1, 0.12], e: 'snap' }), k(0.74, out(PUSH, L.lungeL, 0.35)), k(1, GL)], ev,
+    { hit: h, ual: { mask: 'body', segs: [['Staff_Push_Enter', 0, Math.max(0.05, h.t - 0.12), 0.1, 0.5], ['Staff_Push_Shoot', Math.max(0.05, h.t - 0.12), D, 0, 0.5]], end: D * 0.8 }, ...o });
+  const dartAt = (t) => ({ t, e: 'proj', kind: 'dart', from: 'R', impact: 'thorn' });
+  // ---- Nettle Dart: three darts on the run, the third two at once
+  for (const [id, st] of [['h_dart', 1], ['h_dart_2', 2], ['h_dart_3', 3]]) {
+    const h = K13('h_dart', st).hit, D = 0.6, rel = Math.max(0.05, h.t - 0.08) / D;
+    const ev = [dartAt(rel), { t: rel, e: 'sound', s: 'whoosh' }];
+    if (st === 3) ev.push(dartAt(rel + (h.gap || 0.08) / D));
+    dartPush(id, h, D, ev, { skill: 'h_dart', step: st });
+  }
+  for (const id of ['h_dart_2', 'h_dart_3']) BLEND.add(id);
+  // ---- Soothing Salve (1.6 s, cast 1.2): the jar kneaded in the left hand (a thread of steam off the warm salve), then tossed
+  { const h = K13('h_salve').hit, D = 1.6, rel = 1.15;
+    H13('h_salve', D, [k(0, GL), k(0.12, P(STF, { spine: [14, 0, 0], head: [24, 0, 0], armL: [-60, 20, 10], foreL: [-100, 0, 0], handL: [-20, 0, 0] })),
+      k(0.5, P(STF, { spine: [20, 12, 0], chest: [6, 4, 0], head: [28, -6, 0], armL: [-74, 28, 18], foreL: [-122, 0, 0], handL: [16, 0, 0] }), { root: [0, -0.04, 0] }),
+      k((rel - 0.14) / D, P(UND0, L.stepBack), { root: [0, -0.16, 0.06] }), k(rel / D, P(UND1, L.lungeL), { root: [0, -0.16, 0.14], e: 'snap' }), k(0.86, out(UND1, L.lungeL)), k(1, GL)],
+      [{ t: 0.06, e: 'holdItem', side: 'L', item: 'remedyjar', on: true }, { t: 0.1, e: 'trailSmoke', side: 'L', dur: 0.6, color: '#e8efe4' }, { t: rel / D, e: 'holdItem', side: 'L', item: 'remedyjar', on: false }, toss(rel / D, 'remedyjar', h.t - rel), { t: rel / D, e: 'sound', s: 'whoosh' }],
+      { hit: h, channel: { from: 0.1, to: 0.62, hz: 2.4, bones: { armL: [5, 0, 3], foreL: [-9], handL: [14, 0, 0], spine: [2, 3, 0], head: [3, 0, 0] } } }); }
+  // ---- Mending Poultice (0.75 s): an underhand toss of a warm linen pad, steam trailing
+  { const h = K13('h_poultice').hit, D = 0.75, rel = 0.3;
+    H13('h_poultice', D, [k(0, GL), k(0.16 / D, P(UND0, L.stepBack), { root: [0, -0.14, 0.04] }), k(rel / D, P(UND1, L.lungeL), { root: [0, -0.16, 0.14], e: 'snap' }), k(0.82, out(UND1, L.lungeL)), k(1, GL)],
+      [{ t: 0.04, e: 'holdItem', side: 'L', item: 'poulticepad', on: true }, { t: rel / D, e: 'holdItem', side: 'L', item: 'poulticepad', on: false }, toss(rel / D, 'poulticepad', h.t - rel, { impact: 'warmpoultice', spin: 4 }), { t: rel / D, e: 'sound', s: 'whoosh' }],
+      { hit: h, ual: { mask: 'body', segs: [['Throw_Underhand', 0, 0.6, 0, 0.667]], end: 0.6 } }); }
+  // ---- Snare Net (0.9 s): an overhand cast of the weighted net (square weave); it spreads and drops on the machine
+  { const h = K13('h_net').hit, D = 0.9, rel = 0.32;
+    H13('h_net', D, [k(0, GL), k(0.18 / D, P(OVW, L.stepBack), { root: [0, -0.04, -0.1] }), k(rel / D, P(OVR, L.lungeL), { root: [0, -0.14, 0.2], e: 'snap' }), k(0.82, out(OVR, L.lungeL)), k(1, GL)],
+      [{ t: 0.05, e: 'holdItem', side: 'L', item: 'net', on: true }, { t: rel / D, e: 'holdItem', side: 'L', item: 'net', on: false }, { t: rel / D, e: 'proj', kind: 'net', from: 'L', arc: 0.4, impact: 'net', time: Math.max(0.1, h.t - rel) }, { t: rel / D, e: 'sound', s: 'whoosh' }],
+      { hit: h, ual: { mask: 'body', segs: [['OverhandThrow', 0, D * 0.8, 0, 0.8]], end: D * 0.8 } }); }
+  // ---- Calming Smoke (0.95 s): the clay pot of smouldering herbs swung underarm to the ally's feet (the smoke is the server's hzone)
+  { const h = K13('h_smoke').hit, D = 0.95, rel = 0.38;
+    H13('h_smoke', D, [k(0, GL), k(0.2 / D, P(UND0, L.stepBack), { root: [0, -0.2, 0.06] }), k(rel / D, P(UND1, L.lungeL), { root: [0, -0.2, 0.15], e: 'snap' }), k(0.82, out(UND1, L.lungeL)), k(1, GL)],
+      [{ t: 0.04, e: 'holdItem', side: 'L', item: 'smokepot', on: true }, { t: 0.06, e: 'trailSmoke', side: 'L', dur: 0.35 }, { t: rel / D, e: 'holdItem', side: 'L', item: 'smokepot', on: false }, toss(rel / D, 'smokepot', h.t - rel, { arc: 0.7, ground: true, impact: 'potland', spin: 5 }), { t: rel / D, e: 'sound', s: 'whoosh' }],
+      { hit: h, ual: { mask: 'body', segs: [['Throw_Underhand', 0, 0.6, 0, 0.667]], end: 0.6 } }); }
+  // ---- Lantern Flash (0.85 s): the staff thrust out head-first and the shutter opened: a soft warm round glow at the glass
+  { const h = K13('h_lantern').hit;
+    H13('h_lantern', 0.85, [k(0, GL), k(Math.max(0.05, h.t - 0.2) / 0.85, P(PUSHW, L.stepBack), { root: [0, -0.03, -0.06] }), k(h.t / 0.85, P(PUSH, L.lungeL), { root: [0, -0.1, 0.14], e: 'snap' }), k(0.74, out(PUSH, L.lungeL, 0.35)), k(1, GL)],
+      [{ t: 0.05, e: 'sound', s: 'click' }, { t: 'hit', e: 'lanternGlow', dur: 0.55, big: true }, { t: 'hit', e: 'sound', s: 'fire' }],
+      { hit: h, ual: { mask: 'body', segs: [['Staff_Push_Enter', 0, Math.max(0.05, h.t - 0.15), 0.1, 0.5], ['Staff_Push_Shoot', Math.max(0.05, h.t - 0.15), 0.85, 0, 0.5]], end: 0.7 } }); }
+  // the staff planted (Grand Remedy, Field Hospital, Full Dressing): a draught drunk (Consume), then the staff driven into the
+  // ground at a slant with both hands, dust at its foot and steam loosed from the kettle
+  const plant = (id, h, D, ev = [], o = {}) => H13(id, D, [k(0, GL),
+    k(0.12, P(STF, { spine: [-8, 0, 0], head: [-26, 0, 0], armL: [-150, 30, 10], foreL: [-140, 0, 0], handL: [-60, 0, 0] })),
+    k(Math.max(0.2, h.t - 0.24) / D, P({ spine: [-10, 0, 0], armR: [-150, 0, -10], foreR: [-20, 0, 0], handR: [-10, 0, 0], armL: [-140, 0, 20], foreL: [-30, 0, 0] }, L.stand), { root: [0, 0.06, 0] }),
+    k(h.t / D, P({ spine: [30, 0, 0], chest: [10, 0, 0], head: [16, 0, 0], armR: [-60, 0, -10], foreR: [-10, 0, 0], handR: [40, 0, 0], armL: [-60, 0, 14], foreL: [-14, 0, 0] }, L.lungeL), { root: [0, -0.3, 0.12], e: 'snap' }),
+    k(0.86, P({ spine: [22, 0, 0], armR: [-56, 0, -10], foreR: [-10, 0, 0], handR: [40, 0, 0], armL: [-56, 0, 14] }, L.lungeL), { root: [0, -0.26, 0.12] }), k(1, GL, { e: 'smooth' })],
+    [{ t: 0.04, e: 'holdItem', side: 'L', item: 'cup', on: true }, { t: 0.3, e: 'holdItem', side: 'L', item: 'cup', on: false }, { t: 'hit', e: 'dust' }, { t: 'hit', e: 'sound', s: 'thud' }, { t: 'hit', e: 'kettleSteam', dur: 1.1 }, { t: 'hit', e: 'lanternGlow', dur: 1.0 }, { t: 'hit', e: 'sound', s: 'hiss' }, ...ev],
+    { hit: h, ual: { mask: 'body', segs: [['Consume', 0, 0.36, 0.2, 0.9]], end: 0.36 }, ...o });
+  plant('h_remedy', K13('h_remedy').hit, 1.15, [{ t: 'hit', e: 'cloud', kind: 'willowsteam', r: 7, at: 'self' }]);
+
+  // ---- the fusions (each opens fx.fuseBudget; one light, at most one ring a beat)
+  // Bark Poultice (0.7 s, the first fusion): the jar thrown hard onto the warm poultice; the shell sets on the ally (amber-green
+  // resin flecks hardening, a crackle)
+  { const f = FUSION_BY_ID.hf_barkpoultice, D = 0.7, rel = 0.28;
+    H13('hf_barkpoultice', D, [k(0, P(UND0, L.stepBack), { root: [0, -0.14, 0.04] }), k(rel / D, P(UND1, L.lungeL), { root: [0, -0.16, 0.16], e: 'snap' }), k(0.82, out(UND1, L.lungeL)), k(1, GL)],
+      [{ t: 0.01, e: 'holdItem', side: 'L', item: 'remedyjar', on: true }, { t: rel / D, e: 'holdItem', side: 'L', item: 'remedyjar', on: false }, toss(rel / D, 'remedyjar', f.hit.t - rel, { impact: 'shell', spin: 12 }), { t: rel / D, e: 'sound', s: 'whoosh' }], {}); }
+  // Thistle Net (0.75 s): five darts out of the haft at the netted machine, quick and uneven
+  { const f = FUSION_BY_ID.hf_thistlenet, D = 0.75, h = f.hit;
+    H13('hf_thistlenet', D, [k(0, P(PUSHW, L.stepBack), { root: [0, -0.03, -0.05] }), ...[0, 1, 2, 3, 4].map((i) => k(TS(h, i) / D, P(PUSH, { spine: [16 + (i % 2) * 4, -12 + (i % 2) * 6, 0] }, L.lungeL), { root: [0, -0.1, 0.12], e: 'snap' })), k(0.86, out(PUSH, L.lungeL, 0.35)), k(1, GL)],
+      [0, 1, 2, 3, 4].flatMap((i) => [dartAt(Math.max(0.01, TS(h, i) - 0.06) / D), { t: Math.max(0.01, TS(h, i) - 0.06) / D, e: 'sound', s: 'whoosh' }]), { ual: { mask: 'body', segs: [['Staff_Push_Shoot', 0, D, 0, 0.5]], end: D * 0.8 } }); }
+  // Bitterroot Tincture (0.7 s): the stoppered tincture thrown overhand at the machine (a green splash there; the server's
+  // hsplash flies the drops back to the most hurt ally)
+  { const f = FUSION_BY_ID.hf_bitterroot, D = 0.7, rel = 0.26;
+    H13('hf_bitterroot', D, [k(0, P(OVW, L.stepBack), { root: [0, -0.04, -0.1] }), k(rel / D, P(OVR, L.lungeL), { root: [0, -0.14, 0.2], e: 'snap' }), k(0.82, out(OVR, L.lungeL)), k(1, GL)],
+      [{ t: 0.01, e: 'holdItem', side: 'L', item: 'remedyjar', on: true }, { t: rel / D, e: 'holdItem', side: 'L', item: 'remedyjar', on: false }, toss(rel / D, 'remedyjar', f.hit.t - rel, { arc: 0.35, impact: 'remedyfoe', spin: 14 }), { t: rel / D, e: 'sound', s: 'whoosh' }], {}); }
+  // Lantern Haze (0.85 s): the staff swung out over the smoke and the shutter opened into it: the smoke takes the warm light
+  // from inside (the server's hhaze); no beams, only the soft glow at the glass
+  { const f = FUSION_BY_ID.hf_lanternhaze;
+    H13('hf_lanternhaze', 0.85, [k(0, GL), k(0.2, P({ spine: [10, -30, 0], armR: [-100, -10, -40], foreR: [-30, 0, 0], handR: [70, 0, 0], armL: [-40, 0, 30], foreL: [-60, 0, 0] }, L.stepBack), { root: [0, -0.06, 0] }),
+      k(f.hit.t / 0.85, P({ spine: [-6, 20, 0], chest: [-6, 0, 0], armR: [-130, 10, -10], foreR: [-10, 0, 0], handR: [90, 0, 0], head: [-10, 0, 0] }, L.stepL), { root: [0, 0.04, 0.1], e: 'snap' }), k(0.8, P({ spine: [-4, 16, 0], armR: [-126, 10, -10], foreR: [-16, 0, 0], handR: [86, 0, 0] }, L.stepL), {}), k(1, GL)],
+      [{ t: 0.04, e: 'sound', s: 'click' }, { t: 'hit', e: 'lanternGlow', dur: 0.9, big: true }, { t: 'hit', e: 'sound', s: 'fire' }, shake('hit', 0.25)], {}); }
+  // Willowbark Steam (0.95 s): the salve tipped onto the hot smoke pot as it goes: it boils over into steam (the server's hzone)
+  { const f = FUSION_BY_ID.hf_willowsteam, D = 0.95, rel = 0.36;
+    H13('hf_willowsteam', D, [k(0, GL), k(0.18 / D, P(UND0, L.stepBack), { root: [0, -0.2, 0.06] }), k(rel / D, P(UND1, L.lungeL), { root: [0, -0.2, 0.15], e: 'snap' }), k(0.82, out(UND1, L.lungeL)), k(1, GL)],
+      [{ t: 0.02, e: 'holdItem', side: 'L', item: 'smokepot', on: true }, { t: 0.04, e: 'trailSmoke', side: 'L', dur: 0.32, color: '#eef3f0' }, { t: rel / D, e: 'holdItem', side: 'L', item: 'smokepot', on: false }, toss(rel / D, 'smokepot', f.hit.t - rel, { arc: 0.7, ground: true, impact: 'potland', spin: 5 }), { t: 'hit', e: 'sound', s: 'hiss' }], {}); }
+  // Field Hospital (1.15 s): the staff planted at a slant with the lantern hung from it (the remedies and the leaf patches are
+  // the server's hzone); Full Dressing (the triad) plants it and loosens the kettle over everyone, the shells setting on them
+  plant('hf_fieldhospital', FUSION_BY_ID.hf_fieldhospital.hit, 1.15, [shake('hit', 0.3)]);
+  plant('ht_fulldressing', FUSION_BY_ID.ht_fulldressing.hit, 1.15, [{ t: 'hit', e: 'cloud', kind: 'willowsteam', r: 9, at: 'self' }, shake('hit', 0.35)]);
+  // Sneezing Powder (0.95 s): the pot, packed with pepper, swung onto the netted machine (its choking smoke is the server's hzone)
+  { const f = FUSION_BY_ID.hf_sneezing, D = 0.95, rel = 0.36;
+    H13('hf_sneezing', D, [k(0, GL), k(0.18 / D, P(OVW, L.stepBack), { root: [0, -0.04, -0.1] }), k(rel / D, P(OVR, L.lungeL), { root: [0, -0.14, 0.2], e: 'snap' }), k(0.82, out(OVR, L.lungeL)), k(1, GL)],
+      [{ t: 0.02, e: 'holdItem', side: 'L', item: 'smokepot', on: true }, { t: rel / D, e: 'holdItem', side: 'L', item: 'smokepot', on: false }, toss(rel / D, 'smokepot', f.hit.t - rel, { arc: 0.6, impact: 'pepperpot', spin: 6 }), { t: rel / D, e: 'sound', s: 'whoosh' }], {}); }
+  // Swiftroot Toss (0.8 s): a short vault on the staff (Pole_Vault), two jars thrown from the top of it
+  { const D = 0.8, f = FUSION_BY_ID.hf_swiftroot;
+    H13('hf_swiftroot', D, [k(0, P(STF, { spine: [20, 0, 0] }, L.deep), { root: [0, -0.26, 0] }), ...leapRoot(D, { t0: 0.04, t1: 0.26, t2: 0.42, t3: 0.62, h: 1.4, float: 0.05, dist: 2.5, atTop: 0.45, atEnd: 0.6 }),
+      k(f.hit.t / D, P(UND1, L.tuck), { root: [0, 1.35, 1.2], e: 'snap' }), k(0.86, P(G, { spine: [18, 0, 0] }, L.deep), { root: [0, -0.24, 2.5] }), k(1, GL, { root: [0, 0, 2.5], e: 'smooth' })],
+      [{ t: 0.02, e: 'dust' }, { t: 0.02, e: 'holdItem', side: 'L', item: 'remedyjar', on: true }, { t: f.hit.t / D, e: 'holdItem', side: 'L', item: 'remedyjar', on: false }, { t: f.hit.t / D, e: 'sound', s: 'whoosh' }, { t: 0.66, e: 'dust' }],
+      { endRoot: [0, 0, 2.5], ual: { mask: 'body', segs: [['Pole_Vault', 0, 0.5, 0.3, 0.75], ['Slam_Land', 0.6, D, 0.1, 0.4]], end: 0.78 } }); }
+}
+// the Herbalist's Staff Hop (S13): a 5 m short vault on the staff the way he moves (the staff planted, the body swung over it)
+{
+  const G = P(guard('herbalist'), { spine: [8, 0, 0] }), GL = P(G, LG), STUP = { armR: [-70, 0, -16], foreR: [-60, 0, 0], armL: [-70, 0, 16], foreL: [-60, 0, 0] };
+  const hop = (id, dir) => (DEF[id] = C('herbalist', 0.5, 'full', [
+    k(0, GL),
+    k(0.07 / 0.5, P(G, STUP, { spine: [22, 0, 0] }, L.deep), { root: [0, -0.3, 0.1 * dir] }),
+    k(0.22 / 0.5, P(G, STUP, { spine: [0, 0, 0] }, L.tuck), { root: [0, 0.6, 2.5 * dir], e: 'out' }),
+    k(0.36 / 0.5, P(G, STUP, { spine: [18, 0, 0] }, L.deep), { root: [0, -0.3, 4.9 * dir], e: 'in' }),
+    k(1, GL, { root: [0, 0, 5 * dir] }),
+  ], [{ t: 0.02, e: 'sound', s: 'gust' }, { t: 0.06 / 0.5, e: 'dust' }, { t: 0.36 / 0.5, e: 'dust' }], { endRoot: [0, 0, 5 * dir], dodge: true, ual: { mask: 'body', segs: [['Pole_Vault', 0, 0.36, 0.3, 0.7]], end: 0.36 } }));
+  hop('dodge_herbalist', 1); hop('dodgeb_herbalist', -1);
+}
+
 // compile: resolve 'hit', 'hit2'.. into normalized times from the skill's impact timing
 export const CHOREO = {};
 for (const [id, def] of Object.entries(DEF)) {

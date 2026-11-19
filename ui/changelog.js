@@ -1,6 +1,14 @@
 // What's new: shown once after an update (newest first). Bump `v` on the first entry whenever something is added.
 export const CHANGELOG = [
   {
+    v: 136, date: '19 November 2026', title: 'The Herbalist',
+    items: [
+      ['The Herbalist, rebuilt', 'The last class on the new combat, so all seven now fight the new way. Nettle Dart is a three-dart chain thrown on the run, and every dart that lands stores Sap that makes your next heal stronger. Calming Smoke heals allies inside it and softens the machines’ blows. Old Herbalists get their talent points back with a letter from the trainer.'],
+      ['Herbalist fusions', 'Nine new moves: Bark Poultice hardens the salve into a sap shell, Thistle Net peppers a netted machine with darts, Lantern Haze lights the smoke from inside, and Field Hospital plants your staff so the first ally who would fall there stays standing. Full Dressing finishes it all.'],
+      ['His own Skill Web', 'The Herbalist has his own region of the Skill Web, with keystones like Bitter Medicine, which turns Grand Remedy into Bitter Remedy. Everyone gets another free Web reset.'],
+    ],
+  },
+  {
     v: 135, date: '19 November 2026', title: 'The Chemist',
     items: [
       ['The Chemist, rebuilt', 'The sixth class on the new combat. Acid Flask is a three-throw chain thrown on the run, Tar Pot leaves a slowing puddle, Spark Gear arcs from machine to machine, and bombs lie on the ground until their fuse runs out. Old Chemists get their talent points back with a letter from the trainer.'],

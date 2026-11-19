@@ -22,7 +22,7 @@ export const LOCK_MIN = 0.45, LOCK_MAX = 0.9;
 // (the pilot class, combat_design.md section 11): a shorter lock changes each class's damage by how much resource it
 // has spare (deadeyetest: the Deadeye fell to x0.82 of the Ranger with every class on it), so the others move over with
 // their own slices (S8-S13) where their numbers are tuned with it
-export const LOCK_CLASSES = new Set(['knight', 'sandblade', 'warden', 'deadeye', 'ranger', 'chemist']); // (S8: the Sandblade's slice; S9: the Warden's; S10: the Deadeye's; S11: the Ranger's; S12: the Chemist's)
+export const LOCK_CLASSES = new Set(['knight', 'sandblade', 'warden', 'deadeye', 'ranger', 'chemist', 'herbalist']); // (S8: the Sandblade's slice; S9: the Warden's; S10: the Deadeye's; S11: the Ranger's; S12: the Chemist's; S13: the Herbalist's)
 export const OLD_GCD = 1.0;
 
 export const DODGE = { charges: 2, regen: 3.5, dist: 4, dur: 0.35, evade: 0.3, opening: 2, worldStop: 0.06 };
@@ -36,7 +36,9 @@ export const DODGE_CLS = { sandblade: { charges: 3, dist: 2.5 }, ranger: { name:
   // wind-up by firing it at once, and with Snap Shot held it fires one out of the slide (slideShot: s into the slide)
   deadeye: { name: 'Slide', slide: true, charges: 2, dist: 4, dur: 0.4, evade: 0.3, slideShot: 0.14 },
   // the Chemist's Side Hop (S12, combat_design_fusion.md 4.3): a short 4 m hop with a puff of smoke left where he was
-  chemist: { name: 'Side Hop', hop: true, charges: 2, dist: 4, dur: 0.35 } };
+  chemist: { name: 'Side Hop', hop: true, charges: 2, dist: 4, dur: 0.35 },
+  // the Herbalist's Staff Hop (S13, combat_design_fusion.md 4.6): a 5 m short vault on the staff, 2 charges
+  herbalist: { name: 'Staff Hop', hop: true, charges: 2, dist: 5, dur: 0.45 } };
 export const dodgeFor = (cls) => ({ ...DODGE, ...(DODGE_CLS[cls] || {}) });
 // the dodge with a Skill Web modifier table on it (p.tal; the server and the client both read it): Quick Feet's 3 charges and
 // 0.45 s evade, Momentum's 30% slower recovery, Iron Comet's roll that no longer evades

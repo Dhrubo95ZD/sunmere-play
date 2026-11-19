@@ -8,7 +8,7 @@
 import { SKILLS } from './classes.js';
 
 // classes on the new kit. Knight first (the pilot slice); the old path goes at S16
-export const KIT_V2 = { knight: true, sandblade: true, warden: true, deadeye: true, ranger: true, chemist: true }; // (S8: the Sandblade's slice; S9: the Warden's; S10: the Deadeye's; S11: the Ranger's; S12: the Chemist's)
+export const KIT_V2 = { knight: true, sandblade: true, warden: true, deadeye: true, ranger: true, chemist: true, herbalist: true }; // (S8: the Sandblade's slice; S9: the Warden's; S10: the Deadeye's; S11: the Ranger's; S12: the Chemist's; S13: the Herbalist's, the last)
 export const onKit2 = (cls) => !!KIT_V2[cls];
 
 const K = (id, name, o) => ({ id, name, gcd: true, cast: 0, cost: 15, cd: 0, range: 4, target: 'enemy', kit: 2, ...o });
@@ -23,6 +23,9 @@ export const DE_SKILL = 1.2; // (the six skills over the chain, S10 tuning)
 export const RA_POW = 0.95, RA_FILL = 0.5, RA_FUSE = 2.1; // (the skills x RA_POW; Quick Shot x RA_FILL of that, so the filler is not most of the damage; the fusions x RA_FUSE of it)
 // the Chemist's numbers (S12): the design's coefficients x CH_POW; Acid Flask x CH_FILL of that; the fusions x CH_FUSE of it
 export const CH_POW = 1.1, CH_FILL = 0.45, CH_FUSE = 2.0;
+// the Herbalist's numbers (S13): damage x HB_POW (Nettle Dart x HB_FILL of that; the damage of fusions x HB_FUSE of it), every
+// heal x HB_HEAL (fusion heals are the design's own numbers x HB_HEAL; they are already sized as fusions)
+export const HB_POW = 0.8, HB_FILL = 0.5, HB_FUSE = 2.0, HB_HEAL = 1.08;
 const chain = (base, steps) => {
   const list = steps.map((s, i) => ({ ...base, ...s, step: i + 1, steps: steps.length, fx: s.fx, win: { ...(base.win || {}), ...(s.win || {}) }, tags: [...base.tags, ...(i === steps.length - 1 ? ['finisher'] : [])] }));
   for (const s of list) s.chain = list;
@@ -141,9 +144,31 @@ export const CORE = {
       K('c_grand', 'Grand Detonation', { icon: 'cask', slot: 7, lvl: 14, cost: 40, cd: 40, range: 24, fuse: 2.0, hit: { t: 0.62, kind: 'aoe', at: 'spot', r: 8 }, fx: [['dmg', d(4.4)], ['launch', 1.0], ['brk', 60]], tags: ['throw', 'blast', 'bomb'], tier: 4, desc: 'Heave an iron cask of blasting powder underarm with both hands: it rolls to a stop where the machine stood, its fuse burns 2 s, and it bursts over 8 m, throwing the machines up.' }),
     ];
   })(),
+  // the Herbalist (combat_design_fusion.md 4.6 and combat_design.md 5.7, S13): keeps the group up, and is not harmless. Nettle
+  // Dart is a chain blown on the run from the staff's hollow haft (each dart that strikes stores Sap, which the next heal
+  // spends), Soothing Salve a kneaded jar tossed to an ally (1.2 s), Mending Poultice a heal over time, Snare Net a weighted
+  // net (Pinned), Calming Smoke a smouldering pot that lies as a herb zone (sim.js herbZone: allies mend, machines strike
+  // softer), Lantern Flash the kettle-lantern's shutter opened (a soft round flare: no beams), Grand Remedy a draught and the
+  // staff planted. Every remedy is a 'remedy', every heal a 'heal'. Ids keep the old kit's, so its talents carry over
+  herbalist: (() => {
+    const P = HB_POW, d = (v) => +(v * P).toFixed(3), q = (v) => d(v * HB_FILL), h = (v) => +(v * HB_HEAL).toFixed(3);
+    return [
+      chain(K('h_dart', 'Nettle Dart', { icon: 'dart', slot: 1, lvl: 1, cost: 0, cd: 0, range: 24, move: true, hit: { t: 0.26, kind: 'proj', speed: 40 }, tags: ['dart', 'shot', 'chain'], desc: 'A three-step chain of nettle darts blown on the run from the hollow haft of the staff, the third two at once. Each dart that strikes stores a drop of Sap (up to five); your next heal spends them, 8% stronger for each. Costs nothing and builds Herbs.' }), [
+        { fx: [['dmg', q(0.8)], ['sap', 1], ['brk', 2], ['res', 5]], win: { lock: 0.5 }, tier: 1 },
+        { fx: [['dmg', q(0.8)], ['sap', 1], ['brk', 2], ['res', 5]], win: { lock: 0.5 }, tier: 1 },
+        { hit: { t: 0.3, kind: 'proj', speed: 40, n: 2, gap: 0.08 }, fx: [['dmg', q(0.6)], ['sap', 1], ['brk', 4], ['res', 4]], win: { lock: 0.6 }, tier: 2, twin: true },
+      ]),
+      K('h_salve', 'Soothing Salve', { icon: 'salve', slot: 2, lvl: 1, cost: 15, cd: 0, cast: 1.2, target: 'ally', range: 28, hit: { t: 1.3, kind: 'proj', speed: 22, arc: 0.5 }, fx: [['heal', h(2.2)]], tags: ['throw', 'remedy', 'heal'], tier: 2, desc: 'Knead a jar of salve for 1.2 s and toss it to an ally (or yourself): it bursts in a soft green splash and mends 2.2.' }),
+      K('h_poultice', 'Mending Poultice', { icon: 'leaf', slot: 3, lvl: 3, cost: 15, cd: 6, target: 'ally', range: 28, hit: { t: 0.45, kind: 'proj', speed: 24, arc: 0.5 }, fx: [['hot', h(3.0), 12]], tags: ['throw', 'remedy', 'heal', 'hot'], tier: 2, desc: 'Toss a warm poultice of bruised leaves bound in linen to an ally: it mends 3.0 over 12 s.' }),
+      K('h_net', 'Snare Net', { icon: 'net', slot: 4, lvl: 5, cost: 15, cd: 14, range: 16, hit: { t: 0.5, kind: 'proj', speed: 18, arc: 0.4 }, fx: [['dmg', d(0.3)], ['pin', 3], ['brk', 15]], tags: ['throw', 'net', 'cc'], tier: 2, desc: 'Throw a weighted net with a square weave over the machine: it is held fast for 3 s (Pinned: 30% more from behind).' }),
+      K('h_smoke', 'Calming Smoke', { icon: 'smoke', slot: 5, lvl: 8, cost: 20, cd: 16, target: 'ally', range: 20, hit: { t: 0.6, kind: 'aoe', at: 'target', r: 6 }, fx: [['hzone', 'smoke', h(0.4), 8, 6]], zoneWeak: 15, tags: ['throw', 'smoke', 'heal', 'zone'], tier: 2, desc: 'Swing a clay pot of smouldering herbs underarm to an ally\'s feet (or your own): a low smoke lies over 6 m for 8 s. Allies in it mend 0.4 a second; machines in it strike 15% softer.' }),
+      K('h_lantern', 'Lantern Flash', { icon: 'lantern', slot: 6, lvl: 11, cost: 15, cd: 18, target: 'self', range: 0, selfDone: true, hit: { t: 0.45, kind: 'cone', r: 10, cone: 70 }, fx: [['stagger', 1.0], ['debuff', 'miss', 40, 2], ['cleanseOne', 10], ['brk', 25]], tags: ['lantern', 'cc'], tier: 2, desc: 'Open the shutter of the kettle-lantern at the machines: a soft round flare of the oil flame over a 10 m cone. They stagger and their swings miss 40% for 2 s, and every ally within 10 m loses one harmful effect.' }),
+      K('h_remedy', 'Grand Remedy', { icon: 'remedy', slot: 7, lvl: 14, cost: 40, cd: 50, cast: 0.6, target: 'self', range: 0, hit: { t: 0.75, kind: 'self', r: 15 }, fx: [['heal', h(4.0)]], tags: ['remedy', 'heal', 'plant'], tier: 3, desc: 'Drink a bitter draught, then plant the staff and let the kettle loose its steam: every ally within 15 m mends 4.0.' }),
+    ];
+  })(),
 };
 // the dodge (feel.js DODGE does the move): it counts as an input, and always as landed (gate 'dodge')
-export const DODGES = { knight: { id: 'dodge', name: 'Shoulder Roll', icon: 'evade', tags: ['dash'] }, sandblade: { id: 'dodge', name: 'Sidestep', icon: 'evade', tags: ['dash'] }, warden: { id: 'dodge', name: 'Brace', icon: 'shield', tags: ['guard', 'shield'] }, deadeye: { id: 'dodge', name: 'Slide', icon: 'evade', tags: ['dash', 'slide'] }, ranger: { id: 'dodge', name: 'Tumble', icon: 'evade', tags: ['dash', 'roll'] }, chemist: { id: 'dodge', name: 'Side Hop', icon: 'evade', tags: ['dash', 'hop'] } }; // (S12: the Chemist's short hop, a puff of smoke left behind) // (S11: the Ranger's roll keeps the arrow nocked: the Quick Shot chain goes on) // (S10: the Deadeye's knee slide; with Snap Shot held it fires out of it) // (S9: the Warden does not move: he braces behind the tower shield)
+export const DODGES = { knight: { id: 'dodge', name: 'Shoulder Roll', icon: 'evade', tags: ['dash'] }, sandblade: { id: 'dodge', name: 'Sidestep', icon: 'evade', tags: ['dash'] }, warden: { id: 'dodge', name: 'Brace', icon: 'shield', tags: ['guard', 'shield'] }, deadeye: { id: 'dodge', name: 'Slide', icon: 'evade', tags: ['dash', 'slide'] }, ranger: { id: 'dodge', name: 'Tumble', icon: 'evade', tags: ['dash', 'roll'] }, chemist: { id: 'dodge', name: 'Side Hop', icon: 'evade', tags: ['dash', 'hop'] }, herbalist: { id: 'dodge', name: 'Staff Hop', icon: 'evade', tags: ['dash', 'hop', 'vault'] } }; // (S13: the Herbalist's short vault on the staff) // (S12: the Chemist's short hop, a puff of smoke left behind) // (S11: the Ranger's roll keeps the arrow nocked: the Quick Shot chain goes on) // (S10: the Deadeye's knee slide; with Snap Shot held it fires out of it) // (S9: the Warden does not move: he braces behind the tower shield)
 export const PARRY = { res: 20, stagger: 1.2 }; // a parry: Valor back and the attacker Staggered
 
 export const CORE_BY_ID = {};

@@ -18,7 +18,7 @@ import { STORY } from './story.js';
 import { LINK, compileKit, fusionUnlocked } from './fusions.js';
 
 export { TREE_V };
-export const TREE_CLASSES = new Set(['knight', 'sandblade', 'warden', 'deadeye', 'ranger', 'chemist']); // classes on the Web (the others keep talents until their slice: S8-S13)
+export const TREE_CLASSES = new Set(['knight', 'sandblade', 'warden', 'deadeye', 'ranger', 'chemist', 'herbalist']); // classes on the Web (every class since S13; the talents screen goes at S16)
 export const onWeb = (cls) => TREE_CLASSES.has(cls);
 export const TREE_FREE_LEVEL = 20; // refunds and resets are free at this level and below
 export const TREE_FREE_DAYS = 14; // after the move from talents
@@ -133,6 +133,9 @@ export function treeMods(cls, alloc = {}, o = {}) {
 const copy = (r) => ({ ...r, fx: (r.fx || []).map((e) => [...e]), hit: r.hit ? { ...r.hit } : r.hit, tags: [...(r.tags || [])], ...(r.seq ? { seq: r.seq.map((q) => ({ ...q, fx: (q.fx || []).map((e) => [...e]) })) } : {}) });
 // (S10) a record with seq (one { hit, fx } a contact) has its numbers changed in each contact's own fx too
 const fxSet = (r, kind, f) => { let hit = false; r.fx = r.fx.map((e) => { if (e[0] !== kind) return e; hit = true; return f(e); }); for (const q of r.seq || []) q.fx = q.fx.map((e) => { if (e[0] !== kind) return e; hit = true; return f(e); }); return hit; };
+// (S13) a record's healing numbers (heal, hot, absorb: the first value; healLowest, healHurt, hzone, hazeSmoke: the second) x m
+const HEAL_AT = { heal: 1, hot: 1, absorb: 1, healParty: 1, healLowest: 2, healHurt: 2, hzone: 2, hazeSmoke: 2 };
+const healSet = (r, m) => { for (const [k, i] of Object.entries(HEAL_AT)) fxSet(r, k, (e) => { const o = [...e]; o[i] = +(o[i] * m).toFixed(3); return o; }); };
 // one Form option's or carry rule's mods on a record (the fixed list in 3.4 plus the carry keys of section 5)
 export function applyMods(r, mods = {}) {
   for (const [k, v] of Object.entries(mods)) {
@@ -179,6 +182,11 @@ export function applyMods(r, mods = {}) {
       case 'splash': if (r.hit) r.hit.r = Math.max(r.hit.r || 0, v); break;
       case 'sticky': if (r.hit) r.hit.at = 'target'; r.sticky = true; break;
       case 'hotTar': r.hotTar = true; if (!r.tags.includes('heat')) r.tags.push('heat'); break;
+      // (S13, the Herbalist) every heal of the record x (1 + v) (Slow Salve); Moss Dressing: a heal over time front-loaded (half
+      // of it at once, the rest over half the time)
+      case 'healPow': healSet(r, 1 + v); break;
+      case 'castTo': r.cast = v; if (r.hit) r.hit = { ...r.hit, t: +(v + 0.1).toFixed(2) }; break; // (Slow Salve: kneaded 2 s)
+      case 'moss': { let add = 0; fxSet(r, 'hot', (e) => { add += e[1] * 0.5; return [e[0], +(e[1] * 0.55).toFixed(3), +(e[2] * 0.5).toFixed(2)]; }); if (add) r.fx.unshift(['heal', +add.toFixed(3)]); break; }
       default: r[k] = v; // noTarget, single, allLifted, step3, shape, field, onRun, charges, split, pierce, chain, coat, parryWin...
     }
   }
@@ -220,7 +228,7 @@ export function compileEff(rec, tal, ctx = {}) {
   // melee, a leap's or a dash's distance with it (melee reach and self skills stay as they are)
   if (tal.range && (r.range || 0) > 5) { r.range = +(r.range * (1 + tal.range)).toFixed(2); fxSet(r, 'leap', (e) => [e[0], +(e[1] * (1 + tal.range)).toFixed(2)]); fxSet(r, 'dash', (e) => [e[0], +(e[1] * (1 + tal.range)).toFixed(2)]); }
   for (const f of tal.skfx?.[r.id] || []) r.fx.push([...f]);
-  if (r.from && tal.fuse) fxSet(r, 'dmg', (e) => [e[0], +(e[1] * (1 + tal.fuse)).toFixed(3), ...e.slice(2)]);
+  if (r.from && tal.fuse) { fxSet(r, 'dmg', (e) => [e[0], +(e[1] * (1 + tal.fuse)).toFixed(3), ...e.slice(2)]); healSet(r, 1 + tal.fuse); } // (S13: a healing fusion mends that much more)
   return r;
 }
 

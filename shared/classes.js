@@ -370,7 +370,13 @@ const MIG = {
     c_naphtha: ['form', 'c_tar'], c_shrapnel: ['form', 'c_volatile'], c_quicklime: ['form', 'c_acid'], c_brine: ['form', 'c_acid'],
     c_catalyst: ['notable', 'c_catalyst'], c_flash: ['notable', 'c_flash'], c_draught: ['notable', 'c_draught'], c_smokebomb: ['notable', 'c_flash'], c_vigor: ['notable', 'c_steady'],
   }, // (S12: the Chemist's slice, combat_design_fusion.md 4.3; Clockwork Bomb is retired)
-  herbalist: { core: ['h_sweep', 'h_net', 'h_salve', 'h_poultice', 'h_dart', 'h_smoke', 'h_lantern'], fusion: ['h_remedy', 'h_bandage', 'h_sneeze', 'h_sap'], form: ['h_seed', 'h_swift', 'h_bark'], notable: ['h_antidote', 'h_brew', 'h_camphor', 'h_willowsteam', 'h_tonic', 'h_revive'] },
+  herbalist: {
+    core: ['h_dart', 'h_salve', 'h_poultice', 'h_net', 'h_smoke', 'h_lantern', 'h_remedy'], h_sweep: ['core', 'h_dart'], h_revive: ['core', 'h_remedy'],
+    h_bark: ['fusion', 'hf_barkpoultice'], h_sap: ['fusion', 'hf_barkpoultice'], h_bandage: ['fusion', 'hf_barkpoultice'], h_sneeze: ['fusion', 'hf_sneezing'], h_swift: ['fusion', 'hf_swiftroot'], h_tincture: ['fusion', 'hf_bitterroot'], h_willowsteam: ['fusion', 'hf_willowsteam'],
+    h_moss: ['form', 'h_poultice'], h_pitch: ['form', 'h_salve'], h_seed: ['form', 'h_net'],
+    h_antidote: ['notable', 'h_antidote'], h_brew: ['notable', 'h_brew'], h_camphor: ['notable', 'h_camphor'], h_tonic: ['notable', 'h_tonic'], h_snowmelt: ['notable', 'h_antidote'],
+    h_flurry: ['keystone', 'brawling_healer'], h_uproot: ['keystone', 'brawling_healer'],
+  }, // (S13: the Herbalist's slice, combat_design_fusion.md 4.6; the last class)
 };
 export const OLD_TO_NEW = {};
 for (const [cls, m] of Object.entries(MIG)) {

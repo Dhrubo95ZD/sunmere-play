@@ -89,6 +89,9 @@ const newId = (p) => p + (nextId++).toString(36);
 // one cached copy of a record per kind, same id, so the sim's contact (this._hc) and the client name the same skill
 const HOT_REC = new WeakMap(), BANK_REC = new WeakMap();
 const POP_REC = new WeakMap(); // (S12 Chain Reaction: one cached pop record per fusion record)
+// (S13) the Herbalist: the kinds a heal of his is made of (the next one spends his Sap), and Grove Keeper's herb patch
+const HEALS = new Set(['heal', 'hot', 'absorb', 'healLowest', 'healHurt', 'healParty', 'hzone', 'hazeSmoke']);
+const GROVE_REC = { id: 'h_grove', name: 'Herb Patch', cls: 'herbalist' };
 const ZONE_SLOW = { tar: 'Tar', fire: 'Burning Tar', frost: 'Frost', acid: 'Acid Cloud' }; // (S12: the slow a puddle of each kind lays on what stands in it)
 const tagged = (M, sk, tag) => { let r = M.get(sk); if (!r) { r = { ...sk, tags: [...new Set([...(sk.tags || []), tag])] }; M.set(sk, r); } return r; };
 const MOVERS = new Set([...Object.values(SKILLS), ...Object.values(CORE), ...Object.values(FUSIONS)].flat().filter((s) => s.fx.some((f) => f[0] === 'dash' || f[0] === 'leap' || f[0] === 'back')).map((s) => s.id));
@@ -1949,6 +1952,16 @@ export class World {
     // hurt, a heal over time kept on whoever the foe is hitting, the cheapest good heal from 80%, the biggest below 50%,
     // and it keeps half its resource for healing
     if (healer) {
+      // (S13) on the new kit: B in the link its last skill opened when the fusion helps (botHerbFuse); Lantern Flash first when
+      // the group is hurt and Grand Remedy is ready (it fuses into Field Hospital); the smoke pot when two are hurt
+      if (KIT_V2.herbalist) {
+        if (b.link && b.effFuse && !b.link.open) { const fz = this.botHerbFuse(b, team, tgt, tal); if (fz) return fz; }
+        const sore = team.filter((q) => q.hp / q.maxHp < 0.72);
+        const lan = usable.find((s) => s.id === 'h_lantern'), rem = b.eff?.h_remedy;
+        if (lan && rem && b.level >= 18 && sore.length >= 2 && !((b.cds.h_remedy || 0) > this.time + 0.6) && !((b.cds.hf_fieldhospital || 0) > this.time) && b.res >= skillCost(lan, tal) + skillCost(rem, tal) + 10) return { skill: lan.id };
+        const pot = usable.find((s) => s.id === 'h_smoke');
+        if (pot && sore.length >= 2) { const at = sore.sort((x, y) => x.hp / x.maxHp - y.hp / y.maxHp)[0]; return { skill: pot.id, target: at.id }; }
+      }
       const hv = (s) => s.fx.reduce((t, f) => t + (f[0] === 'heal' ? f[1] : f[0] === 'hot' ? f[1] * 0.7 : f[0] === 'absorb' ? f[1] * 0.8 : 0), 0);
       const isHeal = (s) => has(s, 'heal') || has(s, 'hot') || has(s, 'absorb');
       for (const s of usable.filter((s) => s.target === 'self' && s.hit.kind === 'self' && s.hit.r && isHeal(s)).sort((a, c) => hv(c) - hv(a))) {
@@ -1964,7 +1977,7 @@ export class World {
         const direct = ally.filter((s) => has(s, 'heal')).sort((a, c) => (r < 0.5 ? hv(c) - hv(a) : hv(c) / skillCost(c, tal) - hv(a) / skillCost(a, tal)));
         if (direct[0]) return { skill: direct[0].id, target: hurt.id };
       }
-      if (tgt && b.res < b.maxRes * 0.5 && team.some((q) => q.hp / q.maxHp < 0.9 || tgt.def?.boss)) return null;
+      if (tgt && b.res < b.maxRes * 0.5 && team.some((q) => q.hp / q.maxHp < 0.9 || tgt.def?.boss)) { const dart = KIT_V2.herbalist && usable.find((s) => s.id === 'h_dart'); return dart && dist(b, tgt) <= dart.range + this.rad(tgt) ? { skill: dart.id, target: tgt.id } : null; } // (S13: Nettle Dart costs nothing and builds Herbs)
     }
     if (hurt && hurt.hp / hurt.maxHp < 0.72) {
       const heals = usable.filter((s) => (s.target === 'ally' || (s.target === 'self' && hurt === b)) && (has(s, 'heal') || has(s, 'hot') || has(s, 'absorb')));
@@ -2419,7 +2432,7 @@ export class World {
       if (target && dist(p, target) > sk.nearest + this.rad(target)) target = null;
       if (!target) { let bd = sk.nearest; for (const q of this.foesOf(p)) { const d = dist(p, q) - this.rad(q); if (d < bd && !houseCrosses(p.x, p.z, q.x, q.z)) { bd = d; target = q; } } }
     } else if (sk.target === 'ally') {
-      target = this.players.get(m.target) || p;
+      target = this.players.get(m.target) || (fu && p.link?.tgt ? this.players.get(p.link.tgt) : null) || p; // (S13: a fusion on an ally goes to the one A reached when none is picked)
       if (target.dead || target.id === p.duel?.with) target = p;
       if (sk.intercept && target === p) target = this.interceptAlly(p, sk.range) || p; // (S9 Intercept: the ally in most danger when none is picked)
       if (dist(p, target) > sk.range + 1) return this.err(p, 'Out of range.');
@@ -2531,7 +2544,7 @@ export class World {
       const n = (p.fmastery[sk.id] = (p.fmastery[sk.id] || 0) + 1);
       if (MASTERY.includes(n) && !p.bot) this.msg(p, `${sk.name}: mastery rank ${['I', 'II', 'III'][MASTERY.indexOf(n)]}.`, '#ffd870');
       if (p.tal?.keys) runKeys(this, p, 'onLink', { fusion: sk }); // (Momentum, Shared Courage, Rolling Start: a landed fusion; review 18 Nov: they ran on the cast, so a whiffed fusion stacked Momentum)
-      const tri = hit && (FUSIONS[p.cls] || []).find((t) => t.triad && t.from === sk.id && fusionUnlocked(p, t));
+      const tri = (hit || (sk.target !== 'enemy' && done)) && (FUSIONS[p.cls] || []).find((t) => t.triad && t.from === sk.id && fusionUnlocked(p, t)); // (S13: Bark Poultice reaches an ally, no machine: Full Dressing)
       if (tri) p.link = { from: sk.id, at: this.time, until: this.time + LINK.win + (p.tal?.linkWin || 0), landed: true, done: true, step: 0, tgt: c.target, encore: !!p.tal?.chainwork }; // (linkWin: Long Breath, Practised Links, Hair Trigger apply to every link)
       else if (hit && p.tal?.chainwork && !sk.triad) p.link = { from: sk.id, at: this.time, until: this.time + p.tal.chainwork, landed: true, done: true, step: 0, tgt: c.target, encore: true }; // (Chainwork: an Encore link; no fusion is keyed from it)
       return;
@@ -2681,7 +2694,7 @@ export class World {
     // (S12) the Chemist: c.ctr a bomb's resting place; at 'spot' where the machine stood at the throw; at 'here' where the
     // fusion began; at 'puddle' his nearest puddle (a burning one first), else the machine; a cluster's bombs land side by side
     const pud = h.at === 'puddle' && !c.ctr ? this.puddleFor(p, target) : null;
-    let center = c.ctr ? c.ctr : h.at === 'spot' ? (c.spot || target || p) : h.at === 'here' ? (p.castFrom || p) : h.at === 'puddle' ? (pud ? (pud.follow ? p : pud) : target || p) : h.at === 'trap' ? c.trapAt : h.at === 'cast' ? (c.aFrom || p.castFrom || p) : h.at === 'target' && !target && sk.noTarget && sk.fx.some((f) => f[0] === 'trap') ? ahead(Math.min(8, sk.range || 8)) : sk.target === 'ground' ? { x: c.gx, z: c.gz } : h.at === 'target' && target ? target : (h.kind === 'aoe' || h.kind === 'self') ? p : target || p; // (h.at 'target': round the machine, Thousand Cuts, S8)
+    let center = c.ctr ? c.ctr : h.at === 'smoke' ? (this.herbZoneFor(p, p) || p) : h.at === 'spot' ? (c.spot || target || p) : h.at === 'here' ? (p.castFrom || p) : h.at === 'puddle' ? (pud ? (pud.follow ? p : pud) : target || p) : h.at === 'trap' ? c.trapAt : h.at === 'cast' ? (c.aFrom || p.castFrom || p) : h.at === 'target' && !target && sk.noTarget && sk.fx.some((f) => f[0] === 'trap') ? ahead(Math.min(8, sk.range || 8)) : sk.target === 'ground' ? { x: c.gx, z: c.gz } : h.at === 'target' && target ? target : (h.kind === 'aoe' || h.kind === 'self') ? p : target || p; // (h.at 'target': round the machine, Thousand Cuts, S8)
     if (h.cluster && !c.ctr && (c.hits || 0) !== 1) { const k = (c.hits || 0) - 1; center = { x: center.x + Math.cos(p.ry || 0) * k * h.cluster, z: center.z - Math.sin(p.ry || 0) * k * h.cluster }; }
     // gather affected entities
     let enemies = [], allies = [];
@@ -2724,7 +2737,10 @@ export class World {
     const area = h.kind === 'aoe' || h.kind === 'ground' || h.kind === 'cone' || h.kind === 'line';
     const skPow = 1 + (tsk?.pow || 0);
     const power = p.power * (1 + this.buffVal(p, 'dmg')) * (1 + tal.dmg) * skPow * (area ? 1 + tal.aoe : 1) * (c.mul || 1) * rmul; // (rmul: a hot load, S10)
-    const healPow = p.power * (1 + tal.heal) * skPow;
+    // (S13) the Herbalist's Sap: his next heal spends every drop Nettle Dart stored, 8% stronger for each
+    const sapMul = p.sap > 0 && p.type === 'player' && (S0?.fx || sk.fx).some((f) => HEALS.has(f[0])) ? 1 + 0.08 * p.sap : 1;
+    if (sapMul > 1) { p.sap = 0; p.buffs = p.buffs.filter((bf) => bf.name !== 'Sap'); }
+    const healPow = p.power * (1 + tal.heal) * skPow * sapMul;
     const cc1 = 1 + tal.ccDur;
     // the contact being resolved: poise, lifts, the hit-stop tier and Opening's crit are read by damage() (feel.js)
     const fe = FEEL_ON ? skillFeel(sk) : null;
@@ -2741,8 +2757,11 @@ export class World {
         case 'dmg': for (const m of enemies) this.damage(p, m, power * a * R(0.9, 1.1), sk.id); break;
         case 'execute': for (const m of enemies) if (!m.dead && m.hp / m.maxHp < 0.35) this.damage(p, m, power * a * R(0.9, 1.1), sk.id); break;
         case 'dot': for (const m of enemies) this.addBuff(m, { name: sk.name, stat: 'dot', dot: (power * a * (1 + tal.dot)) / b, t: b, dur: b, src: p.id, tick: 0, debuff: true, icon: sk.icon }); break;
-        case 'heal': for (const q of allies) this.heal(p, q, healPow * (1 + this.buffVal(p, 'dmg')) * a * R(0.95, 1.05)); break;
-        case 'hot': for (const q of allies) this.addBuff(q, { name: sk.name, stat: 'hot', hot: (healPow * (1 + this.buffVal(p, 'dmg')) * a * (1 + tal.dot)) / b, t: b, dur: b, src: p.id, tick: 0, icon: sk.icon }); break;
+        case 'heal': for (const q of allies) this.heal(p, q, healPow * (1 + this.buffVal(p, 'dmg')) * a * R(0.95, 1.05));
+          if (sk.splashHeal && allies[0]) this.splashHeal(p, sk, allies[0], healPow * (1 + this.buffVal(p, 'dmg')) * a); // (S13 Splash Jar)
+          if (tal.grove && p.type === 'player' && !(c.hits || 0)) for (const q of allies) this.herbZone(p, GROVE_REC, q, 'patch', tal.grove, 4, 2); // (S13 Grove Keeper)
+          break;
+        case 'hot': for (const q of allies) this.addBuff(q, { name: sk.name, stat: 'hot', hot: (healPow * (1 + this.buffVal(p, 'dmg')) * a * (1 + tal.dot)) / b, t: b, dur: b, src: p.id, tick: 0, icon: sk.icon, spread: sk.spread ? 1 : undefined }); break; // (spread, S13: Spreading Poultice)
         case 'stun': for (const m of enemies) if (m.type === 'mob' && !m.def.boss) this.addBuff(m, { name: 'Stunned', cc: 'stun', t: a * cc1, dur: a * cc1, debuff: true, icon: 'stun' }); break;
         // (S7) a net, a trap or a chain shot is Pinned: rooted, and +30% from behind (shared/reactions.js); ['pin', s] too
         case 'root': case 'pin': for (const m of enemies) if (m.type === 'mob' && !m.def.boss) { const pin = type === 'pin' || PIN_SKILLS.has(sk.id) || !!sk.tags?.includes('pin'); this.addBuff(m, { name: pin ? 'Pinned' : 'Rooted', cc: 'root', t: a * cc1, dur: a * cc1, debuff: true, icon: 'root' }); if (pin) m.pinT = Math.max(m.pinT || 0, this.time + a * cc1); } break;
@@ -2811,6 +2830,28 @@ export class World {
         case 'useBomb': if (!(c.hits || 0) && p.bombs?.length) { const B = p.bombs.pop(); this.broadcast({ k: 'bombGone', bid: B.id }); } break;
         // Pitch Vault: a strip of tar along the whole vault (where A began to where the fusion began), a s long, b m wide
         case 'tarPath': if (!(c.hits || 0) && !c.after) { const f0 = c.aFrom || p.castFrom || p, f1 = p.castFrom || p; this.chemZone(p, sk, { x: (f0.x + f1.x) / 2, z: (f0.z + f1.z) / 2 }, sk.hotTar ? 'fire' : 'tar', sk.hotTar ? 0.3 : 0, a, b, [f0.x, f0.z, f1.x, f1.z]); } break;
+        // ---- the Herbalist's kinds (S13)
+        // Nettle Dart's Sap: a drop a dart that strikes (five at most); the next heal spends them (sapMul above)
+        case 'sap': if (enemies.length && p.type === 'player') { p.sap = Math.min(5, (p.sap || 0) + a); this.keepBuff(p, { name: 'Sap', stat: 'sap', pct: 0, t: 30, dur: 30, icon: 'sap' }); } break;
+        // Bitter (Thistle Net): the machine strikes a% softer for b s (playerDamaged reads 'weak')
+        case 'weak': for (const m of enemies) if (m.type === 'mob' && !m.dead) this.addBuff(m, { name: 'Bitter', stat: 'weak', pct: a, t: b, dur: b, debuff: true, icon: 'powder' }); break;
+        // Lantern Flash and Lantern Haze: the machines stagger a s (never a boss); its swing is cut and the client plays the flinch
+        case 'stagger': for (const m of enemies) { if (m.type !== 'mob' || m.dead || m.def.boss || m.def.dummy) continue; const st = a * cc1; this.addBuff(m, { name: 'Staggered', cc: 'stun', stat: 'vuln', pct: POISE.staggerVuln, t: st, dur: st, debuff: true, icon: 'stun' }); m.pending = null; m.swingT = Math.max(m.swingT || 0, st); const dd = Math.hypot(m.x - p.x, m.z - p.z) || 1; this.broadcast({ k: 'stag', id: m.id, dur: +st.toFixed(2), dir: [+((m.x - p.x) / dd).toFixed(2), +((m.z - p.z) / dd).toFixed(2)] }); } break;
+        // Lantern Flash: every ally within a m loses one harmful effect (the newest)
+        case 'cleanseOne': if (!(c.hits || 0) && p.type === 'player') for (const q of this.healAllies(p, p, a)) { const i = q.buffs.map((x) => !!x.debuff).lastIndexOf(true); if (i >= 0) { q.buffs.splice(i, 1); if (q.type === 'player') this.pushSelf(q); } } break;
+        // a herb zone (Calming Smoke, Willowbark Steam, Field Hospital, Sneezing Powder): [kind, heal a second, s, m]
+        case 'hzone': if (!(c.hits || 0) && !c.after && p.type === 'player') this.herbZone(p, sk, center, a, b * skPow * sapMul, cc, Math.max(fxl.find((f) => f[0] === 'hzone')?.[4] || 6, h.r || 0)); break; // (the reach: the zone's own or the compiled hit's, Camphor and Wide Net widen it)
+        // Antidote: the ally healed loses one harmful effect (the newest)
+        case 'cleanseAlly': for (const q of allies) { const i = q.buffs.map((x) => !!x.debuff).lastIndexOf(true); if (i >= 0) { q.buffs.splice(i, 1); if (q.type === 'player') this.pushSelf(q); } } break;
+        // Lantern Haze: the light goes into his nearest smoke (it lasts a s more): every ally in it is rid of every harmful
+        // effect and mends b; the machines in it (this contact's enemies) are blinded and staggered by the kinds after it
+        case 'hazeSmoke': if (!(c.hits || 0) && p.type === 'player') { const z = this.herbZoneFor(p, center), zr = z ? z.r : h.r || 6; for (const q of this.healAllies(p, center, zr + 0.5)) { q.buffs = q.buffs.filter((x) => !x.debuff); this.heal(p, q, healPow * b * R(0.95, 1.05)); if (q.type === 'player') this.pushSelf(q); } if (z) { z.until = Math.max(z.until, this.time + a); this.broadcast({ k: 'hhaze', id: p.id, zid: z.id, x: +z.x.toFixed(2), z: +z.z.toFixed(2), r: zr, dur: +(z.until - this.time).toFixed(2) }); } else this.broadcast({ k: 'hhaze', id: p.id, x: +center.x.toFixed(2), z: +center.z.toFixed(2), r: zr, dur: a }); } break;
+        // Bitterroot Tincture: the most hurt ally within a m mends b (the splash flies back to them)
+        case 'healLowest': if (!(c.hits || 0) && p.type === 'player') { const q = this.healAllies(p, p, a).filter((x) => x.hp < x.maxHp).sort((x, y) => x.hp / x.maxHp - y.hp / y.maxHp)[0] || p; this.heal(p, q, healPow * b * R(0.95, 1.05)); this.broadcast({ k: 'hsplash', id: p.id, from: (enemies[0] || p).id, to: q.id }); } break;
+        // Swiftroot Toss: the a most hurt allies within the reach mend b and run cc% faster for the fifth value's s
+        case 'healHurt': if (!(c.hits || 0) && p.type === 'player') { const dur = fxl.find((f) => f[0] === 'healHurt')?.[4] || 4; for (const q of this.healAllies(p, p, h.r || 15).sort((x, y) => x.hp / x.maxHp - y.hp / y.maxHp).slice(0, a)) { this.heal(p, q, healPow * b * R(0.95, 1.05)); this.addBuff(q, { name: 'Swiftroot', stat: 'speed', pct: cc, t: dur, dur, icon: 'swift' }); this.broadcast({ k: 'hsplash', id: p.id, from: p.id, to: q.id }); } } break;
+        // Brawling Healer's Staff Flurry: each landed blow mends every ally within b m by a
+        case 'healParty': if (enemies.length && p.type === 'player') for (const q of this.healAllies(p, p, b)) this.heal(p, q, healPow * a * R(0.95, 1.05)); break;
         case 'ricochet': { const t0 = enemies[0]; if (!t0) break; const coef = sk.fx.find((f) => f[0] === 'dmg')?.[1] || 1; const near = this.foesOf(p).filter((o) => !o.dead && !enemies.includes(o) && dist(o, t0) <= b).sort((x, y) => dist(x, t0) - dist(y, t0)).slice(0, Math.min(a, 2)); for (const o of near) this.damage(p, o, power * coef * 0.7 * R(0.9, 1.1), sk.id); break; } // (at most 2 bounces a shot, section 3.6)
       }
     }
@@ -3072,6 +3113,10 @@ export class World {
     const before = q.hp;
     q.hp = Math.min(q.maxHp, q.hp + amt);
     this.broadcast({ k: 'heal', src: src.id, tgt: q.id, amt: Math.round(q.hp - before) || amt });
+    // (S13) the Herbalist's keystones: Overflowing turns what a heal of his would waste into a shell (up to 30% of the ally's
+    // health); Bitter Medicine stings the machines within 4 m of the one healed for 30% of the heal
+    if (src?.tal?.overflow && q.type === 'player' && amt > q.hp - before) { const add = Math.min(amt - (q.hp - before), Math.max(0, q.maxHp * src.tal.overflow - (q.absorb || 0))); if (add > 0) { q.absorb = (q.absorb || 0) + add; this.keepBuff(q, { name: 'Overflow', stat: 'absorb', t: 8, dur: 8, icon: 'sap' }); } }
+    if (src?.tal?.bitterMed && src.type === 'player' && !src.dead && amt > 0) for (const m of this.foesOf(src)) if (m.type === 'mob' && !m.dead && Math.hypot(m.x - q.x, m.z - q.z) <= 4 + this.rad(m)) this.damage(src, m, amt * src.tal.bitterMed, 'bitter');
     // healers draw a little threat
     for (const m of this.mobs.values()) if (m.threat.has(q.id)) this.addThreat(m, src, amt * 0.4);
     if (q.type === 'player') this.pushSelf(q);
@@ -4100,7 +4145,7 @@ export class World {
           if (e.dead) return;
         }
       }
-      if (b.t <= 0) { if (b.stat === 'absorb') e.absorb = 0; e.buffs.splice(i, 1); changed = true; }
+      if (b.t <= 0) { if (b.stat === 'absorb') e.absorb = 0; e.buffs.splice(i, 1); changed = true; if (b.hot && b.spread) this.spreadHot(e, b); } // (S13 Spreading Poultice)
     }
     if (changed && e.type === 'player') this.pushSelf(e);
   }
@@ -4161,6 +4206,7 @@ export class World {
       if (z.follow) { z.x = p.x; z.z = p.z; }
       if (this.time < z.next) continue;
       z.next += 0.5;
+      if (z.herb) { this.tickHerbZone(p, z, (foes ||= this.foesOf(p)), inZ); continue; } // (S13: the Herbalist's smoke, steam and Field Hospital)
       const tal = p.tal || {};
       for (const m of (foes ||= this.foesOf(p))) {
         if (m.dead || !inZ(z, m)) continue;
@@ -4319,6 +4365,86 @@ export class World {
       }
     }
   }
+  // ---- the Herbalist (S13)
+  // the allies a heal of his reaches: his party (himself when alone) within r m of at, alive
+  healAllies(p, at, r) { return this.partyMembers(p).filter((q) => q && !q.dead && q.id !== p.duel?.with && Math.hypot(q.x - at.x, q.z - at.z) <= r); }
+  // a buff kept up without a new event while it runs (zones refresh theirs every 0.5 s)
+  keepBuff(e, b) { const ex = e.buffs.find((x) => x.name === b.name && x.src === b.src); if (ex) { Object.assign(ex, b); return ex; } this.addBuff(e, b); return b; }
+  // his herb zones (p.zones, herb): smoke (Calming Smoke: allies mend coef a second, the machines strike zoneWeak% softer),
+  // steam (Willowbark Steam: twice the mending for the first 4 s, allies run 20% faster), hospital (Field Hospital: allies
+  // take 30% less and the first who would fall stays up at 30%), sneeze (Sneezing Powder: the machines' swings are cut
+  // short every sk.sneeze s), patch (Grove Keeper: a small herb patch at a healed ally's feet). Camphor Smoke Chills the
+  // machines in it, Drifting Smoke follows him (zoneFollow). Every client draws them from {k:'hzone'} and lets them run out
+  herbZone(p, sk, center, kind, coef, dur, r) {
+    const follow = !!sk.zoneFollow && kind !== 'hospital' && kind !== 'patch';
+    const z = { id: newId('hz'), herb: true, kind, coef, until: this.time + dur, t0: this.time, r, x: follow ? p.x : center.x, z: follow ? p.z : center.z, follow, weak: kind === 'patch' ? 0 : sk.zoneWeak || 0, coat: sk.camphor ? 'chill' : null, sneeze: sk.sneeze || 0, sneezeT: this.time + (sk.sneeze || 0), save: kind === 'hospital' ? 1 : 0, next: this.time + 0.5, sk: sk.id };
+    const Z = (p.zones ||= []);
+    if (kind === 'patch') { const old = Z.filter((q) => q.herb && q.kind === 'patch'); if (old.length >= 2) { const o = old[0]; Z.splice(Z.indexOf(o), 1); this.broadcast({ k: 'hzoneEnd', zid: o.id }); } } // (Grove Keeper: two patches at most)
+    Z.push(z);
+    while (Z.length > 6) { const o = Z.shift(); if (o.herb) this.broadcast({ k: 'hzoneEnd', zid: o.id }); else if (o.chem) this.broadcast({ k: 'czoneEnd', zid: o.id }); }
+    this.broadcast({ k: 'hzone', id: p.id, zid: z.id, kind, x: +z.x.toFixed(2), z: +z.z.toFixed(2), r, dur, follow: follow ? 1 : undefined, cam: z.coat ? 1 : undefined });
+    return z;
+  }
+  // his smoke (smoke, steam or sneeze) nearest at, within 12 m (Lantern Haze goes off in it)
+  herbZoneFor(p, at) {
+    const L = (p.zones || []).filter((z) => z.herb && z.until > this.time && (z.kind === 'smoke' || z.kind === 'steam' || z.kind === 'sneeze') && (z.follow || Math.hypot(z.x - at.x, z.z - at.z) <= 12));
+    return L.sort((u, v) => Math.hypot(u.x - at.x, u.z - at.z) - Math.hypot(v.x - at.x, v.z - at.z))[0] || null;
+  }
+  // every 0.5 s: the allies in it mend (and Field Hospital's and the steam's buffs are kept up); the machines in it strike
+  // softer, are Chilled (Camphor Smoke) and choke (Sneezing Powder: the swing cut short, a small machine staggers)
+  tickHerbZone(p, z, foes, inZ) {
+    const tal = p.tal || {};
+    const boost = z.kind === 'steam' && this.time - z.t0 < 4 ? 2 : 1;
+    const hp = p.power * (1 + (tal.heal || 0)) * z.coef * 0.5 * boost;
+    for (const q of this.healAllies(p, z, z.r + 0.5)) {
+      if (hp > 0) this.heal(p, q, hp * R(0.95, 1.05));
+      if (z.kind === 'steam') this.keepBuff(q, { name: 'Willowbark Steam', stat: 'speed', pct: 20, t: 0.8, dur: 0.8, icon: 'steam' });
+      if (z.kind === 'hospital') this.keepBuff(q, { name: 'Field Hospital', stat: 'armor', pct: 30, t: 0.8, dur: 0.8, hosp: z, icon: 'plant' });
+    }
+    const sneeze = z.sneeze && this.time >= z.sneezeT;
+    if (sneeze) z.sneezeT = this.time + z.sneeze;
+    for (const m of foes) {
+      if (m.dead || m.type !== 'mob' || !inZ(z, m)) continue;
+      if (z.weak) this.keepBuff(m, { name: 'Herb Smoke', stat: 'weak', pct: z.weak, t: 0.8, dur: 0.8, debuff: true, icon: 'smoke' });
+      if (z.coat && !m.buffs.some((x) => x.coat === z.coat)) this.applyCoat(p, m, z.coat, 3);
+      if (sneeze) { m.pending = null; m.swingT = Math.max(m.swingT || 0, 0.5); if (!m.def.boss && !m.def.dummy) this.addBuff(m, { name: 'Staggered', cc: 'stun', t: 0.4, dur: 0.4, debuff: true, icon: 'stun' }); this.broadcast({ k: 'sneeze', id: m.id }); }
+    }
+  }
+  // Splash Jar: the jar bursts on the ally and splashes up to n more within r m at k of the heal
+  splashHeal(p, sk, q0, amt) { const [n, r, k] = sk.splashHeal; for (const q of this.healAllies(p, q0, r).filter((x) => x !== q0).sort((x, y) => x.hp / x.maxHp - y.hp / y.maxHp).slice(0, n)) this.heal(p, q, amt * k * R(0.95, 1.05)); }
+  // Spreading Poultice: a heal over time that runs out jumps once to the most hurt ally within 12 m who has none of it
+  spreadHot(e, b) {
+    const src = this.entity(b.src);
+    if (!src || src.dead || src.type !== 'player') return;
+    const q = this.healAllies(src, e, 12).filter((x) => x !== e && !x.buffs.some((y) => y.name === b.name)).sort((x, y) => x.hp / x.maxHp - y.hp / y.maxHp)[0];
+    if (q) { this.addBuff(q, { ...b, t: b.dur, tick: 0, spread: undefined }); this.broadcast({ k: 'hsplash', id: src.id, from: e.id, to: q.id }); }
+  }
+  // a bot Herbalist on the new kit presses B in the link its last skill opened when the fusion helps the group: Bark Poultice
+  // on the one the poultice reached (or the most hurt), Field Hospital and Full Dressing when two are hurt, Willowbark Steam
+  // when two are, Lantern Haze when someone in the smoke carries a harmful effect or a machine stands in it, Bitterroot when
+  // anyone is hurt, the rest on the machine; companions 85%, volunteers 80%, the rest 60% of the time (one roll a link)
+  botHerbFuse(b, team, tgt, tal) {
+    const L = b.link, lt = L.tgt ? this.players.get(L.tgt) : null;
+    const frac = (q) => q.hp / q.maxHp, hurt = (r) => team.filter((q) => frac(q) < r).sort((x, y) => frac(x) - frac(y));
+    for (const f of Object.values(b.effFuse)) {
+      if (f.from !== L.from || f.from === 'dodge' || f.fx.some((e) => e[0] === 'dash' || e[0] === 'leap' || e[0] === 'back')) continue;
+      const B = b.eff?.[f.to];
+      if (!B || B.lvl > b.level || (b.cds[B.id] || 0) > this.time || b.res < skillCost(B, tal) + (f.extra || 0)) continue;
+      if (this.fusionOf(b, B, { target: tgt?.id }) !== f) continue;
+      const has = (k) => f.fx.some((e) => e[0] === k);
+      let want = null;
+      if (f.target === 'ally' && f.hit.kind === 'proj') { const q = lt && team.includes(lt) && frac(lt) < 0.92 ? lt : hurt(0.85)[0]; if (q) want = { skill: B.id, target: q.id }; }
+      else if (f.hit.kind === 'self' && (f.hit.r || 0) >= 8 && !has('healHurt')) { if (hurt(0.75).length >= 2 || hurt(0.45).length) want = { skill: B.id }; }
+      else if (f.target === 'ally' && has('hzone')) { const H = hurt(0.85); if (H.length >= 2) want = { skill: B.id, target: H[0].id }; }
+      else if (has('hazeSmoke')) { const z = this.herbZoneFor(b, b); if (z && (team.some((q) => Math.hypot(q.x - z.x, q.z - z.z) <= z.r && q.buffs.some((x) => x.debuff)) || [...this.mobs.values()].some((m) => !m.dead && m.threat?.size && Math.hypot(m.x - z.x, m.z - z.z) <= z.r + this.rad(m)))) want = { skill: B.id }; }
+      else if (f.target === 'enemy' && tgt && dist(b, tgt) <= (f.range || 4) + this.rad(tgt) + 0.4) { if (!has('healLowest') || hurt(0.9).length) want = { skill: B.id, target: tgt.id, gx: tgt.x, gz: tgt.z }; }
+      if (!want) continue;
+      if (b.fuseLink !== L.at) { b.fuseLink = L.at; b.fuseOk = rand() < (b.botRole === 'Volunteer' ? 0.8 : b.owner ? 0.85 : 0.6); } // (one roll a link)
+      if (!b.fuseOk) continue;
+      return want;
+    }
+    return null;
+  }
   // delayed contacts (S9 Aftershock): each fires once at its time, from where the Warden stands then
   tickDelays(p) {
     const due = p.delays.filter((d) => d.t <= this.time + 1e-6);
@@ -4408,12 +4534,14 @@ export class World {
       this.pushSelf(p);
       return;
     }
-    let a = amt * (1 - p.armorPct) * (1 - this.buffVal(p, 'armor'));
+    let a = amt * (1 - p.armorPct) * (1 - this.buffVal(p, 'armor')) * (src?.buffs ? 1 - Math.min(0.6, this.buffVal(src, 'weak')) : 1); // (S13: Bitter and the herb smoke, the machine strikes softer)
     if (rand() < this.buffVal(p, 'evade') || rand() < this.buffVal(p, 'block') * 0.9 || rand() < (p.tal?.dodge || 0)) { this.broadcast({ k: 'miss', src: src.id, tgt: p.id, text: 'Dodge' }); return; }
     if (rand() < this.buffVal(src, 'miss')) { this.broadcast({ k: 'miss', src: src.id, tgt: p.id, text: 'Miss' }); return; }
     a = Math.max(1, Math.round(a));
     if (p.absorb > 0) { const s = Math.min(p.absorb, a); p.absorb -= s; a -= s; if (a <= 0) { this.broadcast({ k: 'miss', src: src.id, tgt: p.id, text: 'Absorb' }); return; } }
     if (p.tal?.keys && p.tal.hooks.length + p.tal.keys.length) a = Math.max(1, Math.round(runKeys(this, p, 'onTaken', { src, amt: a }).amt)); // (Second Breath)
+    // (S13) Field Hospital: the first ally who would fall in it stays up at 30% (once a hospital)
+    if (a >= p.hp && p.buffs.length) { const fh = p.buffs.find((b) => b.hosp?.save > 0 && b.t > 0); if (fh) { fh.hosp.save = 0; a = Math.max(0, p.hp - Math.max(1, Math.round(p.maxHp * 0.3))); if (p.hp < p.maxHp * 0.3) p.hp = Math.round(p.maxHp * 0.3); this.broadcast({ k: 'hsave', id: p.id }); } }
     p.hp -= a;
     p.combatT = this.time;
     p.eating = 0;

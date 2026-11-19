@@ -6,7 +6,7 @@
 // Anvil Fall their own DEFs on the authored hero clips (client/game/choreo.js, 'ual'); the rest still name an existing one.
 // Imports only from shared/.
 import { SKILLS, SKILL_BY_ID } from './classes.js';
-import { KIT_V2, CORE, CORE_BY_ID, DODGES, DE_POW, RA_POW, RA_FUSE, CH_POW, CH_FUSE } from './kit.js';
+import { KIT_V2, CORE, CORE_BY_ID, DODGES, DE_POW, RA_POW, RA_FUSE, CH_POW, CH_FUSE, HB_POW, HB_FUSE, HB_HEAL } from './kit.js';
 
 export const LINK = { win: 1.0, afterLock: 0.25, tick: 0.05, grace: 0.15 }; // window from contact; never shorter than the lock + 0.25 s; one tick of grace; 0.15 s for a claimed chain
 export const MASTERY = [25, 100, 300]; // landed uses for ranks I, II, III (a Book badge; III adds the extra beat)
@@ -338,6 +338,61 @@ export const FUSIONS = {
         tags: ['heat', 'blast', 'triad'], tier: 5, choreo: 'ct_furnacedrum', hint: 'Roll something heavy into the fire.',
         carry: { c_tar: { pitchwall: { pow: 0.1 }, hottar: { pow: 0.1 } } }, ai: { role: 'burst' },
         desc: 'Roll the cask into the burning tar: it bursts over 10 m, throwing the machines up, and leaves a ring of fire burning 5 s.' }),
+    ];
+  })(),
+  // the Herbalist (combat_design_fusion.md 4.6, S13): heals in fusions. Damage x HB_POW x HB_FUSE (as the Chemist's), heals
+  // the design's own numbers x HB_HEAL. Everything is a real remedy: salve and poultice splashes in green, resin and sap
+  // hardening amber-green, herb smoke, steam off the kettle, the lantern's warm oil flame behind glass (a soft round glow,
+  // never beams or rays). hzone: [kind, heal a second, s, m] (sim.js herbZone); at: 'smoke' round his nearest smoke
+  herbalist: (() => {
+    const P = HB_POW * HB_FUSE, d = (v) => +(v * P).toFixed(3), h = (v) => +(v * HB_HEAL).toFixed(3);
+    return [
+      F('hf_barkpoultice', 'Bark Poultice', { cls: 'herbalist', icon: 'bark', from: 'h_poultice', to: 'h_salve', lvl: 5, need: 'done', cd: 12, extra: 5, target: 'ally', range: 28,
+        hit: { t: 0.45, kind: 'proj', speed: 24, arc: 0.45 }, fx: [['heal', h(2.0)], ['absorb', h(2.5), 10]], tiers: [3],
+        tags: ['shell', 'fusion'], choreo: 'hf_barkpoultice', gateText: 'Mending Poultice must reach an ally', hint: 'Something warm, then something that sets.',
+        carry: { a: { spreading: { healPow: 0.1 }, moss: { healPow: 0.15 } }, b: { splashjar: { splashHeal: [3, 4, 0.5] }, slowsalve: { healPow: 0.3 } } }, ai: { role: 'heal' },
+        desc: 'The salve is thrown straight onto the warm poultice and hardens into a shell of sap and resin: the ally mends 2.0 at once, and the shell soaks up 2.5 of the next blows for 10 s.' }),
+      F('hf_thistlenet', 'Thistle Net', { cls: 'herbalist', icon: 'dart', from: 'h_net', to: 'h_dart', lvl: 7, need: 'hit', cd: 12, extra: 5, range: 24,
+        hit: { t: 0.2, kind: 'proj', speed: 50, n: 5, gap: 0.09 }, fx: [['dmg', d(0.5)], ['weak', 20, 6], ['sap', 1], ['brk', 6]], tiers: [1, 1, 1, 1, 3],
+        tags: ['dart', 'fusion'], choreo: 'hf_thistlenet', gateText: 'Snare Net must strike a machine', hint: 'A held machine is an easy mark.',
+        carry: { a: { weighted: { pow: 0.1 }, widenet: { splash: 3 } } }, ai: { role: 'burst' },
+        desc: 'Five thistle darts pepper the netted machine one after another: each stores Sap, and the bitter sting leaves it striking 20% softer for 6 s.' }),
+      F('hf_bitterroot', 'Bitterroot Tincture', { cls: 'herbalist', icon: 'potion', from: 'h_dart', to: 'h_salve', step: 3, lvl: 9, need: 'hit', cd: 10, extra: 5, range: 24,
+        hit: { t: 0.42, kind: 'proj', speed: 24, arc: 0.5 }, fx: [['dmg', d(0.8)], ['healLowest', 15, h(2.1)], ['brk', 12]], tiers: [3],
+        tags: ['throw', 'remedy', 'heal', 'fusion'], choreo: 'hf_bitterroot', gateText: 'The third Nettle Dart must land', hint: 'A remedy can sting the right patient.',
+        carry: { b: { splashjar: { splashHeal: [3, 4, 0.5] }, slowsalve: { healPow: 0.3 } } }, ai: { role: 'heal' },
+        desc: 'The salve is thrown at the machine instead, bitter and stinging: it is struck, and the most hurt ally within 15 m is washed with what splashes back (2.1).' }),
+      F('hf_lanternhaze', 'Lantern Haze', { cls: 'herbalist', icon: 'lantern', from: 'h_smoke', to: 'h_lantern', lvl: 12, need: 'done', cd: 18, extra: 5, target: 'self', range: 0, selfDone: true,
+        hit: { t: 0.45, kind: 'aoe', at: 'smoke', r: 6 }, fx: [['hazeSmoke', 3, h(1.0)], ['debuff', 'miss', 50, 3], ['stagger', 1.2], ['brk', 30]], tiers: [3],
+        tags: ['lantern', 'smoke', 'fusion'], choreo: 'hf_lanternhaze', gateText: 'Calming Smoke must go down', hint: 'A lamp held into the smoke.',
+        carry: { a: { camphor: { healPow: 0.15 }, drifting: { healPow: 0.15 } } }, ai: { role: 'heal' },
+        desc: 'The lantern is held into your smoke and the smoke takes its warm light from inside: every ally in it is rid of every harmful effect and mends 1.0, and every machine in it staggers and is blinded for 3 s (half its swings miss).' }),
+      F('hf_willowsteam', 'Willowbark Steam', { cls: 'herbalist', icon: 'steam', from: 'h_salve', to: 'h_smoke', lvl: 15, need: 'done', cd: 18, extra: 5, target: 'ally', range: 20,
+        hit: { t: 0.6, kind: 'aoe', at: 'target', r: 6 }, fx: [['hzone', 'steam', h(0.4), 8, 6]], zoneWeak: 15, tiers: [3],
+        tags: ['steam', 'zone', 'fusion'], choreo: 'hf_willowsteam', gateText: 'Soothing Salve must reach an ally', hint: 'Salve on a hot pot.',
+        carry: { b: { camphor: { camphor: 1 }, drifting: { zoneFollow: true } } }, ai: { role: 'heal' },
+        desc: 'The salve goes onto the hot smoke pot and it boils over into willowbark steam: for 8 s allies in it mend twice as fast for the first 4 s (0.8 a second) and run 20% faster; machines in it strike 15% softer.' }),
+      F('hf_fieldhospital', 'Field Hospital', { cls: 'herbalist', icon: 'plant', from: 'h_lantern', to: 'h_remedy', lvl: 18, need: 'done', cd: 50, extra: 10, target: 'self', range: 0, cast: 0.3,
+        hit: { t: 0.7, kind: 'self', r: 8 }, fx: [['heal', h(1.0)], ['hzone', 'hospital', h(0.6), 8, 8]], tiers: [5],
+        tags: ['plant', 'zone', 'fusion'], choreo: 'hf_fieldhospital', gateText: 'Lantern Flash must open', hint: 'Hang the light where the wounded are.',
+        carry: {}, ai: { role: 'heal' },
+        desc: 'The staff is planted at a slant with the lantern hung from it and the remedies set out around it: for 8 s allies within 8 m mend 0.6 a second and take 30% less, and the first of them who would fall there stays up at 30% (once).' }),
+      F('hf_sneezing', 'Sneezing Powder', { cls: 'herbalist', icon: 'powder', from: 'h_net', to: 'h_smoke', tree: 'sneezing_powder', need: 'hit', cd: 18, extra: 5, range: 20,
+        hit: { t: 0.6, kind: 'aoe', at: 'target', r: 6 }, fx: [['dmg', d(0.4)], ['hzone', 'sneeze', h(0.4), 8, 6], ['brk', 20]], zoneWeak: 15, sneeze: 2, tiers: [3],
+        tags: ['smoke', 'powder', 'fusion'], choreo: 'hf_sneezing', gateText: 'Snare Net must strike a machine', hint: 'Pepper in the smoke.',
+        carry: { a: { weighted: { pow: 0.1 }, widenet: { r: 1.2 } }, b: { camphor: { camphor: 1 }, drifting: { zoneFollow: true } } }, ai: { role: 'control' },
+        desc: 'The smoke pot goes down on the netted machine packed with ground pepper and dried thistle: for 8 s every machine in it chokes on it, its swing cut short every 2 s, while allies in it mend 0.4 a second.' }),
+      F('hf_swiftroot', 'Swiftroot Toss', { cls: 'herbalist', move: true, icon: 'swift', from: 'dodge', to: 'h_salve', tree: 'swiftroot', need: 'dodge', cd: 14, extra: 5, target: 'self', range: 0, selfDone: true,
+        hit: { t: 0.25, kind: 'self', r: 15 }, fx: [['healHurt', 2, h(2.0), 30, 4]], tiers: [3],
+        tags: ['throw', 'remedy', 'heal', 'fusion'], choreo: 'hf_swiftroot', gateText: 'Come out of a Staff Hop', hint: 'Throw from the top of the hop.',
+        carry: { b: { splashjar: { healPow: 0.1 }, slowsalve: { healPow: 0.2 } } }, ai: { role: 'heal' },
+        desc: 'At the top of the hop two jars of swiftroot salve go out to the two most hurt allies within 15 m: each mends 2.0 and runs 30% faster for 4 s.' }),
+      // the triad (a deep tree notable): Bark Poultice > Grand Remedy
+      F('ht_fulldressing', 'Full Dressing', { cls: 'herbalist', icon: 'bark', from: 'hf_barkpoultice', to: 'h_remedy', tree: 'full_dressing', need: 'done', triad: true, cd: 50, extra: 10, target: 'self', range: 0, cast: 0.3,
+        hit: { t: 0.7, kind: 'self', r: 15 }, fx: [['heal', h(3.0)], ['absorb', h(2.5), 10]], tier: 5,
+        tags: ['plant', 'shell', 'triad'], choreo: 'ht_fulldressing', hint: 'Every wound bound at once.',
+        carry: {}, ai: { role: 'heal' },
+        desc: 'The staff is planted and the kettle loosed over the whole group: every ally within 15 m mends 3.0 and is bound in a shell of sap and resin that soaks up 2.5 for 10 s.' }),
     ];
   })(),
 };

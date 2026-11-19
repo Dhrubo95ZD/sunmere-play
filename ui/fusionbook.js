@@ -13,13 +13,14 @@ import { skillIcon } from './icons.js';
 import { DODGE_ICON, pinsOf, setPin, pinnable } from './combathud.js';
 import { IS_TOUCH } from '../engine/platform.js';
 
-// the recorded previews that exist (one per Knight, Sandblade, Warden, Deadeye, Ranger and Chemist fusion)
+// the recorded previews that exist (one per fusion of every class)
 const PREVIEWS = new Set(['kf_stormfall', 'kf_highledger', 'kf_kingsfall', 'kf_pierce', 'kf_battering', 'kf_upheaval', 'kf_riposte', 'kf_sidewind', 'kt_anvilfall',
   'sf_sandspout', 'sf_glasscutter', 'sf_sirocco', 'sf_dustwhirl', 'sf_thousand', 'sf_riptide', 'sf_sandline', 'sf_whiteout', 'st_sandstorm', // (S8: the Sandblade's, tools/shots/combat/s8)
   'wf_colossus', 'wf_piledriver', 'wf_bastion', 'wf_faultline', 'wf_triphammer', 'wf_earthbreaker', 'wf_breakwater', 'wf_intercept', 'wt_hammerfall', // (S9: the Warden's, tools/shots/combat/s9)
   'df_recoilvault', 'df_overhead', 'df_platesplitter', 'df_chainshot', 'df_pointblank', 'df_broadside', 'df_slideshot', 'df_lastround', 'dt_fallingstorm', // (S10: the Deadeye's, tools/shots/combat/s10)
   'rf_highwire', 'rf_rolling', 'rf_tripwire', 'rf_ridgeline', 'rf_ricochet', 'rf_cloudburst', 'rf_springsnare', 'rf_longdraw', 'rt_closedground', // (S11: the Ranger's, tools/shots/combat/s11)
-  'cf_tarfire', 'cf_corrosive', 'cf_thermalshock', 'cf_pitchvault', 'cf_flashsteam', 'cf_chainreaction', 'cf_blastvault', 'cf_galvanic', 'ct_furnacedrum']); // (S12: the Chemist's, tools/shots/combat/s12)
+  'cf_tarfire', 'cf_corrosive', 'cf_thermalshock', 'cf_pitchvault', 'cf_flashsteam', 'cf_chainreaction', 'cf_blastvault', 'cf_galvanic', 'ct_furnacedrum', // (S12: the Chemist's, tools/shots/combat/s12)
+  'hf_barkpoultice', 'hf_thistlenet', 'hf_bitterroot', 'hf_lanternhaze', 'hf_willowsteam', 'hf_fieldhospital', 'hf_sneezing', 'hf_swiftroot', 'ht_fulldressing']); // (S13: the Herbalist's, tools/shots/combat/s13)
 const ROMAN = ['', 'I', 'II', 'III'];
 const icoOf = (id, cls) => (id === 'dodge' ? DODGE_ICON : skillIcon(skillOf(id) || { id }));
 const nameOf = (id, cls) => (id === 'dodge' ? DODGES[cls]?.name || 'Dodge' : skillOf(id)?.name || id);

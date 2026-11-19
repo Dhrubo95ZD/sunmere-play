@@ -291,6 +291,67 @@ export const KEYSTONES = {
     onCompile(rec) { if (rec.id === 'c_acid' && rec.step === 3) { rec.was = rec.was || rec.name; rec.name = 'Mix'; rec.mix = true; } return rec; },
   },
 
+  // ------------------------------------------------------------------ Herbalist (combat_design_fusion.md 4.6, combat_design.md 5.7, S13)
+  // Bitter Medicine: every heal of his also stings the machines within 4 m of the one healed for 30% of it (sim.js heal reads
+  // tal.bitterMed); his healing is 15% weaker. Grand Remedy becomes Bitter Remedy (its steam scalds the machines in it)
+  bitter_medicine: {
+    name: 'Bitter Medicine', cls: 'herbalist',
+    desc: 'Every heal of yours also stings the machines within 4 m of the one you heal, for 30% of the heal. Grand Remedy becomes Bitter Remedy.',
+    price: 'Your healing is 15% weaker.',
+    mods: { bitterMed: 0.3, heal: -0.15 },
+    renames: { h_remedy: { name: 'Bitter Remedy', fx: 'bitter' } },
+  },
+  // Overflowing: what a heal of his would waste on a full ally becomes a shell (sim.js heal, tal.overflow: up to 30% of the
+  // ally's health); his heals over time are 20% weaker
+  overflowing: {
+    name: 'Overflowing', cls: 'herbalist',
+    desc: 'What a heal of yours would waste on an ally already whole hardens into a shell of sap on them, up to 30% of their health.',
+    price: 'Your heals over time are 20% weaker.',
+    mods: { overflow: 0.3 },
+    onCompile(rec) { fxMul(rec, 'hot', 0.8); return rec; },
+  },
+  // Brawling Healer (combat_design_fusion.md 4.6): Nettle Dart becomes Staff Flurry, a three-step string with the staff in
+  // melee reach, each blow mending every ally within 15 m by 0.2; every heal costs 20% more
+  brawling_healer: {
+    name: 'Brawling Healer', cls: 'herbalist',
+    desc: 'Nettle Dart becomes Staff Flurry: three quick blows of the staff at arm\'s length, harder than the darts, and each blow that lands mends every ally within 15 m a little.',
+    price: 'Every heal costs 20% more Herbs.',
+    onCompile(rec) {
+      if (rec.id === 'h_dart') {
+        rec.was = rec.was || rec.name; rec.name = 'Staff Flurry'; rec.range = 3.5; rec.move = false;
+        rec.hit = { t: [0.24, 0.22, 0.3][(rec.step || 1) - 1], kind: 'melee' };
+        fxMul(rec, 'dmg', 1.6);
+        rec.fx = [...rec.fx.filter((e) => e[0] !== 'sap'), ['healParty', 0.2, 15]];
+        rec.tags = rec.tags.filter((t) => t !== 'dart' && t !== 'shot'); addTag(rec, 'strike'); addTag(rec, 'blunt');
+        rec.formChoreo = ['h_sweep', 'h_flurry', 'h_uproot'][(rec.step || 1) - 1];
+        return rec;
+      }
+      if (has(rec, 'heal') || has(rec, 'shell')) rec.cost = Math.round((rec.cost || 0) * 1.2);
+      return rec;
+    },
+  },
+  // Battle Medic (combat_design.md 5.7): every Nettle Dart that lands mends the most hurt ally within 12 m by 15% of its
+  // blow; every heal costs 20% more
+  battle_medic: {
+    name: 'Battle Medic', cls: 'herbalist',
+    desc: 'Every Nettle Dart that strikes mends the most hurt ally within 12 m for 15% of the blow.',
+    price: 'Every heal costs 20% more Herbs.',
+    onCompile(rec) { if ((has(rec, 'heal') || has(rec, 'shell')) && rec.id !== 'h_dart') rec.cost = Math.round((rec.cost || 0) * 1.2); return rec; },
+    onHit(w, p, ctx) {
+      if (ctx.sk?.id !== 'h_dart' || !w?.healAllies || !(ctx.amt > 0)) return;
+      const q = w.healAllies(p, p, 12).filter((x) => x.hp < x.maxHp).sort((x, y) => x.hp / x.maxHp - y.hp / y.maxHp)[0];
+      if (q) w.heal(p, q, ctx.amt * 0.15);
+    },
+  },
+  // Grove Keeper (combat_design.md 5.7): every direct heal leaves a small herb patch at the ally's feet (0.1 a second for 4 s,
+  // sim.js herbZone 'patch'; two at most); his healing is 15% weaker
+  grove_keeper: {
+    name: 'Grove Keeper', cls: 'herbalist',
+    desc: 'Every direct heal of yours leaves a small patch of crushed herbs at the ally\'s feet that mends whoever stands on it 0.1 a second for 4 s (two patches at most).',
+    price: 'Your healing is 15% weaker.',
+    mods: { grove: 0.1, heal: -0.15 },
+  },
+
   // ------------------------------------------------------------------ Common Ground (4.4)
   chainwork: {
     name: 'Chainwork', cls: 'common', desc: 'A landed fusion opens a 0.8 s link: the next core skill is an Encore, 25% stronger with a heavy stop.',

@@ -29,6 +29,14 @@ export const TREE_BUILDS = {
     { id: 'forge', name: 'The Forge', desc: 'A hot hammer: Forge-Heated Head, Steam Plate, Bedrock, Iron Weight and the Common Ground weight.',
       want: ['w_presence', 'wf_form_charge', 'wf_form_split', 'w_steamplate', 'w_bedrock', 'forge_head', 'w_fortify', 'wf_form_blow', 'w_ironskin', 'cg_thick'] },
   ],
+  herbalist: [
+    { id: 'mender', name: 'Field Mender', desc: 'Heals for the whole group: Restorative Tonic, Splash Jar or Slow Salve, Willowbark, Antidote, Rejuvenating Brew, Full Dressing and the fusion power of the Common Ground.',
+      want: ['h_tonic', 'hf_form_salve', 'h_antidote', 'hf_form_poultice', 'h_brew', 'h_willowbark', 'full_dressing', 'swiftroot', 'cg_follow', 'h_fieldhands'] },
+    { id: 'smoke', name: 'Smoke and Pepper', desc: 'The smoke pot first: Camphor, Camphor Smoke or Drifting Smoke, the Snare Net Form, Bitter Leaves, Sneezing Powder and Grove Keeper.',
+      want: ['h_camphor', 'hf_form_smoke', 'hf_form_net', 'h_bitterleaves', 'sneezing_powder', 'h_tonic', 'hf_form_salve', 'grove_keeper', 'h_brew'] },
+    { id: 'brawler', name: 'Bitter Medicine', desc: 'A healer in the fight: Field Hands, Bitter Leaves, the Snare Net Form, Battle Medic, Bitter Medicine and Willowbark.',
+      want: ['h_fieldhands', 'h_bitterleaves', 'hf_form_net', 'battle_medic', 'h_tonic', 'hf_form_salve', 'h_willowbark', 'bitter_medicine', 'sneezing_powder'] },
+  ],
   chemist: [
     { id: 'board', name: 'Set the Board', desc: 'Puddles and fire: Measured Pours, Hot Tar or Pitch Wall, Spark Gap, Catalyst, the Furnace Cask and Closed Lab, with the fusion power of the Common Ground.',
       want: ['c_measured', 'cf_form_acid', 'c_sparkgap', 'cf_form_tar', 'live_rod', 'c_catalyst', 'blast_vault', 'c_heavycask', 'furnace_cask', 'cg_follow'] },

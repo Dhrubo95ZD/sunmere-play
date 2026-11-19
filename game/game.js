@@ -497,6 +497,15 @@ export async function startGame() {
       // machine to machine, a held draw let go
       // the Chemist (S12): his puddles and clouds (a carried one follows him: Closed Lab), bombs lying with a burning fuse and their
       // bursts, Chain Reaction's pops, Spark Gear's and Galvanic Arc's arcs from machine to machine, Bitter Draught, Unstable Stock
+      // the Herbalist (S13): his herb zones (smoke, steam, pepper, Field Hospital, herb patches; a carried one follows him: Drifting
+      // Smoke), Lantern Haze lighting a smoke, a remedy's drops flying to the ally (Bitterroot, Swiftroot, Spreading Poultice), Field
+      // Hospital holding up an ally who would fall, a machine choking in Sneezing Powder
+      case 'hzone': { const own = ev.id === me ? local : entities.get(ev.id); fx.herbZone?.(ev, ev.follow && own ? () => own.pos : null); break; }
+      case 'hzoneEnd': fx.herbZoneEnd?.(ev.zid); break;
+      case 'hhaze': fx.herbHaze?.(ev); break;
+      case 'hsplash': { const ent = (id) => (id === me ? local : entities.get(id)); const a = ent(ev.from), b = ent(ev.to); if (a && b) fx.herbSplash?.(a.pos, b.pos); break; }
+      case 'hsave': { const v = ev.id === me ? local : entities.get(ev.id); if (v) { fx.emit('steam', v.pos.clone().setY(v.pos.y + 1.0), { n: 6, size: 0.9, alpha: 0.35, color: '#eef2ee' }); fx.emit('flecks', v.pos.clone().setY(v.pos.y + 1.2), { n: 10, color: '#c8a040' }); fx.sound('crack'); } break; }
+      case 'sneeze': { const v = entities.get(ev.id); if (v) { fx.emit('dust', v.pos.clone().setY(v.pos.y + 1.4), { n: 5, size: 0.6, color: '#c8b87a' }); v.flinch?.(0.25); } break; }
       case 'czone': { const own = ev.id === me ? local : entities.get(ev.id); fx.chemZone?.(ev, ev.follow && own ? () => own.pos : null); break; }
       case 'czoneEnd': fx.chemZoneEnd?.(ev.zid); break;
       case 'bomb': { const on = ev.on ? entities.get(ev.on) : null; fx.bombPlace?.(ev, on ? () => on.pos : null); break; }

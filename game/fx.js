@@ -334,6 +334,10 @@ function itemMesh(item) {
       b.add(sphere(0.02, 6, 4), 'wGlowAmber', { p: [0, 0.09, 0], c: 0xffffff });
       break;
     case 'bandage': b.add(cyl(0.05, 0.05, 0.06, 12), 'wCloth', { r: [0, 0, Math.PI / 2], c: '#efe6d0' }); break;
+    // (S13) the Herbalist's kit: a stoppered clay remedy jar, a linen poultice pad tied with twine, the clay smoke pot (nothing self-lit)
+    case 'remedyjar': b.add(lathe([[0.001, -0.05], [0.045, -0.048], [0.055, -0.01], [0.045, 0.03], [0.025, 0.045], [0.028, 0.06], [0.001, 0.06]], 10), 'wWood', { c: '#9a7a52' }); b.add(cyl(0.022, 0.022, 0.02, 8), 'wCloth', { p: [0, 0.065, 0], c: '#d8ccb0' }); break;
+    case 'poulticepad': b.add(box(0.11, 0.04, 0.09), 'wCloth', { c: '#d8d0b4' }); b.add(box(0.012, 0.045, 0.095), 'wCloth', { c: '#7a6a4a' }); break;
+    case 'smokepot': b.add(lathe([[0.001, -0.06], [0.06, -0.055], [0.075, -0.01], [0.065, 0.04], [0.045, 0.06], [0.001, 0.06]], 12), 'wWood', { c: '#7a5232' }); b.add(cyl(0.05, 0.05, 0.012, 10), 'wDark', { p: [0, 0.062, 0], c: '#4a4a3a' }); break;
     case 'seedpod': b.add(lumpy(ico(0.07, 1), 0.015, 20, 3), 'wWood', { c: '#7a5a2a' }); break;
     case 'cup': b.add(lathe([[0.001, 0], [0.04, 0], [0.05, 0.07], [0.045, 0.075], [0.001, 0.01]], 12), 'wWood', { c: '#8a6a3a' }); break;
     // the Deadeye's kit: a flat brass powder flask, a ramrod, a paper cartridge, a chalk pellet, an iron ball, two balls on
@@ -441,7 +445,9 @@ export class FX {
     const mark = mk((x) => { const g = x.createRadialGradient(128, 128, 10, 128, 128, 96); g.addColorStop(0, 'rgba(255,110,70,0.35)'); g.addColorStop(1, 'rgba(255,90,60,0)'); x.fillStyle = g; x.beginPath(); x.arc(128, 128, 96, 0, Math.PI * 2); x.fill(); x.strokeStyle = 'rgba(255,90,60,0.95)'; x.lineWidth = 12; x.beginPath(); x.arc(128, 128, 100, 0, Math.PI * 2); x.stroke(); });
     // (S12) rime: pale, uneven blotches of frost and cold salts (Cold Chemistry's frost, Thermal Shock)
     const rime = mk((x) => { blotchy(x, 10, 44, 36, 78, '226,240,250', 0.32); blotchy(x, 6, 26, 16, 36, '246,252,255', 0.4); });
-    return { crack, crater, scorch, smudge, tar, mark, rime };
+    // (S13) a patch of crushed herbs and leaves on the ground (uneven, never a disc)
+    const leafpatch = mk((x) => { blotchy(x, 9, 48, 18, 44, '84,118,52', 0.42); blotchy(x, 6, 40, 10, 24, '122,104,58', 0.35); });
+    return { crack, crater, scorch, smudge, tar, mark, rime, leafpatch };
   }
 
   ground(p) { return this.heightAt(p.x, p.z); }
@@ -797,6 +803,66 @@ export class FX {
       this.after(0.06 * (i - 1) + 0.01, null, () => { this.arc(a, b, galv ? '#b8e4ff' : '#dcecff', 0.28, false); this.emit('sparks', b, { n: 8, dir: V(0, -1, 0), color: '#e8f4ff' }); });
     }
   }
+  // ---- the Herbalist (S13): his herb zones ({k:'hzone'}): smoke a low grey-green bank of herb smoke (Camphor: rime-pale), steam
+  // white willowbark steam rising, sneeze grey-yellow pepper powder, patch crushed herbs at a healed ally's feet, hospital (Field
+  // Hospital) four to six remedy jars set out unevenly round the staff with steam off each and leaf patches between, never
+  // one round glow under a post. Lantern Haze ({k:'hhaze'}) lights a smoke from inside with soft warm puffs (no beams).
+  herbZone(ev, follow) {
+    const Z = (this._hz ||= new Map());
+    Z.get(ev.zid)?.stop();
+    const at = V(ev.x, 0, ev.z); at.y = this.ground(at);
+    const centre = () => { if (follow) { const q = follow(); if (q) at.set(q.x, this.heightAt(q.x, q.z), q.z); } return at; };
+    const pick = (k = 0.92) => { const c = centre(), a = r(0, 6.28), d = Math.sqrt(rnd()) * ev.r * k; const p = V(c.x + Math.cos(a) * d, 0, c.z + Math.sin(a) * d); p.y = this.ground(p) + 0.08; return p; };
+    const kind = ev.kind, dur = Math.max(0.5, ev.dur || 4), jars = [];
+    if (kind === 'patch') this.decal('leafpatch', at.clone(), ev.r, dur);
+    if (kind === 'hospital') {
+      const n = 4 + Math.floor(rnd() * 3);
+      for (let i = 0; i < n; i++) {
+        const a = (i / n) * 6.28 + r(-0.5, 0.5), d = ev.r * r(0.25, 0.75), p = V(at.x + Math.cos(a) * d, 0, at.z + Math.sin(a) * d); p.y = this.ground(p) + 0.05;
+        const m = itemMesh(i % 2 ? 'remedyjar' : 'smokepot'); m.position.copy(p); m.rotation.y = r(0, 6.28); m.scale.setScalar(3); this.scene.add(m); jars.push({ m, p });
+        if (i < 3) this.decal('leafpatch', p.clone().add(V(r(-1, 1), 0, r(-1, 1))), r(1.2, 2.0), dur);
+      }
+      this.sound('hiss');
+    }
+    if (kind === 'smoke' || kind === 'sneeze' || kind === 'steam') { this.cloud(kind === 'steam' ? 'willowsteam' : kind === 'sneeze' ? 'pepper' : 'herbsmoke', at.clone(), Math.min(ev.r, 4), 0.2); this.sound('puff'); }
+    if (kind === 'steam') this.sound('hiss');
+    const rate = { smoke: 9, sneeze: 9, steam: 12, patch: 1.5, hospital: 0 }[kind] ?? 6;
+    let acc = 0, jt = 0;
+    const e = this.after(dur, (k, t, dt) => {
+      acc += dt * rate * (follow ? 0.7 : 1) * (GFX.mobile ? 0.45 : 1);
+      while (acc > 1) {
+        acc--;
+        const p = pick();
+        if (kind === 'smoke' || kind === 'sneeze') this.alpha.spawn({ pos: p.setY(p.y + r(0.1, 0.7)), vel: V(r(-0.3, 0.3), r(0.03, 0.2), r(-0.3, 0.3)), age: 0, life: r(1.6, 2.6), size: r(1.4, 2.2), tex: TEX.puff, drag: 1.2, alpha: kind === 'sneeze' ? 0.42 : 0.36, grow: 1.2, spin: r(-0.4, 0.4), rot: r(0, 6), color: col(kind === 'sneeze' ? '#c8b87a' : ev.cam ? '#d8e4e8' : rnd() < 0.5 ? '#9aa48a' : '#8a9480'), fadeIn: 0.3 });
+        else if (kind === 'steam') this.emit('steam', p, { n: 1, size: 1.2, alpha: 0.32, speed: 0.9, color: '#eef2ec' });
+        else if (kind === 'patch') this.emit('steam', p, { n: 1, size: 0.5, alpha: 0.22, speed: 0.4, color: '#e4efe0' });
+      }
+      if (jars.length) { jt += dt * (GFX.mobile ? 3 : 6); while (jt > 1) { jt--; const j = jars[Math.floor(rnd() * jars.length)]; this.emit('steam', j.p.clone().setY(j.p.y + 0.2), { n: 1, size: 0.6, alpha: 0.3, speed: 0.8, color: '#eef2ee' }); } }
+    }, () => { for (const j of jars) this.scene.remove(j.m); Z.delete(ev.zid); });
+    Z.set(ev.zid, { e, at: () => centre().clone(), r: ev.r, stop: () => { e.t = e.dur; } });
+  }
+  herbZoneEnd(zid) { this._hz?.get(zid)?.stop(); }
+  // Lantern Haze: the smoke lit warm from inside for dur (soft additive puffs low in it and one soft light; no beams)
+  herbHaze(ev) {
+    const z = ev.zid ? this._hz?.get(ev.zid) : null;
+    if (z && ev.dur) z.e.dur = Math.max(z.e.dur, z.e.t + ev.dur);
+    const c = () => (z ? z.at() : V(ev.x, this.heightAt(ev.x, ev.z), ev.z)), R = ev.r || 5;
+    if (!(this._fb && (this.clockT || 0) <= this._fb.until)) this.fuseBudget(0.2);
+    this.light(c().setY(c().y + 1.2), '#ffbf78', 9, Math.min(1.5, ev.dur || 1), 12, true);
+    let acc = 0;
+    this.after(ev.dur || 2, (k, t, dt) => {
+      acc += dt * (GFX.mobile ? 6 : 12);
+      while (acc > 1) { acc--; const o = c(), a = r(0, 6.28), d = Math.sqrt(rnd()) * R * 0.85; const p = V(o.x + Math.cos(a) * d, 0, o.z + Math.sin(a) * d); p.y = this.ground(p) + r(0.3, 1.1); this.add.spawn({ pos: p, vel: V(r(-0.2, 0.2), r(0.05, 0.25), r(-0.2, 0.2)), age: 0, life: r(0.9, 1.5), size: r(1.2, 2.0) * (1 - k * 0.3), tex: TEX.puff, alpha: 0.16, grow: 1.1, rot: r(0, 6), color: col('#ffc27a'), fadeIn: 0.3 }); }
+    });
+    this.sound('fire');
+  }
+  // Bitterroot Tincture, Swiftroot Toss and Spreading Poultice: drops of the remedy flying in an arc from one to the other
+  // (water drops, not motes)
+  herbSplash(a, b) {
+    const A = a.clone().setY(a.y + 1.2), B = b.clone().setY(b.y + 1.0);
+    for (let i = 0; i < 7; i++) this.after(0.03 * i + 0.01, null, () => { const m = itemMesh('remedyjar'); m.scale.setScalar(0.25); this.projectile(m, A.clone().add(V(r(-0.2, 0.2), r(-0.1, 0.2), r(-0.2, 0.2))), B.clone().add(V(r(-0.3, 0.3), r(-0.1, 0.3), r(-0.3, 0.3))), { time: 0.35, arc: 0.8, spin: 4, onHit: (q) => this.emit('drops', q, { n: 4, color: '#7ed05a' }) }); });
+    this.after(0.4, null, () => this.impact('remedy', b.clone()));
+  }
   fuseBudget(dur) { const cap = GFX.mobile ? 8 : 18; this._fb = { until: (this.clockT || 0) + dur + 1, left: cap, cap }; }
   rocks(pos, n = 10, power = 1) {
     const fb = this._fb && (this.clockT || 0) <= this._fb.until ? this._fb : null;
@@ -978,6 +1044,8 @@ export class FX {
       gunsmoke: { color: '#9a948a', alpha: 0.72, size: 2.7, low: true, dens: 1.6 },
       // the Chemist's Flash Steam (S12): a big rolling white steam cloud, no glow
       steam: { color: '#eef3f5', alpha: 0.62, size: 2.3, dens: 1.5 },
+      // the Herbalist (S13): a low grey-green bank of herb smoke, white willowbark steam rising, grey-yellow pepper powder (no glow)
+      herbsmoke: { color: '#9aa48a', alpha: 0.45, size: 2.0, low: true }, willowsteam: { color: '#eef2ec', alpha: 0.45, size: 1.9 }, pepper: { color: '#c8b87a', alpha: 0.55, size: 1.2, low: true },
     }[kind] || { color: '#888', alpha: 0.5, size: 1.4 };
     const dir = o.dir;
     let acc = 0;
@@ -1172,6 +1240,15 @@ export class FX {
         this.sound('heal');
         break;
       }
+      // (S13) the Herbalist's remedies: a green splash of salve with a little warm steam and a few leaves (no motes, no ring);
+      // a warm poultice settling in steam; the sap shell hardening (amber-green resin flecks, a crackle); a stinging splash on a
+      // machine; a nettle dart's thorn puff; the smoke pot landing; the pepper pot bursting in grey-yellow powder
+      case 'remedy': case 'remedyfoe': this.emit('drops', up, { n: kind === 'remedyfoe' ? 26 : 18, color: '#7ed05a' }); this.emit('drops', up, { n: 6, color: '#c8e8a8' }); this.emit('steam', up, { n: 3, color: '#e4efe0', alpha: 0.3, size: 0.9, speed: 0.6 }); this.emit('leaves', up, { n: 4, color: '#7aa848' }); this.sound('splat'); if (kind === 'remedyfoe') this.sound('glass'); break;
+      case 'warmpoultice': this.emit('steam', up, { n: 6, color: '#ecf2e6', alpha: 0.35, size: 1.0, speed: 0.5 }); this.emit('leaves', up, { n: 6, color: '#7aa848' }); this.emit('drops', up, { n: 8, color: '#8ed06a' }); this.sound('splat'); break;
+      case 'shell': this.emit('drops', up, { n: 14, color: '#7ed05a' }); this.emit('flecks', up, { n: 16, color: '#c8a040' }); this.emit('flecks', up, { n: 8, color: '#8aa848' }); this.emit('steam', up, { n: 3, alpha: 0.28, size: 0.8, speed: 0.4 }); this.sound('crack'); this.sound('splat'); break;
+      case 'thorn': this.emit('dust', up, { n: 3, size: 0.4, color: '#8a9a5a' }); this.emit('leaves', up, { n: 2, color: '#6a8a3a' }); this.sound('hit'); break;
+      case 'potland': this.emit('dust', at, { n: 6, size: 0.6 }); this.emit('smoke', up, { n: 4, size: 0.8, alpha: 0.4, color: '#9aa48a' }); this.sound('thud'); break;
+      case 'pepperpot': this.emit('dust', up, { n: 14, size: 0.9, color: '#c8b87a' }); this.emit('shards', up, { n: 6, color: '#8a6a4a' }); this.sound('glass'); this.sound('puff'); break;
       case 'bark': case 'sap': this.emit('motes', pos.clone().setY(g), { n: 24, color: '#ffc860', r: 0.6 }); this.emit('glow', up, { size: 2, color: '#ffb040', alpha: 0.5 }); this.sound('heal'); break;
       case 'elixir': this.emit('drops', up.clone().setY(up.y + 2), { n: 30, color: '#9adcff', additive: true }); this.emit('flash', up.clone().setY(up.y + 2), { size: 3, color: '#c0f0ff' }); this.sound('glass'); break;
       case 'mark': { const d = this.decal('mark', pos, 1.3, 2.2); this.emit('flash', up, { size: 1.6, color: '#ff7050' }); break; }
@@ -1730,6 +1807,10 @@ export class FX {
       case 'lanternFlare': { const p = () => ctx.animator.weaponPoint('R', 1.2); this.light(p(), '#a8ff6a', 14, ev.dur || 1, 14); let acc = 0; this.after(ev.dur || 1, (k, t, dt) => { acc += dt * 30; while (acc > 1) { acc--; this.emit('motes', p(), { n: 1, color: '#c8ff9a', r: 0.2 }); } this.emit('glow', p(), { size: 2.5 * (1 - k * 0.5), color: '#c8ff8a', life: 0.06, alpha: 0.6 }); }); break; }
       case 'petals': { const c = feet(); this.emit('petals', c, { n: ev.n || 100 }); this.emit('motes', c, { n: 60, color: '#e8ffd0', r: 3 }); break; }
       case 'spinGear': break;
+      // (S13) the Herbalist's kettle-lantern: the oil flame behind the glass flares up warm when the shutter opens (one soft
+      // round glow sprite at the glass and one warm light; no beams, rays or rings), and the kettle under it vents steam
+      case 'lanternGlow': { const p = () => ctx.animator.weaponPoint('R', 1.2); this.light(p(), '#ffb868', ev.big ? 12 : 7, ev.dur || 0.6, ev.big ? 12 : 8, true); this.after(ev.dur || 0.6, (k) => this.emit('glow', p(), { size: (ev.big ? 1.6 : 1.1) * (1 - k * 0.4), color: '#ffcf8a', life: 0.06, alpha: 0.5 })); break; }
+      case 'kettleSteam': { let acc = 0; this.after(ev.dur || 1, (k, t, dt) => { acc += dt * 22; while (acc > 1) { acc--; this.emit('steam', ctx.animator.weaponPoint('R', 1.15).add(V(r(-0.1, 0.1), 0.1, r(-0.1, 0.1))), { n: 1, size: 0.6, alpha: 0.32, speed: 0.7, color: '#eef2ee' }); } }); break; }
       // (S12) the Chemist: an arc from the rod's gear to the machine (Spark Gear, Tarfire's spark ribbon down into the puddle:
       // ev.ground), and a smoke ribbon behind the hero in the air (Blast Vault)
       case 'rodArc': { const t = tgt(); t.y = ev.ground ? this.ground(t) + 0.15 : Math.max(t.y + 1.1, this.ground(t) + 1); this.arc(where('rod'), t, ev.color || '#dcecff', ev.dur || 0.25, false); break; }
