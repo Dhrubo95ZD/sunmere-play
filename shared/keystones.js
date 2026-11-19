@@ -96,6 +96,45 @@ export const KEYSTONES = {
     },
   },
 
+  // ------------------------------------------------------------------ Warden (5.2, S9)
+  aftershock: {
+    name: 'Aftershock', cls: 'warden',
+    desc: 'Every slam strikes again 0.6 s later at half strength, with a second, smaller ring of dust and a smaller shake.',
+    price: 'Slams cost 10 more Resolve.',
+    onCompile(rec) {
+      if (!has(rec, 'slam')) return rec;
+      rec.aftershock = { t: 0.6, mul: 0.5 };
+      if (!rec.from) rec.cost = (rec.cost || 0) + 10; // (a fusion pays through its B: Colossus Drop's Ground Pound)
+      return rec;
+    },
+  },
+  unmoving: {
+    name: 'Unmoving', cls: 'warden',
+    desc: 'You cannot be knocked back, lifted, rooted or slowed, and your armour is 15% thicker. Bulwark Charge becomes Shoulder Check.',
+    price: 'Every charge and dash is a 3 m step.',
+    mods: { unmoving: 1, armor: 0.15 },
+    renames: { w_bulwark: { name: 'Shoulder Check' } },
+    onCompile(rec) {
+      if ((rec.fx || []).some((e) => e[0] === 'dash')) { rec.fx = rec.fx.map((e) => (e[0] === 'dash' ? ['dash', 3] : e)); rec.range = Math.min(rec.range || 4, 5); rec.stepOnly = true; }
+      return rec;
+    },
+  },
+  forge_head: {
+    name: 'Forge-Heated Head', cls: 'warden',
+    desc: 'The hammer head is kept hot: a dull orange tint and a faint smoke trail. Hammer strikes are heat (they Ignite Tarred machines) and leave hot slag on the ground for 3 s. Colossus Drop becomes Slag Drop and Fault Line becomes Slag Seam.',
+    price: 'The heat costs you 2% of your health every 10 s in a fight.',
+    mods: { forgeBurn: 0.02 },
+    renames: { wf_colossus: { name: 'Slag Drop', fx: 'slag' }, wf_faultline: { name: 'Slag Seam', fx: 'slag' } },
+    onCompile(rec) {
+      if (!has(rec, 'hammer')) return rec;
+      addTag(rec, 'heat');
+      rec.forge = true;
+      if ((rec.fx || []).some((e) => e[0] === 'dmg') && !rec.fx.some((e) => e[0] === 'zone')) rec.fx = [...rec.fx, ['zone', 'fire', 0.15, 3, rec.hit?.kind === 'aoe' ? Math.min(4, rec.hit.r || 3) : 2]];
+      rec.groundFx = 'slag';
+      return rec;
+    },
+  },
+
   // ------------------------------------------------------------------ Common Ground (4.4)
   chainwork: {
     name: 'Chainwork', cls: 'common', desc: 'A landed fusion opens a 0.8 s link: the next core skill is an Encore, 25% stronger with a heavy stop.',
@@ -142,6 +181,10 @@ export const KEYSTONES = {
 
 // notables that need an event rather than a number
 export const NOTABLE_HOOKS = {
+  // the Warden's Iron Skin (S9): a Brace lays an absorb over him (1.2 heals' worth, 3 s); Steam Plate: a blow blocked in
+  // the Brace scalds the machine with steam from the plates (heat, 0.8x)
+  iron_skin: { onDodge(w, p) { if (!w?.addBuff) return; p.absorb = (p.absorb || 0) + (p.power || 10) * 1.2; w.addBuff(p, { name: 'Iron Skin', stat: 'absorb', t: 3, dur: 3, icon: 'iron' }); } },
+  steam_plate: { onBlock(w, p, ctx) { if (ctx.src && !ctx.src.dead && w?.damage) { w._zk = 'fire'; w.damage(p, ctx.src, (p.power || 10) * 0.8, 'zone'); w._zk = null; } } },
   // the Sandblade's Dust Cloak (S8): after a dodge the next skill strikes critically (sim.js on_dodge gives the buff)
   dust_cloak: { onDodge(w, p) { w?.addBuff?.(p, { name: 'Dust Cloak', stat: 'cloak', pct: 0, t: 3, dur: 3, icon: 'cloak' }); } },
   shared_courage: { onLink(w, p) { for (const q of w?.partyMembers ? w.partyMembers(p) : [p]) w?.addBuff?.(q, { name: 'Shared Courage', stat: 'dmg', pct: 8, t: 6, dur: 6, icon: 'shout' }); } },
@@ -157,7 +200,7 @@ export const NOTABLE_HOOKS = {
   },
 };
 
-export const KEY_HOOKS = ['onCast', 'onHit', 'onLand', 'onLink', 'onKill', 'onTaken', 'onDodge'];
+export const KEY_HOOKS = ['onCast', 'onHit', 'onLand', 'onLink', 'onKill', 'onTaken', 'onDodge', 'onBlock'];
 
 // patch a compiled record with every keystone the hero holds (step 4 of compileKit), then apply the renames
 export function keyCompile(rec, keys = [], ctx = {}) {

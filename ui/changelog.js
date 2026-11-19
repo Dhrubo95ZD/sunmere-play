@@ -1,6 +1,14 @@
 // What's new: shown once after an update (newest first). Bump `v` on the first entry whenever something is added.
 export const CHANGELOG = [
   {
+    v: 133, date: '19 November 2026', title: 'The Warden',
+    items: [
+      ['The Warden, rebuilt', 'The third class on the new combat: seven skills and Brace, a stand-your-ground block. Hammer Blow is a three-swing chain, Challenge strikes the shield rim to pull every machine near you onto you, and the Warden holds a boss better than before. Old Wardens get their talent points back with a letter from the trainer.'],
+      ['Warden fusions', 'Nine new moves: Colossus Drop knocks a machine up, follows it and hammers it into the ground; Fault Line splits the ground in a long seam; Breakwater throws a blocked blow straight back; Intercept takes an ally’s next blows on your own shield; and Hammerfall finishes it all.'],
+      ['His own Skill Web', 'The Warden has his own region of the Skill Web, with keystones like Forge-Heated Head, which turns Colossus Drop into Slag Drop. Everyone gets another free Web reset.'],
+    ],
+  },
+  {
     v: 132, date: '18 November 2026', title: 'The Sandblade',
     items: [
       ['The Sandblade, rebuilt', 'The second class on the new combat. Seven skills and a Sidestep you can use three times in a row: Sand Slash is a four-cut chain, Desert Step takes you behind the machine, Needle Thrust bites hardest from behind, and Counter Stance turns a blow aside and cuts back. Old Sandblades get their talent points back with a letter from the trainer.'],

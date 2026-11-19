@@ -8,7 +8,7 @@
 import { SKILLS } from './classes.js';
 
 // classes on the new kit. Knight first (the pilot slice); the old path goes at S16
-export const KIT_V2 = { knight: true, sandblade: true }; // (S8: the Sandblade's slice)
+export const KIT_V2 = { knight: true, sandblade: true, warden: true }; // (S8: the Sandblade's slice; S9: the Warden's)
 export const onKit2 = (cls) => !!KIT_V2[cls];
 
 const K = (id, name, o) => ({ id, name, gcd: true, cast: 0, cost: 15, cd: 0, range: 4, target: 'enemy', kit: 2, ...o });
@@ -52,9 +52,25 @@ export const CORE = {
     K('s_needle', 'Needle Thrust', { icon: 'thrust', slot: 6, lvl: 11, cost: 15, cd: 7, hit: { t: 0.24, kind: 'melee' }, fx: [['dmg', 2.34], ['dot', 0.8, 6], ['brk', 12]], critAdd: 0.3, behindMul: 1.5, tags: ['strike', 'blade'], tier: 2, desc: 'A precise thrust at a seam: 30% more likely to strike critically, 50% harder from behind, and it bleeds for 6 s.' }),
     K('s_counter', 'Counter Stance', { icon: 'parry', slot: 7, lvl: 14, cost: 10, cd: 12, target: 'self', range: 0, hit: { t: 0.15, kind: 'self' }, fx: [['parry', 1.0], ['counter', 2.5], ['buff', 'evade', 50, 1.5]], tags: ['guard', 'blade'], tier: 2, desc: 'Hold a low stance for 1 s. The first blow that comes is turned aside on the shield: the machine staggers and you slip aside and cut back (2.5x). For 1.5 s other blows land only half the time.' }),
   ],
+  // the Warden (combat_design.md 5.2, S9): the slowest, heaviest swings (0.55-0.7 s chain locks), the ground is his weapon.
+  // Hit times match the clips (choreo.js: the chain has a clip per step, w_blow_2..3 on Sword_Heavy_Combo's three swings;
+  // Ground Pound on Hammer_Overhead). Every slam is a 'slam' (Aftershock repeats it), every hammer strike a 'hammer'
+  warden: [
+    chain(K('w_blow', 'Hammer Blow', { icon: 'hammer', slot: 1, lvl: 1, cost: 0, cd: 0, hit: { t: 0.42, kind: 'melee' }, tags: ['strike', 'blunt', 'hammer', 'chain'], desc: 'A three-step chain: a flat swing from the side, a backhand and an overhead. Costs nothing.' }), [
+      { fx: [['dmg', 1.22], ['brk', 6]], win: { lock: 0.55 }, tier: 1 },
+      { hit: { t: 0.42, kind: 'melee' }, fx: [['dmg', 1.22], ['brk', 6]], win: { lock: 0.55 }, tier: 1 },
+      { hit: { t: 0.5, kind: 'melee' }, fx: [['dmg', 1.95], ['brk', 16]], win: { lock: 0.7 }, tier: 2 },
+    ]),
+    K('w_uppercut', 'Uppercut Smash', { icon: 'rise', slot: 2, lvl: 1, cost: 15, cd: 7, hit: { t: 0.38, kind: 'melee' }, fx: [['dmg', 1.46], ['launch', 1.1], ['brk', 25]], tags: ['strike', 'blunt', 'hammer', 'lift'], tier: 2, desc: 'The hammer brought up from the ground through the machine, lifting it into the air.' }),
+    K('w_pound', 'Ground Pound', { icon: 'pound', slot: 3, lvl: 3, cost: 20, cd: 8, target: 'self', range: 0, hit: { t: 0.43, kind: 'aoe', r: 5 }, fx: [['dmg', 1.34], ['slow', 40, 3], ['brk', 18]], tags: ['strike', 'blunt', 'hammer', 'slam', 'earth'], tier: 2, desc: 'Drive the hammer into the ground: everything within 5 m is struck and slowed 40% for 3 s.' }),
+    K('w_slam', 'Shield Slam', { icon: 'shield', slot: 4, lvl: 5, cost: 15, cd: 8, hit: { t: 0.32, kind: 'melee' }, fx: [['dmg', 0.97], ['stun', 1.2], ['taunt', 2], ['brk', 30]], tags: ['shield', 'blunt', 'cc', 'taunt'], tier: 2, desc: 'Drive the tower shield in: the machine is stunned and turns on you.' }),
+    K('w_bulwark', 'Bulwark Charge', { icon: 'charge', slot: 5, lvl: 8, cost: 20, cd: 14, range: 14, hit: { t: 0.5, kind: 'melee' }, fx: [['dash', 12], ['dmg', 1.22], ['knock', 2], ['brk', 25]], tags: ['shield', 'blunt', 'dash', 'charge'], tier: 2, desc: 'Charge up to 12 m behind the tower shield and knock the machine back.' }),
+    K('w_split', 'Earthsplitter', { icon: 'fissure', slot: 6, lvl: 11, cost: 25, cd: 10, range: 12, hit: { t: 0.7, kind: 'line', r: 12 }, fx: [['dmg', 1.58], ['root', 1.5], ['brk', 20]], tags: ['strike', 'blunt', 'hammer', 'earth', 'fissure'], tier: 2, desc: 'Split the ground: a fissure runs 12 m ahead and holds every machine on it fast for 1.5 s.' }),
+    K('w_challenge', 'Challenge', { icon: 'shout', slot: 7, lvl: 14, cost: 10, cd: 12, target: 'self', range: 0, hit: { t: 0.32, kind: 'aoe', r: 10 }, fx: [['taunt', 4], ['selfBuff', 'armor', 20, 6]], tags: ['shield', 'taunt', 'guard'], tier: 2, desc: 'One heavy hammer strike on the shield rim: every machine within 10 m turns on you, and your armour is 20% thicker for 6 s.' }),
+  ],
 };
 // the dodge (feel.js DODGE does the move): it counts as an input, and always as landed (gate 'dodge')
-export const DODGES = { knight: { id: 'dodge', name: 'Shoulder Roll', icon: 'evade', tags: ['dash'] }, sandblade: { id: 'dodge', name: 'Sidestep', icon: 'evade', tags: ['dash'] } };
+export const DODGES = { knight: { id: 'dodge', name: 'Shoulder Roll', icon: 'evade', tags: ['dash'] }, sandblade: { id: 'dodge', name: 'Sidestep', icon: 'evade', tags: ['dash'] }, warden: { id: 'dodge', name: 'Brace', icon: 'shield', tags: ['guard', 'shield'] } }; // (S9: the Warden does not move: he braces behind the tower shield)
 export const PARRY = { res: 20, stagger: 1.2 }; // a parry: Valor back and the attacker Staggered
 
 export const CORE_BY_ID = {};

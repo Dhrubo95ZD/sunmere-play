@@ -661,6 +661,114 @@ export class FX {
     }, () => this.scene.remove(m));
   }
 
+  // ---------------------------------------------------------------- the Warden (S9): seams, fissures, rock spikes
+  // A ground seam: one long thin irregular dark mark laid along `dir` (a stretched plane on the terrain), never a radial
+  // crack; it fades over its life. Seams are capped (the oldest go first)
+  seamTex() {
+    if (this._seamTex) return this._seamTex;
+    const c = document.createElement('canvas'); c.width = 256; c.height = 64;
+    const x = c.getContext('2d');
+    const line = (w, a, jit) => { x.strokeStyle = `rgba(32,24,16,${a})`; x.lineWidth = w; x.lineJoin = 'round'; x.beginPath(); let y = 32; x.moveTo(0, y); for (let i = 1; i <= 16; i++) { y = Math.max(20, Math.min(44, y + r(-jit, jit))); x.lineTo(i * 16, y); } x.stroke(); };
+    line(46, 0.3, 3); line(24, 0.6, 4); line(11, 0.95, 5); // (S9 review: a 4 px seam read as nothing from the game camera)
+    x.globalCompositeOperation = 'destination-in';
+    const g = x.createLinearGradient(0, 0, 256, 0); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(0.12, 'rgba(0,0,0,1)'); g.addColorStop(0.88, 'rgba(0,0,0,1)'); g.addColorStop(1, 'rgba(0,0,0,0)');
+    x.fillStyle = g; x.fillRect(0, 0, 256, 64);
+    const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+    return (this._seamTex = t);
+  }
+  seam(pos, dir, len = 1.6, w = 0.8, life = 2.6) {
+    const L = (this.seams ||= []);
+    while (L.length >= 48) { const old = L.shift(); old.e.t = Math.max(old.e.t, old.e.dur - 0.2); }
+    const g = new THREE.PlaneGeometry(len, w, 6, 1);
+    g.rotateX(-Math.PI / 2);
+    g.rotateY(-Math.atan2(dir.z, dir.x));
+    const pa = g.attributes.position;
+    for (let i = 0; i < pa.count; i++) pa.setY(i, this.heightAt(pos.x + pa.getX(i), pos.z + pa.getZ(i)) + 0.05);
+    g.translate(pos.x, 0, pos.z);
+    const m = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ map: this.seamTex(), transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3, opacity: 0 }));
+    m.renderOrder = 6;
+    this.scene.add(m);
+    const rec = { m };
+    rec.e = this.after(life, (k, t) => { m.material.opacity = Math.min(1, t / 0.06, (life - t) / (life * 0.5)); }, () => { this.scene.remove(m); g.dispose(); m.material.dispose(); const i = L.indexOf(rec); if (i >= 0) L.splice(i, 1); });
+    L.push(rec);
+  }
+  // A fissure from o along dir for len m, opening over dur s: seams one after another with a slight wander, a short branch
+  // now and then that always leaves to the same side and forward (branching one way, never a star from above), a spray of
+  // grit and dust and a rock (from the fusion's budget) at each step, a few short rock spikes at uneven steps. o.erupt: a
+  // second pass after `erupt` s that throws dust and rocks up along the whole line
+  fissure(o, dir, len = 12, opt = {}) {
+    const d = V(dir.x, 0, dir.z).normalize(), side = V(-d.z, 0, d.x), step = opt.step || 1.3, n = Math.max(2, Math.round(len / step));
+    const bs = opt.branchSide ?? (rnd() < 0.5 ? 1 : -1), dur = opt.dur ?? 0.4, w = opt.w ?? 1.2;
+    const spikeAt = new Set(); for (let i = 0; i < (opt.spikes || 0); i++) spikeAt.add(Math.min(n - 1, Math.floor(r(0.25, 0.95) * n)));
+    const pts = []; let off = 0;
+    for (let i = 0; i <= n; i++) { off = Math.max(-0.7, Math.min(0.7, off + r(-0.3, 0.3))); pts.push(o.clone().addScaledVector(d, i * step).addScaledVector(side, off)); }
+    let done = 0;
+    this.after(dur, (k) => {
+      const upto = Math.min(n, Math.floor(k * n + 1e-6));
+      while (done < upto) {
+        const a = pts[done], b = pts[done + 1], sd = b.clone().sub(a), mid = a.clone().add(b).multiplyScalar(0.5);
+        mid.y = this.ground(mid);
+        this.seam(mid, sd, sd.length() * 1.15, w * r(0.85, 1.1), opt.life ?? 2.6);
+        if (done % 3 === 1) { const bd = sd.clone().normalize().applyAxisAngle(V(0, 1, 0), bs * r(0.4, 0.6)); this.seam(mid.clone().addScaledVector(bd, 0.45), bd, r(0.7, 1.0), w * 0.5, (opt.life ?? 2.6) * 0.8); }
+        const up = mid.clone().setY(mid.y + 0.25);
+        this.emit('grit', up, { n: 3, speed: 0.9 });
+        this.emit('dust', up, { n: 2, size: 1.0, speed: 0.9 });
+        if (done % 2 === 0) this.rocks(up, 1, 0.55);
+        if (spikeAt.has(done)) this.spike(mid.clone().addScaledVector(side, r(-0.3, 0.3)), r(0.7, 1.1), 1.6);
+        if (opt.heat) this.emit('flecks', up, { n: 2, color: '#e07a30' });
+        done++;
+      }
+    });
+    this.sound('scrape');
+    if (opt.erupt != null) this.after(opt.erupt + dur, null, () => {
+      for (let i = 0; i < n; i += 1) { const p = pts[i].clone(); p.y = this.ground(p) + 0.2; this.emit('dust', p, { n: 3, size: 1.2, speed: 1.6 }); this.emit('grit', p, { n: 3, speed: 1.4 }); if (i % 3 === 0) this.rocks(p, 1, 0.8); }
+      this.sound('rumble');
+    });
+    return pts;
+  }
+  // a few short rock spikes round a crater at uneven angles and distances (never a regular ring of them)
+  rockSpikes(c, n = 3, rMin = 1.6, rMax = 3) {
+    let a = r(0, 6.28);
+    for (let i = 0; i < n; i++) { a += r(1.1, 2.4); const d = r(rMin, rMax); this.spike(V(c.x + Math.cos(a) * d, c.y, c.z + Math.sin(a) * d), r(0.6, 1.05), 1.8); }
+  }
+  // an Aftershock (the server's word): a smaller ring of dust where the slam struck and a smaller shake for the own hero
+  aftershock(pos, r0 = 3, local = false) {
+    pos.y = this.ground(pos);
+    this.emit('ringdust', pos.clone(), { n: Math.round(8 + r0 * 2), r: r0 * 0.3, speed: 1.4 + r0 * 0.5, size: 1.0, alpha: 0.5 });
+    this.emit('grit', pos.clone().setY(pos.y + 0.3), { n: 6, speed: 1 });
+    this.rocks(pos.clone().setY(pos.y + 0.3), 3, 0.5);
+    if (local) this.shake(0.25);
+    this.sound('thud');
+  }
+  // a blow blocked on the Warden's tower shield (Brace): sparks off the face toward the machine, grit, one clang
+  braceBlock(v, src) {
+    if (!v?.pos) return;
+    const d = src?.pos ? src.pos.clone().sub(v.pos).setY(0).normalize() : V(Math.sin(v.ry || 0), 0, Math.cos(v.ry || 0));
+    const at = v.pos.clone().addScaledVector(d, 0.7).setY(v.pos.y + 1.1);
+    this.emit('fan', at, { n: 12, dir: d, color: '#ffe0a8', width: 3 });
+    this.emit('grit', at, { n: 4 });
+    this.emit('dust', v.pos.clone().setY(v.pos.y + 0.2), { n: 4, spread: 0.4 });
+    this.sound('clang');
+  }
+  // Forge-Heated Head: the hammer head smokes faintly and sheds a few dull orange flecks while the strike plays (heat on
+  // the metal, never a glow round the hero)
+  forgeHead(v, dur = 0.9) {
+    const A = v?.anim;
+    if (!A?.weaponPoint) return;
+    let acc = 0;
+    this.after(dur, (k, t, dt) => {
+      acc += dt * 18;
+      while (acc > 1) { acc--; const p = A.weaponPoint('R', r(0.85, 1.05)); this.emit('smoke', p, { n: 1, size: 0.3, alpha: 0.3, color: '#6a625a', lifeK: 0.5, speed: 0.4 }); if (rnd() < 0.25) this.emit('flecks', p, { n: 1, color: '#c8642a' }); }
+    });
+  }
+  // hot slag left on the ground (Forge-Heated Head, the server's zone): a dark scorch with dull orange flecks and smoke
+  slag(pos, r0 = 2, dur = 3) {
+    pos.y = this.ground(pos);
+    this.decal('scorch', pos.clone(), Math.max(0.8, r0 * 0.6), Math.min(4, dur));
+    let acc = 0;
+    this.after(dur, (k, t, dt) => { acc += dt * 8; while (acc > 1) { acc--; const p = pos.clone().add(V(r(-r0, r0) * 0.5, 0.1, r(-r0, r0) * 0.5)); this.emit('flecks', p, { n: 1, color: '#d8702c' }); if (rnd() < 0.5) this.emit('smoke', p, { n: 1, size: 0.5, alpha: 0.25, lifeK: 0.6, color: '#5a524a' }); } });
+  }
+
   after(dur, update, done) { const e = { t: 0, dur, update, done }; this.timed.push(e); return e; }
   // a crackling electric arc between two points: a jagged line re-drawn every frame for a moment, a flash at the end
   arc(from, to, color = '#a8dcff', dur = 0.3) {
@@ -1325,6 +1433,28 @@ export class FX {
         const f = feet(), y0 = this.ground(f), n = ev.n || 26, R0 = ev.r || 3;
         for (let i = 0; i < n; i++) { const a = r(0, 6.28), sp = r(1.5, 4) * (R0 / 3); this.alpha.spawn({ pos: V(f.x + Math.cos(a) * r(0.3, 1), y0 + r(0.2, 0.9), f.z + Math.sin(a) * r(0.3, 1)), vel: V(Math.cos(a) * sp, r(0.4, 1.6), Math.sin(a) * sp), age: 0, life: r(0.8, 1.5), size: r(0.6, 1.2), tex: TEX.puff, alpha: 0.55, grow: 1.3, color: col(rnd() < 0.5 ? '#e0c490' : '#c8a46a'), drag: 2.2, spin: r(-1, 1) }); }
         this.sound('puff');
+        break;
+      }
+      // ---- the Warden (S9): stone, dust, grit and sparks off the hammer only
+      // a fissure from the feet (or from where the cast began: at 'castFrom') along the facing turned by ang deg and moved
+      // off m to the side; erupt: the furrow throws up rocks that many s after it opens (Earthbreaker Charge)
+      case 'fissure': {
+        const base = ev.at === 'castFrom' && ctx.castFrom ? ctx.castFrom.clone() : feet();
+        const d = fwd.clone(); if (ev.ang) d.applyAxisAngle(V(0, 1, 0), (ev.ang * Math.PI) / 180);
+        const sideV = V(-fwd.z, 0, fwd.x);
+        const o = base.addScaledVector(sideV, ev.off || 0).addScaledVector(d, ev.start ?? 0.8);
+        this.fissure(o, d, ev.len || 12, { dur: ev.dur, w: ev.w, spikes: ev.spikes, erupt: ev.erupt, heat: ev.heat, branchSide: ev.branch, step: ev.step });
+        break;
+      }
+      case 'rockspikes': { const c = ev.at === 'target' ? tgt() : feet(); c.y = this.ground(c); this.rockSpikes(c, ev.n || 3, ev.rMin, ev.rMax); break; }
+      // sparks struck off the ground under the hammer head (Trip Hammer's smash, Earthbreaker's drag)
+      case 'groundSparks': { let acc = 0; const n = ev.rate || 40; this.after(ev.dur || 0.05, (k, t, dt) => { acc += dt * n; while (acc > 1) { acc--; const p = ctx.animator.weaponPoint('R', 1.0); p.y = Math.max(p.y, this.ground(p) + 0.05); this.emit('sparks', p, { n: 2, color: '#ffd8a0', dir: fwd.clone().negate().add(V(0, 0.6, 0)) }); } }); if (!(ev.dur > 0.1)) this.emit('fan', ctx.animator.weaponPoint('R', 1.0), { n: 14, dir: fwd, color: '#ffe0a8', width: 4 }); break; }
+      // a forward-rolling wall of dust and grit (Breakwater): puffs thrown along the facing in a widening band, no rays
+      case 'dustfront': {
+        const f = feet(), y0 = this.ground(f), len = ev.len || 8, sideV = V(-fwd.z, 0, fwd.x);
+        let done = 0; const N = Math.round(len / 0.8);
+        this.after(ev.dur || 0.45, (k) => { const upto = Math.floor(k * N); while (done < upto) { done++; const along = done * 0.8, wd = 0.8 + along * 0.35; for (let j = 0; j < 3; j++) { const p = f.clone().addScaledVector(fwd, along).addScaledVector(sideV, r(-wd, wd)); p.y = y0 + r(0.2, 0.9); this.alpha.spawn({ pos: p, vel: fwd.clone().multiplyScalar(r(2, 4)).add(V(0, r(0.3, 1.0), 0)), age: 0, life: r(0.7, 1.2), size: r(0.8, 1.4), tex: TEX.puff, alpha: 0.55, grow: 1.4, color: col(rnd() < 0.5 ? '#b8a07a' : '#9a8a6a'), drag: 2, spin: r(-1, 1) }); } if (done % 2) this.emit('grit', f.clone().addScaledVector(fwd, along).setY(y0 + 0.4), { n: 3, speed: 1.2 }); } });
+        this.sound('rumble');
         break;
       }
       case 'sparks': {

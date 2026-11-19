@@ -24,6 +24,7 @@ export const GATES = {
   done: (a) => `${a} must take effect`,
   parry: (a) => `${a} must parry a blow`,
   dodge: () => 'Come out of a dodge',
+  block: () => 'Block a blow in the dodge', // (S9 Breakwater: a perfect Brace)
   'state:lifted': (a) => `${a} must leave the machine in the air`,
   'state:staggered': (a) => `${a} must stagger or stun the machine`,
 };
@@ -117,6 +118,56 @@ export const FUSIONS = {
       tags: ['air', 'slam', 'sand', 'triad'], tier: 5, cam: 'lift', choreo: 'st_sandstorm', hint: 'Ride what you raised, and come down through it.', ai: { role: 'burst' },
       desc: 'Ride the whirling column up and dive down through it: every machine inside takes 2.8x and is driven into the ground.' }),
   ],
+  // the Warden (combat_design.md 5.2, S9). Power as the Knight's (a fusion and its A together about 1.35x A + B plain, the
+  // aerial bonus counted on a lifted machine). Everything is stone, dust, grit and sparks off the hammer; cracks run one way
+  // or branch one way, never out from a point; at most two rings a beat
+  warden: [
+    F('wf_colossus', 'Colossus Drop', { cls: 'warden', move: true, icon: 'crater', from: 'w_uppercut', to: 'w_pound', lvl: 5, need: 'state:lifted', cd: 16, extra: 10, range: 6, // (an enemy target: the gate reads the lifted machine; the crater is round the Warden)
+      hit: { t: 0.78, kind: 'aoe', r: 5 }, fx: [['dmg', 2.8], ['air', 1.4], ['slamDown', 0.6], ['brk', 70], ['slow', 50, 3], ['knockOthers', 2]],
+      tags: ['air', 'slam', 'crater', 'fusion'], cam: 'lift', choreo: 'wf_colossus', gateText: 'Uppercut Smash must leave the machine in the air', hint: 'What goes up comes down, and so does he.',
+      carry: { b: { widecrater: { r: 1.4 }, forwardfault: { shape: 'line', range: 10 } } }, ai: { role: 'burst', want: { state: 'lifted' } },
+      desc: 'Leap 3.5 m up after the lifted machine with the hammer held overhead in both hands and come down through it into the ground: a crater, every machine within 5 m struck and slowed, the others thrown back.' }),
+    F('wf_piledriver', 'Pile Driver', { cls: 'warden', move: true, icon: 'pound', from: 'w_bulwark', to: 'w_pound', lvl: 7, need: 'hit', cd: 14, extra: 10, range: 14,
+      hit: { t: 0.5, kind: 'aoe', at: 'target', r: 4 }, fx: [['dmg', 2.44], ['stun', 2.0], ['brk', 45]],
+      tags: ['slam', 'crater', 'fusion'], choreo: 'wf_piledriver', gateText: 'Bulwark Charge must reach a machine', hint: 'Do not stop at the end of the charge. Go down.',
+      carry: { a: { wallpin: { wallPin: 3 } }, b: { widecrater: { r: 1.4 }, forwardfault: { shape: 'line', range: 10 } } }, ai: { role: 'control' },
+      desc: 'The charge ends with the hammer driven down through the machines it carried: a 4 m crater, and they lie stunned for 2 s.' }),
+    F('wf_bastion', 'Bastion Combo', { cls: 'warden', icon: 'combo', from: 'w_slam', to: 'w_blow', lvl: 9, need: 'hit', cd: 10, extra: 5,
+      hit: { t: 0.24, kind: 'melee', n: 3, gap: 0.34 }, fx: [['dmg', 0.76], ['brk', 10]], fxLast: [['knock', 5], ['brk', 25]], tiers: [2, 2, 3],
+      tags: ['shield', 'fusion'], choreo: 'wf_bastion', gateText: 'Shield Slam must strike a machine', hint: 'Shield, hammer, shield.',
+      carry: { b: { ironweight: { brkMul: 2 }, longhaft: { radius: 4.5, kind: 'cone', cone: 120 } } }, ai: { role: 'control' },
+      desc: 'Shield, hammer, shield: three blows with dust at each step; the last throws the machine back 5 m.' }),
+    F('wf_faultline', 'Fault Line', { cls: 'warden', icon: 'fissure', from: 'w_pound', to: 'w_split', lvl: 12, need: 'hit', cd: 14, extra: 10, range: 12,
+      hit: { t: 0.5, kind: 'line', r: 12, n: 2, gap: 0.2, lines: [[-0.75, -5], [0.75, 9]] }, fx: [['dmg', 1.16], ['launch', 0.7], ['brk', 30]], tiers: [3, 4],
+      tags: ['earth', 'fissure', 'fusion'], choreo: 'wf_faultline', gateText: 'Ground Pound must strike a machine', hint: 'The ground is already cracked. Open it twice.',
+      carry: { b: { longfissure: { r: 1.34 } } }, ai: { role: 'line' },
+      desc: 'Two fissures 12 m long, from points 1.5 m apart and running a little apart, erupt one after the other: each throws the machines on it up.' }),
+    F('wf_triphammer', 'Trip Hammer', { cls: 'warden', icon: 'pulverize', from: 'w_blow', to: 'w_uppercut', step: 3, lvl: 15, need: 'hit', cd: 10, extra: 5,
+      hit: { t: 0.2, kind: 'melee', n: 2, gap: 0.22 }, fx: [['dmg', 1.46], ['brk', 20]], fxLast: [['launch', 1.2], ['brk', 20]], tiers: [2, 3],
+      tags: ['lift', 'fusion'], choreo: 'wf_triphammer', gateText: 'The third step of Hammer Blow must land', hint: 'Finish the chain, then bring it back up at once.',
+      carry: { a: { ironweight: { brkMul: 2 }, longhaft: { radius: 4.5, kind: 'cone', cone: 120 } } }, ai: { role: 'burst' },
+      desc: 'The overhead smash goes straight into an upswing: a shower of sparks off the ground, then the machine is lifted.' }),
+    F('wf_earthbreaker', 'Earthbreaker Charge', { cls: 'warden', move: true, icon: 'charge', from: 'w_bulwark', to: 'w_split', lvl: 18, need: 'hit', cd: 14, extra: 10, range: 14,
+      hit: { t: 0.4, kind: 'line', r: 12, from: 'cast', n: 2, gap: 0.5 }, fx: [['dash', 10], ['dmg', 1.28], ['brk', 15]], fxLast: [['root', 1.0]], tiers: [2, 4],
+      tags: ['earth', 'fusion'], choreo: 'wf_earthbreaker', gateText: 'Bulwark Charge must reach a machine', hint: 'Drag the hammer and let the ground follow.',
+      carry: { a: { unstoppable: { ccImmune: true }, wallpin: { wallPin: 3 } }, b: { longfissure: { r: 1.34 } } }, ai: { role: 'line' },
+      desc: 'Charge on 10 m dragging the hammer through the ground, sparks all the way; half a second later the furrow erupts behind you.' }),
+    F('wf_breakwater', 'Breakwater', { cls: 'warden', icon: 'shield', from: 'dodge', to: 'w_slam', tree: 'living_wall', need: 'block', cd: 12, extra: 5, target: 'self', range: 0,
+      hit: { t: 0.3, kind: 'cone', r: 8, cone: 70 }, fx: [['dmg', 0.73], ['parryBack', 1.5], ['knock', 4], ['brk', 30]], tiers: [3],
+      tags: ['shield', 'fusion'], choreo: 'wf_breakwater', gateText: 'Brace must block a blow', hint: 'What you held back, send back.',
+      carry: {}, ai: { role: 'tank' },
+      desc: 'Out of a perfect Brace, heave the tower shield: a forward wall of dust and grit 8 m long carries the blocked blow back at 1.5x and throws the machines back.' }),
+    F('wf_intercept', 'Intercept', { cls: 'warden', move: true, icon: 'leap', from: 'w_challenge', to: 'w_bulwark', tree: 'shoulder_to_shoulder', need: 'done', cd: 16, extra: 5, target: 'ally', range: 16, intercept: true,
+      hit: { t: 0.45, kind: 'self' }, fx: [['intercept', 2, 0.5, 6]],
+      tags: ['shield', 'guard', 'fusion'], choreo: 'wf_intercept', gateText: 'Challenge must take effect', hint: 'Shout, then stand where they are.',
+      carry: {}, ai: { role: 'tank' },
+      desc: 'Charge to an ally and turn the shield to face what threatens them: their next two blows land on you instead, at half strength.' }),
+    // the triad (a deep tree notable): Colossus Drop > Earthsplitter
+    F('wt_hammerfall', 'Hammerfall', { cls: 'warden', icon: 'fissure', from: 'wf_colossus', to: 'w_split', tree: 'fault_and_fall', need: 'hit', triad: true, cd: 50, extra: 10, range: 14,
+      hit: { t: 0.55, kind: 'line', r: 14 }, fx: [['dmg', 3.17], ['launch', 0.8], ['root', 1.5], ['brk', 120]],
+      tags: ['earth', 'fissure', 'slam', 'triad'], tier: 5, choreo: 'wt_hammerfall', hint: 'From the crater, one more blow, and the ground opens.', ai: { role: 'burst' },
+      desc: 'From the crater, a last blow sends a fissure out toward the machine that erupts along its whole length: every machine on it is thrown up and held fast.' }),
+  ],
 };
 
 export const FUSE = {}; // cls -> 'a>b' -> fusion
@@ -174,6 +225,7 @@ export function gateOk(f, L, tgt, opening, isState) {
   if (need === 'done') return !!(L.done || L.landed || opening);
   if (need === 'parry') return !!L.parried;
   if (need === 'dodge') return L.from === 'dodge';
+  if (need === 'block') return L.from === 'dodge' && L.blocked > 0; // (S9: a blow blocked in the Warden's Brace)
   if (need.startsWith('state:')) return !!(L.landed || opening) && !!tgt && isState(tgt, need.slice(6));
   return false;
 }

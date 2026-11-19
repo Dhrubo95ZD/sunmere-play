@@ -22,13 +22,16 @@ export const LOCK_MIN = 0.45, LOCK_MAX = 0.9;
 // (the pilot class, combat_design.md section 11): a shorter lock changes each class's damage by how much resource it
 // has spare (deadeyetest: the Deadeye fell to x0.82 of the Ranger with every class on it), so the others move over with
 // their own slices (S8-S13) where their numbers are tuned with it
-export const LOCK_CLASSES = new Set(['knight', 'sandblade']); // (S8: the Sandblade's slice)
+export const LOCK_CLASSES = new Set(['knight', 'sandblade', 'warden']); // (S8: the Sandblade's slice; S9: the Warden's)
 export const OLD_GCD = 1.0;
 
 export const DODGE = { charges: 2, regen: 3.5, dist: 4, dur: 0.35, evade: 0.3, opening: 2, worldStop: 0.06 };
 // class flavours (same timing): Sandblade's extra charge and shorter step, the Ranger's longer one (the Warden's Brace
 // with no movement and the other clips come with each class's slice; S1 gives every class the roll and the hop back)
-export const DODGE_CLS = { sandblade: { charges: 3, dist: 2.5 }, ranger: { dist: 5 } };
+export const DODGE_CLS = { sandblade: { charges: 3, dist: 2.5 }, ranger: { dist: 5 },
+  // the Warden's Brace (S9, 5.2): no movement, a frontal block for 0.4 s behind the tower shield, 2 charges; a blow blocked
+  // in it is a perfect Brace (Opening, and the gate of Breakwater, which throws the blocked damage back)
+  warden: { name: 'Brace', brace: true, charges: 2, dist: 0, dur: 0.4, evade: 0, block: 0.4, blockArc: 80 } };
 export const dodgeFor = (cls) => ({ ...DODGE, ...(DODGE_CLS[cls] || {}) });
 // the dodge with a Skill Web modifier table on it (p.tal; the server and the client both read it): Quick Feet's 3 charges and
 // 0.45 s evade, Momentum's 30% slower recovery, Iron Comet's roll that no longer evades

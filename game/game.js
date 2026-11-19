@@ -416,6 +416,7 @@ export async function startGame() {
     const me = game.localId;
     switch (ev.k) {
       case 'cast': {
+        if (ev.hot) fx.forgeHead?.(ev.id === me ? local : entities.get(ev.id)); // (S9 Forge-Heated Head: the hammer head smokes)
         // already played locally. S2 prediction fallback: when the server cast something else from the same press (it fused
         // where the client predicted plain, or refused a predicted fusion), the clip swaps from the same frame; both start
         // from A's recovery pose, so the cut is clean
@@ -457,7 +458,7 @@ export async function startGame() {
         break;
       }
       case 'heal': { ui.meterEvent('heal', ev); const t = entities.get(ev.tgt); if (t && (ev.src === me || ev.tgt === me)) ui.floatText(t.pos, '+' + ev.amt, 'heal'); break; }
-      case 'miss': { const t = entities.get(ev.tgt); if (t && (ev.tgt === me || ev.src === me)) ui.floatText(t.pos, ev.text, 'miss'); break; }
+      case 'miss': { const t = entities.get(ev.tgt); if (t && (ev.tgt === me || ev.src === me)) ui.floatText(t.pos, ev.text, 'miss'); if (ev.tgt === me && ev.text === 'Block' && game.plink?.from === 'dodge') game.plink.blocked = 1; if (ev.text === 'Block' && t?.cls === 'warden') fx.braceBlock?.(t, entities.get(ev.src)); break; } // (S9: a perfect Brace opens Breakwater on the bar; sparks and grit off the tower shield)
       // S1 machine reactions and the dodge (combat_design.md 2.4-2.6)
       case 'air': case 'stag': case 'broken': case 'recover': entities.get(ev.id)?.startReact?.(ev.k, ev, fx);
         if (ev.k === 'broken' && ev.cut) { for (const c of game.teleCut?.get(ev.id) || []) c.visible = false; game.teleCut?.delete(ev.id); ui.ucast?.delete(ev.id); } // (its wind-up was cancelled)
@@ -473,11 +474,16 @@ export async function startGame() {
       case 'column': { const v = entities.get(ev.id); if (v?.column && !(ev.dur > 0)) { v.column.t = v.column.dur; v.column = null; } if (ev.fall && v) { const p = new THREE.Vector3(ev.x, fx.ground?.(new THREE.Vector3(ev.x, 0, ev.z)) ?? v.pos.y, ev.z); fx.ring(p, '#d8c090', 3.5, 0.6); fx.emit('sand', p.clone().setY(p.y + 0.5), { n: 22, spread: 1.6 }); fx.sound('puff'); } break; }
       case 'sandcloud': fx.cloud('sand', new THREE.Vector3(ev.x, fx.ground?.(new THREE.Vector3(ev.x, 0, ev.z)) ?? 0, ev.z), ev.r || 4, 1.2); break;
       case 'wake': { const [x0, z0, x1, z1] = ev.seg, n = Math.max(2, Math.round(Math.hypot(x1 - x0, z1 - z0) / 1.2)); let acc = 0; fx.after?.(ev.dur || 3, (k, t, dt) => { acc += dt * 10; while (acc > 1) { acc--; const f = Math.random(), p = new THREE.Vector3(x0 + (x1 - x0) * f, 0, z0 + (z1 - z0) * f); p.y = (fx.ground?.(p) ?? 0) + 0.15; fx.emit('dust', p, { n: 1, size: 0.7, color: '#d8bc88', alpha: 0.4, speed: 0.4 }); } }); for (let i = 0; i <= n; i++) { const f = i / n, p = new THREE.Vector3(x0 + (x1 - x0) * f, 0, z0 + (z1 - z0) * f); p.y = (fx.ground?.(p) ?? 0) + 0.2; fx.emit('sand', p, { n: 3, spread: 0.4 }); } break; }
+      // the Warden (S9): an Aftershock's repeat (a smaller ring and a smaller shake where the slam struck), Intercept's charge
+      // to the ally (the ally's mark), Forge-Heated Head's slag is the fire zone's look
+      case 'slag': fx.slag?.(new THREE.Vector3(ev.x, 0, ev.z), ev.r || 2, ev.dur || 3); break;
+      case 'aftershock': { const v = entities.get(ev.id); fx.aftershock?.(new THREE.Vector3(ev.x, 0, ev.z), ev.r || 3, v === local); break; }
+      case 'intercept': { const v = entities.get(ev.id), q = entities.get(ev.to); if (v && q) { v.ry = Math.atan2(q.pos.x - v.pos.x, q.pos.z - v.pos.z); fx.emit('dust', q.pos.clone().setY(q.pos.y + 0.2), { n: 8, spread: 0.6 }); } break; }
       case 'pull': { const v = entities.get(ev.id); if (v && !v.dead) fx.emit('dust', v.pos.clone().setY(v.pos.y + 0.2), { n: 4, size: 0.8, color: '#d8bc88' }); break; }
       case 'wall': fx.wallSlam?.(ev); break;
       case 'knock': { const v = entities.get(ev.id); if (v?.def?.humanoid && ev.d >= 2.5) fx.foeClip?.(v, 'down'); if (v && !v.dead && fx.after) { let acc = 0; fx.after(0.45, (k, t, dt) => { acc += dt * 28; while (acc > 1) { acc--; fx.emit('dust', v.pos.clone().setY(v.pos.y + 0.15), { n: 1, spread: 0.35, size: 0.75, alpha: 0.5 }); } }); fx.sound('scrape'); } }
         break;
-      case 'dodge': if (ev.id !== me) { const v = entities.get(ev.id); if (v) { v.ry = Math.atan2(ev.dx, ev.dz); v.playSkill((ev.s ? 'dodges_' : 'dodge_') + (v.cls || 'knight'), null, null, fx); } } break;
+      case 'dodge': if (ev.id !== me) { const v = entities.get(ev.id); if (v) { if (v.cls !== 'warden') v.ry = Math.atan2(ev.dx, ev.dz); v.playSkill((ev.s ? 'dodges_' : 'dodge_') + (v.cls || 'knight'), null, null, fx); } } break;
       case 'pdodge': if (ev.id === me && local) {
         // a perfect dodge: the world holds for 0.06 s around you, a puff of dust at the feet, a crack, and Opening
         const near = [...entities.views.values()].filter((v) => v.pos.distanceTo(local.pos) < 30);
@@ -945,11 +951,12 @@ export async function startGame() {
     game.casting = null; moveTo = null; interactTarget = null; qwalk.stop('manual');
     local.aimRy = null;
     if (D.shieldStep) dir = V(Math.sin(local.ry), 0, Math.cos(local.ry)); // (Oathbound's Shield Step: 2 m forward behind the shield, S5)
+    if (D.brace) dir = null; // (S9: the Warden braces where he stands, facing the way he faces)
     if (dir) local.ry = Math.atan2(dir.x, dir.z);
     const back = !dir, w = dir || V(-Math.sin(local.ry), 0, -Math.cos(local.ry));
     game.send({ t: 'dodge', dx: +w.x.toFixed(3), dz: +w.z.toFixed(3) });
-    local.playSkill((D.shieldStep ? 'dodges_' : back ? 'dodgeb_' : 'dodge_') + game.cls, null, null, fx);
-    game.cutT = now + (D.shieldStep ? D.block : DODGE.evade); // (skills cut in once the evade is over)
+    local.playSkill((D.shieldStep ? 'dodges_' : back || D.brace ? 'dodgeb_' : 'dodge_') + game.cls, null, null, fx); // (S9 Brace: in place, both the same clip)
+    game.cutT = now + (D.shieldStep || D.brace ? D.block : DODGE.evade); // (skills cut in once the evade is over; the Warden's Brace once its block is)
     game.chain = null; game.lastCast = null; if (KIT_V2[game.cls]) game.plink = { from: 'dodge', at: now, until: now + D.dur + LINK.win + (y.web ? ui.tmods?.linkWin || 0 : 0), landed: true, done: true, step: 0, tgt: null, parried: false, local: true }; // (S2: the dodge is an input)
     game.dodgeAt = now;
   }

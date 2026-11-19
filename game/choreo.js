@@ -28,7 +28,7 @@ const L = {
   stand: { thighL: [0], shinL: [0], footL: [0], thighR: [0], shinR: [0], footR: [0] },
 };
 const R = { guard: [0, 0, 0], lunge: [0, -0.14, 0.28], deep: [0, -0.4, 0], kneel: [0, -0.44, -0.04], air: [0, 1.3, 0.3], high: [0, 2.2, 0.4], low: [0, -0.2, 0] };
-const TRAIL = { knight: '#ffe6a0', ranger: '#e8f0c8', chemist: '#c49aff', sandblade: '#ffcf8a', warden: '#b0ccff', herbalist: '#b8ff9a', deadeye: '#e8e4dc' };
+const TRAIL = { knight: '#ffe6a0', ranger: '#e8f0c8', chemist: '#c49aff', sandblade: '#ffcf8a', warden: '#cbbd9e', herbalist: '#b8ff9a', deadeye: '#e8e4dc' };
 
 function guard(cls) { return STANCES[cls].combat; }
 
@@ -2514,7 +2514,7 @@ function robeLegs(keys) {
 }
 // Clips that play on the upper body while the legs keep running: every basic attack, and the instant shots and throws.
 const BLEND = new Set([
-  'k_valiant', 'k_pommel', 'k_shieldthrow', 's_slash', 's_slash_2', 's_slash_3', 's_slash_4', 's_shieldspin', 'w_blow', 'w_toss', 'c_staff', 'h_sweep',
+  'k_valiant', 'k_pommel', 'k_shieldthrow', 's_slash', 's_slash_2', 's_slash_3', 's_slash_4', 's_shieldspin', 'w_blow', 'w_blow_2', 'w_blow_3', 'w_toss', 'c_staff', 'h_sweep',
   'r_quick', 'r_twin', 'r_pierce', 'r_explosive', 'r_smoke', 'r_arcing', 'r_fan', 'r_pin', 'r_mark', 'r_volley', 'r_barrage',
   'c_acid', 'c_tar', 'c_shrapnel', 'c_corrosive', 'c_chain', 'c_flash',
   'h_dart', 'h_poultice', 'h_net', 'h_antidote', 'h_bark', 'h_sap', 'h_seed',
@@ -2697,6 +2697,154 @@ const MELEE = new Set(['slash', 'blunt', 'pierce', 'sweep', 'shield', 'sand', 'e
   }
 }
 
+// ============================== S9: the Warden's new kit (combat_design.md 5.2) ==============================
+// Slow heavy swings from a wide planted stance; the hammer drags dust, never light (TRAIL.warden is the colour of dust).
+// Hammer Blow's three steps each have a clip on one of Sword_Heavy_Combo's three swings (the body; the hammer arm keyed:
+// a flat swing from the side, a backhand, an overhead); Ground Pound is Hammer_Overhead; Challenge is ONE strike on the
+// shield rim (one clang, never a beat); Brace is the tower shield set square with no movement. Every crack is a seam that
+// runs one way along a line (fx.js fissure), never a star from above; at most two rings a beat; rocks inside fuseBudget.
+{
+  const G = P(guard('warden'), { spine: [8, 0, 0] }), GL = P(G, LG), T = TRAIL.warden, HC = 'Sword_Heavy_Combo';
+  const SH = { armL: [-50, 74, 28], foreL: [-100, 0, 0] };
+  const SHUP = { armL: [-84, 76, 30], foreL: [-110, 0, 0] }; // (the tower shield raised square in front)
+  const W9 = (id, dur, keys, ev, o = {}) => (DEF[id] = C('warden', dur, 'full', keys, ev, o));
+  // ---- Hammer Blow: step 1 is the old side swing on the combo's first swing; 2 a backhand; 3 an overhead
+  DEF.w_blow = { ...DEF.w_blow, events: [...DEF.w_blow.events, { t: 'hit', e: 'dust' }], ual: { mask: 'body', segs: [[HC, 0, 0.62, 0, 0.62]], end: 0.62 } };
+  W9('w_blow_2', 0.85, [
+    k(0, GL),
+    ...swing(0.85, 0.42, { wind: 105, mid: 50, hit: -5, follow: -50, end: -64 }, (a, role, e) => [P(SH, arc(a, { lead: role === 'wind' ? 30 : role === 'follow' || role === 'end' ? -20 : 5, dy: -0.2, r: role === 'wind' ? 0.36 : 0.44, bend: 12 }), role === 'wind' ? L.wide : L.lungeR), { root: [0, -0.14, role === 'wind' ? 0.05 : 0.22], e }], 1100),
+    k(1, GL, { root: R.guard, e: 'smooth' }),
+  ], [{ t: 0.1, e: 'trail', on: true, color: T, w: 1.2, along: 0.85 }, { t: 'hit', e: 'impact', kind: 'blunt', at: 'target' }, { t: 'hit', e: 'dust' }, { t: 0.66, e: 'trail', on: false }],
+  { skill: 'w_blow', hit: { t: 0.42 }, step: 2, ual: { mask: 'body', segs: [[HC, 0, 0.62, 1.4, 2.02]], end: 0.62 } });
+  W9('w_blow_3', 1.05, [
+    k(0, GL),
+    k(0.12, P(SH, { spine: [12, 0, 0], armR: [-60, 0, -20], foreR: [-50, 0, 0], handR: [20, 0, 0] }, LG), { root: [0, -0.06, 0] }),
+    k(0.3, P(SH, overhead({ spine: [-18, 0, 0], chest: [-10, 0, 0], head: [-14, 0, 0] }), L.stand), { root: [0, 0.1, 0.04] }),
+    k(0.5 / 1.05, P(SH, slamAt({ spine: [34, 0, 0], chest: [14, 0, 0], head: [16, 0, 0] }, L.lungeL, [-0.04, 0.5, 1.2], [0.06, -0.56, 0.83], 0.85, 0.26), L.lungeL), { root: [0, -0.34, 0.26], e: 'snap' }),
+    k(0.66, P(SH, slamAt({ spine: [32, 0, 0], chest: [12, 0, 0], head: [14, 0, 0] }, L.lungeL, [-0.04, 0.48, 1.18], [0.06, -0.54, 0.84], 0.85, 0.26), L.lungeL), { root: [0, -0.32, 0.26] }),
+    k(1, GL, { root: [0, 0, 0.26], e: 'smooth' }),
+  ], [{ t: 0.24, e: 'trail', on: true, color: T, w: 1.4, along: 0.85 }, { t: 'hit', e: 'impact', kind: 'blunt', at: 'target' }, { t: 'hit', e: 'dust' }, { t: 'hit', e: 'groundSparks' }, { t: 0.62, e: 'trail', on: false }],
+  { skill: 'w_blow', hit: { t: 0.5 }, step: 3, endRoot: [0, 0, 0.26], ual: { mask: 'body', segs: [[HC, 0, 0.8, 2.07, 2.87]], end: 0.8 } });
+  // ---- Ground Pound on Hammer_Overhead (its contact, 0.43 s, is the server's hit); Forward Fault opens a line instead
+  W9('w_pound', 1.0, [
+    k(0, GL),
+    k(0.22, P(SH, overhead({ spine: [-16, 0, 0], chest: [-10, 0, 0], head: [-12, 0, 0] }), L.stand), { root: [0, 0.06, 0] }),
+    k(0.43, P(SH, slamAt({ spine: [30, 0, 0], chest: [14, 0, 0], head: [14, 0, 0] }, L.lungeL, [-0.04, 0.16, 1.18], [0.06, -0.6, 0.8], 0.85, 0.1), L.lungeL), { root: [0, -0.3, 0.1], e: 'snap' }),
+    k(0.66, P(SH, slamAt({ spine: [28, 0, 0], chest: [12, 0, 0], head: [12, 0, 0] }, L.lungeL, [-0.04, 0.18, 1.15], [0.06, -0.56, 0.83], 0.85, 0.1), L.lungeL), { root: [0, -0.3, 0.1] }),
+    k(1, GL, { root: R.guard, e: 'smooth' }),
+  ], [{ t: 0.12, e: 'trail', on: true, color: T, w: 1.3, along: 0.85 }, { t: 'hit', e: 'impact', kind: 'earth', at: 'front1', r: 5 }, { t: 0.62, e: 'trail', on: false }],
+  { hit: { t: 0.43 }, ual: { mask: 'full', segs: [['Hammer_Overhead', 0, 0.875]], end: 0.8 } });
+  DEF.w_pound_fault = { ...DEF.w_pound, skill: 'w_pound', events: [DEF.w_pound.events[0], { t: 'hit', e: 'impact', kind: 'blunt', at: 'front1' }, { t: 'hit', e: 'fissure', len: 10, dur: 0.35, spikes: 1, start: 1.2 }, DEF.w_pound.events[2]] };
+  // ---- Challenge: the hammer drawn back and brought once onto the shield rim; one clang, one ring of dust 10 m out
+  W9('w_challenge', 0.9, [
+    k(0, GL),
+    k(0.2, P({ spine: [-6, 10, 0], armL: [-70, 60, 30], foreL: [-90, 0, 0], armR: [-140, 30, -24], foreR: [-80, 0, 0], handR: [0, 0, 0] }, L.wide), { root: [0, -0.12, 0] }),
+    k(0.32, P({ spine: [14, -6, 0], armL: [-70, 60, 30], foreL: [-90, 0, 0], armR: [-78, 52, 0], foreR: [-58, 0, 0], handR: [0, 0, 0] }, L.wide), { root: [0, -0.18, 0], e: 'snap' }),
+    k(0.55, P({ spine: [12, -6, 0], armL: [-70, 60, 30], foreL: [-90, 0, 0], armR: [-76, 50, 0], foreR: [-60, 0, 0] }, L.wide), { root: [0, -0.16, 0] }),
+    k(1, GL, { root: R.guard, e: 'smooth' }),
+  ], [{ t: 'hit', e: 'impact', kind: 'clang', at: 'shieldL' }, { t: 'hit', e: 'ring', color: '#cbbd9e', r: 10 }, { t: 'hit', e: 'dust' }], { hit: { t: 0.32 } });
+  // ---- Bulwark Charge: the shield charge on the body, landing at the machine; Earthsplitter: one fissure that runs out
+  DEF.w_bulwark = { ...DEF.w_bulwark, toTarget: { gap: 1.2, max: 12 }, ual: { mask: 'body', segs: [['Shield_Dash', 0, 0.14, 0, 0.14], ['Shield_Charge_Loop', 0.14, 0.5, 0, 0.5]], end: 0.5 } };
+  DEF.w_split = { ...DEF.w_split, events: [DEF.w_split.events[0], { t: 'hit', e: 'impact', kind: 'blunt', at: 'front1' }, { t: 'hit', e: 'fissure', len: 12, dur: 0.45, spikes: 2, start: 1.2 }, { t: 'hit', e: 'shake', amt: 0.3 }, DEF.w_split.events.at(-1)] };
+
+  // ---- the fusions
+  // Colossus Drop (1.25 s): a heavy take-off with a dust column and rocks, the hammer two-handed overhead at the apex (the
+  // shield arm held out low, never spread), down with the hammer leading, T4 at 0.78: a crater, two rings (r3 then r6),
+  // three short rock spikes at uneven spacing
+  {
+    const D = 1.25;
+    W9('wf_colossus', D, [
+      k(0, GL),
+      ...leapRoot(D, { t0: 0.1, t1: 0.45, t2: 0.55, t3: 0.78, h: 3.5, float: 0.1, dist: 0 }),
+      k(1, GL, { root: [0, 0, 0], e: 'smooth' }),
+    ], [{ t: 0, e: 'sound', s: 'whoosh' }, { t: 0.1 / D, e: 'leap' }, { t: 0.1 / D, e: 'column', h: 3, rocks: 8 }, { t: 0.1 / D, e: 'camlift', up: 2.0, back: 2.4, dur: 1.0 },
+      { t: 0.5 / D, e: 'trail', on: true, color: T, w: 1.4, along: 0.85 }, { t: 'hit', e: 'impact', kind: 'earth', at: 'self', r: 3 }, { t: 'hit', e: 'ring', color: '#cbbd9e', r: 6, delay: 0.14 },
+      { t: 'hit', e: 'decal', kind: 'crater', r: 3 }, { t: 'hit', e: 'rockspikes', n: 3, rMin: 1.8, rMax: 3.2 }, { t: 0.86 / D, e: 'trail', on: false }],
+    { ual: { mask: 'full', segs: [['Leap_Rise', 0, 0.45, 0, 0.458], ['Hammer_Overhead', 0.45, 0.82, 0, 0.47], ['Slam_Land', 0.82, D, 0.1, 0.58]] } });
+  }
+  // Pile Driver (1.1 s): the charge runs on 2.5 m into the overhead blow; T4 with a crater on the machines it carried
+  W9('wf_piledriver', 1.1, [
+    k(0, GL),
+    k(0.24 / 1.1, P(G, SHUP, { spine: [24, 0, 0] }, L.lungeL), { root: [0, -0.16, 2.5], e: 'out' }),
+    k(1, GL, { root: [0, 0, 2.5], e: 'smooth' }),
+  ], [{ t: 0.02, e: 'dash' }, { t: 0.12, e: 'dust' }, { t: 0.3, e: 'trail', on: true, color: T, w: 1.4, along: 0.85 }, { t: 'hit', e: 'impact', kind: 'earth', at: 'target', r: 4 },
+    { t: 'hit', e: 'decal', kind: 'crater', r: 3, at: 'target' }, { t: 0.62, e: 'trail', on: false }],
+  { endRoot: [0, 0, 2.5], toTarget: { gap: 1.0, max: 3 }, ual: { mask: 'full', segs: [['Shield_Charge_Loop', 0, 0.28, 0, 0.5], ['Hammer_Overhead', 0.28, 0.66, 0.15, 0.6]] } });
+  // Bastion Combo: shield, hammer, shield on the old combo's keys, dust at each step; the last throws the machine 5 m
+  DEF.wf_bastion = { ...DEF.w_combo, skill: 'wf_bastion', events: [...DEF.w_combo.events, { t: 'hit', e: 'dust' }, { t: 'hit2', e: 'dust' }, { t: 'hit3', e: 'dust' }, { t: 'hit3', e: 'wave', kind: 'dust', len: 4 }],
+    ual: { mask: 'body', segs: [['Shield_OneShot', 0, 0.3, 0.1, 0.5], ['Sword_Heavy_Combo', 0.36, 0.74, 2.2, 2.6], ['Shield_OneShot', 0.74, 1.1, 0.1, 0.5]], end: 1.05 } };
+  // Fault Line (1.0 s): the overhead blow, then two fissures from points 1.5 m apart, 14 deg uneven, one after the other
+  W9('wf_faultline', 1.0, [
+    k(0, GL),
+    k(0.24, P(SH, overhead({ spine: [-18, 0, 0], chest: [-10, 0, 0], head: [-14, 0, 0] }), L.stand), { root: [0, 0.08, 0] }),
+    k(0.5, P(SH, slamAt({ spine: [36, 0, 0], chest: [16, 0, 0], head: [16, 0, 0] }, L.deep, [-0.04, 0.14, 1.14], [0.06, -0.62, 0.78], 0.85, 0.2), L.deep), { root: [0, -0.42, 0.2], e: 'snap' }),
+    k(0.72, P(SH, slamAt({ spine: [34, 0, 0], chest: [14, 0, 0], head: [14, 0, 0] }, L.deep, [-0.04, 0.16, 1.12], [0.06, -0.58, 0.81], 0.85, 0.2), L.deep), { root: [0, -0.4, 0.2] }),
+    k(1, GL, { root: R.guard, e: 'smooth' }),
+  ], [{ t: 0.14, e: 'trail', on: true, color: T, w: 1.4, along: 0.85 }, { t: 'hit', e: 'impact', kind: 'blunt', at: 'front1' }, { t: 'hit', e: 'fissure', len: 12, off: 0.75, ang: -5, dur: 0.4, spikes: 2, branch: -1 },
+    { t: 'hit2', e: 'fissure', len: 12, off: -0.75, ang: 9, dur: 0.4, spikes: 2, branch: 1 }, { t: 0.6, e: 'trail', on: false }],
+  { ual: { mask: 'full', segs: [['Hammer_Overhead', 0.05, 0.53, 0, 0.45]], end: 0.8 } });
+  // Trip Hammer (0.8 s): out of the overhead, a short smash into the ground (sparks off the stone, T2), then at once an
+  // upswing through the machine (T3, lifts it)
+  W9('wf_triphammer', 0.8, [
+    k(0, P(SH, slamAt({ spine: [30, 0, 0], chest: [12, 0, 0], head: [14, 0, 0] }, L.lungeL, [-0.04, 0.5, 1.18], [0.06, -0.54, 0.84], 0.85, 0.26), L.lungeL), { root: [0, -0.3, 0] }),
+    k(0.1 / 0.8, P(SH, wield({ spine: [2, 0, 0], chest: [-4, 0, 0], head: [-4, 0, 0] }, [-0.3, 1.6, 0.16], [0.06, 0.9, -0.42], [-0.7, 1.4, 0.15]), L.stepL), { root: [0, -0.06, 0.06] }),
+    k(0.2 / 0.8, P(SH, slamAt({ spine: [34, 0, 0], chest: [14, 0, 0], head: [16, 0, 0] }, L.deep, [-0.04, 0.12, 1.1], [0.06, -0.7, 0.7], 0.85, 0.14), L.deep), { root: [0, -0.4, 0.14], e: 'snap' }),
+    k(0.32 / 0.8, P(SH, { spine: [30, -30, 0], armR: [22, -10, -40], foreR: [-20, 0, 0], handR: [60, 0, 0] }, L.deep), { root: [0, -0.36, 0.14] }),
+    k(0.42 / 0.8, P(SH, { spine: [8, 4, 0], chest: [-2, 4, 0], armR: [-70, 14, -28], foreR: [-14, 0, 0], handR: [40, 0, 0], head: [-8, 0, 0] }, L.stepL), { root: [0, -0.12, 0.2], e: 'snap' }),
+    k(0.6 / 0.8, P(SH, { spine: [-20, 30, 0], chest: [-12, 20, 0], armR: [-158, 30, -10], foreR: [-10, 0, 0], handR: [-10, 0, 0], head: [-20, 0, 0] }, P(L.stand, { thighR: [-20, 0, -4] })), { root: [0, 0.14, 0.24] }),
+    k(1, GL, { root: [0, 0, 0.24], e: 'smooth' }),
+  ], [{ t: 0.04, e: 'trail', on: true, color: T, w: 1.3, along: 0.85 }, { t: 'hit', e: 'impact', kind: 'blunt', at: 'front1' }, { t: 'hit', e: 'groundSparks' }, { t: 'hit2', e: 'impact', kind: 'blunt', at: 'target' }, { t: 'hit2', e: 'dust' }, { t: 0.82, e: 'trail', on: false }],
+  { endRoot: [0, 0, 0.24] });
+  // Earthbreaker Charge (1.25 s): the shield dash with the right arm dragging the hammer through the ground, sparks all the
+  // way and a scrape; the furrow opens behind him and erupts 0.5 s later, a rolling eruption chasing the Warden
+  {
+    const D = 1.25, DRAG = { armR: [34, 0, -34], foreR: [-12, 0, 0], handR: [72, 0, 0] };
+    W9('wf_earthbreaker', D, [
+      k(0, GL),
+      k(0.06 / D, P(G, SHUP, DRAG, { spine: [26, 0, 0] }, L.lungeL), { root: [0, -0.18, 0.3] }),
+      k(0.45 / D, P(G, SHUP, DRAG, { spine: [28, 0, 0] }, L.lungeR), { root: [0, -0.2, 9.0], e: 'linear' }),
+      k(0.56 / D, P(G, SH, DRAG, { spine: [18, 0, 0] }, L.deep), { root: [0, -0.3, 10.0], e: 'out' }),
+      k(1, GL, { root: [0, 0, 10.0], e: 'smooth' }),
+    ], [{ t: 0.02, e: 'dash' }, { t: 0.04, e: 'groundSparks', dur: 0.46, rate: 50 }, { t: 0.05, e: 'sound', s: 'scrape' }, { t: 'hit', e: 'fissure', at: 'castFrom', start: 0.6, len: 9, dur: 0.3, step: 1.1, erupt: 0.2, spikes: 1 },
+      { t: 'hit', e: 'impact', kind: 'shield', at: 'target' }, { t: 'hit2', e: 'impact', kind: 'earth', at: 'self', r: 2 }],
+    { endRoot: [0, 0, 10.0], toTarget: { gap: -2.4, max: 10, behind: true }, through: true, ual: { mask: 'body', segs: [['Shield_Dash', 0, 0.5, 0, 0.6]], end: 0.5 } });
+  }
+  // Breakwater (0.85 s): out of the Brace, the tower shield heaved forward: a rolling wall of dust and grit 8 m long
+  {
+    const D = 0.85, HEAVE = { armL: [-96, 14, 4], foreL: [-22, -18, 0] }, LL = P(L.lungeL, { thighL: [-70, 0, 6], shinL: [66] });
+    W9('wf_breakwater', D, [
+      k(0, P(G, SHUP, { spine: [22, 0, 0] }, L.deep), { root: [0, -0.3, 0] }),
+      k(0.16 / D, P(G, { spine: [-4, -26, 0], armL: [-52, 70, 40], foreL: [-104, 0, 0] }, L.stepBack), { root: [0, -0.12, -0.1] }),
+      k(0.3 / D, P(G, { spine: [22, 22, 0], head: [6, -14, 0] }, HEAVE, LL), { root: [0, -0.2, 0.44], e: 'snap' }),
+      k(0.62 / D, P(G, { spine: [20, 22, 0], head: [6, -14, 0] }, HEAVE, LL), { root: [0, -0.2, 0.46] }),
+      k(1, GL, { root: [0, 0, 0.46], e: 'smooth' }),
+    ], [{ t: 0, e: 'impact', kind: 'parry', at: 'shieldL' }, { t: 'hit', e: 'impact', kind: 'shield', at: 'cone', r: 8 }, { t: 'hit', e: 'dustfront', len: 8, dur: 0.45 }],
+    { endRoot: [0, 0, 0.46], ual: { mask: 'body', segs: [['Shield_OneShot', 0.1, 0.6, 0.1, 0.7]], end: 0.6 } });
+  }
+  // Intercept (0.9 s): the shield charge to the ally (the server's cast names the ally), then the shield set square to
+  // face what threatens them
+  W9('wf_intercept', 0.9, [
+    k(0, GL),
+    k(0.08 / 0.9, P(G, SHUP, { spine: [26, 0, 0] }, L.lungeL), { root: [0, -0.16, 0.3] }),
+    k(0.42 / 0.9, P(G, SHUP, { spine: [28, 0, 0] }, L.lungeR), { root: [0, -0.18, 7.6], e: 'linear' }),
+    k(0.52 / 0.9, P(G, SHUP, { spine: [20, 0, 0], head: [10, 0, 0] }, L.deep), { root: [0, -0.3, 8.0], e: 'out' }),
+    k(0.8, P(G, SHUP, { spine: [18, 0, 0] }, L.deep), { root: [0, -0.28, 8.0] }),
+    k(1, GL, { root: [0, 0, 8.0], e: 'smooth' }),
+  ], [{ t: 0.02, e: 'dash' }, { t: 0.2, e: 'dust' }, { t: 0.38, e: 'dust' }, { t: 'hit', e: 'impact', kind: 'clang', at: 'shieldL' }, { t: 'hit', e: 'dust' }],
+  { endRoot: [0, 0, 8.0], toTarget: { gap: 1.4, max: 14 }, ual: { mask: 'body', segs: [['Shield_Charge_Loop', 0.06, 0.44, 0, 0.5]], end: 0.46 } });
+  // Hammerfall (1.0 s, the triad): from the crater one more overhead blow; a fissure runs out toward the machine and the
+  // whole line erupts (one ring, at the blow)
+  W9('wt_hammerfall', 1.0, [
+    k(0, P(G, LG, { spine: [30, 0, 0] }, L.deep), { root: [0, -0.3, 0] }),
+    k(0.26, P(SH, overhead({ spine: [-20, 0, 0], chest: [-12, 0, 0], head: [-14, 0, 0] }), L.stand), { root: [0, 0.12, 0.04] }),
+    k(0.55, P(SH, slamAt({ spine: [38, 0, 0], chest: [16, 0, 0], head: [16, 0, 0] }, L.deep, [-0.04, 0.14, 1.14], [0.06, -0.62, 0.78], 0.85, 0.22), L.deep), { root: [0, -0.44, 0.22], e: 'snap' }),
+    k(0.75, P(SH, slamAt({ spine: [36, 0, 0], chest: [14, 0, 0], head: [14, 0, 0] }, L.deep, [-0.04, 0.16, 1.12], [0.06, -0.58, 0.81], 0.85, 0.22), L.deep), { root: [0, -0.42, 0.22] }),
+    k(1, GL, { root: [0, 0, 0.22], e: 'smooth' }),
+  ], [{ t: 0.16, e: 'trail', on: true, color: T, w: 1.5, along: 0.85 }, { t: 'hit', e: 'impact', kind: 'earth', at: 'front1', r: 3 }, { t: 'hit', e: 'fissure', len: 14, dur: 0.35, spikes: 2, erupt: 0.05, start: 1.4 },
+    { t: 0.64, e: 'trail', on: false }],
+  { endRoot: [0, 0, 0.22], ual: { mask: 'full', segs: [['Hammer_Overhead', 0.1, 0.58, 0, 0.45]], end: 0.8 } });
+}
+
 // ============================== DODGE (S1, combat_design.md 2.4) ==============================
 // Every class: a low shoulder roll the way you move (4 m, the evade covers the first 0.3 s; the push-off crouch comes
 // first, 0.1 s) and, with no direction held, a quick hop back. Arms tucked, coat and cloak trail behind (no wings).
@@ -2742,6 +2890,18 @@ for (const cls of Object.keys(TRAIL)) {
     k(0.29 / 0.42, P(G, SHUP, { spine: [18, 0, 0] }, L.deep), { root: [0, -0.3, 2.4], e: 'in' }),
     k(1, GL, { root: [0, 0, 2.5] }),
   ], [{ t: 0.02, e: 'sound', s: 'gust' }, { t: 0.07 / 0.42, e: 'cloud', kind: 'sand', r: 1.2, at: 'self' }, { t: 0.29 / 0.42, e: 'cloud', kind: 'sand', r: 1.2, at: 'self' }], { endRoot: [0, 0, 2.5], dodge: true });
+}
+// the Warden's Brace (S9, 5.2): no movement at all; he drops into the wide stance behind the tower shield set square for the
+// 0.4 s block, with a scrape of the shield's foot on the ground (both dodge keys play it)
+{
+  const G = P(guard('warden'), { spine: [8, 0, 0] }), GL = P(G, LG), SHUP = { armL: [-86, 76, 30], foreL: [-112, 0, 0] };
+  const BR = P(G, SHUP, { spine: [22, 0, 0], chest: [6, 0, 0], head: [12, 0, 0], armR: [-30, 0, -30], foreR: [-70, 0, 0] }, L.wide);
+  DEF.dodge_warden = DEF.dodgeb_warden = C('warden', 0.55, 'full', [
+    k(0, GL),
+    k(0.07 / 0.55, BR, { root: [0, -0.3, 0.02], e: 'snap' }),
+    k(0.44 / 0.55, BR, { root: [0, -0.3, 0.02] }),
+    k(1, GL, { root: R.guard, e: 'smooth' }),
+  ], [{ t: 0.02, e: 'sound', s: 'scrape' }, { t: 0.07 / 0.55, e: 'dust' }], { dodge: true, ual: { mask: 'body', segs: [['Idle_Shield_Loop', 0.04, 0.46, 0, 0.42]], end: 0.44 } });
 }
 
 // compile: resolve 'hit', 'hit2'.. into normalized times from the skill's impact timing

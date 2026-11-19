@@ -13,9 +13,10 @@ import { skillIcon } from './icons.js';
 import { DODGE_ICON, pinsOf, setPin, pinnable } from './combathud.js';
 import { IS_TOUCH } from '../engine/platform.js';
 
-// the recorded previews that exist (one per Knight and Sandblade fusion)
+// the recorded previews that exist (one per Knight, Sandblade and Warden fusion)
 const PREVIEWS = new Set(['kf_stormfall', 'kf_highledger', 'kf_kingsfall', 'kf_pierce', 'kf_battering', 'kf_upheaval', 'kf_riposte', 'kf_sidewind', 'kt_anvilfall',
-  'sf_sandspout', 'sf_glasscutter', 'sf_sirocco', 'sf_dustwhirl', 'sf_thousand', 'sf_riptide', 'sf_sandline', 'sf_whiteout', 'st_sandstorm']); // (S8: the Sandblade's, tools/shots/combat/s8)
+  'sf_sandspout', 'sf_glasscutter', 'sf_sirocco', 'sf_dustwhirl', 'sf_thousand', 'sf_riptide', 'sf_sandline', 'sf_whiteout', 'st_sandstorm', // (S8: the Sandblade's, tools/shots/combat/s8)
+  'wf_colossus', 'wf_piledriver', 'wf_bastion', 'wf_faultline', 'wf_triphammer', 'wf_earthbreaker', 'wf_breakwater', 'wf_intercept', 'wt_hammerfall']); // (S9: the Warden's, tools/shots/combat/s9)
 const ROMAN = ['', 'I', 'II', 'III'];
 const icoOf = (id, cls) => (id === 'dodge' ? DODGE_ICON : skillIcon(skillOf(id) || { id }));
 const nameOf = (id, cls) => (id === 'dodge' ? DODGES[cls]?.name || 'Dodge' : skillOf(id)?.name || id);

@@ -21,6 +21,14 @@ export const TREE_BUILDS = {
     { id: 'blade', name: 'Behind You', desc: 'Steps and thrusts: Three Charges, Searing Edge, Finishing Blow, Afterwake and the Common Ground\'s fusion power.',
       want: ['sf_form_needle', 'sf_form_step', 's_finish', 's_evasion', 'sf_form_slash', 's_rend', 'afterwake', 's_joints', 'cg_practised', 'cg_follow'] },
   ],
+  warden: [
+    { id: 'wall', name: 'The Living Wall', desc: 'The tank: Iron Skin, Living Wall for Breakwater, Shoulder to Shoulder for Intercept, Presence, Unmoving and Last Stand.',
+      want: ['w_ironskin', 'w_fortify', 'wf_form_blow', 'living_wall', 'w_presence', 'wf_form_charge', 'shoulder_to_shoulder', 'unmoving', 'w_laststand', 'cg_thick'] },
+    { id: 'quake', name: 'The Quarry', desc: 'Slams and fissures: Wide Crater, Tremor Feet, Aftershock, Long Fissure, Bedrock and Fault and Fall for Hammerfall.',
+      want: ['w_ironskin', 'wf_form_pound', 'w_tremor', 'w_laststand', 'fault_and_fall', 'w_presence', 'wf_form_charge', 'aftershock', 'wf_form_split', 'w_bedrock'] },
+    { id: 'forge', name: 'The Forge', desc: 'A hot hammer: Forge-Heated Head, Steam Plate, Bedrock, Iron Weight and the Common Ground weight.',
+      want: ['w_presence', 'wf_form_charge', 'wf_form_split', 'w_steamplate', 'w_bedrock', 'forge_head', 'w_fortify', 'wf_form_blow', 'w_ironskin', 'cg_thick'] },
+  ],
 };
 
 // the node ids a suggested path takes from what the hero holds, in order, at most `pts` of them. pathTo(cls, alloc, id) is

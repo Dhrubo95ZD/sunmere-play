@@ -339,7 +339,13 @@ const MIG = {
     k_twin: ['form', 'k_valiant'], k_arcwave: ['form', 'k_cleave'], k_millrace: ['form', 'k_cleave'],
     k_rally: ['notable', 'shared_courage'], k_unbreakable: ['notable', 'unyielding'], k_shout: ['keystone', 'oathbound'], k_wind: ['notable', 'second_breath'],
   },
-  warden: { core: ['w_blow', 'w_uppercut', 'w_pound', 'w_slam', 'w_bulwark', 'w_split', 'w_challenge'], fusion: ['w_colossus', 'w_piledriver', 'w_icefall', 'w_triphammer', 'w_breakwater', 'w_intercept', 'w_combo'], form: ['w_toss', 'w_stomp'], notable: ['w_iron', 'w_fortify', 'w_laststand', 'w_deflect'] },
+  warden: {
+    core: ['w_blow', 'w_uppercut', 'w_pound', 'w_slam', 'w_bulwark', 'w_split', 'w_challenge'],
+    w_colossus: ['fusion', 'wf_colossus'], w_piledriver: ['fusion', 'wf_piledriver'], w_icefall: ['fusion', 'wf_faultline'], w_triphammer: ['fusion', 'wf_triphammer'],
+    w_breakwater: ['fusion', 'wf_breakwater'], w_intercept: ['fusion', 'wf_intercept'], w_combo: ['fusion', 'wf_bastion'],
+    w_toss: ['form', 'w_split'], w_stomp: ['form', 'w_pound'],
+    w_iron: ['notable', 'w_ironskin'], w_fortify: ['notable', 'w_fortify'], w_laststand: ['notable', 'w_laststand'], w_deflect: ['notable', 'w_deflect'],
+  },
   sandblade: {
     core: ['s_slash', 's_whirl', 's_leap', 's_step', 's_dust', 's_needle', 's_counter'],
     s_thousand: ['fusion', 'sf_thousand'], s_sirocco: ['fusion', 'sf_sirocco'], s_glass: ['fusion', 'sf_glasscutter'], s_devil: ['fusion', 'sf_dustwhirl'], s_riptide: ['fusion', 'sf_riptide'], s_whiteout: ['fusion', 'sf_whiteout'],

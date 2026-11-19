@@ -61,6 +61,7 @@ export const mobDmgMul = (lvl) => lerpT(MOB_DMG_T, lvl);
 export const BOT_TANK_THREAT = 6;
 export const BOT_TANK_HP = 5; // and wears this much more health on its two armour pieces (botGear)
 const TANK_CLS = new Set(['knight', 'warden']);
+const BOT_BRACE = { slam: 0.8, boss: 0.55, other: 0.4 }; // (S9: how often a bot Warden braces for a swing it sees coming; its 2 charges limit it)
 export const BOT_SIDESTEP = 0.7; // share of telegraphed hits a bot is taken to step out of
 export const BOSS_SWING = 1.25; // a dungeon or raid boss swings this much harder at its target (the tank) than its level curve
 // a boss shrunk for a smaller group (raidScale, raidK below 1) also hits softer: by the square root of its share
@@ -1938,6 +1939,9 @@ export class World {
       const lost = tgt.target && (tgt.target !== b.id || (tgt.def.boss && Math.max(0, ...[...tgt.threat].filter(([id]) => id !== b.id).map(([, v]) => v)) > 0.9 * (tgt.threat.get(b.id) || 0)));
       const taunt = usable.find((s) => has(s, 'taunt') && dT < (s.hit.r || 6) + 2);
       if (taunt && lost) return { skill: taunt.id, target: tgt.id };
+      // (S9) a Warden on the new kit low on health under the machines: Challenge for its armour (and the taunt round him)
+      const guard = b.hp / b.maxHp < 0.55 && usable.find((s) => s.fx.some((f) => f[0] === 'selfBuff' && f[1] === 'armor') && !b.buffs.some((x) => x.name === s.name));
+      if (guard) return { skill: guard.id };
       const round = usable.find((s) => has(s, 'taunt') && s.hit.kind === 'aoe' && s.target === 'self');
       if (round && tgt.def.boss) {
         const ids = new Set(team.map((q) => q.id));
@@ -2346,6 +2350,7 @@ export class World {
     } else if (sk.target === 'ally') {
       target = this.players.get(m.target) || p;
       if (target.dead || target.id === p.duel?.with) target = p;
+      if (sk.intercept && target === p) target = this.interceptAlly(p, sk.range) || p; // (S9 Intercept: the ally in most danger when none is picked)
       if (dist(p, target) > sk.range + 1) return this.err(p, 'Out of range.');
     } else if (sk.target === 'ground') {
       gx = Number(m.gx); gz = Number(m.gz);
@@ -2357,7 +2362,7 @@ export class World {
     this.dismount(p); p.sit = false; if (p.salv) this.endSalvage(p, false);
     p.qcast = null; // (a cast that goes off replaces any press still held)
     p.res -= cost;
-    const haste = (1 + p.hastePct + this.buffVal(p, 'haste')) * (tal.animMul || 1); // (Heavy Hand's price: animations at 0.9x; review 18 Nov: it was never applied)
+    const haste = (1 + p.hastePct + this.buffVal(p, 'haste')) * (tal.animMul || 1) / (sk.tempo || 1); // (Heavy Hand's price: animations at 0.9x; review 18 Nov: it was never applied. S9 Iron Weight: tempo 1.2, the swing 20% slower)
     // a fusion starts B's own cooldown and its own; A's was spent by A
     if (base.charges > 1) this.chargeSpend(p, base, skillCd(base, tal));
     else if (base.cd) p.cds[base.id] = this.time + skillCd(base, tal);
@@ -2377,11 +2382,12 @@ export class World {
     // (S8) out of reach while the move plays (Thousand Cuts, Whiteout); a Counter Stance's counter and Shield Step's block
     if (sk.untarget) p.untargT = Math.max(p.untargT || 0, this.time + sk.untarget);
     if (sk.guardNext) p.guardT = this.time + sk.guardNext;
+    if (sk.ccImmune) p.ccImmT = this.time + hitT + 0.3; // (S9 Unstoppable: no stun or hold lands while the charge runs)
     p.castFrom = { x: p.x, z: p.z };
     const unseen = !!target && target.type === 'mob' && target.target !== p.id; // (S8 Desert Step: it had not turned on him yet)
     p.cast = { sk, t0: this.time, unseen, end: this.time + Math.max(hitT, (sk.channel || 0)), target: target?.id, gx, gz, hits: 0, channel: !!sk.channel, haste, opening: opening >= 0 || cloak >= 0, fused: !!fu, blocked: fu ? L?.blocked || 0 : 0, mul: kmul, encore };
     if (target && target.type === 'mob') this.addThreat(target, p, 1);
-    this.broadcast({ k: 'cast', id: p.id, skill: sk.id, base: fu ? base.id : undefined, step: sk.step || undefined, fc: sk.formChoreo || undefined, target: target?.id, gx, gz, haste }); // (fc: a Form's clip, S8)
+    this.broadcast({ k: 'cast', id: p.id, skill: sk.id, base: fu ? base.id : undefined, step: sk.step || undefined, fc: sk.formChoreo || undefined, target: target?.id, gx, gz, haste, hot: sk.forge ? 1 : undefined }); // (fc: a Form's clip, S8; hot: Forge-Heated Head, S9)
     if (fu) this.fusionFound(p, fu); // (the keystones' onLink runs when the fusion lands: linkAfter)
     this.pushSelf(p);
   }
@@ -2558,12 +2564,17 @@ export class World {
     if (h.kind === 'aoe' || h.kind === 'ground') enemies = this.foesOf(p).filter((m) => dist(m, center) <= (h.r || 4) + this.rad(m));
     if (h.kind === 'proj' && h.r && target) enemies = this.foesOf(p).filter((m) => dist(m, target) <= h.r + this.rad(m));
     if (h.kind === 'cone' || h.kind === 'line') {
+      // (S9) h.from 'cast': the line runs from where the cast began (Earthbreaker's furrow behind the charge); h.lines: one
+      // fissure a contact, each [side offset m, turn deg] (Fault Line's two, 1.5 m apart and 14 deg uneven)
+      const o0 = h.from === 'cast' && p.castFrom ? p.castFrom : p;
       const fx = Math.sin(p.ry), fz = Math.cos(p.ry);
-      const ax = target ? target.x - p.x : fx, az = target ? target.z - p.z : fz;
-      const al = Math.hypot(ax, az) || 1;
-      const dx0 = ax / al, dz0 = az / al;
+      const ax0 = target ? target.x - o0.x : fx, az0 = target ? target.z - o0.z : fz;
+      const al0 = Math.hypot(ax0, az0) || 1;
+      let dx0 = ax0 / al0, dz0 = az0 / al0, ox = o0.x, oz = o0.z;
+      const LN = h.lines?.[Math.min((c.hits || 0), h.lines.length - 1)];
+      if (LN) { ox += dz0 * LN[0]; oz -= dx0 * LN[0]; const a = LN[1] * Math.PI / 180, ca = Math.cos(a), sa = Math.sin(a); [dx0, dz0] = [dx0 * ca + dz0 * sa, -dx0 * sa + dz0 * ca]; }
       for (const m of this.foesOf(p)) {
-        const vx = m.x - p.x, vz = m.z - p.z, d = Math.hypot(vx, vz);
+        const vx = m.x - ox, vz = m.z - oz, d = Math.hypot(vx, vz);
         if (d > (h.r || 6) + this.rad(m)) continue;
         const along = vx * dx0 + vz * dz0;
         if (h.kind === 'cone') { if (along / (d || 1) >= Math.cos(((h.cone || 60) * Math.PI) / 360) || d < 1.5) enemies.push(m); }
@@ -2589,7 +2600,8 @@ export class World {
     const lastHit = (c.hits || 0) >= (h.n || 1) - 1;
     // (S8: a finisher's added damage joins the contact's own, one blow and one number: Sandspout's dive)
     const fxl = lastHit && sk.fxLast ? (sk.fxLast.some((f) => f[0] === 'dmg') ? [...sk.fx.map((f) => (f[0] === 'dmg' ? ['dmg', f[1] + sk.fxLast.filter((g) => g[0] === 'dmg').reduce((t, g) => t + g[1], 0), ...f.slice(2)] : f)), ...sk.fxLast.filter((f) => f[0] !== 'dmg')] : [...sk.fx, ...sk.fxLast]) : sk.fx;
-    if (lastHit && sk.fxLast && this._hc) { const b2 = sk.fxLast.find((f) => f[0] === 'brk'); if (b2) this._hc.brk = b2[1]; }
+    if (lastHit && sk.fxLast && this._hc) { const b2 = sk.fxLast.find((f) => f[0] === 'brk'); if (b2) this._hc.brk = b2[1]; const l2 = sk.fxLast.find((f) => f[0] === 'launch'); if (l2) this._hc.launch = l2[1]; } // (S9 Trip Hammer: the upswing lifts, the smash before it does not)
+    if (c.after && this._hc) { this._hc.brk = Math.round(this._hc.brk * 0.5); this._hc.after = true; } // (an Aftershock: half the poise too)
     for (const [type, a, b, cc] of fxl) {
       switch (type) {
         case 'dmg': for (const m of enemies) this.damage(p, m, power * a * R(0.9, 1.1), sk.id); break;
@@ -2612,14 +2624,14 @@ export class World {
         case 'res': p.res = Math.min(p.maxRes, p.res + a); break; // the caster's own resource back (the Deadeye's Quick Reload)
         // the new kit's kinds (combat_design.md 3.7; launch, air and brk are read through feel.js above)
         case 'holdLift': for (const m of enemies) { if (m.type !== 'mob' || m.dead || !(m.airT > this.time)) continue; const add = Math.min(a, isElite(m.def) ? POISE.eliteAir : a); const until = Math.max(m.airT, this.time + add); const lb = m.buffs.find((bf) => bf.name === 'Lifted'); if (lb) { lb.t = until - this.time; lb.dur = Math.max(lb.dur, lb.t); } m.airT = until; m.swingT = Math.max(m.swingT || 0, until - this.time); this.broadcast({ k: 'air', id: m.id, dur: +(until - this.time).toFixed(2), h: 2.2, hold: 1, dir: [0, 0] }); } break; // (kept in the air: Stormfall, High Ledger)
-        case 'zone': if (p.type === 'player' && !(c.hits || 0)) { const e = fxl.find((f) => f[0] === 'zone'); const Z = (p.zones ||= []); Z.push({ kind: a, coef: b, until: this.time + (cc || 4), r: e?.[4] || 4, x: center.x, z: center.z, slow: sk.zoneSlow || 0, next: this.time + 0.5, sk: sk.id }); if (Z.length > 6) Z.shift(); } break; // (a ground patch: Cinder Landing's cinders; at most 6 a hero, oldest goes, section 3.6)
+        case 'zone': if (p.type === 'player' && !(c.hits || 0) && !c.after) { const e = fxl.find((f) => f[0] === 'zone'); const Z = (p.zones ||= []); Z.push({ kind: a, coef: b, until: this.time + (cc || 4), r: e?.[4] || 4, x: center.x, z: center.z, slow: sk.zoneSlow || 0, next: this.time + 0.5, sk: sk.id }); if (Z.length > 6) Z.shift(); } if (sk.forge && p.type === 'player' && !(c.hits || 0) && !c.after && type === 'zone') this.broadcast({ k: 'slag', x: +center.x.toFixed(2), z: +center.z.toFixed(2), r: fxl.find((f) => f[0] === 'zone')?.[4] || 2, dur: cc || 3 }); break; // (a ground patch: Cinder Landing's cinders; at most 6 a hero, oldest goes, section 3.6)
         // (S5) Stormfall's plunge drives the lifted machine into the ground: a 0.3 m bounce (still Lifted for its 0.8 s, so the
         // air bonus holds), then it lies stunned for a s (Hold Aloft: longer). The client plays the slam on the 'air' hold
         case 'slamDown': for (const m of enemies) { if (m.type !== 'mob' || m.dead) continue; const was = m.airT > this.time; const b = isElite(m.def) ? 0.5 : 0.8; if (was) { m.airT = this.time + b; const lb = m.buffs.find((bf) => bf.name === 'Lifted'); if (lb) { lb.t = b; lb.dur = Math.max(lb.dur, b); } this.broadcast({ k: 'air', id: m.id, dur: b, h: 0.3, hold: 1, slam: 1, dir: [0, 0] }); } if (!m.def.boss && (was || a > 0)) { const st = (was ? b : 0) + a * cc1; this.addBuff(m, { name: 'Slammed', cc: 'stun', t: st, dur: st, debuff: true, icon: 'stun' }); m.swingT = Math.max(m.swingT || 0, st); } } break;
         case 'parry': p.parryT = this.time + a; p.parryFrom = sk.id; break; // (Guard: a blow in this window is parried, see playerDamaged)
         case 'parryBack': if (c.blocked) for (const m of enemies) this.damage(p, m, c.blocked * a, sk.id); break; // (a share of the blocked blow back: Turning Riposte)
         // (carried into a wall or a machine: the knock's wall slam is held Pinned for a s; Battering Line)
-        case 'wallSlam': for (const m of enemies) { if (m.type !== 'mob' || m.dead || m._wall !== this.time || m.def.boss) continue; m._kb = undefined; this.addBuff(m, { name: 'Pinned', cc: 'root', t: a, dur: a, debuff: true, icon: 'root' }); m.pinT = Math.max(m.pinT || 0, this.time + a); } break;
+        case 'wallSlam': for (const m of enemies) { if (m.type !== 'mob' || m.dead || m._wall !== this.time || m.def.boss) continue; m._kb = undefined; this.addBuff(m, { name: 'Pinned', cc: 'root', t: a, dur: a, debuff: true, icon: 'root' }); m.pinT = Math.max(m.pinT || 0, this.time + a); if (sk.wallStun) this.addBuff(m, { name: 'Stunned', cc: 'stun', t: a, dur: a, debuff: true, icon: 'stun' }); } break; // (S9 Wall Pin: stunned too)
         // ---- the Sandblade's kinds (S8)
         // a pull: every machine reached that is not a boss or a big machine is dragged up to a m toward the centre (Sandspout,
         // Drawing Spin); the client's snapshot slides it in
@@ -2635,6 +2647,13 @@ export class World {
         case 'endColumn': if (p.zones?.some((z) => z.follow)) { p.zones = p.zones.filter((z) => !z.follow); this.broadcast({ k: 'column', id: p.id, dur: 0 }); } break;
         // Whiteout: a second cloud where the sidestep began blinds what stands there too
         case 'cloudAt': if (!(c.hits || 0) && p.dodgeFrom) { this.broadcast({ k: 'sandcloud', x: +p.dodgeFrom.x.toFixed(2), z: +p.dodgeFrom.z.toFixed(2), r: a }); const de = sk.fx.find((f) => f[0] === 'debuff'); for (const m of this.foesOf(p)) if (!enemies.includes(m) && m.type === 'mob' && Math.hypot(m.x - p.dodgeFrom.x, m.z - p.dodgeFrom.z) <= a + this.rad(m)) { if (de) this.addBuff(m, { name: sk.name, stat: de[1], pct: de[2], t: de[3], dur: de[3], debuff: true, icon: sk.icon }); this.provoke(m, p, 1); } } break;
+        // ---- the Warden's kinds (S9)
+        // Challenge's armour on the Warden himself (an area skill has no allies list)
+        case 'selfBuff': if (!(c.hits || 0) && !c.after) this.addBuff(p, { name: sk.name, stat: a, pct: b, t: cc, dur: cc, icon: sk.icon }); break;
+        // Colossus Drop: the machines that were not the lifted target are thrown back a m from the crater
+        case 'knockOthers': { const kd = sk.fx.find((f) => f[0] === 'dmg')?.[1] || 0.5; for (const m of enemies) { if (m.type !== 'mob' || m.def.boss || m.dead || m.id === c.target || m.airT > this.time) continue; this.knockMob(p, m, a, power * kd, sk.id); } break; }
+        // Intercept: the ally's next a blows within cc s land on the Warden instead, at b of their strength
+        case 'intercept': if (!(c.hits || 0)) { const q = target && target.type === 'player' && target !== p ? target : null; if (q) { q.icpt = { by: p.id, n: a, mul: b, until: this.time + cc }; this.addBuff(q, { name: 'Intercepted', stat: 'icpt', pct: 0, t: cc, dur: cc, icon: 'shield' }); this.broadcast({ k: 'intercept', id: p.id, to: q.id }); for (const m of this.mobs.values()) if (!m.dead && m.target === q.id && dist(m, q) < 12) this.addThreat(m, p, 1); } } break;
         case 'ricochet': { const t0 = enemies[0]; if (!t0) break; const coef = sk.fx.find((f) => f[0] === 'dmg')?.[1] || 1; const near = this.foesOf(p).filter((o) => !o.dead && !enemies.includes(o) && dist(o, t0) <= b).sort((x, y) => dist(x, t0) - dist(y, t0)).slice(0, Math.min(a, 2)); for (const o of near) this.damage(p, o, power * coef * 0.7 * R(0.9, 1.1), sk.id); break; } // (at most 2 bounces a shot, section 3.6)
       }
     }
@@ -2642,7 +2661,12 @@ export class World {
     // (S7) a coat the skill leaves on every machine it reached, after its own blow (so it never sets itself off)
     const ck = enemies.length && p.type === 'player' ? coatOf(sk) : null;
     if (ck) for (const m of enemies) this.applyCoat(p, m, ck.kind, ck.dur);
-    if (KIT_V2[p.cls] && p.type === 'player') this.linkAfter(p, sk, c, enemies, allies); // (fusions: the link window, mastery)
+    if (KIT_V2[p.cls] && p.type === 'player' && !c.after) this.linkAfter(p, sk, c, enemies, allies); // (fusions: the link window, mastery)
+    // Aftershock (the Warden, S9): a slam's last contact strikes again 0.6 s later at half strength (one repeat, never of a repeat)
+    if (sk.aftershock && !c.after && lastHit && p.type === 'player') {
+      (p.delays ||= []).push({ t: this.time + sk.aftershock.t, sk, c: { ...c, after: true, hits: (h.n || 1) - 1, mul: (c.mul || 1) * sk.aftershock.mul, opening: false } });
+      if (p.delays.length > 4) p.delays.shift();
+    }
     // Afterwake (S8): a dash leaves a wake of churned sand along its path (castFrom to here) that cuts what crosses it
     if (sk.wake && !(c.hits || 0) && p.type === 'player') {
       const W = sk.wake, f = p.castFrom || p, Z = (p.zones ||= []);
@@ -2901,6 +2925,8 @@ export class World {
   }
 
   addBuff(e, b) {
+    if (b.debuff && e.type === 'player' && e.tal?.unmoving && (b.stat === 'slow' || b.cc === 'root')) return; // (Unmoving, S9: never slowed or held fast)
+    if (b.debuff && b.cc && e.type === 'player' && e.ccImmT > this.time) return; // (Unstoppable's charge, S9)
     const ex = e.buffs.find((x) => x.name === b.name && x.src === b.src);
     // a refreshed damage or healing over time keeps its running tick, so a quick recast never skips a tick
     if (ex) { const tk = ex.tick; Object.assign(ex, b); if ((b.dot || b.hot) && tk != null) ex.tick = tk; } else e.buffs.push(b);
@@ -3885,6 +3911,9 @@ export class World {
     this.tickBuffs(p, dt);
     if (p.dead) return;
     if (p.zones?.length) this.tickZones(p);
+    if (p.delays?.length) this.tickDelays(p);
+    // Forge-Heated Head (the Warden, S9): the hot head costs 2% of his health every 10 s in a fight (never the last point)
+    if (p.tal?.forgeBurn && this.time - p.combatT < 5 && this.time >= (p.forgeT || 0)) { if (p.forgeT) p.hp = Math.max(1, p.hp - p.maxHp * p.tal.forgeBurn); p.forgeT = this.time + 10; }
     if (p.link && (this.hasCC(p, 'stun') || this.time > p.link.until + LINK.tick + LINK.grace + 0.05)) p.link = null; // (a stun closes the window early)
     const inCombat = this.time - p.combatT < 5;
     const c = CLASSES[p.cls] || { regen: 0 };
@@ -3901,6 +3930,8 @@ export class World {
     if (p.dodgeN != null && p.dodgeNext) this.dodgeRegen(p, this.dodgeOf(p));
     if (p.qdodge) { if (this.time > p.qdodge.until + 0.051) p.qdodge = null; else this.on_dodge(p, p.qdodge.m, true); }
     if (p.botDodge && this.time >= p.botDodge.at) { const bd = p.botDodge; p.botDodge = null; if (!p.dead && !p.cast?.channel) this.on_dodge(p, bd); }
+    // (S9) a bot Warden braces behind the tower shield just before a swing it sees coming lands (botBrace, set by the swing)
+    if (p.botBrace && this.time >= p.botBrace.at) { const bb = p.botBrace; p.botBrace = null; const m = this.mobs.get(bb.src); if (!p.dead && !p.cast?.channel && m && !m.dead) { p.ry = Math.atan2(m.x - p.x, m.z - p.z); this.on_dodge(p, { dx: 0, dz: 0 }); } }
     if (p.qcast && !p.dead) { if (this.time > p.qcast.until + 0.051) p.qcast = null; else this.on_cast(p, p.qcast.m, true); }
     // send hp/res a few times a second
     p.selfT = (p.selfT || 0) + dt;
@@ -3929,6 +3960,24 @@ export class World {
       }
     }
   }
+  // delayed contacts (S9 Aftershock): each fires once at its time, from where the Warden stands then
+  tickDelays(p) {
+    const due = p.delays.filter((d) => d.t <= this.time + 1e-6);
+    if (!due.length) return;
+    p.delays = p.delays.filter((d) => d.t > this.time + 1e-6);
+    for (const d of due) {
+      const h = d.sk.hit || {}, t = d.c.target ? this.entity(d.c.target) : null;
+      this.broadcast({ k: 'aftershock', id: p.id, sk: d.sk.id, x: +p.x.toFixed(2), z: +p.z.toFixed(2), r: h.r || 3, ...(t && h.at === 'target' ? { x: +t.x.toFixed(2), z: +t.z.toFixed(2) } : {}) });
+      this.applySkill(p, d.sk, d.c);
+    }
+  }
+  // Intercept's ally (S9): a party member within range that a machine is hitting (the most hurt first), else the most hurt
+  interceptAlly(p, range) {
+    const team = this.partyMembers(p).filter((q) => q !== p && !q.dead && dist(q, p) <= range + 1);
+    if (!team.length) return null;
+    const hit = team.filter((q) => [...this.mobs.values()].some((m) => !m.dead && m.target === q.id));
+    return (hit.length ? hit : team).sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)[0];
+  }
   // the column falls (Dust Whirl, S8): every small machine still inside is thrown up (a poise contact of the fusion with a
   // launch), the rest staggered by its poise; the client plays a ring where it stood
   columnFall(p, z, foes) {
@@ -3942,6 +3991,12 @@ export class World {
 
   playerDamaged(p, src, amt, skill) {
     if (p.held) return; // its connection dropped and it waits for a reconnect: nothing lands on it (a swing in the air, a slam, a burn)
+    // (S9) Intercept: the Warden takes this ally's next blows instead, at half strength
+    if (p.icpt && p.icpt.n > 0 && p.icpt.until > this.time && src.type === 'mob' && skill !== 'dot') {
+      const W = this.players.get(p.icpt.by);
+      if (W && !W.dead && W !== p) { p.icpt.n--; if (!p.icpt.n) { p.icpt = null; p.buffs = p.buffs.filter((b) => b.name !== 'Intercepted'); } this.broadcast({ k: 'miss', src: src.id, tgt: p.id, text: 'Intercepted' }); this.playerDamaged(W, src, amt * 0.5, skill); return; }
+      p.icpt = null;
+    }
     // (S8) out of reach in a Thousand Cuts or a Whiteout; Desert Step's Shield Step Form blocks the next blow within 1 s
     if (p.untargT > this.time && skill !== 'dot') { this.broadcast({ k: 'miss', src: src.id, tgt: p.id, text: 'Dodge' }); return; }
     if (p.guardT > this.time && src.type === 'mob' && skill !== 'dot' && skill !== 'thorns') { p.guardT = 0; this.broadcast({ k: 'miss', src: src.id, tgt: p.id, text: 'Block' }); return; }
@@ -3963,6 +4018,10 @@ export class World {
       if ((ax * Math.sin(p.ry) + az * Math.cos(p.ry)) / al >= Math.cos((this.dodgeOf(p).blockArc || 75) * Math.PI / 180)) {
         this.broadcast({ k: 'miss', src: src.id, tgt: p.id, text: 'Block' });
         if (p.openT !== p.dodgeAt) { p.openT = p.dodgeAt; const D = this.dodgeOf(p); this.addBuff(p, { name: 'Opening', stat: 'opening', pct: 0, t: D.opening, dur: D.opening, icon: 'evade' }); this.broadcast({ k: 'pdodge', id: p.id, src: src.id }); }
+        // (S9) a blow blocked in the Warden's Brace: the link from it holds the blow (Breakwater throws it back), and Steam Plate
+        if (p.link?.from === 'dodge' && p.link.at >= p.dodgeAt - 1e-6) { const blow = Math.min(p.maxHp * 0.5, amt * (1 - (p.armorPct || 0))); p.link.blocked = Math.max(p.link.blocked || 0, blow); p.link.until = Math.max(p.link.until, this.time + LINK.win + (p.tal?.linkWin || 0)); p.link.tgt = src.id; }
+        if (p.tal?.hooks?.length || p.tal?.keys?.length) runKeys(this, p, 'onBlock', { src, amt });
+        p.combatT = this.time;
         return;
       }
     }
@@ -4139,6 +4198,8 @@ export class World {
           // a dungeon or raid boss slam lands in full on its target only; everyone else nearby takes one plain hit (v120: fights are
           // long enough now that full slams on every melee fighter wiped volunteer parties)
           m.pending = { t: this.time + hitDelay, tgt: target.id, dmg: special ? dmg * 1.8 : dmg, aoe: special ? 6 : 0, splash: special && def.boss && inDungeon ? dmg / BOSS_SWING : 0 };
+          // (S9) a bot Warden on the new kit sees the swing and braces for it: a boss's slam most of the time, other swings less
+          if (target.bot && target.type === 'player' && dodgeFor(target.cls).brace && KIT_V2[target.cls] && !target.botBrace && rand() < (special ? BOT_BRACE.slam : def.boss ? BOT_BRACE.boss : BOT_BRACE.other)) target.botBrace = { at: m.pending.t - 0.2, src: m.id };
         }
       } else m.swingT = Math.min(m.swingT, 0.6);
     } else if (m.state === 'leash') {

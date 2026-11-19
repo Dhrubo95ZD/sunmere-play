@@ -18,7 +18,7 @@ import { STORY } from './story.js';
 import { LINK, compileKit } from './fusions.js';
 
 export { TREE_V };
-export const TREE_CLASSES = new Set(['knight', 'sandblade']); // classes on the Web (the others keep talents until their slice: S8-S13)
+export const TREE_CLASSES = new Set(['knight', 'sandblade', 'warden']); // classes on the Web (the others keep talents until their slice: S8-S13)
 export const onWeb = (cls) => TREE_CLASSES.has(cls);
 export const TREE_FREE_LEVEL = 20; // refunds and resets are free at this level and below
 export const TREE_FREE_DAYS = 14; // after the move from talents
@@ -155,6 +155,14 @@ export function applyMods(r, mods = {}) {
       case 'heat': r.fx.push(['dot', v, 4]); if (!r.tags.includes('heat')) r.tags.push('heat'); break;
       case 'pull': if (!fxSet(r, 'pull', () => ['pull', v])) r.fx.unshift(['pull', v]); break;
       case 'gap': if (r.hit) r.hit.gap = v; break;
+      // (S9, the Warden) Iron Weight's x2 poise and 20% slower swing; Long Haft's cone; Unstoppable's longer charge; Hammer
+      // Toss (Earthsplitter thrown: out and back, two contacts); Wall Pin (a wall slam stuns 3 s)
+      case 'brkMul': fxSet(r, 'brk', (e) => [e[0], Math.round(e[1] * v)]); break;
+      case 'tempo': r.tempo = v; break; // (the sim plays the cast at haste / tempo: contacts, lock and the clip all slower)
+      case 'cone': if (r.hit) r.hit.cone = v; break;
+      case 'dash': fxSet(r, 'dash', () => ['dash', v]); r.range = Math.max(r.range || 0, v + 2); break;
+      case 'toss': r.hit = { t: 0.45, kind: 'proj', speed: 22, n: 2, gap: 0.6 }; r.range = 20; r.toss = true; break;
+      case 'wallPin': if (!r.fx.some((e) => e[0] === 'wallSlam')) r.fx.push(['wallSlam', v]); r.wallStun = true; break;
       default: r[k] = v; // noTarget, single, allLifted, step3, shape, field, onRun, charges, split, pierce, chain, coat, parryWin...
     }
   }
