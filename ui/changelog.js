@@ -1,6 +1,16 @@
 // What's new: shown once after an update (newest first). Bump `v` on the first entry whenever something is added.
 export const CHANGELOG = [
   {
+    v: 137, date: '19 November 2026', title: 'Clearer Fights',
+    items: [
+      ['Big fights stay readable', 'Every fusion now keeps to firm limits on dust, rocks, lights and rings, so a crowd of heroes fusing at once stays clear and smooth. Phones show a lighter version of everything.'],
+      ['Other players’ effects', 'A new setting in Options > Graphics: see other players’ effects in Full, Reduced or Minimal. Your party always shows more, and far-off fights stay quiet.'],
+      ['Danger stands out', 'Red-orange now only ever means a machine is about to strike: hero effects use warm amber instead, and warnings draw on top of everything.'],
+      ['Feel the big hits', 'On phones, your heaviest blows now give a short buzz (Options can turn it off).'],
+      ['A tidier Chemist', 'A worn cloak now lies against the Chemist’s back under his pressure tank, and the Herbalist’s lantern glows warm.'],
+    ],
+  },
+  {
     v: 136, date: '19 November 2026', title: 'The Herbalist',
     items: [
       ['The Herbalist, rebuilt', 'The last class on the new combat, so all seven now fight the new way. Nettle Dart is a three-dart chain thrown on the run, and every dart that lands stores Sap that makes your next heal stronger. Calming Smoke heals allies inside it and softens the machines’ blows. Old Herbalists get their talent points back with a letter from the trainer.'],
