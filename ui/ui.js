@@ -292,11 +292,20 @@ export class UI {
       const box = $('.login-chars', w);
       if (!box) return;
       box.innerHTML = '';
-      if (!list.length) { if (note) box.innerHTML = `<div class="chars-note">${note}</div>`; return; }
-      if (firstList && !$('.name-in', w).value) { $('.name-in', w).value = list[0].name; if (CLASSES[list[0].cls] && !qc) pick(list[0].cls); } // (a test run's ?cls= wins)
-      firstList = false;
-      box.innerHTML = `<label>${online ? 'Your characters online' : 'Your characters'}</label>${list.slice(0, 8).map((c) => `<div class="char-row"><button class="char-pick" data-n="${c.name}" data-c="${c.cls}" style="--cc:${CLASSES[c.cls]?.color || '#fff'}"><img src="${classArt(SKILLS[c.cls] ? c.cls : 'knight')}"><span><b>${c.name}</b><em>Level ${c.level} ${CLASSES[c.cls]?.name || ''}</em></span></button>${online ? `<button class="char-del" data-n="${c.name}" title="Delete this character">Delete</button>` : ''}</div>`).join('')}`;
-      box.querySelectorAll('.char-pick').forEach((b) => {
+      // (owner 20 Nov) character slots: your characters, then empty "New character" slots, at least 4 (8 at most)
+      const slotsOn = online || list.length > 0;
+      if (!slotsOn) { if (note) box.innerHTML = `<div class="chars-note">${note}</div>`; return; }
+      if (list.length && firstList && !$('.name-in', w).value) { $('.name-in', w).value = list[0].name; if (CLASSES[list[0].cls] && !qc) pick(list[0].cls); } // (a test run's ?cls= wins)
+      if (list.length) firstList = false;
+      const shown = list.slice(0, 8), empty = Math.max(0, Math.min(8, Math.max(4, shown.length + 1)) - shown.length);
+      box.innerHTML = `<label>${online ? 'Your characters online' : 'Your characters'}</label>`
+        + shown.map((c) => `<div class="char-row"><button class="char-pick" data-n="${c.name}" data-c="${c.cls}" style="--cc:${CLASSES[c.cls]?.color || '#fff'}"><img src="${classArt(CLASSES[c.cls] ? c.cls : 'knight')}"><span><b>${c.name}</b><em>Level ${c.level} ${CLASSES[c.cls]?.name || ''}</em></span></button>${online ? `<button class="char-del" data-n="${c.name}" title="Delete this character">Delete</button>` : ''}</div>`).join('')
+        + Array.from({ length: empty }, () => '<div class="char-row"><button class="char-pick char-new"><span class="char-plus">+</span><span><b>New character</b><em>Pick a class and a name</em></span></button></div>').join('')
+        + (list.length ? '' : (note ? `<div class="chars-note">${note}</div>` : ''));
+      box.querySelectorAll('.char-new').forEach((b) => {
+        b.onclick = () => { const n = $('.name-in', w); n.value = ''; n.focus(); box.querySelectorAll('.char-pick').forEach((x) => x.classList.toggle('on', x === b)); };
+      });
+      box.querySelectorAll('.char-pick:not(.char-new)').forEach((b) => {
         b.onclick = () => { $('.name-in', w).value = b.dataset.n; if (CLASSES[b.dataset.c]) pick(b.dataset.c); box.querySelectorAll('.char-pick').forEach((x) => x.classList.toggle('on', x === b)); };
         b.ondblclick = () => { b.onclick(); go(); };
       });

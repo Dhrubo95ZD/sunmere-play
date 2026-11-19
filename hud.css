@@ -427,7 +427,7 @@
 .w-char .pet-list, .w-char .rep-list { max-width: 372px; }
 
 /* saved characters on the login screen */
-.login-chars { margin-bottom: 10px; display: flex; flex-direction: column; gap: 4px; max-height: 250px; overflow-y: auto; }
+.login-chars { margin-bottom: 10px; display: flex; flex-direction: column; gap: 4px; max-height: 264px; overflow-y: auto; }
 .char-pick { display: flex; gap: 8px; align-items: center; padding: 4px 6px; background: rgba(255,230,160,.05); border: 1px solid #4a3a22; border-radius: 5px; cursor: pointer; text-align: left; color: #f4ead2; font: 13px var(--font-body); }
 .char-pick img { width: 30px; height: 30px; border-radius: 4px; }
 .char-pick b { display: block; color: var(--cc); font: 700 14px var(--font-head); }
@@ -456,7 +456,7 @@
 .login .srv-in { width: 100%; box-sizing: border-box; padding: 6px 8px; font: 600 13px var(--font-body); background: var(--recess, #0e0a07); color: var(--metal-text, #fff); border: 1px solid var(--brass-edge, #8a6a30); border-radius: 2px; box-shadow: var(--socket-shadow, none); outline: none; }
 /* with the account box the panel can outgrow a short window: it scrolls instead of running off the top */
 .login-panel:has(.login-acct) { max-height: calc(100vh - 24px); overflow-y: auto; box-sizing: border-box; }
-.login-panel:has(.login-acct) .login-chars { max-height: 150px; }
+.login-panel:has(.login-acct) .login-chars { max-height: 236px; }
 .login-panel:has(.login-acct) .enter-btn { position: sticky; bottom: 0; z-index: 1; }
 .login .char-row { display: flex; gap: 4px; align-items: stretch; }
 .login .char-row .char-pick { flex: 1; min-width: 0; }
@@ -2704,3 +2704,8 @@ html.phone .hud .minimap .on-badge { font-size: 20px; line-height: 26px; padding
 .w-web .ws-card .wc-h b { font-family: Cinzel, var(--font-head); color: #f6d488; letter-spacing: .5px; }
 .w-web .ws-card .wc-h span { color: #c8b48a; }
 .w-web .ws-card .wc-opt { border-color: #6a5430; background: #0000001f; }
+
+/* (owner 20 Nov) character slots on the login screen: empty slots invite a new character */
+.login .char-new { opacity: .78; border-style: dashed !important; }
+.login .char-new:hover, .login .char-new.on { opacity: 1; }
+.char-plus { width: 30px; height: 30px; display: grid; place-items: center; border-radius: 4px; border: 1px dashed #8a6a3a; color: #e8c26a; font: 700 20px var(--font-head); }
