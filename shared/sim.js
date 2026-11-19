@@ -29,7 +29,7 @@ import { treeMods, treeCompile, treePoints, treeSpent, allocBlock, isLeaf, prune
 import { TREE_BY_ID } from './tree.js';
 import { runKeys } from './keystones.js';
 import { linkFusion, opener, planWait, reservedB, coatScore, coatFirst, botTree, botBuildOf } from './botplan.js';
-import { COATS, REACTIONS, WALL, KNOCKDOWN, RECOVER, PIN, PIN_SKILLS, elemsOf, coatOf, reactionFor, fromBehind } from './reactions.js';
+import { COATS, REACTIONS, WALL, KNOCKDOWN, RECOVER, WINDOW, inWindow, PIN, PIN_SKILLS, elemsOf, coatOf, reactionFor, fromBehind } from './reactions.js';
 const HEAT_ONLY = Object.freeze(['heat']); // (a fire patch's tick, S7)
 
 const rand = mulberry32(Date.now() & 0xffff);
@@ -2752,7 +2752,7 @@ export class World {
           if (p.type === 'player' && !(c.hits || 0) && !c.after) { const e = fxl.find((f) => f[0] === 'zone'); const Z = (p.zones ||= []); Z.push({ kind: a, coef: b, until: this.time + (cc || 4), r: e?.[4] || 4, x: center.x, z: center.z, slow: sk.zoneSlow || 0, next: this.time + 0.5, sk: sk.id }); if (Z.length > 6) Z.shift(); } if (sk.forge && p.type === 'player' && !(c.hits || 0) && !c.after && type === 'zone') this.broadcast({ k: 'slag', x: +center.x.toFixed(2), z: +center.z.toFixed(2), r: fxl.find((f) => f[0] === 'zone')?.[4] || 2, dur: cc || 3 }); break; // (a ground patch: Cinder Landing's cinders; at most 6 a hero, oldest goes, section 3.6)
         // (S5) Stormfall's plunge drives the lifted machine into the ground: a 0.3 m bounce (still Lifted for its 0.8 s, so the
         // air bonus holds), then it lies stunned for a s (Hold Aloft: longer). The client plays the slam on the 'air' hold
-        case 'slamDown': for (const m of enemies) { if (m.type !== 'mob' || m.dead) continue; const was = m.airT > this.time; const b = isElite(m.def) ? 0.5 : 0.8; if (was) { m.airT = this.time + b; const lb = m.buffs.find((bf) => bf.name === 'Lifted'); if (lb) { lb.t = b; lb.dur = Math.max(lb.dur, b); } this.broadcast({ k: 'air', id: m.id, dur: b, h: 0.3, hold: 1, slam: 1, dir: [0, 0] }); } if (!m.def.boss && (was || a > 0)) { const st = (was ? b : 0) + a * cc1; this.addBuff(m, { name: 'Slammed', cc: 'stun', t: st, dur: st, debuff: true, icon: 'stun' }); m.swingT = Math.max(m.swingT || 0, st); } } break;
+        case 'slamDown': for (const m of enemies) { if (m.type !== 'mob' || m.dead) continue; const was = m.airT > this.time; const b = isElite(m.def) ? 0.5 : 0.8; if (was) { m.airT = this.time + b; const lb = m.buffs.find((bf) => bf.name === 'Lifted'); if (lb) { lb.t = b; lb.dur = Math.max(lb.dur, b); } this.broadcast({ k: 'air', id: m.id, dur: b, h: 0.3, hold: 1, slam: 1, dir: [0, 0] }); } if (m.winT > this.time && inWindow(m, this.time)) this.winHold(p, m, WINDOW.slam, 'slam'); /* (CR.6: pressed down in its open window) */ if (!m.def.boss && (was || a > 0)) { const st = (was ? b : 0) + a * cc1; this.addBuff(m, { name: 'Slammed', cc: 'stun', t: st, dur: st, debuff: true, icon: 'stun' }); m.swingT = Math.max(m.swingT || 0, st); } } break;
         case 'parry': p.parryT = this.time + a; p.parryFrom = sk.id; break; // (Guard: a blow in this window is parried, see playerDamaged)
         case 'parryBack': if (c.blocked) for (const m of enemies) this.damage(p, m, c.blocked * a, sk.id); break; // (a share of the blocked blow back: Turning Riposte)
         // (carried into a wall or a machine: the knock's wall slam is held Pinned for a s; Battering Line)
@@ -2886,7 +2886,8 @@ export class World {
     if (crit) amt *= 1.6 + (tal?.critDmg || 0);
     if (tal) { const f = m.hp / m.maxHp; if (f < 0.35) amt *= 1 + tal.execute; else if (f > 0.9) amt *= 1 + tal.opener; }
     amt *= 1 + this.buffVal(m, 'vuln');
-    if (m.type === 'mob') amt *= 1 + Math.min(0.6, this.buffVal(m, 'armor')); // sundered armour (every caster's breaks add up, to +60% at most)
+    if (m.type === 'mob') amt *= 1 + Math.min(0.6, this.buffVal(m, 'armor'));
+    if (hc?.sk?.from && m.type === 'mob' && m.winT > this.time && inWindow(m, this.time)) amt *= WINDOW.fuse; // (CR.6: a fusion lands fully in a boss's open window) // sundered armour (every caster's breaks add up, to +60% at most)
     if (hc && m.type === 'mob' && m.airT > this.time && hc.air) amt *= hc.air; // ['air', x]: more against a Lifted machine
     // (S7, shared/reactions.js) Pinned: +30% from behind. A coated machine struck by the right kind of blow: a Reaction
     let rx = null;
@@ -3009,6 +3010,20 @@ export class World {
     }
   }
 
+  // (CR.6, reactions.js WINDOW) a lift or a slam-down on a boss in its open window holds it a little longer: the window
+  // grows by `want` s, at most WINDOW.ext s in all per window; the client plays a 0.3 m jolt (air, win) or a pressed stagger
+  winHold(src, m, want, kind) {
+    const add = Math.min(want, WINDOW.ext - (m.winExt || 0));
+    if (add < 0.15 || m.dead) return 0;
+    m.winExt = (m.winExt || 0) + add; m.winT += add;
+    const t = m.winT - this.time;
+    this.addBuff(m, { name: 'Jolted', cc: 'stun', t, dur: t, debuff: true, icon: 'stun' });
+    m.pending = null; m.swingT = Math.max(m.swingT || 0, t);
+    const d = Math.hypot(m.x - src.x, m.z - src.z) || 1, dir = [+((m.x - src.x) / d).toFixed(2), +((m.z - src.z) / d).toFixed(2)];
+    this.broadcast(kind === 'lift' ? { k: 'air', id: m.id, dur: +add.toFixed(2), h: WINDOW.liftH, dir, win: 1 } : { k: 'stag', id: m.id, dur: +add.toFixed(2), dir, win: 1 });
+    return add;
+  }
+
   // poise (feel.js, combat_design.md 2.5): a skill contact wears a machine's poise down; at 0 a normal machine is Staggered
   // (1.2 s stun, +15% damage taken; elites 0.8 s) and an elite or boss is Broken (its telegraph cancelled, a 1 s kneel,
   // 4 s Exposed +25%, poise back at 120%). A launch throws a small machine into the air (Lifted: it cannot act); a heavy
@@ -3021,7 +3036,7 @@ export class World {
     hc.broke.add(m.id); // (once per machine per contact)
     const out = { broke: false, launched: false };
     const big = !liftable(m.def);
-    let dmg = (hc.brk + (hc.xbrk || 0)) * (crit ? POISE.critMul : 1) * (hc.launch && big ? POISE.bigLaunchMul : 1) * (m.def.boss || m.def.world ? POISE.bossTake : 1);
+    let dmg = (hc.brk + (hc.xbrk || 0)) * (crit ? POISE.critMul : 1) * (hc.launch && big ? POISE.bigLaunchMul : 1) * (m.def.boss || m.def.world ? (hc.sk?.from && m.winT > this.time ? 1 : POISE.bossTake) : 1); // (CR.6: a fusion in a boss's open window lands its full poise)
     if (src.tal?.keys) dmg *= (1 + (src.tal.brk || 0)) * (src.tal.brkMul || 1); // the Skill Web's poise damage (Impact nodes, Heavy Impact, Heavy Hand)
     if (m.brokenT > this.time) dmg = 0; // a Broken machine is already open
     const elite = isElite(m.def);
@@ -3050,6 +3065,7 @@ export class World {
         out.launched = true;
       }
     }
+    if (hc.launch && big && m.winT > this.time && inWindow(m, this.time)) this.winHold(src, m, WINDOW.lift, 'lift'); // (CR.6: a lift on an open boss: a short jolt)
     if (m.poise <= 0 || (hc.bash && !elite && !(m.brokenT > this.time) && !guard)) {
       out.broke = true;
       if (elite) {
@@ -3062,6 +3078,7 @@ export class World {
         this.aoes = this.aoes.filter((a) => a.src !== m.id || a.caller || !CUT_KINDS.has(a.kind) || a.t <= this.time);
         m.pending = null;
         m.poise = m.poiseMax * POISE.brokenRefill;
+        if (m.def.boss || m.def.world) { m.winT = this.time + POISE.brokenKneel; m.winExt = 0; } // (CR.6: the kneel is an open window)
         this.broadcast({ k: 'broken', id: m.id, t: POISE.broken, cut: this.aoes.length < n0 ? 1 : 0 }); // (cut: the client clears its circles)
       } else if (guard) { out.broke = false; m.poise = Math.max(m.poise, 1); // (guarded: it shrugs it off)
       } else {
@@ -4008,6 +4025,7 @@ export class World {
         const t = R(RECOVER.min, RECOVER.max);
         this.addBuff(src, { name: 'Recovering', cc: 'stun', t, dur: t, debuff: true, icon: 'stun' });
         src.pending = null; src.swingT = Math.max(src.swingT || 0, t);
+        src.winT = this.time + t; src.winExt = 0; // (CR.6: the boss's open window, reactions.js WINDOW)
         this.broadcast({ k: 'recover', id: src.id, t: +t.toFixed(2) });
       }
     }

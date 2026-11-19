@@ -636,13 +636,20 @@ export class EntityView {
     if (this.dead) return;
     // S7: a raider plays the hero body's clips (Air_Juggle_Loop, Hit_Knockback, Knockdown, LayToIdle; reactfx.js foeClip)
     const human = !!this.def?.humanoid;
-    if (human && kind !== 'recover' && !(kind === 'air' && ev?.hold) && !(kind === 'stag' && this.react?.kind === 'air' && !this.react.landed)) fx?.foeClip?.(this, kind, ev);
+    if (human && kind !== 'recover' && !(kind === 'air' && (ev?.hold || ev?.win)) && !(kind === 'stag' && this.react?.kind === 'air' && !this.react.landed)) fx?.foeClip?.(this, kind, ev);
     // S7: a boss's recovery after its big telegraph: it sags and vents steam for the window (not over a lift or a kneel)
     if (kind === 'recover') {
       if (this.react && this.react.kind !== 'recover') return;
       const d0 = V(-Math.sin(this.ry), 0, -Math.cos(this.ry));
       this.react = { kind, t: 0, dur: Math.min(2, ev?.t || 1.2), dir: d0, y: 0, fx, jet: 0, h: 0 };
-      if (fx && !human) { fx.emit('steam', this.pos.clone().setY(this.pos.y + (this.height || 2) * 0.85), { n: 8, size: 1 + (this.radius || 1) * 0.25, spread: 0.5 }); fx.sound('hiss'); }
+      if (fx && !human) {
+        const H0 = this.height || 2, R0 = this.radius || 1;
+        fx.emit('steam', this.pos.clone().setY(this.pos.y + H0 * 0.85), { n: 8, size: 1 + R0 * 0.25, spread: 0.5 }); fx.sound('hiss');
+        // (CR.6) the open window reads at a glance: sparks off a joint and one loose plate dropping off the side (no glow, no ring)
+        const side = V(Math.cos(this.ry), 0, -Math.sin(this.ry)).multiplyScalar(R0 * 0.6), at0 = this.pos.clone().setY(this.pos.y + H0 * 0.55).add(side);
+        fx.emit('sparks', at0, { n: 14, dir: side.clone().normalize().setY(0.3), color: '#fff0d0' });
+        if (fx.plates) fx.plates(at0, 1, Math.min(0.9, 0.3 + R0 * 0.2), fx.machineTone?.(this), side.clone().normalize()); fx.sound('clang');
+      }
       return;
     }
     const d = ev?.dir ? V(ev.dir[0], 0, ev.dir[1]) : V(-Math.sin(this.ry), 0, -Math.cos(this.ry));
@@ -678,7 +685,7 @@ export class EntityView {
       if (fx) { fx.emit('sparks', this.pos.clone().setY(this.pos.y + was.y + H * 0.55).addScaledVector(d, -0.25), { n: 12, dir: d }); fx.emit('steam', this.pos.clone().setY(this.pos.y + was.y + H * 0.8), { n: 5, size: 0.8 }); }
       return;
     }
-    this.react = { kind, t: 0, dur: kind === 'air' ? ev.dur || 1 : kind === 'stag' ? 0.55 : Math.min(ev?.t || 4, 4), h: Math.min(2.6, Math.max(1.6, ev?.h || 1.9)), dir: d, y: 0, ox: 0, oz: 0, tilt: 0, fx, landed: false, jet: 0 };
+    this.react = { kind, t: 0, dur: kind === 'air' ? ev.dur || 1 : kind === 'stag' ? 0.55 : Math.min(ev?.t || 4, 4), h: ev?.win ? ev.h || 0.3 : Math.min(2.6, Math.max(1.6, ev?.h || 1.9)), dir: d, y: 0, ox: 0, oz: 0, tilt: 0, fx, landed: false, jet: 0 };
     if (!fx) return;
     if (kind === 'stag') {
       fx.emit('sparks', at.clone().addScaledVector(d, -0.25), { n: 12, dir: d });

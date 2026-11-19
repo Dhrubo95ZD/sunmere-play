@@ -1,6 +1,13 @@
 // What's new: shown once after an update (newest first). Bump `v` on the first entry whenever something is added.
 export const CHANGELOG = [
   {
+    v: 140, date: '19 November 2026', title: 'Boss Windows',
+    items: [
+      ['Strike when they stagger', 'After a boss lands its big attack, or when you break its guard, it staggers for a moment: steam vents, sparks fly off a joint and a plate drops off. In that window your fusions hit harder and break its guard faster, and lifts and slams jolt it.'],
+      ['Bots wait for it', 'Companions and volunteers now hold their big fusions for a boss’s window instead of spending them at once.'],
+    ],
+  },
+  {
     v: 139, date: '19 November 2026', title: 'One Way to Fight',
     items: [
       ['The old skills are gone', 'Every class now fights only the new way: fewer skills that fuse in pairs, and the Skill Web. The old talent screen and the old skill keys are retired.'],

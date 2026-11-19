@@ -20,7 +20,7 @@ import { TREE_BY_ID, TREE_START } from './tree.js';
 import { houseCrosses } from './houses.js';
 import { worldGap } from './terrain.js';
 import { DUNGEON_MIN_X, dungeonPush } from './dungeons.js';
-import { elemsOf, coatOf, reactionFor } from './reactions.js';
+import { elemsOf, coatOf, reactionFor, bossy, inWindow, windowSoon } from './reactions.js';
 
 // ------------------------------------------------------------------ the opener tables
 // Per class, the fusions a bot plans for, most wanted first (single target first, then the area ones that need foes).
@@ -139,9 +139,12 @@ export function opener(w, b, tgt, team, lead) {
   if (!list) return null;
   const tal = b.tal;
   let looked = 0;
+  // (CR.6) a boss about to open (its own big telegraph lands within WINDOW.soon s): the damage fusions wait for the window
+  const save = bossy(tgt) && !inWindow(tgt, w.time) && windowSoon(w, tgt);
   for (const id of list) {
     const f = b.effFuse && Object.values(b.effFuse).find((x) => x.id === id) || FUSION_BY_ID[id];
     if (!f || !fusionUnlocked(b, f) || !ready(w, b, f.id, 0.4)) continue;
+    if (save && !(f.ai?.want?.allyHpBelow || WANT[f.id]?.allyHpBelow)) continue;
     const B = b.eff?.[f.to];
     if (!B || B.lvl > b.level) continue;
     const dodge = f.from === 'dodge';

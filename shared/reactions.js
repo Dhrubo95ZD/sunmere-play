@@ -60,6 +60,21 @@ export const KNOCKDOWN = { dist: 2.5, down: 1.0, liftDown: 0.8 };
 // (no swing, no new mechanic; its ability clock waits). A world boss too. Dungeon hazards it calls are not its own blow.
 export const RECOVER = { min: 1.0, max: 1.5, kinds: new Set(['circles', 'nova', 'beam']) };
 
+// (CR.6) a boss's open window: its Recovering after a big telegraph (above) or the kneel of a Poise break. While it is open
+//   fuse: a fusion's blow deals this much (fusions land fully: outside the window a boss is braced, x1); poise: a fusion's
+//   poise lands without the boss's poise share (POISE.bossTake); lift / slam: a launch or a slam-down on the boss holds it
+//   this long more (a short jolt 0.3 m up, or a stagger pressed down), up to `ext` s added to one window in all; soon: a bot
+//   with a fusion ready holds it while the boss's own big telegraph lands within this many s (shared/botplan.js)
+export const WINDOW = { fuse: 1.2, lift: 0.4, liftH: 0.3, slam: 0.4, ext: 0.8, soon: 2.5 };
+export const bossy = (m) => !!(m?.def?.boss || m?.def?.world);
+export const inWindow = (m, now) => bossy(m) && m.winT > now;
+// a big telegraph of the boss's own lands within WINDOW.soon s (a.caller: a dungeon hazard it called, not its own blow)
+export function windowSoon(w, m) {
+  if (!bossy(m) || !w.aoes?.length) return false;
+  for (const a of w.aoes) if (a.src === m.id && !a.caller && RECOVER.kinds.has(a.kind) && a.t > w.time && a.t - w.time <= WINDOW.soon) return true;
+  return false;
+}
+
 // the kinds of blow a skill record is (cached per record: a core skill record and each fusion is its own object)
 const cache = new WeakMap();
 const NONE = Object.freeze([]);
