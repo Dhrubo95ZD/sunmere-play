@@ -22,6 +22,7 @@ import { CameraRig } from './camera.js';
 import { createHorizon } from './horizon.js';
 import { TargetFX } from './targetfx.js';
 import { FX } from './fx.js';
+import { voiceContext } from './voiceamb.js';
 import { installReactFx } from './reactfx.js';
 import { SFX } from './sfx.js';
 import { EntityManager } from './entities.js';
@@ -1073,6 +1074,7 @@ export async function startGame() {
       ambient.update(dtRaw, show.pos);
       world.grass.userData.setPushers([{ x: show.pos.x, y: show.pos.y, z: show.pos.z, r: 1.2 }]);
       engine.updateShadow(show.pos, 20);
+      sfx.voice('menu'); // (VA.1 voice ambience on the login screen)
       return;
     }
     const y = game.you;
@@ -1265,6 +1267,7 @@ export async function startGame() {
     weather.blizzard = (weather.blizzard || 0) + ((D ? 0 : wt.blizzard || 0) - (weather.blizzard || 0)) * wk;
     const night = window.NIGHT_FORCE ?? nightAt(game.serverTime());
     world.night = D ? 0 : night; world.rain = weather.rain; world.sand = weather.sand;
+    sfx.voice(voiceContext({ dungeon: !!D, night, x: local.pos.x, z: local.pos.z }), !!local.anim?.combatTarget); // (VA.1 voice ambience)
     // (on the Heights a blizzard is a squall of blown snow: the air closes in white, renderer setWeather's squall)
     const squall = !D && area === 'heights' ? Math.min(1, weather.blizzard * 1.15) : 0;
     // (in the Rainward Gorge a downpour closes the air in grey-green, heavier than the Heights' squall: renderer setWeather's pour)

@@ -50,6 +50,8 @@ const TF_LOD_DESK = { FULL: 30, NEAR: 50, NEAR_HZ: 30, FAR_HZ: 15, THINK_HZ: 10 
 const TF_LOD_MOB = { FULL: 24, NEAR: 50, NEAR_HZ: 20, FAR_HZ: 12, THINK_HZ: 10 };
 // (combat_design 7.1) the new hero body on desktop: full rate within 20 m, half (30 Hz) to 40 m, a quarter (15 Hz) beyond
 const TF_LOD_HERO = { ...TF_LOD_DESK, FULL: 20, NEAR: 40 };
+// (v141, phones with the hero body: its pose costs ~2x the old body's) full detail to 14 m, the rest as TF_LOD_MOB
+const TF_LOD_MOB_HERO = { ...TF_LOD_MOB, FULL: 14 };
 
 // walking spots, kept on one side of the stream each so nobody wades across
 const SPOTS = {
@@ -651,7 +653,7 @@ export class Townsfolk {
         if (Math.hypot(focus.x - q.S.x, focus.z - q.S.z) < INDOOR_NEAR + 15) { this.pending.splice(k, 1); this.makeIndoor(q); }
       }
     }
-    const TF_LOD = GFX.mobile ? TF_LOD_MOB : heroOn() ? TF_LOD_HERO : TF_LOD_DESK;
+    const TF_LOD = GFX.mobile ? (heroOn() ? TF_LOD_MOB_HERO : TF_LOD_MOB) : heroOn() ? TF_LOD_HERO : TF_LOD_DESK;
     for (let i = 0; i < this.list.length; i++) {
       const p = this.list[i];
       // after dark the children and shoppers go home and half the strollers turn in: those with a home house sit or doze

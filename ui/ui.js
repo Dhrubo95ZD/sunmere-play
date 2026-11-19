@@ -2054,6 +2054,7 @@ export class UI {
         <h4>Sound</h4>
         <label class="opt"><span>Volume</span><input type="range" class="o-vol" min="0" max="1" step="0.05" value="${SETTINGS.volume}"><b class="o-volv">${Math.round(SETTINGS.volume * 100)}%</b></label>
         <label class="opt chk"><input type="checkbox" class="o-mute" ${SETTINGS.muted ? 'checked' : ''}> Mute all sound</label>
+        <label class="opt chk"><input type="checkbox" class="o-voice" ${SETTINGS.voiceAmb !== false ? 'checked' : ''}> Voice ambience: quiet wordless men's humming under towns at night, dungeons and the menu (no music; it fades under combat${IS_MOBILE ? '; one lighter layer on phones' : ''})</label>
         <label class="opt chk"><input type="checkbox" class="o-bg" ${SETTINGS.bgMute ? 'checked' : ''}> Silent when the game is in the background</label>
         <label class="opt chk"><input type="checkbox" class="o-fog" ${SETTINGS.mapFog !== false ? 'checked' : ''}> World map: hide places you have not explored yet</label>
         <label class="opt chk"><input type="checkbox" class="o-junk" ${SETTINGS.autoJunk ? 'checked' : ''}> Sell Poor-quality gear automatically when I talk to a merchant (it stays in Buyback)</label>
@@ -2083,6 +2084,7 @@ export class UI {
       const set = () => { saveSettings(); this.g.sfx?.applyVolume(); };
       const vol = $('.o-vol', w); vol.oninput = () => { SETTINGS.volume = Number(vol.value); $('.o-volv', w).textContent = Math.round(SETTINGS.volume * 100) + '%'; set(); };
       $('.o-mute', w).onchange = (e) => { SETTINGS.muted = e.target.checked; set(); };
+      $('.o-voice', w).onchange = (e) => { SETTINGS.voiceAmb = e.target.checked; set(); };
       $('.o-bg', w).onchange = (e) => { SETTINGS.bgMute = e.target.checked; set(); };
       const mf = $('.o-fog', w); if (mf) mf.onchange = (e) => { SETTINGS.mapFog = e.target.checked; set(); if (this.windows.map?.isConnected) this.windows.map.refresh(); };
       const mj = $('.o-junk', w); if (mj) mj.onchange = (e) => { SETTINGS.autoJunk = e.target.checked; set(); };

@@ -1,5 +1,8 @@
-// Sound effects synthesized from filtered noise only (no music, no pitched tones).
+// Sound effects synthesized from filtered noise only (no music, no pitched tones). The one recorded sound is the quiet
+// men's-voice humming under towns at night, dungeons and the menu (voiceamb.js, Options: Voice ambience).
 import { SETTINGS } from '../engine/settings.js';
+import { IS_MOBILE } from '../engine/platform.js';
+import { VoiceAmb } from './voiceamb.js';
 export class SFX {
   constructor() {
     this.ctx = null;
@@ -29,6 +32,12 @@ export class SFX {
     const b = this.brown.getChannelData(0);
     let lastOut = 0;
     for (let i = 0; i < len; i++) { const w = Math.random() * 2 - 1; lastOut = (lastOut + 0.02 * w) / 1.02; b[i] = lastOut * 3.5; }
+  }
+  // the voice ambience (VA.1): ctx = 'menu' | 'dungeon' | 'town' | null, combat = fighting (it ducks right down)
+  voice(ctx, combat = false) {
+    if (!this.ctx) return;
+    this.va ||= new VoiceAmb(this, IS_MOBILE);
+    this.va.update(SETTINGS.voiceAmb !== false && !SETTINGS.muted ? ctx : null, !!combat);
   }
   level() {
     const away = SETTINGS.bgMute && (document.hidden || !document.hasFocus());

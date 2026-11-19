@@ -245,7 +245,7 @@ export function mergeCharacter(root, o = {}) {
   const skip = () => { MERGE_STATS.skipped++; return false; };
   if (!meshes || !skel || U.merged || U.kind === 'deadeye' || U.dsList) return skip();
   // (v115 players, o.keep: not with the Dragonslayer armour model or a Tripo body on, which come and go on their own)
-  if (o.keep && (U.dsa?.mesh || U.tbody || U.heatBody || U.holstered?.on)) return skip();
+  if (o.keep && (U.dsa?.mesh || U.heatBody || U.holstered?.on)) return skip();
   // (a player's target outline, targetfx.js, hangs on its meshes: dropped here, built again on the new ones: mergeGen)
   if (o.keep) { const hulls = []; root.traverse((x) => { if (x.userData.isHull) hulls.push(x); }); if (hulls.length) { for (const h of hulls) h.parent.remove(h); U.mergeGen = (U.mergeGen || 0) + 1; } }
   const list = Object.entries(meshes).filter(([, m]) => m.visible !== false);

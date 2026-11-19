@@ -13,3 +13,9 @@ re-textured for the game (tools/cgtrader/SOURCES.md, convert.py, finalize.py):
 - red_cottage.glb, red_cottage_bg.glb: "FREE Game Ready Low Poly Medieval Cottage" by leland-thegamedeveloper, https://www.cgtrader.com/free-3d-models/exterior/house/free-game-ready-low-poly-medieval-cottage-for-any-project, Royalty Free.
 - desert_house.glb: "Stylized desert house" by matasskarzauskas, https://www.cgtrader.com/free-3d-models/exterior/house/stylized-desert-house, Royalty Free.
 - egypt_house_001.glb, egypt_house_002.glb, egypt_house_003.glb, egypt_house_004.glb, egypt_house_005.glb, egypt_house_006.glb, egypt_house_007.glb, egypt_house_008.glb, egypt_house_009.glb: "EGYPT ARAB DESERT ANCIENT TURKEY SUMER BABYLON HOUSE COLLECTION" (all nine houses; 1, 3, 4, 6, 8 and 9 added in v110) by Enterables, https://www.cgtrader.com/free-3d-models/exterior/house/egypt-arab-desert-ancient-turkey-sumer-babylon-house-collection, Royalty Free.
+
+Voice ambience beds (client/assets/audio/voice/*.ogg, VA.1), men's wordless humming from Freesound, all CC0 1.0 Universal (public domain). Trimmed, pitch-shifted, filtered, looped and mixed by art_src/voice/build_beds.py:
+- "Humming in A Minor" by xkeril, https://freesound.org/people/xkeril/sounds/685679/, CC0.
+- "Humming in F# Minor" by xkeril, https://freesound.org/people/xkeril/sounds/685680/, CC0.
+- "male_hum.wav" by mahakush, https://freesound.org/people/mahakush/sounds/368817/, CC0.
+- "Voice Male humming - Doubting" by bolkmar, https://freesound.org/people/bolkmar/sounds/469605/, CC0.

@@ -7,6 +7,28 @@ import { G, QUALITY } from '../engine/globals.js';
 import { GlowPoint } from './glowfield.js';
 import { walkOnDemand, skipWhenHidden } from '../game/freeze.js';
 
+// (v141) the scene walk of an assembled building with moving parts of its own (res.dynamics): its built meshes stand still
+// (v115, the shadow cache relies on it too), so after the first walk only the moving parts are walked, each by its own
+// step; the whole group again when it or its parent moves or its children change. ?freeze=0 keeps the full walk.
+const OBJ_UMW = THREE.Object3D.prototype.updateMatrixWorld;
+function partialUpdateMatrixWorld() { // (force ignored, as freeze.js does: the scene's own walk forces every frame)
+  const P = this._partial, p = this.parent, flagged = this.matrixWorldNeedsUpdate;
+  if (this.matrixAutoUpdate) this.updateMatrix(); // (sets the flag again: only a flag from before counts)
+  if (flagged || P.n !== this.children.length || !P.m.equals(this.matrix) || (p && !P.pmw.equals(p.matrixWorld))) {
+    P.n = this.children.length; P.m.copy(this.matrix); if (p) P.pmw.copy(p.matrixWorld);
+    OBJ_UMW.call(this, true);
+    return;
+  }
+  this.matrixWorldNeedsUpdate = false; // (unchanged: the world matrix still holds)
+  for (const d of P.dyn) if (d.parent === this) d.updateMatrixWorld(true); // (forced, as the scene's walk did)
+}
+function partialWalk(g, dyn) {
+  if (/[?&]freeze=0/.test(globalThis.location?.search || '')) return g;
+  g._partial = { dyn, n: -1, m: new THREE.Matrix4(), pmw: new THREE.Matrix4() };
+  g.updateMatrixWorld = partialUpdateMatrixWorld;
+  return g;
+}
+
 const LANTERN_COLORS = {
   yellow: { mat: 'glowYellow', light: 0xffc24a },
   green: { mat: 'glowGreen', light: 0x9ae84a },
@@ -223,5 +245,5 @@ export function assemble(res, { shadow = true } = {}) {
   // with its own update): the static shadow cache draws them (engine/shadowCache.js; it redraws if the whole group is
   // moved), those moving parts stay dynamic casters
   g.userData.shadowStatic = true;
-  return res.dynamics?.length ? g : walkOnDemand(g);
+  return res.dynamics?.length ? partialWalk(g, dyn) : walkOnDemand(g);
 }

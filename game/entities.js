@@ -38,6 +38,8 @@ export const VIEW_LOD_MOB = { ...VIEW_LOD, FULL_D: 24, NEAR_HZ: 20, MID_HZ: 12 }
 // (combat_design 7.1, the new hero body on desktop: its retarget pass costs more per update than the old body) full rate
 // within 20 m, half rate (30 Hz) to 40 m, a quarter (15 Hz) beyond; the old body keeps VIEW_LOD
 export const VIEW_LOD_HERO = { ...VIEW_LOD, FULL_D: 20, NEAR_D: 40 };
+// (v141, phones with the hero body) full detail to 14 m, the rest as VIEW_LOD_MOB
+export const VIEW_LOD_MOB_HERO = { ...VIEW_LOD_MOB, FULL_D: 14 };
 // characters cast sun shadows within this many metres of you (the player always does); QUALITY.charShadowDist overrides
 export const charShadowDist = () => GFX.charShadowDist ?? (GFX.mobile ? 20 : 45);
 const _frustum = new THREE.Frustum(), _pv = new THREE.Matrix4(), _sph = new THREE.Sphere();
@@ -972,7 +974,7 @@ export class EntityManager {
   }
   // per frame: every view, at the rate and detail its distance and visibility earn (VIEW_LOD above)
   update(dt) {
-    const L = GFX.mobile ? VIEW_LOD_MOB : heroOn() ? VIEW_LOD_HERO : VIEW_LOD, me =this.views.get(this.localId), cam = window.game?.engine?.camera;
+    const L = GFX.mobile ? (heroOn() ? VIEW_LOD_MOB_HERO : VIEW_LOD_MOB) : heroOn() ? VIEW_LOD_HERO : VIEW_LOD, me =this.views.get(this.localId), cam = window.game?.engine?.camera;
     const ref = me ? me.pos : cam ? cam.position : null;
     this.lodT = (this.lodT ?? 0) - dt;
     const evalNow = this.lodT <= 0;

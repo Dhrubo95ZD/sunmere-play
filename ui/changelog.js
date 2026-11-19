@@ -1,6 +1,13 @@
 // What's new: shown once after an update (newest first). Bump `v` on the first entry whenever something is added.
 export const CHANGELOG = [
   {
+    v: 141, date: '20 November 2026', title: 'Quiet Voices',
+    items: [
+      ['Voice ambience', 'Towns at night, dungeons and the main menu now have a quiet bed of men humming: voice only, no instruments. It softens in a fight. Turn it off with Options > Voice ambience.'],
+      ['Smoother phone towns', 'Towns run about 10% faster on phones: nearby townsfolk keep full animation, and market stalls and buildings no longer redo work every frame.'],
+    ],
+  },
+  {
     v: 140, date: '19 November 2026', title: 'Boss Windows',
     items: [
       ['Strike when they stagger', 'After a boss lands its big attack, or when you break its guard, it staggers for a moment: steam vents, sparks fly off a joint and a plate drops off. In that window your fusions hit harder and break its guard faster, and lifts and slams jolt it.'],

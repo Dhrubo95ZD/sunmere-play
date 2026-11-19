@@ -28,7 +28,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 import { patchWorld } from '../engine/materials.js';
 import { IS_MOBILE } from '../engine/platform.js';
-import { bumpStatic } from '../game/freeze.js';
+import { bumpStatic, freezeStatic } from '../game/freeze.js';
 
 const SPEC = {
   floodgate: { rough: 0.9, metal: 0.0, normal: 0.9 },
@@ -356,7 +356,10 @@ function swapIn(root, name, o) {
 // s: one scale or [sx, sy, sz]; onPut(hold): called once the GLB is in (e.g. to tag it like its house).
 export function modelSlot(name, { p = [0, 0, 0], ry = 0, s = 1, fallback = null, extra = null, shadow = true, tint = null, onPut = null } = {}) {
   const g = new THREE.Group(); g.name = 'slot_' + name;
+  const noFreeze = /[?&]freeze=0/.test(globalThis.location?.search || '');
   if (fallback) g.add(fallback);
+  // (v141) the stand-in's matrices frozen (the slot's update kept it walking every frame; it is all the phones show)
+  if (fallback && !noFreeze) freezeStatic(g);
   const dyn = [];
   g.userData.update = (dt, t) => { for (const d of dyn) d.userData.update?.(dt, t); };
   const put = () => {
@@ -376,6 +379,9 @@ export function modelSlot(name, { p = [0, 0, 0], ry = 0, s = 1, fallback = null,
     // (v116) the GLB stands still: the static shadow cache draws it (engine/shadowCache.js; its extras keep their own
     // update and stay dynamic casters), classified again now that it is in
     g.userData.shadowStatic = true; bumpStatic();
+    // (v141) its matrices too: the GLB's nodes (~150 in a market stall) were walked every frame under the slot's update;
+    // frozen now (redone only if the slot is moved), the extras keep walking
+    if (!noFreeze) freezeStatic(hold, { dynamic: dyn });
     onPut?.(hold);
   };
   if (isReady(name)) put(); else if (enabled) need(name).then((ok) => { if (ok && enabled) put(); });

@@ -742,7 +742,7 @@ function gunSash(rb, accent) {
 // two leather hip holsters (flap open: the pistols are in the fists; riding, they go in here), a belt of paper
 // cartridges on the right front and a dark leather cartridge pouch behind the left hip (no flask: a flat brass flask
 // reads as a drinking flask)
-// the two holster bodies alone (at = the pistol's place, HOLSTER.at or HOLSTER.tripo; loop = the belt loop's x)
+// the two holster bodies alone (at = the pistol's place, HOLSTER.at; loop = the belt loop's x)
 function holsterPair(rb, brass, at = HOLSTER.at, loop = 0.232, mat = 'leather') {
   for (const sx of [-1, 1]) {
     // the pistol's place in it (EntityView holsters the pistols here out of combat and while riding: HOLSTER)
@@ -764,10 +764,10 @@ function holsters(rb, brass) {
   rb.add(rbox(0.088, 0.034, 0.038, 0.008), 'leather', 'hips', { p: [0.15, -0.026, -0.15], r: [0, -0.6, 0], c: '#3a2416' });
   rb.add(box(0.016, 0.012, 0.006), 'metal', 'hips', { p: [0.161, -0.032, -0.167], r: [0, -0.6, 0], c: brass }); // the flap's stud, on the outer face
 }
-// at: the pistol's place on the hips bone (x for the left hip; the right is mirrored); tripo: the same on the bulkier Tripo
-// coat (its skirts stand further out); rx: the pistol's tilt in it (barrel down, a little back)
-export const HOLSTER = { at: [0.27, -0.01, 0.03], tripo: [0.3, -0.01, 0.05], rx: Math.PI / 2 - 0.3 };
-export const holsterAt = (root) => (root?.userData?.tbody ? HOLSTER.tripo : HOLSTER.at);
+// at: the pistol's place on the hips bone (x for the left hip; the right is mirrored);
+// rx: the pistol's tilt in it (barrel down, a little back)
+export const HOLSTER = { at: [0.27, -0.01, 0.03], rx: Math.PI / 2 - 0.3 };
+export const holsterAt = () => HOLSTER.at;
 // Out of combat the Deadeye's pistols ride in the hip holsters (EntityView decides when, v108). The pistols in the hands
 // are hidden by shrinking the weapon bones (no visibility flag the gear code owns is touched, and a gear change while
 // holstered just shows up in the holsters), and copies sharing their geometry and materials sit in the holsters, barrel
@@ -806,27 +806,6 @@ export function setPistolsHolstered(root, on) {
   for (const bn of ['weaponR', 'weaponL']) if (B[bn] && B[bn].scale.x !== s) B[bn].scale.setScalar(s);
   H.on = on && H.copies.length > 0;
 }
-// the Tripo body (tripoBody.js, v108) brings no hands or mask of its own (tools/tripo/deadeye/rig_body.py cuts them off):
-// these closed gauntleted fists go on the hand bones, and a smooth closed steel mask (a rounded block: no ridge, no slit,
-// no features) under its hat on the head bone. The mask fills up into the Tripo hat (brim underside at y 1.84, crown from
-// 1.87, crown radius ~0.1) and back over the hat's thin post: a rounder, shorter block left a gap under the brim with the
-// post showing in it. Its rounded top edges sit inside the brim and crown, so from every side the mask meets the brim
-// v108: the head is a smooth wrapped cloth hood instead of the steel block: one rounded egg of dark cloth from the collar
-// up into the hat (it still fills the space under the brim and round the hat's post), and a scarf band in the variant's
-// accent wound once round the lower part. Completely featureless: no eyes,
-// nose, mouth or seams down the front, nothing in pairs; under the brim from above, so no ring shows.
-// Hands go in rb, the hood in hb (drawn matte: tripoBody.js marks its vertices dull). v = the coat variant.
-setTripoHands((rb, hb, v = 0) => {
-  for (const s of ['L', 'R']) fist(rb, s, '#4e3e32', 'metal');
-  const accent = DEADEYE_LOOKS[v % 3][1], head = () => [['head', 1]];
-  const wrap = lathe([[0.001, 1.585], [0.06, 1.59], [0.08, 1.61], [0.093, 1.65], [0.1, 1.7], [0.103, 1.76], [0.103, 1.82], [0.1, 1.85], [0.085, 1.868], [0.05, 1.876], [0.001, 1.878]], 24);
-  hb.addW(wrap, 'metal', head, { p: [0, 0, -0.012], s: [0.96, 1, 1.28], c: '#64584e', paint: 0.22, taper: false });
-  const band = lathe([[0.1, 1.598], [0.107, 1.62], [0.108, 1.655], [0.101, 1.678]], 24);
-  band.translate(0, -1.638, 0); band.rotateX(0.14); band.rotateZ(0.05); band.translate(0, 1.638, 0);
-  hb.addW(band, 'metal', head, { p: [0, 0, -0.012], s: [0.94, 1, 1.3], c: accent, paint: 0.2, taper: false });
-  // the hip holsters on the Tripo coat (matte, with the hood: hb), a little further out than on the procedural outfit
-  holsterPair(hb, '#c89a50', HOLSTER.tripo, 0.27, 'metal');
-});
 // (Deadeye look pass, new body) the head: a fitted cloth cowl over the plain head egg (no face, no seams, nothing in
 // pairs), a scarf wound up over the lower half and round the neck with one tail on the scarf chain, under a flat-crowned
 // road hat pulled a little forward. From straight above the hat must not read as a disc in a ring: the crown is a rounded
@@ -912,7 +891,8 @@ function bandolierStrap(rb, leather, brass) {
 import { longsword, kiteShield, recurveBow, arrowMesh, reactorRod, gearStaff, flaskMesh, scimitar, roundShield, warhammer, towerShield, herbStaff, dagger, battleAxe, flangedMace, pistol, sidearm, WEAPON_MODEL, SHIELD_MODEL, LEG_MODEL, LEG_SHIELD, SIDEARM_MODEL } from './weapons.js';
 import { dsRefresh } from './dragonslayer.js';
 import { dsaSync } from './dsArmour.js';
-import { tripoBodySync, setTripoHands, DEADEYE_LOOKS } from './tripoBody.js';
+// the Deadeye's coat variants [coat, accent, hat]
+export const DEADEYE_LOOKS = [['#2c2622', '#8a3a24', '#2a2420'], ['#3c434c', '#a8865a', '#33302c'], ['#575b60', '#2a7a78', '#3a3c40']];
 import { lookChange } from './charMerge.js';
 export { longsword, kiteShield, recurveBow, arrowMesh, reactorRod, gearStaff, flaskMesh, scimitar, roundShield, warhammer, towerShield, herbStaff, dagger, battleAxe, flangedMace, pistol, sidearm };
 
@@ -1417,7 +1397,7 @@ function dsaLater(root) {
   const U = root.userData;
   if (U.dsaQueued) return;
   U.dsaQueued = true;
-  queueMicrotask(() => { U.dsaQueued = false; tripoBodySync(root); dsaSync(root); }); // (the Tripo body first: the armour masks it)
+  queueMicrotask(() => { U.dsaQueued = false; dsaSync(root); });
 }
 
 // --------------------------------------------------------------------------
@@ -1661,7 +1641,7 @@ export function buildCharacter(kind, variant = 0) {
   root.userData.kind = kind;
   root.userData.variant = variant;
   if (rb.hero) rb.hero.finish(root);
-  if (kind === 'deadeye') dsaLater(root); // the Tripo body (tripoBody.js) for a look no setChar* call follows
+  if (kind === 'deadeye') dsaLater(root); // the armour sync for a look no setChar* call follows
   // find the bow string for live updates
   root.traverse((o) => { if (o.userData?.string) root.userData.bow = o; });
   return root;

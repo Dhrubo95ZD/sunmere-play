@@ -36,7 +36,7 @@ export const KEY_ACTIONS = [
   ['dodge', 'Dodge (a tap)', 'ShiftLeft'], // (S1: a tap of Shift on its own dodges; Shift held with 1-0 still casts the second bar)
 ];
 // S1 feel layer (combat_design.md 2.1 and 2.7): hit-stop on contacts, and the camera's punch, kick and lift on your own hits
-for (const [k, v] of [['hitstop', true], ['camFx', true], ['dodgeFlick', true]]) if (SETTINGS[k] === undefined) SETTINGS[k] = v;
+for (const [k, v] of [['hitstop', true], ['camFx', true], ['dodgeFlick', true], ['voiceAmb', true]]) if (SETTINGS[k] === undefined) SETTINGS[k] = v;
 SETTINGS.keys = { ...Object.fromEntries(KEY_ACTIONS.map(([a, , k]) => [a, k])), ...(SETTINGS.keys || {}) };
 export const keyFor = (action) => SETTINGS.keys[action];
 export const actionFor = (code) => { for (const [a] of KEY_ACTIONS) if (SETTINGS.keys[a] === code) return a; return null; };
