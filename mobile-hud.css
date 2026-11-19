@@ -298,7 +298,7 @@ html.mobile.touch .hud .ram-panel .rp-drive button { padding: 4px 2px; font-size
 /* ---------------------------------------------------------------- S6: the morphing wheel, drag-fuse, pinned chips, dodge charges */
 html.mobile.touch .tc-sk .tc-fzw { position: absolute; left: 22%; right: 22%; bottom: 9%; height: calc(var(--u) * 4px); border-radius: 2px; pointer-events: none; display: none; background: #0008; }
 html.mobile.touch .tc-sk .tc-fzw { width: auto; }
-html.mobile.touch .tc-sk .tc-fzq { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; border-radius: 50%; font: 800 calc(var(--u) * 24px) var(--font-head); color: #fff4d0; background: rgba(20,26,32,.6); text-shadow: 0 0 6px #000; pointer-events: none; }
+html.mobile.touch .tc-sk .tc-fzq { position: absolute; right: 4%; top: 4%; width: calc(var(--u) * 16px); height: calc(var(--u) * 16px); display: none; align-items: center; justify-content: center; border-radius: 50%; font: 800 calc(var(--u) * 12px)/1 var(--font-head); color: #2a1a06; background: #ffe08a; box-shadow: 0 1px 2px #000; pointer-events: none; z-index: 3; }
 html.mobile.touch .tc-sk.fz { border-color: #ffe08a; animation: tcfz 0.7s ease-in-out infinite alternate; }
 html.mobile.touch .tc-sk.fz .tc-fzw { display: block; box-shadow: none; background: linear-gradient(90deg, #ffe08a, #fff6d8); max-width: 56%; }
 html.mobile.touch .tc-sk.fz.fz-in { animation: tcfzin .22s ease-out, tcfz 0.7s .22s ease-in-out infinite alternate; }
@@ -331,3 +331,6 @@ html.mobile.touch .hud .target-frame .bar.poise { height: calc(var(--hu) * 4px);
 html.mobile.touch .hud .target-frame .bar.poise span { top: calc(var(--hu) * 4px); right: 0; font-size: 9px; }
 html.mobile.touch .hud .fz-pill span i { display: none; } /* (no keys on a phone) */
 html.mobile.touch .hud .fz-pill span { padding: 3px 12px; }
+/* Leave dungeon on phones: on the left under the chat button, clear of the minimap chips, the target frame and the wheel */
+html.mobile.touch .hud .minimap .leave-dg { position: fixed; left: calc(var(--sl) + 8px); top: calc(var(--st) + var(--hu) * 152px); margin: 0; padding: 6px 12px; font-size: 13px; z-index: 30; }
+html.mobile.touch .hud.has-buffs .minimap .leave-dg { top: calc(var(--st) + var(--hu) * 176px); }

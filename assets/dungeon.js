@@ -41,7 +41,7 @@ import { G } from '../engine/globals.js';
 const PI = Math.PI;
 const THEME = {
   mine: { floor: 'dFloorMine', wall: 'dWallMine', wallH: 3.6, light: 0xffb060 },
-  warren: { floor: 'dFloorMine', wall: 'dWallMine', wallH: 3.2, light: 0xffb060, floorTint: '#b08a62', rock: '#a07a58' },
+  warren: { floor: 'dFloorMine', wall: 'dWallMine', wallH: 3.2, light: 0xffb060, floorTint: '#cdbb9c', rock: '#7e7d7a' },
   vault: { floor: 'dFloorVault', wall: 'dWallVault', wallH: 3.8, light: 0xffa850 },
   foundry: { floor: 'dFloorFoundry', wall: 'dWallFoundry', wallH: 4.2, light: 0xff8a40 },
   storm: { floor: 'dFloorFoundry', wall: 'dWallFoundry', wallH: 4.4, light: 0x8ac8ff, floorTint: '#9aa8b8' },
@@ -916,11 +916,15 @@ function dressWarren(D, b, { r, rng, isFloorL, torch, addDyn, col, placeRes }) {
     for (let k = 0; k < pts.length - 1; k++) {
       const [ax, az] = pts[k], [bx, bz] = pts[k + 1];
       const L = Math.hypot(bx - ax, bz - az), dx = (bx - ax) / L, dz = (bz - az) / L, nx = -dz, nz = dx;
-      for (let t = 3; t < L - 3; t += 5.5) {
-        const px = ax + dx * t, pz = az + dz * t, half = w / 2 - 0.4, rot = Math.atan2(dx, dz);
+      for (let t = 3; t < L - 3; t += 7.5) {
+        const px = ax + dx * t, pz = az + dz * t, rot = Math.atan2(dx, dz);
         for (const sg of [1, -1]) {
-          const qx = px + nx * half * sg, qz = pz + nz * half * sg;
-          if (!isFloorL(qx, qz)) continue;
+          // (v-briar) set hard against the rock: walk out from the middle of the tunnel to its last floor, so no post
+          // stands in the walkway or between the camera and the hero; none where the tunnel opens into a room
+          let e = -1;
+          for (let s = 0.5; s <= w / 2 + 3; s += 0.25) { if (!isFloorL(px + nx * s * sg, pz + nz * s * sg)) { e = s; break; } }
+          if (e < 1.2) continue;
+          const qx = px + nx * (e - 0.3) * sg, qz = pz + nz * (e - 0.3) * sg;
           b.add(box(0.22, 2.5, 0.22), 'dTimber', { p: [qx, 1.25, qz], r: [0, rot + r(-0.1, 0.1), r(-0.05, 0.05)], c: 0xffffff });
           b.add(box(0.42, 0.18, 0.36), 'dTimber', { p: [qx, 2.55, qz], r: [0, rot, 0], c: 0xffffff });
           col(qx, qz, 0.2);

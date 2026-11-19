@@ -51,7 +51,7 @@ const LIFT_FROM = { rime: { heights: [HEIGHTS.rimeLift.keeper.x, HEIGHTS.rimeLif
 const SAIL_LINE = { reach: 'Sail to the Cinder Reach.', valley: 'Sail home to Harrowmouth.', rime: 'Sail north to the Rime Steps.', heights: 'Ride the lift up to the Windward Heights.', rimelift: 'Ride the lift down to the Dam Crown.', tidewater: 'Sail round the cold cape to Tidewater Sound.', rainward: 'Ride the wagon up the haul road to the Rainward Gorge.', tidemills: 'Ride the wagon down the haul road to the Tide Mills.', weald: 'Ride the car over the ridge to the Russet Weald.', slip: 'Ride the car back over the ridge to the Slip.' };
 const NEED_CH = { m_c29_aboard: 'Main Story, Chapter 29', m_c32_cold: 'Main Story, Chapter 32', m_c33_refit: 'Main Story, Chapter 33', m_c36_keep: 'Main Story, Chapter 36', m_c41_chart: 'Main Story, Chapter 41', m_c45_haulier: 'Main Story, Chapter 45', m_c49_rope: 'Main Story, Chapter 49' };
 const MAP_PX = Math.round(MAP.w); // world map width in pixels (1 px per metre)
-import { DUNGEONS, DUNGEON_AREAS, areaCenter, dungeonAt, cellFloor, CELL } from '/sunmere-play/shared/dungeons.js';
+import { DUNGEONS, DUNGEON_AREAS, areaCenter, dungeonAt, dungeonSight, cellFloor, CELL } from '/sunmere-play/shared/dungeons.js';
 import { OBJECT_KINDS, SPAWNS, LOOT_TABLES, NODES, OBJECTS, COMPANIONS, FACTIONS, REP_RANKS, repRank, factionOfZone, SETS, RECIPES, STATION_NAME, PAINTS, PETS, ESCORTS, repairCost, TRADE, tradeFair, PROF_NAME, PROF_MAX, profColor, LEDGER } from '/sunmere-play/shared/data.js';
 import { icon, skillIcon, buffArt, achArt, factionArt, homeArt, menuArt, miscArt } from './icons.js';
 import { CHANGELOG, CHANGELOG_VERSION } from './changelog.js';
@@ -407,7 +407,7 @@ export class UI {
       <div class="hud">
         <div class="unit player-frame"><div class="portrait"><img><span class="lvl"></span></div><div class="bars"><div class="nm"></div><div class="bar hp"><i></i><span></span></div><div class="bar res"><i></i><span></span></div><div class="buffs"></div></div></div>
         <div class="unit target-frame hidden"><div class="portrait"><img><span class="lvl"></span></div><div class="bars"><div class="nm"></div><div class="bar hp"><i></i><span></span></div><div class="sub"></div><div class="buffs"></div></div></div>
-        <div class="minimap"><div class="zone-name"></div><canvas width="200" height="200"></canvas><div class="mm-zoom"><button data-z="1" title="Zoom in (+)">+</button><button data-z="-1" title="Zoom out (-)">&minus;</button></div><div class="coords"></div><div class="post-note hidden">Post waiting</div><div class="dura hidden"></div></div>
+        <div class="minimap"><div class="zone-name"></div><canvas width="200" height="200"></canvas><div class="mm-zoom"><button data-z="1" title="Zoom in (+)">+</button><button data-z="-1" title="Zoom out (-)">&minus;</button></div><div class="coords"></div><div class="post-note hidden">Post waiting</div><div class="dura hidden"></div><button class="leave-dg hidden" title="Leave this dungeon and return to its entrance">Leave dungeon</button></div>
         <div class="quest-tracker"></div>
         <div class="chat"><div class="chat-log"></div><input class="chat-in" maxlength="200" placeholder="Enter to chat (/s say, /p party, /w name whisper)"></div>
         <div class="castbar hidden"><i></i><span></span></div>
@@ -438,6 +438,16 @@ export class UI {
     for (const b of r.querySelectorAll('.menubar button')) { const a = menuArt(b.dataset.w); if (a) { b.innerHTML = `<img src="${a}" alt=""><span>${b.textContent}</span>`; b.classList.add('mb-art'); } }
     $('.menubar', r).addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; if (b.dataset.w === 'recall') return this.g.send({ t: 'recall' }); this.toggle(b.dataset.w); });
     $('.respawn', r).onclick = () => this.g.send({ t: 'respawn' });
+    // Leave dungeon: a second press within 3 s confirms; the server takes you out the same way as the exit portal
+    const lv = $('.leave-dg', r);
+    lv.onclick = (e) => {
+      e.stopPropagation();
+      const D = this.leaveD;
+      if (!D) return;
+      if (lv.classList.contains('arm')) { clearTimeout(this.leaveArmT); lv.classList.remove('arm'); lv.textContent = 'Leave dungeon'; this.g.send({ t: 'door', id: D.id, exit: true, leave: true }); return; }
+      lv.classList.add('arm'); lv.textContent = 'Leave? Tap again';
+      this.leaveArmT = setTimeout(() => { lv.classList.remove('arm'); lv.textContent = 'Leave dungeon'; }, 3000);
+    };
     const chatIn = $('.chat-in', r);
     chatIn.addEventListener('keydown', (e) => {
       e.stopPropagation();
@@ -3532,6 +3542,7 @@ export class UI {
   update(dt, camera) {
     if (!this.you) return;
     const g = this.g;
+    { const p0 = g.playerPos(), D = p0 && p0.x >= 700 ? dungeonAt(p0.x, p0.z) : null, show = D && !this.you.dead ? D : null; if (show !== this.leaveD) { this.leaveD = show; $('.leave-dg', this.root).classList.toggle('hidden', !show); } }
     // target frame
     const tf = $('.target-frame', this.root);
     const tv = g.target ? g.entities.get(g.target) : null;
@@ -3674,6 +3685,8 @@ export class UI {
       if (v.ty === 'n' && v.npc && (v.npc.seenFrom || v.npc.seenUntil) && v.root && !v.root.visible) continue; // a story-timed man not here yet (npcSeen): no floating name
       const dist = v.pos.distanceTo(camPos);
       if (dist > 70) continue;
+      // in a dungeon, no plate through rock (judged from the hero, re-checked every 7th frame per entity; the target keeps its plate)
+      if (v.pos.x >= 700 && this.g.target !== v.id) { if (((v.plSeenF ?? -1) !== this._plF) && ((this._plF + (v.id | 0)) % 7 === 0 || v.plSeen === undefined)) { const me = this.g.playerPos(); v.plSeen = dungeonSight(me.x, me.z, v.pos.x, v.pos.z); v.plSeenF = this._plF; } if (v.plSeen === false) continue; }
       const mr = mob ? mob.get(v.id) : null;
       if (mob && !mr) continue;
       const pos = v.pos.clone(); pos.y += (v.height || 2) + 0.35;

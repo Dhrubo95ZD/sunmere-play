@@ -36,7 +36,7 @@ export const MOBS = {
   banditArcher: { name: 'Briar Bowman', model: 'raider', variant: 4, lvl: [4, 5], hp: 80, dmg: [4, 8], speed: 4.6, aggro: 17, range: 17, swing: 2.4, xp: 78, loot: 'bandit', radius: 0.5, humanoid: true, ranged: 'arrow' },
   banditBoss: { name: 'Garrick Briar', model: 'raider', variant: 5, lvl: [5, 5], hp: 760, dmg: [9, 15], speed: 5.2, aggro: 14, range: 2.8, swing: 1.9, xp: 520, loot: 'banditBoss', radius: 0.6, humanoid: true, elite: true , abilities: [{ kind: 'nova', every: 14, r: 5, delay: 1.7, dmg: 1.4, text: 'Garrick swings his axe in a wide circle!' }] },
   hollis: { name: 'Hollis the Fence', model: 'raider', variant: 12, lvl: [5, 5], hp: 680, dmg: [8, 13], speed: 5.2, aggro: 13, range: 2.6, swing: 1.8, xp: 420, loot: 'warrensElite', radius: 0.6, humanoid: true, elite: true, abilities: [{ kind: 'circles', every: 12, n: 2, r: 2.8, delay: 1.7, dmg: 1.3, text: 'Hollis throws a pot of lamp oil!' }] },
-  thresher: { name: 'The Iron Thresher', model: 'thresher', lvl: [6, 6], hp: 12000, dmg: [11, 17], speed: 3.2, aggro: 15, range: 4.2, swing: 2.5, xp: 1100, loot: 'thresher', radius: 2.2, elite: true, boss: true, abilities: [{ kind: 'circles', every: 10, n: 3, r: 3.0, delay: 1.9, dmg: 1.4, text: 'The Thresher spits out chaff and stones!' }, { kind: 'nova', every: 16, r: 6, delay: 2.2, dmg: 1.8, text: 'The Thresher spins its drum. Get clear!' }, { kind: 'enrage', at: 0.3, text: 'The Thresher\'s boiler shrieks!' }] },
+  thresher: { name: 'The Iron Thresher', model: 'thresher', lvl: [6, 6], hp: 12000, dmg: [11, 17], speed: 3.2, aggro: 15, range: 4.2, swing: 2.5, xp: 1100, loot: 'thresher', radius: 2.2, elite: true, boss: true, abilities: [{ kind: 'circles', every: 10, n: 3, r: 3.0, delay: 1.9, dmg: 1.4, text: 'The Thresher spits out chaff and stones!' }, { kind: 'nova', every: 16, r: 6, delay: 2.2, dmg: 1.8, text: 'The Thresher spins its barrel. Get clear!' }, { kind: 'enrage', at: 0.3, text: 'The Thresher\'s boiler shrieks!' }] },
   // ---- 5-10: Glimmer Glade, Westfold, Ironcliff Quarry, the Deepmine
   harvester: { name: 'Rusted Harvester', model: 'harvester', lvl: [6, 8], hp: 170, dmg: [8, 13], speed: 3.6, aggro: 11, range: 2.9, swing: 2.2, xp: 100, loot: 'harvester', radius: 1.2 },
   rustguard: { name: 'Rusted Warden-Engine', model: 'sentinel', variant: 1, lvl: [5, 7], hp: 150, dmg: [7, 12], speed: 3.4, aggro: 12, range: 2.8, swing: 2.4, xp: 95, loot: 'foundry', radius: 0.9 },
@@ -109,9 +109,10 @@ export const SPAWNS = [
   { mob: 'harvester', x: -196, z: 44, r: 16, n: 7 },
   { mob: 'harvester', x: -168, z: 58, r: 10, n: 3 },
   // ---- the Briar Warrens (4-6)
-  ds('warrens', 'bandit', 26, 62, 6, 3, { lvl: [4, 5] }), ds('warrens', 'bandit', 72, 60, 7, 3, { lvl: [4, 5] }), ds('warrens', 'banditArcher', 76, 56, 4, 1, { lvl: [5, 5] }),
-  ds('warrens', 'scrapper', 48, 46, 5, 2, { lvl: [4, 5] }), ds('warrens', 'bandit', 22, 31, 6, 3, { lvl: [5, 5] }), ds('warrens', 'hollis', 22, 26, 1, 1),
-  ds('warrens', 'scrapper', 76, 28, 6, 2, { lvl: [5, 5] }), ds('warrens', 'banditArcher', 78, 32, 5, 2, { lvl: [5, 5] }),
+  // (v-briar: smaller packs, 12 foes before the Thresher instead of 16, and Hollis no longer pulled with three guards at once)
+  ds('warrens', 'bandit', 26, 62, 6, 2, { lvl: [4, 5] }), ds('warrens', 'bandit', 72, 60, 7, 2, { lvl: [4, 5] }), ds('warrens', 'banditArcher', 76, 56, 4, 1, { lvl: [5, 5] }),
+  ds('warrens', 'scrapper', 48, 46, 5, 2, { lvl: [4, 5] }), ds('warrens', 'bandit', 22, 35, 4, 2, { lvl: [5, 5] }), ds('warrens', 'hollis', 22, 26, 1, 1),
+  ds('warrens', 'scrapper', 76, 28, 6, 2, { lvl: [5, 5] }), ds('warrens', 'banditArcher', 78, 32, 5, 1, { lvl: [5, 5] }),
   ds('warrens', 'thresher', 50, 12, 1, 1),
   // ---- Glimmer Glade (5-8)
   { mob: 'rustguard', x: 132, z: -152, r: 24, n: 7 },

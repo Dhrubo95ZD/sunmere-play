@@ -1,6 +1,16 @@
 // What's new: shown once after an update (newest first). Bump `v` on the first entry whenever something is added.
 export const CHANGELOG = [
   {
+    v: 142, date: '20 November 2026', title: 'Cleaner Dungeons',
+    items: [
+      ['Dungeons stay cleared', 'Machines in dungeons and raids no longer come back while you are inside. Everything resets a minute after the last player leaves.'],
+      ['Leave dungeon', 'A Leave dungeon button sits under the minimap (on phones, under the chat button) whenever you are in a dungeon or raid. Press it twice to go back to the entrance.'],
+      ['The Briar Warrens, tidied', 'Clearer light and floor, no posts in the way of the camera, no names showing through rock, smaller trash pulls, and Hollis no longer brings three guards with him.'],
+      ['Clearer skill bar', 'When a fusion is waiting to be found, the skill keeps its own icon with a small gold ? instead of being covered.'],
+      ['Characters as slots', 'The login screen shows your characters as slots, with empty New character slots to make another.'],
+    ],
+  },
+  {
     v: 141, date: '20 November 2026', title: 'Quiet Voices',
     items: [
       ['Voice ambience', 'Towns at night, dungeons and the main menu now have a quiet bed of men humming: voice only, no instruments. It softens in a fight. Turn it off with Options > Voice ambience.'],

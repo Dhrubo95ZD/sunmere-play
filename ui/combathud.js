@@ -45,8 +45,10 @@ export function fuseFor(game, ui, id, now) {
   }
   return null;
 }
-// the record a slot shows for a fusion state: the fusion's own painted icon, or a "?" plate before it is discovered
-export const fuseIcon = (st) => skillIcon(st.f);
+// the icon a slot shows for a fusion state: the fusion's own painted icon once discovered; before that the skill keeps its
+// own icon with a small "?" badge in the corner (a full "?" plate hid the chain skill, slot 1, after every dodge once
+// the dodge > chain fusion unlocked: the Ranger's Rolling Shot at level 7, and every class has one)
+export const fuseIcon = (st, base) => (st.known ? skillIcon(st.f) : base);
 
 // a morph applied to one button (bar slot or wheel button): classes and the icon swap, written only when they change.
 // S: { el, img, base (the skill's own icon), fz (cache) }
@@ -59,7 +61,7 @@ export function morph(S, st) {
     S.el.classList.toggle('fz-unk', !!st && !st.known && !st.cooling);
     S.el.classList.toggle('fz-cool', !!st?.cooling);
     S.el.classList.toggle('fz-clean', !!st?.clean && !st.cooling);
-    const src = st && !st.cooling ? fuseIcon(st) : S.base;
+    const src = st && !st.cooling ? fuseIcon(st, S.base) : S.base;
     if (S.img && S.img.getAttribute('src') !== src) S.img.src = src;
     if (st && !st.cooling && !was) { S.el.classList.remove('fz-in'); void S.el.offsetWidth; S.el.classList.add('fz-in'); }
     else if (!st || st.cooling) S.el.classList.remove('fz-in');

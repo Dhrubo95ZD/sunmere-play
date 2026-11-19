@@ -602,6 +602,16 @@ export function dungeonAt(x, z) {
 }
 export function cellFloor(d, i, j) { return i >= 0 && j >= 0 && i < d.nx && j < d.nz && d.grid[j * d.nx + i] === 1; }
 export function isFloor(d, x, z) { return cellFloor(d, Math.floor((x - d.ox) / CELL), Math.floor((z - d.oz) / CELL)); }
+// line of sight inside a dungeon: false when rock lies on the ground line between the two points (sampled every metre).
+// Outside the dungeons, or between two dungeons, it is always true. Name plates and picking a target use it.
+export function dungeonSight(x0, z0, x1, z1) {
+  if (x0 < DUNGEON_MIN_X && x1 < DUNGEON_MIN_X) return true;
+  const d = dungeonAt(x0, z0);
+  if (!d || d !== dungeonAt(x1, z1)) return true;
+  const L = Math.hypot(x1 - x0, z1 - z0), n = Math.ceil(L);
+  for (let k = 1; k < n; k++) { const t = k / n; if (!isFloor(d, x0 + (x1 - x0) * t, z0 + (z1 - z0) * t)) return false; }
+  return true;
+}
 export function dungeonWorld(d, lx, lz) { return [d.ox + lx, d.oz + lz]; }
 
 // push a circle (x, z, radius r) out of the rock cells around it; returns [x, z]

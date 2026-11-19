@@ -2276,7 +2276,9 @@ export class World {
     const D = DUNGEON_BY_ID[m.id];
     if (!D) return;
     if (m.exit) {
-      if (Math.hypot(p.x - D.exitW[0], p.z - D.exitW[1]) > 7) return this.err(p, 'Too far away.');
+      // m.leave: the HUD's Leave dungeon button, from anywhere inside this dungeon (same way out as the exit portal)
+      const inside = p.x >= DUNGEON_MIN_X && dungeonAt(p.x, p.z) === D;
+      if (!(m.leave && inside) && Math.hypot(p.x - D.exitW[0], p.z - D.exitW[1]) > 7) return this.err(p, 'Too far away.');
       const a = D.door.ry;
       this.teleport(p, D.door.x + Math.sin(a) * 4, D.door.z + Math.cos(a) * 4);
     } else {
@@ -4005,6 +4007,7 @@ export class World {
     for (const p of this.players.values()) this.tickPlayer(p, dt);
     if (this.tiers) this.tickMobsTiered(dt, this.tiers); else this.tickMobsNear(dt);
     this.tickEvents();
+    this.tickDungeonResets();
     this.tickRam(dt); // the Ram Engine on the Harrow Coast, on the world clock (shared/ramEngine.js)
     this.tickRides(dt); // the Russet Weald's "Clear the Rides" while the gale blows (shared/rides.js)
     for (let i = this.aoes.length - 1; i >= 0; i--) {
@@ -4562,6 +4565,43 @@ export class World {
   }
 
   // ------------------------------------------------------------------ world events
+  // dungeons and raids never respawn while a run is going: once nobody (no hero; bots do not count) has been inside for
+  // a minute, every fallen foe there comes back and the next group finds it fresh. Open regions keep their timers.
+  tickDungeonResets() {
+    if (this.time < (this.dResetNext || 0)) return;
+    this.dResetNext = this.time + 5;
+    const occupied = new Set();
+    for (const q of this.players.values()) if (!q.bot && q.x >= DUNGEON_MIN_X) { const D = dungeonAt(q.x, q.z); if (D) occupied.add(D.id); }
+    const empty = this.dEmptyT || (this.dEmptyT = {});
+    for (const D of DUNGEONS) {
+      if (D.open) continue;
+      if (occupied.has(D.id)) { empty[D.id] = 0; continue; }
+      if (!empty[D.id]) { empty[D.id] = this.time; continue; }
+      if (this.time - empty[D.id] < 60) continue;
+      empty[D.id] = this.time;
+      this.resetDungeon(D.id);
+    }
+  }
+  // true when a hero inside m's dungeon has an unfinished quest that needs m's kill or one of its drops, and no hero stands
+  // within 30 m of its spawn ground (elites and bosses never come back this way)
+  dungeonNeeds(m) {
+    const def = m.def;
+    if (def.elite || def.boss || def.rare) return false;
+    const D = DUNGEON_BY_ID[m.sp.dungeon], drops = LOOT_TABLES[def.loot]?.items || [];
+    let need = false;
+    for (const p of this.players.values()) {
+      if (p.bot || p.x < DUNGEON_MIN_X || dungeonAt(p.x, p.z) !== D) continue;
+      if (Math.hypot(p.x - m.sp.x, p.z - m.sp.z) < 30 + (m.sp.r || 0)) return false;
+      if (need) continue;
+      for (const qid in p.quests || {}) {
+        const Q = QUESTS[qid];
+        if (!Q?.goal || this.questComplete(p, qid)) continue;
+        if (Q.goal.kill === m.kind || (Q.goal.item && drops.some((it) => it[0] === Q.goal.item))) { need = true; break; }
+      }
+    }
+    return need;
+  }
+  resetDungeon(id) { for (const mob of this.mobs.values()) if (mob.dead && !mob.sp.temp && mob.sp.dungeon === id) { this.spawnMob(mob.sp, mob); this.broadcast({ k: 'spawn', id: mob.id }); } }
   tickEvents() {
     for (const ev of this.wev) {
       const E = ev.def;
@@ -4602,6 +4642,9 @@ export class World {
   tickMob(m, dt) {
     if (m.dead) {
       if (m.sp.temp) { if (this.time > m.respawnT + 60 || m.respawnT === 0) { this.mobs.delete(m.id); this.mobGridDrop(m); } return; }
+      // a dungeon or raid stays cleared while anyone is inside: tickDungeonResets brings it back once it empties. The one
+      // exception keeps a quest from locking: a common foe whose kill or drop a hero inside still needs comes back, out of sight
+      if (m.sp.dungeon && !DUNGEON_BY_ID[m.sp.dungeon]?.open) { if (this.time > m.respawnT && this.time >= (m.qNeedT || 0)) { m.qNeedT = this.time + 3; if (this.dungeonNeeds(m)) { this.spawnMob(m.sp, m); this.broadcast({ k: 'spawn', id: m.id }); } } return; }
       if (this.time > m.respawnT) { this.spawnMob(m.sp, m); this.broadcast({ k: 'spawn', id: m.id }); if (m.def.world) this.worldBossNotice(m); }
       return;
     }

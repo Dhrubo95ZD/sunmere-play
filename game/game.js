@@ -10,7 +10,7 @@ import { rimeShore, rimeChannel } from '/sunmere-play/shared/rime.js';
 import { setTideClock, tidewaterShoreDist, tideLevel, TIDEWATER } from '/sunmere-play/shared/tidewater.js';
 import { RAINWARD, rainwardRiverDist, riverZ } from '/sunmere-play/shared/rainward.js';
 import { buildSteamship } from '../assets/steamship.js';
-import { dungeonAt } from '/sunmere-play/shared/dungeons.js';
+import { dungeonAt, dungeonSight } from '/sunmere-play/shared/dungeons.js';
 import { houseAt, houseCrosses } from '/sunmere-play/shared/houses.js';
 import { sweepMove } from '/sunmere-play/shared/sweep.js';
 import { skillFeel, dodgeFor, dodgeWith, BUFFER, DODGE, CUT_KINDS } from '/sunmere-play/shared/feel.js';
@@ -592,7 +592,7 @@ export async function startGame() {
         if (v && ['thunderhead', 'stormengine', 'capwarden'].includes(v.def?.model) && ev.spots.length) { const last = ev.spots[ev.spots.length - 1]; fx.arc(v.pos.clone().add(V(0, (v.root.userData.height || 4) * 0.85, 0)), V(last.x, heightAt(last.x, last.z) + 0.3, last.z)); if (ev.kind === 'beam') for (const sp of ev.spots) fx.emit('sparks', V(sp.x, heightAt(sp.x, sp.z) + 0.3, sp.z), { n: 6, color: '#a8dcff' }); }
         break;
       }
-      case 'yell': { if (ev.id) { const v = entities.get(ev.id); if (!v || !local || v.pos.distanceToSquared(local.pos) > 90 * 90) break; } ui.chat(ev.text, '#ff9a40'); ui.error(ev.text); break; } // a boss's yell only reaches those near the fight
+      case 'yell': { if (ev.id) { const v = entities.get(ev.id); if (!v || !local || v.pos.distanceToSquared(local.pos) > 90 * 90) break; } const yk = ev.id + '|' + ev.text, yt = performance.now(), Y = (game.yellSeen ||= new Map()); if (!ev.id || !(yt - (Y.get(yk) || -1e9) < 45000)) ui.chat(ev.text, '#ff9a40'); if (ev.id) Y.set(yk, yt); ui.error(ev.text); break; } // a boss's yell only reaches those near the fight
       case 'useobj': { qobjects.used(ev.obj, ev.id === me, fx, sfx); const v = entities.get(ev.id); if (v?.anim && ev.id !== me) v.mobAttack?.(null, false, false, fx); break; }
       case 'slam': { const v = entities.get(ev.id); if (v) { fx.impact('earth', v.pos.clone(), { r: ev.r }); fx.decal('crack', v.pos.clone(), ev.r * 0.6, 6); rig.addShake(0.6); } break; }
       case 'node': { const n = game.nodes.get(ev.id); if (n) { n.ready = ev.ready; n.mesh.visible = ev.ready; } break; }
@@ -834,7 +834,7 @@ export async function startGame() {
     for (const v of entities.views.values()) {
       if (v.ty !== 'm' || v.dead || v.root.visible === false) continue;
       const d = v.pos.distanceTo(local.pos);
-      if (d > 40) continue;
+      if (d > 40 || !dungeonSight(local.pos.x, local.pos.z, v.pos.x, v.pos.z)) continue; // (never a foe behind dungeon rock)
       const dir = v.pos.clone().sub(local.pos).setY(0).normalize();
       // practice dummies come last: Tab is for real foes, a dummy only when nothing else is about
       const score = -d + dir.dot(fwd) * 8 + (v.id === game.target ? -1000 : 0) + (v.def?.dummy ? -60 : 0);
@@ -924,7 +924,7 @@ export async function startGame() {
       if (!foe(tgtV)) {
         // auto-target the nearest enemy in range
         let best = null, bd = sk.range + 2;
-        for (const v of entities.views.values()) if (v.ty === 'm' && !v.dead) { const d = v.pos.distanceTo(local.pos); if (d < bd) { bd = d; best = v; } }
+        for (const v of entities.views.values()) if (v.ty === 'm' && !v.dead) { const d = v.pos.distanceTo(local.pos); if (d < bd && dungeonSight(local.pos.x, local.pos.z, v.pos.x, v.pos.z)) { bd = d; best = v; } }
         if (!best) return ui.error('You need a target.');
         tgtV = best; game.setTarget(best.id);
       }
