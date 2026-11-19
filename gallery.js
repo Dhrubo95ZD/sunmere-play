@@ -13,7 +13,8 @@ import { Animator } from './game/anim.js';
 import { FX, updateBowString } from './game/fx.js';
 import { SFX } from './game/sfx.js';
 import { CHOREO } from './game/choreo.js';
-import { SKILLS, CLASSES } from '/sunmere-play/shared/classes.js';
+import { CLASSES } from '/sunmere-play/shared/classes.js';
+import { kitOf } from '/sunmere-play/shared/kit.js';
 import { Builder, cyl, sphere, box } from './assets/kit.js';
 
 export async function startGallery() {
@@ -95,7 +96,7 @@ export async function startGallery() {
     animPanel.style.display = animator || machine ? 'block' : 'none';
     currentClass = def.character || null;
     dummy.visible = !!animator;
-    const list = SKILLS[currentClass] || [];
+    const list = currentClass ? kitOf(currentClass) : [];
     document.getElementById('gal-actions').innerHTML = list.length ? '<div style="color:#e8c26a;font:700 12px Cinzel,serif;margin:8px 0 4px">Skills</div>' + list.map((sk) => `<button class="gal-skill" data-id="${sk.id}" title="${sk.desc}" style="display:block;width:100%;margin:2px 0;padding:3px 6px;text-align:left;background:#30241a;color:#f3d48a;border:1px solid #5a4422;border-radius:3px;cursor:pointer">${sk.lvl}. ${sk.name}</button>`).join('') : '';
     scene.add(current);
     currentName = name; seed = s;

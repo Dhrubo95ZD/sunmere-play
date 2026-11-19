@@ -1,6 +1,6 @@
 // Achievements: counters kept per player, checked whenever a counter moves. Some grant a title shown after your name.
 //   c + n      a counter reaching n (counters: kills, kill:<mob>, elites, rares, bosses, quests, events, travels, gathers,
-//              deaths, level, talents, slots, epic, zones, gold, golden and prismatic finds, up (upgrade steps bought), up10
+//              deaths, level, talents (Skill Web points since S16), slots, epic, zones, gold, golden and prismatic finds, up (upgrade steps bought), up10
 //              (pieces taken to +10), up10worn (worn slots at +10), temperG / temperP (pieces Tempering handed over))
 //   all        a list of counters that must each be at least 1 (e.g. every zone of a region)
 //   req        other achievements that must all be done (meta achievements)
@@ -20,8 +20,8 @@ export const ACHIEVEMENTS = [
   A('lvl35', 'General', 'Salt and Glass', 'Reach level 35.', { c: 'level', n: 35 }, { title: 'of the Glass Waste', pts: 25 }),
   A('donate500', 'General', 'A Hand in It', 'Give materials worth 500 to the valley’s engine in Sunmere.', { c: 'donated', n: 500 }, { title: 'the Builder', pts: 25 }),
   A('lvl40', 'General', 'Down the Great Stair', 'Reach level 40.', { c: 'level', n: 40 }, { title: 'of the Deepway', pts: 25 }),
-  A('tal1', 'General', 'A Path Chosen', 'Spend your first talent point.', { c: 'talents', n: 1 }),
-  A('tal16', 'General', 'Fully Trained', 'Spend 16 talent points.', { c: 'talents', n: 16 }),
+  A('tal1', 'General', 'A Path Chosen', 'Take your first place on the Skill Web.', { c: 'talents', n: 1 }),
+  A('tal16', 'General', 'Fully Trained', 'Spend 16 points on the Skill Web.', { c: 'talents', n: 16 }),
   A('slots', 'General', 'Dressed for Battle', 'Wear an item in every equipment slot.', { c: 'slots', n: 10 }),
   A('epic', 'General', 'Fine Craftsmanship', 'Equip an item of epic quality.', { c: 'epic', n: 1 }),
   A('gold1', 'General', 'Coin Purse', 'Earn 1 gold from loot and rewards.', { c: 'gold', n: 10000 }),

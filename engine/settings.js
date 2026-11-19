@@ -28,16 +28,11 @@ export const MINI_ZOOMS = [40, 70, 110, 160];
 export const KEY_ACTIONS = [
   ['fwd', 'Move forward', 'KeyW'], ['back', 'Move back', 'KeyS'], ['left', 'Move left', 'KeyA'], ['right', 'Move right', 'KeyD'], ['jump', 'Jump', 'Space'],
   ['target', 'Next target', 'Tab'], ['interact', 'Interact', 'KeyF'], ['ride', 'Ride the runabout', 'KeyR'], ['recall', 'Homeward Compass', 'KeyG'],
-  ['char', 'Character', 'KeyC'], ['talents', 'Talents', 'KeyN'], ['skills', 'Skills', 'KeyK'], ['bags', 'Bags', 'KeyB'], ['quests', 'Quest log', 'KeyL'],
+  ['char', 'Character', 'KeyC'], ['talents', 'Skill Web', 'KeyN'], ['skills', 'Skills', 'KeyK'], ['bags', 'Bags', 'KeyB'], ['quests', 'Quest log', 'KeyL'],
   ['ach', 'Achievements', 'KeyY'], ['journal', 'Valley Journal', 'KeyJ'], ['map', 'World map', 'KeyM'], ['options', 'Options', 'KeyO'], ['help', 'Help', 'KeyH'],
   ['zoomIn', 'Minimap zoom in', 'Equal'], ['zoomOut', 'Minimap zoom out', 'Minus'], ['meter', 'Damage meter', 'KeyU'], ['autorun', 'Auto-run', 'Backquote'], ['hideui', 'Hide interface', 'KeyZ'], ['loot', 'Loot history', 'KeyI'],
-  ['skill21', 'Skill 21 (level 42)', 'KeyQ'], ['skill22', 'Skill 22 (level 45)', 'KeyE'],
-  ['skill23', 'Skill 23 (level 47)', 'KeyT'], ['skill24', 'Skill 24 (level 50)', 'KeyV'], // R rides, F interacts, G recalls: T and V are the next free keys
-  ['skill25', 'Skill 25 (level 52)', 'KeyX'], ['skill26', 'Skill 26 (level 55)', 'KeyP'], // Z hides the interface, H is help: X and P are the last free letters
-  ['skill27', 'Skill 27 (level 57)', 'BracketLeft'], ['skill28', 'Skill 28 (level 60)', 'BracketRight'], // no letters left: [ and ] sit beside P
-  ['skill29', 'Skill 29 (level 62)', 'Semicolon'], ['skill30', 'Skill 30 (level 65)', 'Quote'], // ; and ' sit under [ and ]
   ['potion', 'Potion slot', 'Comma'], // the potion slot beside the action bar (desktop and browser)
-  ['pin1', 'Pinned fusion 1 (new kit: Q when unset)', ''], ['pin2', 'Pinned fusion 2 (new kit: E when unset)', ''], // (S6: the Fusion Book's pins; unset, a class on the seven-skill kit uses the free keys of skills 21 and 22)
+  ['pin1', 'Pinned fusion 1', 'KeyQ'], ['pin2', 'Pinned fusion 2', 'KeyE'], // (S6: the Fusion Book's pins; S16: Q and E, the keys the old bar's skills 21 and 22 had)
   ['dodge', 'Dodge (a tap)', 'ShiftLeft'], // (S1: a tap of Shift on its own dodges; Shift held with 1-0 still casts the second bar)
 ];
 // S1 feel layer (combat_design.md 2.1 and 2.7): hit-stop on contacts, and the camera's punch, kick and lift on your own hits
@@ -48,7 +43,9 @@ export const actionFor = (code) => { for (const [a] of KEY_ACTIONS) if (SETTINGS
 export const keyLabel = (code) => (code || '').replace(/^Key/, '').replace(/^Digit/, '').replace('Equal', '=').replace('Minus', '-').replace('Space', 'Space').replace('Numpad', 'Num ').replace('Backquote', '`').replace('BracketLeft', '[').replace('BracketRight', ']').replace('Semicolon', ';').replace('Quote', "'").replace('Comma', ',').replace('ShiftLeft', 'Shift').replace('ShiftRight', 'Right Shift'); // metres of world shown from the minimap's centre to its rim
 let _saved = {};
 try { _saved = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; Object.assign(SETTINGS, _saved); } catch { /* private window: defaults */ }
-// keys added since the options were saved (skills 21 to 30) get their defaults, unless the key is already taken
+// (S16) the old 30-skill bar's keys (skills 21 to 30) are gone: an unset pin takes the key its skill 21 or 22 had
+{ const K = SETTINGS.keys || {}; for (let i = 21; i <= 30; i++) { const a = 'skill' + i; if (!(a in K)) continue; if (i <= 22 && !K['pin' + (i - 20)]) K['pin' + (i - 20)] = K[a]; delete K[a]; } }
+// keys added since the options were saved get their defaults, unless the key is already taken
 { const taken = new Set(Object.values(SETTINGS.keys || {})); for (const [a, , k] of KEY_ACTIONS) if (!(SETTINGS.keys ||= {})[a]) SETTINGS.keys[a] = taken.has(k) ? '' : k; }
 
 // touch controls (phones and tablets; the desktop ignores them). Saved options are merged over these defaults, so

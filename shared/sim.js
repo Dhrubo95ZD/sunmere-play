@@ -1,6 +1,6 @@
 // Authoritative world simulation. Runs on the Node server, or in the browser for offline play.
 // Players move client-side (validated); combat, mobs, loot, quests and progression live here.
-import { CLASSES, SKILLS, SKILL_BY_ID, LEVEL_CAP, xpForLevel, powerAt, dailyXp, OLD_TO_NEW } from './classes.js';
+import { CLASSES, LEVEL_CAP, xpForLevel, powerAt, dailyXp } from './classes.js';
 import { killXp, dungeonXpScale, eventXp } from './xp.js';
 import { MOBS, SPAWNS, NPCS, QUESTS, ITEMS, LOOT_TABLES, VENDORS, NODES, GEAR_NAMES, GEAR_PREFIX, GRAVEYARDS, OBJECTS, OBJECT_KINDS, CARAVANS, WORLD_EVENTS, COMPANIONS, companionCost, MUSTER, HOME_DECO, HOME_TROPHIES, HOME_SPOTS, HOME_MOVABLE, WANDERERS, WANDERER_LINES, WANDERER_LINES_AREA, RUNABOUT, FACTIONS, REP_RANKS, REP_CAP, REP_SHOP, repRank, factionOfZone, EMOTES, SETS, RECIPES, RECIPE_BY_ID, SALVAGE, PAINTS, PETS, ARENA, ARENA_POOL, ESCORTS, DUR_LOSS, repairCost, DUEL, DUEL_YES, DUEL_NO, POST, TRADE, ORDER_FROM, tradeFair, BAG_BASE, BAG_V, RESTED, RECALL, mountSpeed, mountKind, LOADOUT_LEVEL, BOUNTY, PROF_NAME, PROF_MAX, profColor, TEMPEST, tempestMods, weekNumber, LEDGER, GUILD, GUILD_LINES, LEGENDARIES, DRAGONSLAYER, DS_BOSS, DS_NORMAL_CHANCE, DRAGONSLAYER_ARMOUR, DSA_SOURCE, DSA_HEROIC_CHANCE, DSA_NORMAL_CHANCE, DRAWINGS, MARK_SHOP, VALLEY, SAIL, sailRoutes , npcSeen, ENDGAME_LVL, UPGRADE_DROPS, QUALITY_NAME } from './data.js';
 import { DUNGEONS, DUNGEON_BY_ID, DUNGEON_MIN_X, dungeonAt, dungeonPush, dungeonSpot, dungeonTide, dungeonSlip, dungeonCrane, craneDrops, loftAt, loftBays } from './dungeons.js';
@@ -22,10 +22,10 @@ import { BOT_SOCIAL_METHODS, BOT_PARTY } from './botsocial.js';
 import { BOT_CHAT_METHODS } from './botchat.js';
 import { BOT_MEMORY_METHODS } from './botmemory.js';
 import { skillFeel, tierOf, poiseMax, liftable, isElite, dodgeFor, dodgeWith, POISE, BUFFER, CUT_KINDS, CANCEL_AFTER, hitAt, lastHitT } from './feel.js';
-import { KIT_V2, CORE, kitOf, stepOf, CHAIN_RESET, PARRY, balMul, FILL } from './kit.js';
+import { CORE, kitOf, stepOf, CHAIN_RESET, PARRY, balMul, FILL } from './kit.js';
 import { FUSIONS, FUSION_BY_ID, compileKit, fusionUnlocked, gateOk, nameOf, MASTERY, LINK, DISCOVER_XP, DUEL_FUSE } from './fusions.js';
-import { TALENT_BY_ID, TALENTS, TALENT_ROW_REQ, talentMods, talentPoints, talentResetCost, pathSpent, totalSpent, skillCost, skillCd } from './talents.js';
-import { onWeb, treeMods, treeCompile, treePoints, treeSpent, allocBlock, isLeaf, pruneAlloc, freeRespec, formAllowed, leafRefundCost, treeResetCost, TREE_V, TREE_FREE_DAYS } from './treeMods.js';
+import { baseMods, totalSpent, skillCost, skillCd } from './talents.js';
+import { treeMods, treeCompile, treePoints, treeSpent, allocBlock, isLeaf, pruneAlloc, freeRespec, formAllowed, leafRefundCost, treeResetCost, TREE_V, TREE_FREE_DAYS } from './treeMods.js';
 import { TREE_BY_ID } from './tree.js';
 import { runKeys } from './keystones.js';
 import { linkFusion, opener, planWait, reservedB, coatScore, coatFirst, botTree, botBuildOf } from './botplan.js';
@@ -98,23 +98,11 @@ const HEALS = new Set(['heal', 'hot', 'absorb', 'healLowest', 'healHurt', 'healP
 const GROVE_REC = { id: 'h_grove', name: 'Herb Patch', cls: 'herbalist' };
 const ZONE_SLOW = { tar: 'Tar', fire: 'Burning Tar', frost: 'Frost', acid: 'Acid Cloud' }; // (S12: the slow a puddle of each kind lays on what stands in it)
 const tagged = (M, sk, tag) => { let r = M.get(sk); if (!r) { r = { ...sk, tags: [...new Set([...(sk.tags || []), tag])] }; M.set(sk, r); } return r; };
-const MOVERS = new Set([...Object.values(SKILLS), ...Object.values(CORE), ...Object.values(FUSIONS)].flat().filter((s) => s.fx.some((f) => f[0] === 'dash' || f[0] === 'leap' || f[0] === 'back')).map((s) => s.id));
-// a class on the new kit (S2): talent and set modifiers naming a legacy skill move to the skill it became (a Form to its
-// core skill, an old skill that is now a fusion to that fusion); a notable, zone or retired one becomes a plain +damage of
-// a seventh of its size (spread over the seven core skills)
+const MOVERS = new Set([...Object.values(CORE), ...Object.values(FUSIONS)].flat().filter((s) => s.fx.some((f) => f[0] === 'dash' || f[0] === 'leap' || f[0] === 'back')).map((s) => s.id));
 // the distance from (x, z) to a segment [x0, z0, x1, z1] (Afterwake's sand wake, S8)
 function segDist(x, z, s) {
   const vx = s[2] - s[0], vz = s[3] - s[1], t = Math.max(0, Math.min(1, ((x - s[0]) * vx + (z - s[1]) * vz) / (vx * vx + vz * vz || 1)));
   return Math.hypot(x - s[0] - vx * t, z - s[1] - vz * t);
-}
-function remapSk(tal) {
-  for (const id of Object.keys(tal.sk)) {
-    const o = OLD_TO_NEW[id];
-    if (!o || o.to === id) continue;
-    const v = tal.sk[id]; delete tal.sk[id];
-    if (o.to && ['core', 'form', 'fusion', 'triad'].includes(o.as)) { const t = (tal.sk[o.to] ||= { pow: 0, cd: 0, cost: 0 }); t.pow += v.pow || 0; t.cd += v.cd || 0; t.cost += v.cost || 0; }
-    else tal.dmg += (v.pow || 0) / 7;
-  }
 }
 export class World {
   constructor(io = {}) {
@@ -257,10 +245,10 @@ export class World {
       id: newId('p'), type: 'player', session, name: name[0].toUpperCase() + name.slice(1).toLowerCase(), cls,
       level: 1, xp: 0, gold: 10, x: SPAWN_POINT.x + R(-2, 2), z: SPAWN_POINT.z + R(-2, 2), y: 0, ry: Math.PI, speed: 0, air: false,
       hp: 1, maxHp: 1, res: 0, maxRes: 100, dead: false, target: null, cds: {}, gcd: 0, cast: null, buffs: [],
-      bag: [{ id: 'tonic', n: 3 }, { id: 'bread', n: 4 }], equip: {}, quests: {}, done: {}, visited: { village: true }, stats: {}, absorb: 0, combatT: 0, eating: 0, talents: {}, lsT: 0, ach: { c: {}, done: {} }, title: '', rep: {},
+      bag: [{ id: 'tonic', n: 3 }, { id: 'bread', n: 4 }], equip: {}, quests: {}, done: {}, visited: { village: true }, stats: {}, absorb: 0, combatT: 0, eating: 0, lsT: 0, ach: { c: {}, done: {} }, title: '', rep: {},
     };
     p.cv = clamp(msg.cv | 0, 0, 2);
-    if (saved && saved.cls === cls) Object.assign(p, { cv: saved.cv ?? p.cv, level: saved.level, xp: saved.xp, gold: saved.gold, bag: saved.bag, equip: saved.equip, quests: saved.quests, done: saved.done, x: saved.x, z: saved.z, visited: saved.visited || { village: true }, talents: saved.talents || {}, ach: saved.ach || { c: {}, done: {} }, title: saved.title || '', companions: saved.companions || (saved.companion ? [saved.companion] : []), runabout: !!saved.runabout, rep: saved.rep || {}, daily: saved.daily || {}, bank: saved.bank || [], paint: saved.paint || 'brass', pets: saved.pets || {}, pet: saved.pet || null, arenaBest: saved.arenaBest || 0 });
+    if (saved && saved.cls === cls) Object.assign(p, { cv: saved.cv ?? p.cv, level: saved.level, xp: saved.xp, gold: saved.gold, bag: saved.bag, equip: saved.equip, quests: saved.quests, done: saved.done, x: saved.x, z: saved.z, visited: saved.visited || { village: true }, ach: saved.ach || { c: {}, done: {} }, title: saved.title || '', companions: saved.companions || (saved.companion ? [saved.companion] : []), runabout: !!saved.runabout, rep: saved.rep || {}, daily: saved.daily || {}, bank: saved.bank || [], paint: saved.paint || 'brass', pets: saved.pets || {}, pet: saved.pet || null, arenaBest: saved.arenaBest || 0 });
     // a save from before the world changed shape may stand on what is now ridge: back to the village square (inWorld is
     // area-aware: a logout on the Cinder Reach or the Rime Steps is judged by that area's own shore)
     if (!(p.x >= DUNGEON_MIN_X) && !(isFinite(p.x) && isFinite(p.z) && inWorld(p.x, p.z, 0))) { p.x = SPAWN_POINT.x + R(-2, 2); p.z = SPAWN_POINT.z + R(-2, 2); }
@@ -290,20 +278,25 @@ export class World {
     // the wardrobe remembers everything already in your hands, bags and storehouse
     for (const g of [...Object.values(p.equip || {}), ...(p.bag || []).map((b) => b.gear), ...(p.bank || []).map((b) => b.gear)]) this.lookFind(p, g);
     if (saved && saved.cls === cls && !saved.prof) { const k = Math.min(60, (saved.level || 1) * 3); p.prof = { smith: k, herbal: k, cook: k }; } // characters from before craft skills keep their recipes
-    p.loadouts = saved && saved.cls === cls && saved.loadouts || null;
     // the combat rework (S2): fusions found, mastery, the Web (S3) and Forms. A save from before its class moved to the new
     // kit (kitV < 2; p.cv is the colour variant, so the kit version has its own field) has its talents handed back (both
-    // sets) and gets a letter from the class trainer
+    // sets; the points come back as Web points, the talents and loadouts fields are dropped), the talent achievements
+    // counted, its bar and wheel remapped on the client (classes.js OLD_TO_NEW) and a letter from the class trainer (S16)
     const sv = saved && saved.cls === cls ? saved : null;
     p.fusions = sv?.fusions || []; p.fmastery = sv?.fmastery || {}; p.tree = sv?.tree || {}; p.forms = sv?.forms || {}; p.kitV = sv?.kitV || 0;
-    if (KIT_V2[cls] && p.kitV < 2) {
-      if (sv) { p.kitMoved = (sv.level || 1) > 1 || totalSpent(sv.talents) > 0; p.talents = {}; if (p.loadouts) p.loadouts = p.loadouts.map(() => ({})); p.fusions = []; p.fmastery = {}; p.tree = {}; p.forms = {}; }
+    if (p.kitV < 2) {
+      if (sv) {
+        const pts = Math.max(totalSpent(sv.talents), ...(Array.isArray(sv.loadouts) ? sv.loadouts.map(totalSpent) : [0]));
+        if ((sv.level || 1) > 1 || pts > 0) p.kitMoved = { pts };
+        if (pts && p.ach?.c) p.ach.c.talents = Math.max(p.ach.c.talents || 0, pts);
+        p.fusions = []; p.fmastery = {}; p.tree = {}; p.forms = {};
+      }
       p.kitV = 2;
     }
     // the Skill Web (S3): its version (a Web change prunes what no longer joins and gives a free respec), the free-respec
     // window (14 days after the move from talents) and the second tree kept with the second loadout
     p.treeV = sv?.treeV || 0; p.treeFree = sv?.treeFree || 0; p.webSets = sv?.webSets || null;
-    if (onWeb(cls)) {
+    {
       if (p.kitMoved) p.treeFree = Date.now() + TREE_FREE_DAYS * 864e5;
       if (p.treeV < TREE_V) { if (p.treeV) p.treeFree = Math.max(p.treeFree, Date.now() + TREE_FREE_DAYS * 864e5); p.tree = pruneAlloc(cls, p.tree); if (p.webSets) p.webSets = p.webSets.map((w) => ({ tree: pruneAlloc(cls, w?.tree), forms: w?.forms || {} })); p.treeV = TREE_V; }
     }
@@ -336,18 +329,18 @@ export class World {
     this.friendNotice(p, true);
     if (p.ringWeek && p.ringWeek.week !== this.bountyWeek()) this.ringSettle(p);
     if (p.rested >= Math.max(40, xpForLevel(p.level) * 0.1) && p.level < LEVEL_CAP) this.msg(p, `You feel rested: your kills grant double experience for the next ${p.rested.toLocaleString()} XP.`, '#7ab0ff');
-    if (p.kitMoved) { p.kitMoved = false; this.kitLetter(p); }
+    if (p.kitMoved) { this.kitLetter(p, p.kitMoved.pts); p.kitMoved = null; }
     if (p.mail.some((m) => !m.read)) this.msg(p, 'You have post waiting. Any Caravan Master can hand it over.', '#ffe08a');
     for (const c of p.companions || []) if (COMPANIONS[c]) this.hireCompanion(p, c, true);
     this.io.log('join', p.name, cls);
   }
 
   savePlayer(p) {
-    this.io.save(p.name, { cls: p.cls, level: p.level, xp: p.xp, gold: p.gold, bag: p.bag, equip: p.equip, quests: p.quests, done: p.done, picks: p.picks || {}, spares: p.spares || {}, lgear: p.lgear || null, raidLock: p.raidLock || null, x: p.x, z: p.z, visited: p.visited, talents: p.talents, ach: p.ach, title: p.title, companions: this.myBots(p).filter((b) => !b.lfg).map((b) => b.cls), runabout: !!p.runabout, rep: p.rep || {}, daily: p.daily || {}, bank: p.bank || [], paint: p.paint || 'brass', pets: p.pets || {}, pet: p.pet || null, cv: p.cv || 0, kitV: p.kitV || 0, fusions: p.fusions || [], fmastery: p.fmastery || {}, tree: p.tree || {}, forms: p.forms || {}, treeV: p.treeV || 0, treeFree: p.treeFree || 0, webSets: p.webSets || null, arenaBest: p.arenaBest || 0, bagSize: p.bagSize || BAG_BASE, bagV: BAG_V, rested: Math.round(p.rested || 0), savedAt: Date.now(), savedHub: this.inHub(p), home: p.home || 'village', looks: p.looks || [], wlook: p.wlook || null, ohlooks: p.ohlooks || [], ohlook: p.ohlook || null, shines: p.shines || [], wshine: p.wshine || null, shlooks: p.shlooks || [], shlook: p.shlook || null, cklooks: p.cklooks || [], cklook: p.cklook || null, homeDeco: p.homeDeco || {}, homePos: p.homePos || {}, compGear: p.compGear || {}, ringWeek: p.ringWeek || null, guild: p.guild || null, ledger: p.ledger || [], prof: p.prof || {}, bounty: p.bounty || null, lo: p.lo || 0, loadouts: this.loadouts(p), runaboutMk: p.runaboutMk || 1, crawler: !!p.crawler, mountKind: p.mountKind || 'runabout', recallReady: p.recallReady || 0, mail: p.mail || [], buyOrders: p.buyOrders || [], wo: p.wo || null, gearV: p.gearV || GEAR_V, temper: p.temper || newTemper(), heats: p.heats || [], wheat: p.wheat ?? null, friends: p.friends || [], botPrefs: p.botPrefs || null, lfgRole: p.lfgRole || null, ridesOwed: p.ridesOwed || null, ramOwed: p.ramOwed || null });
+    this.io.save(p.name, { cls: p.cls, level: p.level, xp: p.xp, gold: p.gold, bag: p.bag, equip: p.equip, quests: p.quests, done: p.done, picks: p.picks || {}, spares: p.spares || {}, lgear: p.lgear || null, raidLock: p.raidLock || null, x: p.x, z: p.z, visited: p.visited, ach: p.ach, title: p.title, companions: this.myBots(p).filter((b) => !b.lfg).map((b) => b.cls), runabout: !!p.runabout, rep: p.rep || {}, daily: p.daily || {}, bank: p.bank || [], paint: p.paint || 'brass', pets: p.pets || {}, pet: p.pet || null, cv: p.cv || 0, kitV: p.kitV || 0, fusions: p.fusions || [], fmastery: p.fmastery || {}, tree: p.tree || {}, forms: p.forms || {}, treeV: p.treeV || 0, treeFree: p.treeFree || 0, webSets: p.webSets || null, arenaBest: p.arenaBest || 0, bagSize: p.bagSize || BAG_BASE, bagV: BAG_V, rested: Math.round(p.rested || 0), savedAt: Date.now(), savedHub: this.inHub(p), home: p.home || 'village', looks: p.looks || [], wlook: p.wlook || null, ohlooks: p.ohlooks || [], ohlook: p.ohlook || null, shines: p.shines || [], wshine: p.wshine || null, shlooks: p.shlooks || [], shlook: p.shlook || null, cklooks: p.cklooks || [], cklook: p.cklook || null, homeDeco: p.homeDeco || {}, homePos: p.homePos || {}, compGear: p.compGear || {}, ringWeek: p.ringWeek || null, guild: p.guild || null, ledger: p.ledger || [], prof: p.prof || {}, bounty: p.bounty || null, lo: p.lo || 0, runaboutMk: p.runaboutMk || 1, crawler: !!p.crawler, mountKind: p.mountKind || 'runabout', recallReady: p.recallReady || 0, mail: p.mail || [], buyOrders: p.buyOrders || [], wo: p.wo || null, gearV: p.gearV || GEAR_V, temper: p.temper || newTemper(), heats: p.heats || [], wheat: p.wheat ?? null, friends: p.friends || [], botPrefs: p.botPrefs || null, lfgRole: p.lfgRole || null, ridesOwed: p.ridesOwed || null, ramOwed: p.ramOwed || null });
   }
 
   // plan A7: every place a character keeps gear, moved to the gearV 2 shape (bs/tq/up; rf n -> up n). Idempotent. The
-  // remembered talent-set gear (lgear) names pieces by uid, which the migration keeps, so it needs nothing.
+  // remembered loadout gear (lgear) names pieces by uid, which the migration keeps, so it needs nothing.
   migrateSave(p) {
     migratePlayer(p, ITEMS);
     for (const L of p.mail || []) if (L?.item) L.item = migrateEntry(L.item, ITEMS);
@@ -359,14 +352,12 @@ export class World {
   // ------------------------------------------------------------------ stats
   recalc(p) {
     const c = CLASSES[p.cls];
-    if (totalSpent(p.talents) > talentPoints(p.level)) p.talents = {}; // level went down: hand the points back
-    const web = (!p.bot || p.botWeb) && p.tree && onWeb(p.cls); // a hero on the Skill Web (S3): the Web's table replaces talents (S15: and a bot on its build, botGear)
+    const web = (!p.bot || p.botWeb) && p.tree; // a hero on the Skill Web (S3; S15: and a bot on its build, botGear); other bots fight on the plain kit
     if (web && treeSpent(p.tree) > treePoints(p.level, p.done)) p.tree = {}; // level went down: hand the points back
-    const tal = p.tal = web ? treeMods(p.cls, p.tree, { forms: p.forms, done: p.done }) : talentMods(p.cls, p.talents);
-    if (KIT_V2[p.cls]) remapSk(tal);
+    const tal = p.tal = web ? treeMods(p.cls, p.tree, { forms: p.forms, done: p.done }) : baseMods();
     compileKit(p); // p.eff / p.effFuse (shared/fusions.js): what this hero casts, rebuilt here with p.tal
     if (web) treeCompile(p); // Forms, carry, keystones and renames on p.eff (shared/treeMods.js)
-    // set bonuses ride on the same modifier table as talents
+    // set bonuses ride on the same modifier table as the Web
     const worn = {};
     for (const it of Object.values(p.equip)) if (it?.set && it.dur !== 0) worn[it.set] = (worn[it.set] || 0) + 1;
     for (const [k, n] of Object.entries(worn)) for (const [need, fx] of Object.entries(SETS[k]?.bonus || {})) if (n >= Number(need)) for (const [kind, v] of fx) tal[kind] = (tal[kind] || 0) + v;
@@ -398,9 +389,9 @@ export class World {
       hp: p.hp, maxHp: p.maxHp, res: p.res, maxRes: p.maxRes, bag: p.bag, equip: p.equip, quests: p.quests, done: p.done,
       stats: p.stats, power: Math.round(p.power), armorPct: p.armorPct, cds: p.cds, gcd: p.gcd, dead: p.dead, grave: p.dead ? this.graveName(p) : null, x: p.x, z: p.z,
       buffs: p.buffs.map((b) => ({ name: b.name, icon: b.icon, t: b.t, dur: b.dur, debuff: !!b.debuff })), absorb: Math.round(p.absorb),
-      duel: p.duel ? { with: p.duel.with, start: p.duel.start, end: p.duel.end } : null, mailNew: (p.mail || []).filter((m) => !m.read).length, bagSize: this.bagMax(p), rested: Math.round(p.rested || 0), home: CARAVANS.find((c) => c.id === p.home)?.name || 'Sunmere Village', recallReady: p.recallReady || 0, recalling: !!p.recall, looks: p.looks || [], wlook: p.wlook || null, ohlooks: p.ohlooks || [], ohlook: p.ohlook || null, shines: p.shines || [], wshine: p.wshine || null, shlooks: p.shlooks || [], shlook: p.shlook || null, cklooks: p.cklooks || [], cklook: p.cklook || null, heats: p.heats || [], wheat: p.wheat ?? null, temper: this.temperState(p), homeDeco: p.homeDeco || {}, homePos: p.homePos || {}, buyback: (p.buyback || []).map((b) => ({ it: b.it, value: b.value })), compGear: p.compGear || {}, comps: this.myBots(p).filter((b) => !b.escort).map((b) => ({ id: b.id, name: b.name, cls: b.cls, power: Math.round(b.power), hp: b.maxHp, armor: Math.round(b.armorPct * 100) })), guild: p.guild ? { name: p.guild.name, rank: p.guild.rank, roster: this.guildRoster(p) } : null, ledger: p.ledger || [], ridesOwed: p.ridesOwed?.k || 0, ramOwed: p.ramOwed?.k || 0, prof: p.prof || {}, lo: p.lo || 0, loadouts: this.loadouts(p), lgear: (p.lgear || [null, null]).map((g) => (g ? Object.keys(g).length : 0)), runaboutMk: p.runaboutMk || 1, runabout: !!p.runabout, crawler: !!p.crawler, mountKind: mountKind(p), mounted: !!p.mounted, paint: p.paint || 'brass', pets: p.pets || {}, pet: p.pet || null, rep: p.rep || {}, daily: p.daily || {}, today: this.today(),
-      link: p.link ? { from: p.link.from, until: p.link.until, landed: !!p.link.landed, parried: !!p.link.parried, step: p.link.step || 0, tgt: p.link.tgt || null } : null, chain: p.chain || null, fusions: p.fusions || [], fmastery: p.fmastery || {}, tree: p.tree || {}, kitV: p.kitV || 0, rounds: p.tal?.sixChambers ? [p.rounds?.[0] ?? 6, p.rounds?.[1] ?? 6, p.hotN || 0] : null, skc: p.skc ? Object.fromEntries(Object.entries(p.skc).map(([k, c]) => [k, c.n])) : null, forms: p.forms || {}, web: onWeb(p.cls) ? 1 : 0, treePts: onWeb(p.cls) ? treePoints(p.level, p.done) - treeSpent(p.tree) : 0, treeFree: onWeb(p.cls) && freeRespec(p) ? 1 : 0, webSets: onWeb(p.cls) && p.webSets ? p.webSets.map((w) => Object.keys(w?.tree || {}).length) : null,
-      talents: p.talents, talentPts: talentPoints(p.level) - totalSpent(p.talents), speedMul: 1 + (p.tal?.speed || 0), crit: 0.1 + (p.tal?.crit || 0), dodge: p.tal?.dodge || 0, hastePct: p.hastePct || 0, title: p.title || '',
+      duel: p.duel ? { with: p.duel.with, start: p.duel.start, end: p.duel.end } : null, mailNew: (p.mail || []).filter((m) => !m.read).length, bagSize: this.bagMax(p), rested: Math.round(p.rested || 0), home: CARAVANS.find((c) => c.id === p.home)?.name || 'Sunmere Village', recallReady: p.recallReady || 0, recalling: !!p.recall, looks: p.looks || [], wlook: p.wlook || null, ohlooks: p.ohlooks || [], ohlook: p.ohlook || null, shines: p.shines || [], wshine: p.wshine || null, shlooks: p.shlooks || [], shlook: p.shlook || null, cklooks: p.cklooks || [], cklook: p.cklook || null, heats: p.heats || [], wheat: p.wheat ?? null, temper: this.temperState(p), homeDeco: p.homeDeco || {}, homePos: p.homePos || {}, buyback: (p.buyback || []).map((b) => ({ it: b.it, value: b.value })), compGear: p.compGear || {}, comps: this.myBots(p).filter((b) => !b.escort).map((b) => ({ id: b.id, name: b.name, cls: b.cls, power: Math.round(b.power), hp: b.maxHp, armor: Math.round(b.armorPct * 100) })), guild: p.guild ? { name: p.guild.name, rank: p.guild.rank, roster: this.guildRoster(p) } : null, ledger: p.ledger || [], ridesOwed: p.ridesOwed?.k || 0, ramOwed: p.ramOwed?.k || 0, prof: p.prof || {}, lo: p.lo || 0, lgear: (p.lgear || [null, null]).map((g) => (g ? Object.keys(g).length : 0)), runaboutMk: p.runaboutMk || 1, runabout: !!p.runabout, crawler: !!p.crawler, mountKind: mountKind(p), mounted: !!p.mounted, paint: p.paint || 'brass', pets: p.pets || {}, pet: p.pet || null, rep: p.rep || {}, daily: p.daily || {}, today: this.today(),
+      link: p.link ? { from: p.link.from, until: p.link.until, landed: !!p.link.landed, parried: !!p.link.parried, step: p.link.step || 0, tgt: p.link.tgt || null } : null, chain: p.chain || null, fusions: p.fusions || [], fmastery: p.fmastery || {}, tree: p.tree || {}, kitV: p.kitV || 0, rounds: p.tal?.sixChambers ? [p.rounds?.[0] ?? 6, p.rounds?.[1] ?? 6, p.hotN || 0] : null, skc: p.skc ? Object.fromEntries(Object.entries(p.skc).map(([k, c]) => [k, c.n])) : null, forms: p.forms || {}, web: 1, treePts: treePoints(p.level, p.done) - treeSpent(p.tree), treeFree: freeRespec(p) ? 1 : 0, webSets: p.webSets ? p.webSets.map((w) => Object.keys(w?.tree || {}).length) : null,
+      speedMul: 1 + (p.tal?.speed || 0), crit: 0.1 + (p.tal?.crit || 0), dodge: p.tal?.dodge || 0, hastePct: p.hastePct || 0, title: p.title || '',
       mods: Object.fromEntries(['dmg', 'critDmg', 'heal', 'leech', 'cdr', 'thorns', 'regen', 'hp', 'armor', 'haste', 'crit', 'dodge', 'speed', 'absorb'].filter((k) => typeof p.tal?.[k] === 'number' && p.tal[k]).map((k) => [k, p.tal[k]])),
     };
   }
@@ -1186,7 +1177,7 @@ export class World {
       id: newId('p'), type: 'player', bot: true, escort: E, quest: qid, owner: p.id, name: E.name, cls: E.look, cv: E.v, botRole: 'Escort', level: QUESTS[qid].lvl,
       session: { send() {}, bot: true }, x, z, y: walkHeight(x, z), ry: 0, speed: 0, air: false, hp: E.hp, maxHp: E.hp, res: 0, maxRes: 1, dead: false, target: null,
       cds: {}, gcd: 0, cast: null, buffs: [], bag: [], equip: {}, quests: {}, done: {}, visited: {}, stats: {}, absorb: 0, combatT: -100, eating: 0,
-      talents: {}, lsT: 0, ach: { c: {}, done: {} }, title: '', armorPct: 0.15, hastePct: 0, power: 1, tal: null, ai: { wp: 1, said: {}, t: 0 },
+      lsT: 0, ach: { c: {}, done: {} }, title: '', armorPct: 0.15, hastePct: 0, power: 1, tal: null, ai: { wp: 1, said: {}, t: 0 },
     };
     this.players.set(b.id, b);
     this.escortSay(b, 0);
@@ -1608,7 +1599,7 @@ export class World {
     const b = {
       id: newId('p'), type: 'player', bot: true, owner: null, botRole: null, session: { send() {}, bot: true }, xp: 0, gold: 0, y: 0, ry: 0, speed: 0, air: false,
       hp: 1, maxHp: 1, res: 100, maxRes: 100, dead: false, target: null, cds: {}, gcd: 0, cast: null, buffs: [],
-      bag: [], equip: {}, quests: {}, done: {}, visited: {}, stats: {}, absorb: 0, combatT: 0, eating: 0, talents: {}, lsT: 0,
+      bag: [], equip: {}, quests: {}, done: {}, visited: {}, stats: {}, absorb: 0, combatT: 0, eating: 0, lsT: 0,
       ach: { c: {}, done: {} }, title: '', ai: { t: 0, side: rand() < 0.5 ? -1 : 1 }, ...o,
     };
     if (b.x >= DUNGEON_MIN_X) [b.x, b.z] = dungeonPush(b.x, b.z, 0.4);
@@ -1758,7 +1749,7 @@ export class World {
     b.equip = { weapon: { stats: { power: Math.round(budget * 0.9) } }, chest: { stats: { armor: Math.round(budget * 7.5), hp: Math.round(budget * 0.8 * hpk) } }, legs: { stats: { armor: Math.round(budget * 7.5), hp: Math.round(budget * 0.8 * hpk) } } };
     for (const [slot, g] of Object.entries(given)) b.equip[slot] = g;
     // (S15) a bot on the Skill Web holds the first treePoints(level) nodes of its role's suggested path (shared/botplan.js botTree)
-    if (KIT_V2[b.cls] && onWeb(b.cls) && !b.noWeb) { b.botWeb = true; b.tree = { ...botTree(b.cls, botBuildOf(b), b.level) }; b.forms = b.forms || {}; }
+    if (!b.noWeb) { b.botWeb = true; b.tree = { ...botTree(b.cls, botBuildOf(b), b.level) }; b.forms = b.forms || {}; }
     this.recalc(b);
   }
   // ------------------------------------------------------------------ the Homestead: look at another player's trophies and furnishings
@@ -1902,7 +1893,7 @@ export class World {
     const ranged = !!CLASSES[b.cls]?.ranged; // classes.js ranged: ranger, chemist, herbalist, deadeye
     const healer = b.cls === 'herbalist';
     let goal = null, stopAt = 0;
-    if (tgt) { goal = tgt; stopAt = (ranged ? ((b.cls === 'deadeye' && KIT_V2.deadeye) || (b.cls === 'chemist' && KIT_V2.chemist) ? 9.5 : 12) : 2.2) + tgt.def.radius * 0.7; if (healer && dO > 16) { goal = o; stopAt = 8; } }
+    if (tgt) { goal = tgt; stopAt = (ranged ? (b.cls === 'deadeye' || b.cls === 'chemist' ? 9.5 : 12) : 2.2) + tgt.def.radius * 0.7; if (healer && dO > 16) { goal = o; stopAt = 8; } }
     else if (H) { goal = H; stopAt = 0.4; }
     else {
       // walk a little behind and to the side of the owner
@@ -1949,7 +1940,7 @@ export class World {
   // every press is plain
   botAct(b, c) { if (!c) return; if (c.dodge) this.on_dodge(b, c.dodge); else this.on_cast(b, this.botNoFuse ? { ...c, plain: true } : c); }
   botChooseSkill(b, o, tgt) {
-    const tal = b.tal || talentMods(b.cls, b.talents);
+    const tal = b.tal || baseMods();
     const usable = kitOf(b.cls).filter((s) => s.lvl <= b.level && !((b.cds[s.id] || 0) > this.time) && b.res >= skillCost(s, tal)
       && !s.fx.some((f) => f[0] === 'dash' || f[0] === 'leap' || f[0] === 'back'));
     const has = (s, k) => s.fx.some((f) => f[0] === k);
@@ -1963,7 +1954,7 @@ export class World {
     if (healer) {
       // (S13) on the new kit: B in the link its last skill opened when the fusion helps (botHerbFuse); Lantern Flash first when
       // the group is hurt and Grand Remedy is ready (it fuses into Field Hospital); the smoke pot when two are hurt
-      if (KIT_V2.herbalist) {
+      {
         if (b.link && b.effFuse && !b.link.open) { const fz = this.botHerbFuse(b, team, tgt, tal); if (fz) return fz; }
         const sore = team.filter((q) => q.hp / q.maxHp < 0.72);
         const lan = usable.find((s) => s.id === 'h_lantern'), rem = b.eff?.h_remedy;
@@ -1986,8 +1977,8 @@ export class World {
         const direct = ally.filter((s) => has(s, 'heal')).sort((a, c) => (r < 0.5 ? hv(c) - hv(a) : hv(c) / skillCost(c, tal) - hv(a) / skillCost(a, tal)));
         if (direct[0]) return { skill: direct[0].id, target: hurt.id };
       }
-      if (KIT_V2.herbalist && tgt?.type === 'mob' && !planWait(this, b)) { const op = opener(this, b, tgt, team, o !== b ? o : null); if (op) return op; } // (S15: Bitterroot, Bark Poultice, Thistle Net by the table)
-      if (tgt && b.res < b.maxRes * 0.5 && team.some((q) => q.hp / q.maxHp < 0.9 || tgt.def?.boss)) { const dart = KIT_V2.herbalist && usable.find((s) => s.id === 'h_dart'); return dart && dist(b, tgt) <= dart.range + this.rad(tgt) ? { skill: dart.id, target: tgt.id } : null; } // (S13: Nettle Dart costs nothing and builds Herbs)
+      if (tgt?.type === 'mob' && !planWait(this, b)) { const op = opener(this, b, tgt, team, o !== b ? o : null); if (op) return op; } // (S15: Bitterroot, Bark Poultice, Thistle Net by the table)
+      if (tgt && b.res < b.maxRes * 0.5 && team.some((q) => q.hp / q.maxHp < 0.9 || tgt.def?.boss)) { const dart = usable.find((s) => s.id === 'h_dart'); return dart && dist(b, tgt) <= dart.range + this.rad(tgt) ? { skill: dart.id, target: tgt.id } : null; } // (S13: Nettle Dart costs nothing and builds Herbs)
     }
     if (hurt && hurt.hp / hurt.maxHp < 0.72) {
       const heals = usable.filter((s) => (s.target === 'ally' || (s.target === 'self' && hurt === b)) && (has(s, 'heal') || has(s, 'hot') || has(s, 'absorb')));
@@ -2000,7 +1991,7 @@ export class World {
     // (S15) the fusion planner (shared/botplan.js): B in an open link, at the bot's skill rate and after its reaction time;
     // a plan waiting for A's contact holds the next press. Coarse bots never get here (they do not cast)
     const lead = o !== b ? o : null;
-    if (KIT_V2[b.cls]) { if (!healer) { const fz = linkFusion(this, b, tgt, team, lead); if (fz) return fz; } if (planWait(this, b)) return null; }
+    { if (!healer) { const fz = linkFusion(this, b, tgt, team, lead); if (fz) return fz; } if (planWait(this, b)) return null; }
     // tanks pull enemies off the others
     // (and taunt before losing it: when someone else's threat on a boss comes within a tenth of the tank's own; and a taunt
     // round the tank also takes back the boss's adds that went for the others, the healer most of all)
@@ -2021,8 +2012,8 @@ export class World {
     // a reload when the resource runs low (the Deadeye's Quick Reload: a skill that gives resource back)
     if (b.res < 30) { const rl = usable.find((s) => has(s, 'res')); if (rl) return { skill: rl.id }; }
     // (S15) the opener table: cast A of the first fusion that fits, and plan B
-    if (KIT_V2[b.cls] && tgt.type === 'mob') { const op = opener(this, b, tgt, team, lead); if (op) return op; }
-    const keepB = KIT_V2[b.cls] ? reservedB(this, b) : null;
+    if (tgt.type === 'mob') { const op = opener(this, b, tgt, team, lead); if (op) return op; }
+    const keepB = reservedB(this, b);
     const onFoe = (s) => tgt.buffs?.some((x) => x.name === s.name);
     // a marking debuff with no damage (Chalk Mark, Marked Target, Feint) when the target does not carry it yet
     const mark = usable.find((s) => s.target === 'enemy' && s.fx.every((f) => f[0] === 'debuff') && !onFoe(s) && dT <= s.range + this.rad(tgt) + 0.4);
@@ -2092,7 +2083,7 @@ export class World {
     if (p.bot) return;
     const c = p.ach.c, before = { ...p.ach.done };
     c.level = Math.max(c.level || 0, p.level);
-    c.talents = Math.max(c.talents || 0, totalSpent(p.talents));
+    c.talents = Math.max(c.talents || 0, treeSpent(p.tree)); // ('talents' counts Web points since S16: an old save's talents are counted at the move)
     c.slots = Math.max(c.slots || 0, Object.values(p.equip).filter(Boolean).length);
     if (Object.values(p.equip).some((g) => g && g.q >= 4)) c.epic = 1;
     c.quests = Math.max(c.quests || 0, Object.keys(p.done || {}).length);
@@ -2119,22 +2110,7 @@ export class World {
     this.sendAch(p);
   }
 
-  // ------------------------------------------------------------------ talents
-  on_talent(p, m) {
-    if (onWeb(p.cls)) return this.err(p, 'Your class grows through the Skill Web now (N).');
-    const t = TALENT_BY_ID[m.id];
-    if (!t || t.cls !== p.cls) return;
-    const have = p.talents[t.id] || 0;
-    if (have >= t.ranks) return this.err(p, 'That talent is already mastered.');
-    if (totalSpent(p.talents) >= talentPoints(p.level)) return this.err(p, p.level < 5 ? 'Talents open at level 5.' : 'No talent points left.');
-    if (pathSpent(p.cls, p.talents, t.path) < TALENT_ROW_REQ[t.row]) return this.err(p, `Spend ${TALENT_ROW_REQ[t.row]} points in ${TALENTS[p.cls][t.path].name} first.`);
-    p.talents = { ...p.talents, [t.id]: have + 1 };
-    this.recalc(p);
-    this.msg(p, `${t.name} ${have + 1}/${t.ranks}`, '#7ad0ff');
-    this.achSet(p, 'talents', totalSpent(p.talents));
-    this.pushSelf(p);
-  }
-  // both talent sets, with the active one always current
+  // two loadouts (level 10): each keeps its own Skill Web tree, Forms and gear
   // a set's gear: slot -> the piece's own id (given the first time it is remembered; saved with the piece)
   gearSnapshot(p) {
     const out = {};
@@ -2158,41 +2134,29 @@ export class World {
     }
     return { moved, missing };
   }
-  loadouts(p) { const L = p.loadouts ? [...p.loadouts] : [{}, {}]; L[p.lo || 0] = p.talents; return L; }
   on_loadout(p, m) {
     const to = m.i === 1 ? 1 : 0;
     if (to === (p.lo || 0)) return;
-    if (p.level < LOADOUT_LEVEL) return this.err(p, `A second set of talents opens at level ${LOADOUT_LEVEL}.`);
-    if (this.time - p.combatT < 5 || p.cast || p.duel || p.trial) return this.err(p, 'You cannot change talents in combat.');
-    p.loadouts = this.loadouts(p);
+    if (p.level < LOADOUT_LEVEL) return this.err(p, `A second loadout opens at level ${LOADOUT_LEVEL}.`);
+    if (this.time - p.combatT < 5 || p.cast || p.duel || p.trial) return this.err(p, 'You cannot change loadouts in combat.');
     // each set remembers the gear it wore when you left it, and puts it back on when you return
     (p.lgear ||= [null, null])[p.lo || 0] = this.gearSnapshot(p);
-    if (onWeb(p.cls)) { // each loadout keeps its own Skill Web tree and Forms (S3)
+    { // each loadout keeps its own Skill Web tree and Forms (S3)
       const W = p.webSets || [{ tree: {}, forms: {} }, { tree: {}, forms: {} }];
       W[p.lo || 0] = { tree: p.tree || {}, forms: p.forms || {} }; p.webSets = W;
       p.tree = { ...(W[to]?.tree || {}) }; p.forms = { ...(W[to]?.forms || {}) };
     }
-    p.lo = to; p.talents = { ...(p.loadouts[to] || {}) }; p.lsT = 0;
+    p.lo = to; p.lsT = 0;
     const swap = p.lgear[to] ? this.equipSet(p, p.lgear[to]) : null;
     this.recalc(p);
     p.hp = Math.min(p.hp, p.maxHp);
-    this.msg(p, `You switch to your ${to ? 'second' : 'first'} set of talents${swap?.moved ? ` and change ${swap.moved} piece${swap.moved > 1 ? 's' : ''} of gear` : ''}.${swap?.missing ? ` ${swap.missing} remembered piece${swap.missing > 1 ? 's are' : ' is'} no longer in your bags.` : ''}`, '#7ad0ff');
-    this.pushSelf(p);
-  }
-  on_talentReset(p) {
-    if (!totalSpent(p.talents)) return;
-    const cost = talentResetCost(p.level);
-    if (p.gold < cost) return this.err(p, 'Not enough money to unlearn your talents.');
-    p.gold -= cost; p.talents = {}; p.lsT = 0;
-    this.recalc(p);
-    this.msg(p, 'Your talents are unlearned. Spend the points again as you like.', '#7ad0ff');
+    this.msg(p, `You switch to your ${to ? 'second' : 'first'} loadout${swap?.moved ? ` and change ${swap.moved} piece${swap.moved > 1 ? 's' : ''} of gear` : ''}.${swap?.missing ? ` ${swap.missing} remembered piece${swap.missing > 1 ? 's are' : ' is'} no longer in your bags.` : ''}`, '#7ad0ff');
     this.pushSelf(p);
   }
 
   // ------------------------------------------------------------------ the Skill Web (S3, combat_design.md 4.3)
   // take one node (m.id) or a road of nodes in order (m.ids: the Web screen's Apply; all or nothing)
   on_tree(p, m) {
-    if (!onWeb(p.cls)) return;
     const ids = Array.isArray(m.ids) ? m.ids.slice(0, 100) : [m.id];
     if (!ids.length || ids.some((id) => typeof id !== 'string' || !Object.hasOwn(TREE_BY_ID, id))) return this.err(p, 'There is no such place on the Web.');
     const next = { ...(p.tree || {}) };
@@ -2203,6 +2167,7 @@ export class World {
     }
     p.tree = next;
     this.recalc(p);
+    this.achSet(p, 'talents', treeSpent(p.tree));
     const n = TREE_BY_ID[ids[ids.length - 1]];
     this.msg(p, ids.length === 1 ? `Skill Web: ${n.name}.` : `Skill Web: ${ids.length} places taken, up to ${n.name}.`, '#7ad0ff');
     this.pushSelf(p);
@@ -2211,7 +2176,7 @@ export class World {
   // hand back one leaf (the rest stays joined to the start): in a town, 2 x level copper (free at level 20 and below, for
   // 14 days after the move from talents and after a Web change)
   on_treeRefund(p, m) {
-    if (!onWeb(p.cls) || typeof m.id !== 'string' || !Object.hasOwn(p.tree || {}, m.id) || !p.tree[m.id]) return;
+    if (typeof m.id !== 'string' || !Object.hasOwn(p.tree || {}, m.id) || !p.tree[m.id]) return;
     if (this.webBusy(p)) return this.err(p, 'You cannot change the Web in combat.');
     if (!isLeaf(p.cls, p.tree, m.id)) return this.err(p, 'Only the end of a road can be handed back: the rest must stay joined to your start.');
     const free = freeRespec(p), cost = free ? 0 : leafRefundCost(p.level);
@@ -2227,7 +2192,7 @@ export class World {
   }
   // a full respec: today's talent reset price (free at level 20 and below, and in the free windows)
   on_treeReset(p) {
-    if (!onWeb(p.cls) || !treeSpent(p.tree)) return;
+    if (!treeSpent(p.tree)) return;
     if (this.webBusy(p)) return this.err(p, 'You cannot change the Web in combat.');
     const cost = freeRespec(p) ? 0 : treeResetCost(p.level);
     if (p.gold < cost) return this.err(p, 'Not enough money to clear the Web.');
@@ -2238,7 +2203,7 @@ export class World {
   }
   // pick a Form node's option (free, out of combat, no respec): m.id the node, m.opt the option
   on_treeForm(p, m) {
-    if (!onWeb(p.cls) || typeof m.id !== 'string' || !Object.hasOwn(p.tree || {}, m.id) || !p.tree[m.id]) return;
+    if (typeof m.id !== 'string' || !Object.hasOwn(p.tree || {}, m.id) || !p.tree[m.id]) return;
     const node = TREE_BY_ID[m.id];
     if (node?.kind !== 'form') return;
     if (this.webBusy(p)) return this.err(p, 'You cannot change a Form in combat.');
@@ -2405,7 +2370,7 @@ export class World {
     }
     if (p.cast) return queued ? undefined : this.err(p, 'You are busy.'); // (a multi-hit cast past its first contact)
     if (queued && m.qUntil && this.time > m.qUntil + 0.051) return; // (one tick of grace, then the held press is gone)
-    const tal = p.tal || talentMods(p.cls, p.talents);
+    const tal = p.tal || baseMods();
     let cost = fu ? skillCost(mix ? p.eff[mix.to] : base, tal) + (fu.extra || 0) : skillCost(sk, tal); // (a fusion: B's cost + its own extra; Mix: its B's)
     let kmul = 1, encore = false; // (Clean Link, Chainwork's Encore)
     if (tal.keys) { // the Skill Web: fusion cost (Chainwork), then the keystones' onCast (Quick Feet, Last Reserves)
@@ -2458,7 +2423,7 @@ export class World {
     else if (base.cd) p.cds[base.id] = this.time + skillCd(base, tal);
     if (fu) p.cds[fu.id] = this.time + skillCd(fu, tal);
     if (mix) { p.mixT = this.time + p.tal.benchChemist; p.mixLog = []; if (p.eff[mix.to].cd) p.cds[mix.to] = Math.max(p.cds[mix.to] || 0, this.time + skillCd(p.eff[mix.to], tal)); }
-    else if (p.cls === 'chemist' && KIT_V2.chemist && !fu && base.id !== 'c_acid') p.mixLog = [...(p.mixLog || []).slice(-1), base.id];
+    else if (p.cls === 'chemist' && !fu && base.id !== 'c_acid') p.mixLog = [...(p.mixLog || []).slice(-1), base.id];
     // the recovery before another plain skill: the skill's own lock (feel.js, 0.45-0.9 s from its contact), not a flat GCD
     if (sk.gcd) p.gcd = this.time + (FEEL_ON ? skillFeel(sk).win.lock : GCD) / haste;
     const L = p.link; p.link = null; // (any cast spends the open window)
@@ -2563,9 +2528,9 @@ export class World {
     p.link = { from: sk.id, at: prev?.at ?? this.time, until, landed: hit || !!prev?.landed, done, step: sk.step || 0, tgt: c.target || null, parried: false };
   }
   // the letter from the class trainer when a hero's class moves to the new kit (section 11)
-  kitLetter(p) {
+  kitLetter(p, pts = 0) {
     const C = CLASSES[p.cls], f = (FUSIONS[p.cls] || [])[0];
-    this.systemPost(p, `${C.name} Trainer`, 'A new way to fight', `Your ${C.name}'s way of fighting has changed. You now carry seven skills and a dodge, and two skills pressed one after the other can fuse into a new move${f ? `: land ${nameOf(f.from, p.cls)}, then press ${nameOf(f.to, p.cls)} at once, for ${f.name}` : ''}. Each fusion you find goes into your Fusion Book. Your talent points have been handed back: spend them on the Skill Web (N), and change your mind for free for the next 14 days.`);
+    this.systemPost(p, `${C.name} Trainer`, 'A new way to fight', `Your ${C.name}'s way of fighting has changed. You now carry seven skills and a dodge, and two skills pressed one after the other can fuse into a new move${f ? `: land ${nameOf(f.from, p.cls)}, then press ${nameOf(f.to, p.cls)} at once, for ${f.name}` : ''}. Each fusion you find goes into your Fusion Book. ${pts ? `Your ${pts} talent point${pts > 1 ? 's have' : ' has'} been handed back` : 'The old talents are gone'}: spend your points on the Skill Web (N), and change your mind for free for the next 14 days.`);
   }
 
   // the dodge (feel.js DODGE, combat_design.md 2.4): two charges, one back every 3.5 s; 0.3 s of evade from the start (every
@@ -2608,7 +2573,7 @@ export class World {
       if (m.fire && p.eff?.d_snap) p.slideFire = { at: this.time + (D.slideShot || 0.14), target: m.target ?? p.target ?? null };
       if (p.tal?.neverStill) { (p.mvLog ||= []).push([this.time, D.dist]); p.mvAt = this.time; }
     }
-    if (KIT_V2[p.cls]) p.link = { from: 'dodge', at: this.time, until: this.time + D.dur + LINK.win + (p.tal?.linkWin || 0), landed: true, done: true, step: 0, tgt: null, parried: false }; // (the dodge is an input: gate 'dodge')
+    p.link = { from: 'dodge', at: this.time, until: this.time + D.dur + LINK.win + (p.tal?.linkWin || 0), landed: true, done: true, step: 0, tgt: null, parried: false }; // (the dodge is an input: gate 'dodge')
     let dx = Number(m.dx), dz = Number(m.dz), l = Math.hypot(dx, dz);
     if (D.shieldStep) { dx = Math.sin(p.ry); dz = Math.cos(p.ry); l = 1; } // (Shield Step: always forward, behind the shield)
     if (!isFinite(l) || l < 1e-3) { dx = -Math.sin(p.ry); dz = -Math.cos(p.ry); l = 1; } // no direction: backwards
@@ -2739,7 +2704,7 @@ export class World {
     // (S12) a bomb (sk.fuse): this contact is its landing; it lies there and bursts sk.fuse s later (tickChemist); the link
     // opens now, landed when a machine is within its reach
     if (sk.fuse && !c.lit) { this.layBomb(p, sk, c, center, target, enemies, allies, pud); return; }
-    const tal = p.tal || talentMods(p.cls, p.talents), tsk = tal.sk[sk.id];
+    const tal = p.tal || baseMods(), tsk = tal.sk[sk.id];
     const area = h.kind === 'aoe' || h.kind === 'ground' || h.kind === 'cone' || h.kind === 'line';
     const skPow = 1 + (tsk?.pow || 0);
     const power = p.power * (1 + this.buffVal(p, 'dmg')) * (1 + tal.dmg) * skPow * (area ? 1 + tal.aoe : 1) * (c.mul || 1) * rmul; // (rmul: a hot load, S10)
@@ -2783,7 +2748,7 @@ export class World {
         case 'res': p.res = Math.min(p.maxRes, p.res + a); break; // the caster's own resource back (the Deadeye's Quick Reload)
         // the new kit's kinds (combat_design.md 3.7; launch, air and brk are read through feel.js above)
         case 'holdLift': for (const m of enemies) { if (m.type !== 'mob' || m.dead || !(m.airT > this.time)) continue; const add = Math.min(a, isElite(m.def) ? POISE.eliteAir : a); const until = Math.max(m.airT, this.time + add); const lb = m.buffs.find((bf) => bf.name === 'Lifted'); if (lb) { lb.t = until - this.time; lb.dur = Math.max(lb.dur, lb.t); } m.airT = until; m.swingT = Math.max(m.swingT || 0, until - this.time); this.broadcast({ k: 'air', id: m.id, dur: +(until - this.time).toFixed(2), h: 2.2, hold: 1, dir: [0, 0] }); } break; // (kept in the air: Stormfall, High Ledger)
-        case 'zone': if (sk.cls === 'chemist' && KIT_V2.chemist) { if (!(c.hits || 0) && !c.after) this.chemZone(p, sk, center, a, b, cc || 4, fxl.find((f) => f[0] === 'zone')?.[4] || 4); break; } // (S12: the Chemist's puddles and clouds)
+        case 'zone': if (sk.cls === 'chemist') { if (!(c.hits || 0) && !c.after) this.chemZone(p, sk, center, a, b, cc || 4, fxl.find((f) => f[0] === 'zone')?.[4] || 4); break; } // (S12: the Chemist's puddles and clouds)
           if (p.type === 'player' && !(c.hits || 0) && !c.after) { const e = fxl.find((f) => f[0] === 'zone'); const Z = (p.zones ||= []); Z.push({ kind: a, coef: b, until: this.time + (cc || 4), r: e?.[4] || 4, x: center.x, z: center.z, slow: sk.zoneSlow || 0, next: this.time + 0.5, sk: sk.id }); if (Z.length > 6) Z.shift(); } if (sk.forge && p.type === 'player' && !(c.hits || 0) && !c.after && type === 'zone') this.broadcast({ k: 'slag', x: +center.x.toFixed(2), z: +center.z.toFixed(2), r: fxl.find((f) => f[0] === 'zone')?.[4] || 2, dur: cc || 3 }); break; // (a ground patch: Cinder Landing's cinders; at most 6 a hero, oldest goes, section 3.6)
         // (S5) Stormfall's plunge drives the lifted machine into the ground: a 0.3 m bounce (still Lifted for its 0.8 s, so the
         // air bonus holds), then it lies stunned for a s (Hold Aloft: longer). The client plays the slam on the 'air' hold
@@ -2875,7 +2840,7 @@ export class World {
     if (ck?.kind === 'chill' && sk.deepChill && p.type === 'player') (p.deep ||= []).push({ ids: enemies.filter((m) => m.type === 'mob').map((m) => m.id), at: this.time + 2, t: sk.deepChill }); // (S12 Deep Chill)
     // (S11) a trap fusion springs the traps it used on its last contact: they burst (Closed Ground finds the machines there)
     if (h.at === 'trap' && sk.from && lastHit && !c.extraTrap && c.trapList?.length) { p.trapBurst = { list: c.trapList.map((T) => ({ x: T.x, z: T.z })), until: this.time + 4 }; const used = new Set(c.trapList); p.traps = (p.traps || []).filter((T) => !used.has(T)); for (const T of used) this.broadcast({ k: 'trapgone', tid: T.id, burst: 1 }); }
-    if (KIT_V2[p.cls] && p.type === 'player' && !c.after && !c.extraTrap && !c.lit) this.linkAfter(p, sk, c, enemies, allies); // (fusions: the link window, mastery)
+    if (p.type === 'player' && !c.after && !c.extraTrap && !c.lit) this.linkAfter(p, sk, c, enemies, allies); // (fusions: the link window, mastery)
     // Aftershock (the Warden, S9): a slam's last contact strikes again 0.6 s later at half strength (one repeat, never of a repeat)
     if (sk.aftershock && !c.after && lastHit && p.type === 'player') {
       (p.delays ||= []).push({ t: this.time + sk.aftershock.t, sk, c: { ...c, after: true, hits: (h.n || 1) - 1, mul: (c.mul || 1) * sk.aftershock.mul, opening: false } });
@@ -3466,9 +3431,8 @@ export class World {
       this.levelPost(p);
       const learned = kitOf(p.cls).filter((s) => s.lvl === p.level);
       for (const s of learned) this.msg(p, `You have learned ${s.name}!`, '#7ad0ff');
-      for (const f of FUSIONS[p.cls] || []) if (!f.tree && f.lvl === p.level && KIT_V2[p.cls]) this.msg(p, `A new fusion is open: ${f.hint || f.name} (${nameOf(f.from, p.cls)}, then ${nameOf(f.to, p.cls)})`, '#ffd870');
-      if (onWeb(p.cls) && !p.bot) this.msg(p, p.level === 2 ? 'The Skill Web opens! Press N to spend your first Web point.' : 'You gained a Web point (N).', '#7ad0ff');
-      else if (p.level >= 5) this.msg(p, p.level === 5 ? 'Talents unlocked! Press N to spend your first talent point.' : 'You gained a talent point (N).', '#7ad0ff');
+      for (const f of FUSIONS[p.cls] || []) if (!f.tree && f.lvl === p.level) this.msg(p, `A new fusion is open: ${f.hint || f.name} (${nameOf(f.from, p.cls)}, then ${nameOf(f.to, p.cls)})`, '#ffd870');
+      if (!p.bot) this.msg(p, p.level === 2 ? 'The Skill Web opens! Press N to spend your first Web point.' : 'You gained a Web point (N).', '#7ad0ff');
     }
   }
 
@@ -4172,9 +4136,9 @@ export class World {
     if (p.dead) return;
     if (p.zones?.length) this.tickZones(p);
     if (p.delays?.length) this.tickDelays(p);
-    if (p.cls === 'ranger' && KIT_V2.ranger && (p.traps?.length || p.tal?.rangerStill)) this.tickRanger(p); // (S11: the snares on the ground, Never Still's metres)
-    if (p.cls === 'chemist' && KIT_V2.chemist && (p.bombs?.length || p.deep?.length)) this.tickChemist(p); // (S12: his bombs' fuses, Deep Chill)
-    if (p.cls === 'deadeye' && KIT_V2.deadeye) this.tickDeadeye(p); // (S10: Never Still's metres, the slide's shot, Six Chambers' slow reload)
+    if (p.cls === 'ranger' && (p.traps?.length || p.tal?.rangerStill)) this.tickRanger(p); // (S11: the snares on the ground, Never Still's metres)
+    if (p.cls === 'chemist' && (p.bombs?.length || p.deep?.length)) this.tickChemist(p); // (S12: his bombs' fuses, Deep Chill)
+    if (p.cls === 'deadeye') this.tickDeadeye(p); // (S10: Never Still's metres, the slide's shot, Six Chambers' slow reload)
     // Forge-Heated Head (the Warden, S9): the hot head costs 2% of his health every 10 s in a fight (never the last point)
     if (p.tal?.forgeBurn && this.time - p.combatT < 5 && this.time >= (p.forgeT || 0)) { if (p.forgeT) p.hp = Math.max(1, p.hp - p.maxHp * p.tal.forgeBurn); p.forgeT = this.time + 10; }
     if (p.link && (this.hasCC(p, 'stun') || this.time > p.link.until + LINK.tick + LINK.grace + 0.05)) p.link = null; // (a stun closes the window early)
@@ -4334,7 +4298,7 @@ export class World {
     L.push(B);
     while (L.length > 8) L.shift();
     this.broadcast({ k: 'bomb', id: p.id, bid: B.id, sk: sk.id, x: +center.x.toFixed(2), z: +center.z.toFixed(2), t: +(B.t - this.time).toFixed(2), r: sk.hit.r || 4, on: ctr ? undefined : target.id });
-    if (KIT_V2[p.cls] && p.type === 'player') this.linkAfter(p, sk, c, enemies, allies);
+    if (p.type === 'player') this.linkAfter(p, sk, c, enemies, allies);
   }
   detonateAll(p, center, R, coef, sk, c) {
     const items = [];
@@ -4695,9 +4659,9 @@ export class World {
           // long enough now that full slams on every melee fighter wiped volunteer parties)
           m.pending = { t: this.time + hitDelay, tgt: target.id, dmg: special ? dmg * 1.8 : dmg, aoe: special ? 6 : 0, splash: special && def.boss && inDungeon ? dmg / BOSS_SWING : 0 };
           // (S9) a bot Warden on the new kit sees the swing and braces for it: a boss's slam most of the time, other swings less
-          if (target.bot && target.type === 'player' && dodgeFor(target.cls).brace && KIT_V2[target.cls] && !target.botBrace && rand() < (special ? BOT_BRACE.slam : def.boss ? BOT_BRACE.boss : BOT_BRACE.other)) target.botBrace = { at: m.pending.t - 0.2, src: m.id };
+          if (target.bot && target.type === 'player' && dodgeFor(target.cls).brace && !target.botBrace && rand() < (special ? BOT_BRACE.slam : def.boss ? BOT_BRACE.boss : BOT_BRACE.other)) target.botBrace = { at: m.pending.t - 0.2, src: m.id };
           // (S15) a bot Knight raises Guard for it (its parry opens every skill with Oathbound, Turning Riposte with Riposte Drill)
-          else if (target.bot && target.type === 'player' && target.cls === 'knight' && KIT_V2.knight && !target.botGuard && target.level >= 14 && !((target.cds.k_guard || 0) > this.time) && target.res >= 10 && rand() < (special ? BOT_BRACE.slam : def.boss ? BOT_BRACE.boss : BOT_BRACE.other)) target.botGuard = { at: m.pending.t - 0.4, src: m.id };
+          else if (target.bot && target.type === 'player' && target.cls === 'knight' && !target.botGuard && target.level >= 14 && !((target.cds.k_guard || 0) > this.time) && target.res >= 10 && rand() < (special ? BOT_BRACE.slam : def.boss ? BOT_BRACE.boss : BOT_BRACE.other)) target.botGuard = { at: m.pending.t - 0.4, src: m.id };
         }
       } else m.swingT = Math.min(m.swingT, 0.6);
     } else if (m.state === 'leash') {

@@ -47,9 +47,12 @@ export const CLASSES = {
   },
 };
 
+// the legacy kits (30 skills a class, played until each class moved to shared/kit.js in S2-S13; the old path went at S16).
+// Kept only as data: OLD_TO_NEW below migrates old saves' bars, wheels and logs, and choreo.js reuses some of their timings.
+// Nothing plays them any more.
 const S = (id, name, o) => ({ id, name, gcd: true, cast: 0, cost: 15, cd: 0, range: 4, target: 'enemy', ...o });
 
-export const SKILLS = {
+export const LEGACY_SKILLS = {
   knight: [
     S('k_valiant', 'Valiant Strike', { icon: 'slash', lvl: 1, cost: 10, cd: 0, hit: { t: 0.34, kind: 'melee' }, fx: [['dmg', 1.0]], desc: 'A diagonal cut from high to low.' }),
     S('k_bash', 'Shield Bash', { icon: 'shield', lvl: 1, cost: 15, cd: 8, hit: { t: 0.28, kind: 'melee' }, fx: [['dmg', 0.6], ['stun', 1.5]], desc: 'Drive your shield forward, stunning the target.' }),
@@ -296,8 +299,8 @@ export const SKILLS = {
   ],
 };
 
-export const SKILL_BY_ID = {};
-for (const [cls, list] of Object.entries(SKILLS)) for (const s of list) { s.cls = cls; SKILL_BY_ID[s.id] = s; }
+export const LEGACY_BY_ID = {};
+for (const [cls, list] of Object.entries(LEGACY_SKILLS)) for (const s of list) { s.cls = cls; LEGACY_BY_ID[s.id] = s; }
 
 export const LEVEL_CAP = 70; // 65 -> 70 with Part Fifteen (the Russet Weald, set with P15.1); 60 -> 65 with Part Fourteen (the Rainward Gorge, set with P14.1); 55 -> 60 with Part Thirteen (Tidewater Sound, set with P13.1); 50 -> 55 with Part Twelve (the Windward Heights); 45 -> 50 with Part Eleven (the Rime Steps); 40 -> 45 with Part Ten (the Cinder Reach); 25 -> 30 with Part Four (the Far Vale), 30 -> 35 with Part Six (the Glass Waste), 35 -> 40 with Part Eight (the Deepway)
 export const xpForLevel = (l) => Math.round(120 * Math.pow(l, 1.55));
@@ -321,17 +324,15 @@ export const killXp = (xp, mL, pL) => {
 // a daily's experience: 0.08 of the hero's level, a tenth less for each level the hero is above the daily, at least a
 // fifth (P15.7 review: a level-69 hero did the valley's level-3 dailies for 0.08 of level 69 each, 1.4 levels a day)
 export const dailyXp = (Q, pL) => Math.round(xpForLevel(Math.max(pL, Q.lvl || 1)) * 0.08 * Math.max(0.2, Math.min(1, 1 + ((Q.lvl || 1) - pL) * 0.1)));
-export const skillsForLevel = (cls, level) => SKILLS[cls].filter((s) => s.lvl <= level);
 // base damage/heal per point of coefficient at a level
 export const powerAt = (level) => 9 + level * 3.2;
 
 // ---- the combat rework (combat_design.md section 11, stage S2) ----
-// SKILLS stays as LEGACY_SKILLS: a class on KIT_V2 (shared/kit.js) plays its new kit instead. OLD_TO_NEW maps every one
+// Every class plays its new kit (shared/kit.js). OLD_TO_NEW maps every one
 // of the 210 legacy skills: { to, as } with as core / fusion / triad / form / notable / keystone / zone / retired. Used to
 // remap the bar and the phone wheel, talent and set modifiers naming a skill, logs, achievements and quest text, and to
 // reuse choreo. `to` is the new id where it is known; the classes after the Knight fill theirs with their slices
 // (S8-S13). A legacy skill not listed is a zone notable from level 42, else retired.
-export const LEGACY_SKILLS = SKILLS;
 const MIG = {
   knight: {
     core: ['k_valiant', 'k_rising', 'k_skybreaker', 'k_bash', 'k_cleave', 'k_lunge', 'k_guard'], k_riposte: ['core', 'k_guard'],
@@ -381,8 +382,8 @@ const MIG = {
 export const OLD_TO_NEW = {};
 for (const [cls, m] of Object.entries(MIG)) {
   for (const [k, v] of Object.entries(m)) {
-    if (Array.isArray(v) && typeof v[0] === 'string' && SKILL_BY_ID[k]) { OLD_TO_NEW[k] = { to: v[1], as: v[0] }; continue; }
+    if (Array.isArray(v) && typeof v[0] === 'string' && LEGACY_BY_ID[k]) { OLD_TO_NEW[k] = { to: v[1], as: v[0] }; continue; }
     for (const id of v) OLD_TO_NEW[id] = { to: k === 'core' ? id : null, as: k };
   }
-  for (const s of SKILLS[cls]) if (!OLD_TO_NEW[s.id]) OLD_TO_NEW[s.id] = { to: null, as: s.lvl >= 42 ? 'zone' : 'retired' };
+  for (const s of LEGACY_SKILLS[cls]) if (!OLD_TO_NEW[s.id]) OLD_TO_NEW[s.id] = { to: null, as: s.lvl >= 42 ? 'zone' : 'retired' };
 }

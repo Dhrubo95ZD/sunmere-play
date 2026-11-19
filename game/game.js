@@ -31,8 +31,8 @@ import { connect, botPrefsMsg } from './net.js';
 const botHid = (ev, ch) => !!ev.bot && !ev.out && (SETTINGS.botChat?.[ch] === 0 || SETTINGS.botChat?.[ch] === false);
 import { UI } from '../ui/ui.js';
 import { CHOREO, clipOf } from './choreo.js';
-import { CLASSES, SKILLS, SKILL_BY_ID } from '/sunmere-play/shared/classes.js';
-import { KIT_V2, kitOf, stepOf, CHAIN_RESET } from '/sunmere-play/shared/kit.js';
+import { CLASSES } from '/sunmere-play/shared/classes.js';
+import { kitOf, stepOf, CHAIN_RESET } from '/sunmere-play/shared/kit.js';
 import { FUSE, skillOf, fusionUnlocked, gateOk, LINK } from '/sunmere-play/shared/fusions.js';
 import { shownName } from '/sunmere-play/shared/social.js';
 import { NPCS, QUESTS, MOBS, ITEMS, npcSeen, enginesTurning } from '/sunmere-play/shared/data.js';
@@ -682,9 +682,9 @@ export async function startGame() {
     if (act === 'potion') { ui.usePotion?.(); return; }
     const win = ['char', 'bags', 'quests', 'skills', 'talents', 'ach', 'journal', 'options', 'map', 'help', 'meter', 'loot'].includes(act) ? act : null;
     if (win) { ui.toggle(win); return; }
-    // (S6) the two pinned fusions: their own keys, or on the new kit the keys of skills 21 and 22 (Q and E), which the
-    // seven-skill bar leaves free (Z hides the interface and C opens the character window, so the design's Z and C clash)
-    const pin = act === 'pin1' || act === 'pin2' ? Number(act[3]) - 1 : KIT_V2[game.cls] && (act === 'skill21' || act === 'skill22') && !keyFor('pin' + (act === 'skill21' ? 1 : 2)) ? (act === 'skill21' ? 0 : 1) : -1;
+    // (S6) the two pinned fusions on their own keys (Q and E by default; Z hides the interface and C opens the character
+    // window, so the design's Z and C clash)
+    const pin = act === 'pin1' || act === 'pin2' ? Number(act[3]) - 1 : -1;
     if (pin >= 0) { if (!e.repeat) ui.combat?.pin(pin); return; }
     const plainK = SETTINGS.fuseAlt ? !e.altKey : e.altKey; // (Alt casts B plain; the option "fuse only with Alt" turns it round)
     const sx = act && act.match(/^skill(\d+)$/);
@@ -958,7 +958,7 @@ export async function startGame() {
     game.chain = base.chain && !fu ? { id, step: sk.step, at: now } : null;
     const tgtId = tgtV && tgtV !== local ? tgtV.id : tgtV === local ? game.localId : null;
     const hitEnd = (sk.hit?.t || 0) + Math.max(0, (sk.hit?.n || 1) - 1) * (sk.hit?.gap || 0);
-    game.lastCast = { id: sk.id, sk, t0: now, at: now + (sk.hit?.t || 0), end: now + hitEnd, lock: fe.win.lock, tgt: tgtId, done: !KIT_V2[game.cls] || !!sk.from };
+    game.lastCast = { id: sk.id, sk, t0: now, at: now + (sk.hit?.t || 0), end: now + hitEnd, lock: fe.win.lock, tgt: tgtId, done: !!sk.from };
     game.pred = { base: id, as: sk.id, at: now };
     game.send({ t: 'cast', skill: id, chain: fu ? fu.L.from : undefined, plain: o.plain || undefined, target: tgtId, gx: ground?.x, gz: ground?.z, hold: sk.draw && o.hold && !fu ? 1 : undefined });
     local.playSkill(clipOf(sk.id, sk.step, sk.formChoreo), tgtV && tgtV !== local ? tgtV : tgtV === local ? local : null, ground, fx);
@@ -972,7 +972,7 @@ export async function startGame() {
   // contact (game.plink), an authored pair, unlocked, not cooling, inside the window with the 0.15 s grace, and its gate
   // as far as the client can see it (a lifted machine is in the air on screen; a staggered one is reeling or kneeling)
   function predictFusion(B, now) {
-    const y = game.you, fuse = KIT_V2[game.cls] && FUSE[game.cls];
+    const y = game.you, fuse = FUSE[game.cls];
     if (!fuse) return null;
     const opening = (y.buffs || []).some((b) => b.name === 'Opening');
     const seen = (v, st) => (st === 'lifted' ? v?.react?.kind === 'air' : st === 'staggered' ? v?.react?.kind === 'stag' || v?.react?.kind === 'broken' || (v?.stunUntil || 0) > performance.now() : false);
@@ -1041,7 +1041,7 @@ export async function startGame() {
     game.send({ t: 'dodge', dx: +w.x.toFixed(3), dz: +w.z.toFixed(3), fire: fire ? 1 : undefined, target: fire ? game.target : undefined });
     local.playSkill((D.shieldStep ? 'dodges_' : back || D.brace ? 'dodgeb_' : fire ? 'dodgef_' : 'dodge_') + game.cls, fire ? tgF : null, null, fx); // (S9 Brace: in place, both the same clip)
     game.cutT = now + (D.shieldStep || D.brace ? D.block : DODGE.evade); // (skills cut in once the evade is over; the Warden's Brace once its block is)
-    game.chain = null; game.lastCast = null; if (KIT_V2[game.cls]) game.plink = { from: 'dodge', at: now, until: now + D.dur + LINK.win + (y.web ? ui.tmods?.linkWin || 0 : 0), landed: true, done: true, step: 0, tgt: null, parried: false, local: true }; // (S2: the dodge is an input)
+    game.chain = null; game.lastCast = null; game.plink = { from: 'dodge', at: now, until: now + D.dur + LINK.win + (y.web ? ui.tmods?.linkWin || 0 : 0), landed: true, done: true, step: 0, tgt: null, parried: false, local: true }; // (S2: the dodge is an input)
     game.dodgeAt = now;
   }
   // (a plain { x, z } from a script or the touch layer is made a vector: the buffer clones it)
@@ -1062,7 +1062,7 @@ export async function startGame() {
         show.view.pos.copy(show.pos); show.view.target.copy(show.pos);
         show.next -= dtRaw;
         if (show.next <= 0 && !show.view.anim.busy) {
-          const list = SKILLS[show.cls].filter((s) => !CHOREO[s.id]?.endRoot);
+          const list = kitOf(show.cls).filter((s) => !CHOREO[s.id]?.endRoot);
           const sk = list[Math.floor(Math.random() * list.length)];
           show.view.playSkill(sk.id, null, null, fx);
           show.next = 3.2;

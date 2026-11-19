@@ -1,8 +1,8 @@
 // The combat HUD of stage S6 (docs/ai/combat_design.md 2.10, 6.1, 6.2): the morphing skill bar, the link line, the fusion
 // pill and toast, the dodge chip, two pinned fusions, the combo counter, the target's poise bar and haptics on phones.
-// Only a class on the new kit (KIT_V2) gets the morph, the chip and the pins; every other class keeps its bar as it is.
+// Every class is on the new kit (S16 removed the KIT_V2 switches), so every bar gets the morph, the chip and the pins.
 // The touch wheel (ui/touch.js) reads the same fusion state through fuseFor() and morphs its buttons the same way.
-import { KIT_V2, DODGES, CHAIN_RESET } from '/sunmere-play/shared/kit.js';
+import { DODGES, CHAIN_RESET } from '/sunmere-play/shared/kit.js';
 import { FUSE, FUSION_BY_ID, LINK, fusionUnlocked, gateOk, skillOf } from '/sunmere-play/shared/fusions.js';
 import { dodgeFor, dodgeWith, POISE } from '/sunmere-play/shared/feel.js';
 import { effName } from '/sunmere-play/shared/keystones.js';
@@ -29,7 +29,7 @@ export { haptic };
 // returned too, with cooling: the slot shows a grey rim and B casts plain
 const seen = (v, st) => (st === 'lifted' ? v?.react?.kind === 'air' : st === 'staggered' ? v?.react?.kind === 'stag' || v?.react?.kind === 'broken' || (v?.stunUntil || 0) > performance.now() : false);
 export function fuseFor(game, ui, id, now) {
-  const y = game.you, fuse = y && KIT_V2[game.cls] && FUSE[game.cls];
+  const y = game.you, fuse = y && FUSE[game.cls];
   if (!fuse) return null;
   const opening = (y.buffs || []).some((b) => b.name === 'Opening');
   for (const L of [game.plink, y.link]) {
@@ -103,7 +103,7 @@ export class CombatHud {
     this.toast = el('div', 'fz-toast'); hud.appendChild(this.toast);
     this.pill = el('div', 'fz-pill hidden'); hud.appendChild(this.pill);
   }
-  get on() { return !!KIT_V2[this.g.cls]; }
+  get on() { return !!this.g.cls; }
   // a pinned fusion's key (game.js): cast it, or say how to pin one
   pin(i) { const id = pinsOf(this.g.cls)[i]; if (id) pinCast(this.g, this.ui, id); else this.ui.error('Nothing pinned there. Pin a fusion in the Fusion Book (K).'); }
   // the desktop bar (ui.buildActionBars): morph handles on each slot, chain pips on slot 1, the dodge chip, the pins
@@ -154,7 +154,7 @@ export class CombatHud {
     const rec = (this.g.you?.web && this.ui.eff?.[id]) || f;
     return `<div class="tt-name">${effName(rec)} <span class="tt-sub">(${k})</span></div><div class="tt-desc">Casts ${skillOf(f.from)?.name || DODGES[this.g.cls]?.name || 'the dodge'}, then ${skillOf(f.to)?.name} in its window.</div><div class="tt-hint">Right-click to unpin</div>`;
   }
-  pinKey(i) { return keyLabel(keyFor('pin' + (i + 1)) || keyFor('skill' + (21 + i))) || ''; }
+  pinKey(i) { return keyLabel(keyFor('pin' + (i + 1))) || ''; }
   // a fusion went off (from the cast or the server's swap): its name low centre for 0.9 s; the first time "New fusion: ..."
   fusionToast(name, isNew) {
     const t = this.toast, now = performance.now();

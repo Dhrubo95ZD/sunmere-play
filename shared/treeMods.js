@@ -1,6 +1,6 @@
 // The Skill Web's rules (docs/ai/combat_design.md 3.3, 3.4, 4.3): points, allocation, leaf refund, respec, Forms, carry
-// and the hero's modifier table. treeMods replaces talentMods for classes on the Web (TREE_CLASSES) and returns the same
-// shape (dmg, crit, armor, haste, cdr, aoe, sk[id]...), so damage, heal, skillCost, skillCd and set bonuses keep working.
+// and the hero's modifier table (every class is on the Web since S13; the talents went at S16). treeMods returns the
+// shape of talents.js baseMods (dmg, crit, armor, haste, cdr, aoe, sk[id]...), so damage, heal, skillCost, skillCd and set bonuses keep working.
 // It adds:
 //   tag[tag] = { pow, brk, radius, cost }   modifiers over tags (every leap, every shot...)
 //   forms[skillId] = optionId               the Form picked for each core skill (from allocated Form nodes)
@@ -18,8 +18,6 @@ import { STORY } from './story.js';
 import { LINK, compileKit, fusionUnlocked } from './fusions.js';
 
 export { TREE_V };
-export const TREE_CLASSES = new Set(['knight', 'sandblade', 'warden', 'deadeye', 'ranger', 'chemist', 'herbalist']); // classes on the Web (every class since S13; the talents screen goes at S16)
-export const onWeb = (cls) => TREE_CLASSES.has(cls);
 export const TREE_FREE_LEVEL = 20; // refunds and resets are free at this level and below
 export const TREE_FREE_DAYS = 14; // after the move from talents
 export const leafRefundCost = (level) => 2 * level; // copper, one leaf node

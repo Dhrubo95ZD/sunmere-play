@@ -10,7 +10,7 @@
 //     camera-distance button (right); a chat icon with an unread count and short toasts; the menu drawer from the right
 // Windows get tap-to-select (tooltip and an action button: Equip / Use / Sell / Unequip / Deposit) and long-press tooltips.
 import { CLASSES, OLD_TO_NEW } from '/sunmere-play/shared/classes.js';
-import { kitOf, KIT_V2 } from '/sunmere-play/shared/kit.js';
+import { kitOf } from '/sunmere-play/shared/kit.js';
 import { FUSION_BY_ID, fusionUnlocked } from '/sunmere-play/shared/fusions.js';
 import { ITEMS } from '/sunmere-play/shared/data.js';
 import { skillCost } from '/sunmere-play/shared/talents.js';
@@ -52,7 +52,7 @@ const GLYPH = {
 };
 // the drawer: every window the desktop menu bar reaches (painted icons from ui/icons, line glyphs for the rest)
 const MENU = [
-  ['char', 'Character'], ['bags', 'Backpack'], ['skills', 'Skills'], ['talents', 'Talents'], ['quests', 'Quest Log'], ['map', 'World Map'],
+  ['char', 'Character'], ['bags', 'Backpack'], ['skills', 'Skills'], ['talents', 'Skill Web'], ['quests', 'Quest Log'], ['map', 'World Map'],
   ['journal', 'Journal'], ['ach', 'Achievements'], ['recall', 'Homeward'], ['meter', 'Damage Meter'], ['social', 'Players'], ['loot', 'Loot History'], ['options', 'Options'],
   ['help', 'How to Play'], ['news', 'What’s New'], ['chat', 'Chat'],
 ];
@@ -201,7 +201,7 @@ export function initTouch({ game, ui, rig, canvas, act }) {
         const me = { S, t: now, id: e.pointerId, wait: 0 };
         fingers.push(me);
         if (tw) { if (tw.wait) { clearTimeout(tw.wait); tw.wait = 0; useSkill(S.s, { plain: !T2() }); } return; }
-        const st = KIT_V2[game.cls] ? fuseFor(game, ui, S.s.id, game.serverTime()) : null;
+        const st = fuseFor(game, ui, S.s.id, game.serverTime());
         if (st && !st.cooling) me.wait = setTimeout(() => { me.wait = 0; useSkill(S.s, { plain: T2() }); }, 70);
         else useSkill(S.s, { plain: !!st && T2(), hold: !!S.s.draw }); // (S11: a draw is held while the finger stays on the button)
         dragS = { S, id: e.pointerId, x: e.clientX, y: e.clientY, moved: false };
@@ -681,7 +681,7 @@ export function initTouch({ game, ui, rig, canvas, act }) {
     const y = game.you;
     if (!y) return;
     if (builtKey !== `${game.cls}:${y.level}:${JSON.stringify(T.wheel?.[game.cls] || null)}`) buildWheel();
-    const t = game.serverTime(), res = y.res, kit2 = !!KIT_V2[game.cls];
+    const t = game.serverTime(), res = y.res, kit2 = true;
     for (const S of slots) {
       const s = S.s;
       if (!s) continue;

@@ -60,7 +60,7 @@ export const KNOCKDOWN = { dist: 2.5, down: 1.0, liftDown: 0.8 };
 // (no swing, no new mechanic; its ability clock waits). A world boss too. Dungeon hazards it calls are not its own blow.
 export const RECOVER = { min: 1.0, max: 1.5, kinds: new Set(['circles', 'nova', 'beam']) };
 
-// the kinds of blow a skill record is (cached per record: a KIT_V2 record and each fusion is its own object)
+// the kinds of blow a skill record is (cached per record: a core skill record and each fusion is its own object)
 const cache = new WeakMap();
 const NONE = Object.freeze([]);
 export function elemsOf(sk) {

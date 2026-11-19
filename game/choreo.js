@@ -4,9 +4,9 @@
 // spine/chest x>0 bends forward, y>0 twists left; thigh x<0 swings forward, shin x>0 bends the knee.
 // root: hips offset [x, y, z] (z forward). turn: whole-body spin (deg, + = to the left).
 import { compileClip } from './anim.js';
-import { SKILLS, SKILL_BY_ID } from '/sunmere-play/shared/classes.js';
+import { LEGACY_BY_ID } from '/sunmere-play/shared/classes.js'; // (the legacy kits' hit times, which some clips still time themselves by)
 import { FUSION_BY_ID } from '/sunmere-play/shared/fusions.js';
-import { CORE_BY_ID } from '/sunmere-play/shared/kit.js'; // (S10: the Deadeye's new contact times; its core skills keep their legacy ids) // (S4: a fusion's own clip times itself by the fusion's hit)
+import { CORE_BY_ID, kitOf } from '/sunmere-play/shared/kit.js'; // (S10: the Deadeye's new contact times; its core skills keep their legacy ids) // (S4: a fusion's own clip times itself by the fusion's hit)
 import { STANCES } from './anim.js';
 import * as THREE from 'three';
 import { HUMANOID } from '../assets/rig.js';
@@ -2383,7 +2383,7 @@ function gunArm(torso, side, aim, o = {}) {
   const LEFT = (torso, at, aim, pole) => gunArm(torso, 'L', aim, { at, pole: pole || [0.62, 1.1, -0.1] });
   const TUCK = { armR: [-46, 0, -8], foreR: [-128, 0, 0], handR: [50, 0, 0], armL: [-46, 0, 8], foreL: [-128, 0, 0], handL: [50, 0, 0] };
   // the skill's own release times (shared/classes.js hit.t + i * gap), so the shots leave the barrel when the sim fires
-  const HT = (id, def, i = 0) => { const h = SKILL_BY_ID[id]?.hit; return h ? h.t + i * (h.gap || 0) : def + i * 0.16; };
+  const HT = (id, def, i = 0) => { const h = LEGACY_BY_ID[id]?.hit; return h ? h.t + i * (h.gap || 0) : def + i * 0.16; };
   const D1 = (id, dur, mask, keys, ev, o) => (DEF[id] = C('deadeye', dur, mask, keys, ev, o));
   // one quick shot: the pistol snaps up onto the line, fires on the release, kicks up and back, settles to the guard
   const shot1 = (dur, side, tf, o = {}) => [
@@ -3499,7 +3499,7 @@ for (const cls of Object.keys(TRAIL)) {
 // compile: resolve 'hit', 'hit2'.. into normalized times from the skill's impact timing
 export const CHOREO = {};
 for (const [id, def] of Object.entries(DEF)) {
-  const sk = SKILL_BY_ID[def.skill || id] || FUSION_BY_ID[def.skill || id]; // (a mirrored twin, e.g. 'd_snap_l', times itself by its skill; S4: a fusion's own DEF by the fusion)
+  const sk = LEGACY_BY_ID[def.skill || id] || FUSION_BY_ID[def.skill || id]; // (a mirrored twin, e.g. 'd_snap_l', times itself by its skill; S4: a fusion's own DEF by the fusion)
   const hit = def.hit || sk?.hit || { t: def.dur * 0.4 }; // (S8: a chain step's clip carries its own contact time)
   const n = hit.n || 1, gap = hit.gap || 0;
   const resolveT = (t) => {
@@ -3539,6 +3539,6 @@ export function choreoFor(id) { return CHOREO[id]; }
 export const clipOf = (id, step, form) => (form && CHOREO[form] ? form : step > 1 && CHOREO[id + '_' + step] ? id + '_' + step : id);
 export function skillClipsFor(cls) {
   const out = {};
-  for (const s of SKILLS[cls] || []) if (CHOREO[s.id]) out[s.name] = CHOREO[s.id].clip;
+  for (const s of kitOf(cls)) if (CHOREO[s.id]) out[s.name] = CHOREO[s.id].clip;
   return out;
 }

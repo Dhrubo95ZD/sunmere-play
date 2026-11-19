@@ -1,16 +1,10 @@
 // The new class kits (combat_design.md sections 3.1 and 5, stage S2): per class seven core skills and a dodge, in the same
-// S() grammar as classes.js plus tags, win, tier and steps. A class plays this kit when its KIT_V2 switch is on (section
-// 11); every other class keeps its 30 skills from classes.js (LEGACY_SKILLS) until its own slice (S8-S13).
+// S() grammar as classes.js plus tags, win, tier and steps. Every class plays this kit (S16 removed the KIT_V2 switches and
+// the 30-skill legacy kits; classes.js keeps LEGACY_SKILLS only to migrate old saves).
 // Ids that survive from today's kit keep their id, so choreo.js, cooldown slots and talents keyed by id carry over; the
-// sim reads a player's compiled records (p.eff, shared/fusions.js compileKit), never SKILL_BY_ID, for a class on KIT_V2.
+// sim reads a player's compiled records (p.eff, shared/fusions.js compileKit).
 // Hit times match the existing choreography for now (S4 gives the authored clips, S5 the beats).
 // Imports only from shared/.
-import { SKILLS } from './classes.js';
-
-// classes on the new kit. Knight first (the pilot slice); the old path goes at S16
-export const KIT_V2 = { knight: true, sandblade: true, warden: true, deadeye: true, ranger: true, chemist: true, herbalist: true }; // (S8: the Sandblade's slice; S9: the Warden's; S10: the Deadeye's; S11: the Ranger's; S12: the Chemist's; S13: the Herbalist's, the last)
-export const onKit2 = (cls) => !!KIT_V2[cls];
-
 const K = (id, name, o) => ({ id, name, gcd: true, cast: 0, cost: 15, cd: 0, range: 4, target: 'enemy', kit: 2, ...o });
 
 // the basic chain (section 2.3): steps of one skill, each its own record (contact, lock, tier); chain steps 1-2 never
@@ -51,7 +45,7 @@ const balAt = (v, L) => { if (L <= BAL_L[0]) return v[0]; for (let i = 1; i < BA
 // kind: 'fuse' (a fusion's blow), 'fill' (the chain's), anything else plain
 export function balMul(cls, level, kind) {
   const B = BAL[cls];
-  if (!B || !KIT_V2[cls]) return 1;
+  if (!B) return 1;
   return balAt(B.pow, level) * (kind === 'fuse' ? balAt(B.fuse, level) : kind === 'fill' ? balAt(B.fill, level) : balAt(B.skill, level));
 }
 
@@ -197,8 +191,8 @@ export const PARRY = { res: 20, stagger: 1.2 }; // a parry: Valor back and the a
 export const CORE_BY_ID = {};
 for (const [cls, list] of Object.entries(CORE)) for (const s of list) { for (const r of s.chain || [s]) r.cls = cls; CORE_BY_ID[s.id] = s; }
 
-// the bar of a class: the new kit when its switch is on, else the 30 legacy skills
-export const kitOf = (cls) => (KIT_V2[cls] ? CORE[cls] : SKILLS[cls]) || [];
+// the bar of a class: its seven core skills
+export const kitOf = (cls) => CORE[cls] || [];
 export const kitForLevel = (cls, level) => kitOf(cls).filter((s) => s.lvl <= level);
 // a chain skill's record for a step (1-based); any other skill is itself
 export const stepOf = (sk, step) => (sk?.chain ? sk.chain[Math.max(0, Math.min(sk.chain.length, step) - 1)] : sk);

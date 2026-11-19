@@ -137,11 +137,8 @@ html.touch .w-skills .skw-tx b { font: 700 16px var(--font-head); color: var(--g
 html.touch .w-skills .skw-tx span { font-size: 13px; color: #c8bca0; }
 html.touch .w-skills .skw-btns { display: flex; gap: 10px; margin-top: 6px; flex-wrap: wrap; }
 html.touch .w-skills .skw-btns button { min-height: 44px; }
-html.phone .w-talents .tl { min-width: 44px; min-height: 44px; }
-html.phone .w-talents .tl-r, html.phone .w-talents .tl-req, html.phone .w-talents .tl-pd { font-size: 12px; }
 html.phone .window .bag-grid .bslot .cnt, html.phone .window .bag-grid .bslot .bil { font-size: 12px; }
 html.phone .w-dialog .msq-tag { font-size: 12px; }
-html.phone .w-talents .tl-set, html.phone .w-talents .tl-reset { min-height: 44px; }
 
 /* ======================================================================= Quest log (master / detail) */
 html.phone .window.w-quests > .wb { display: flex; flex-direction: column; overflow: hidden !important; }
@@ -218,7 +215,6 @@ html.touch:not(.phone) .w-quests .ql, html.touch:not(.phone) .w-quests .sl-ch { 
 html.touch:not(.phone) .w-quests .ql-track { min-height: 44px; }
 html.touch:not(.phone) .w-ach .ach-cat, html.touch:not(.phone) .w-ach .ach-trk { min-height: 44px; min-width: 64px; }
 html.touch:not(.phone) .w-char .cw-rb { width: 44px; height: 44px; }
-html.touch:not(.phone) .w-talents .tl-set, html.touch:not(.phone) .w-talents .tl-reset { min-height: 44px; }
 html.touch:not(.phone) .w-meter .wb button { min-height: 44px; min-width: 44px; }
 html.touch:not(.phone) .window .bag-head .bag-search button { min-width: 44px; }
 html.touch:not(.phone) .w-opts .o-note a { display: inline-block; min-height: 44px; line-height: 44px; padding: 0 6px; }

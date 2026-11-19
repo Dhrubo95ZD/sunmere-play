@@ -101,7 +101,7 @@ const harmful = (sk) => has(sk, 'dmg') || has(sk, 'execute') || has(sk, 'stun') 
 // a basic (filler) strike: costs little, no cooldown, on the global lock
 const basic = (sk) => !sk.cd && !sk.cast && !sk.channel;
 
-const cache = new WeakMap(); // (by record: a KIT_V2 skill keeps its legacy id, and each chain step is its own record)
+const cache = new WeakMap(); // (by record: a core skill may keep its legacy id, and each chain step is its own record)
 // the feel block of a skill: { brk, launch, bash, win: { cancel, lock } } (times in seconds, before haste)
 export function skillFeel(sk) {
   if (!sk) return null;

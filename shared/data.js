@@ -286,7 +286,7 @@ export const WANDERER_LINES = [
   'The companions from Captain Leof are worth every copper.', 'Stay safe out there.', 'Foundry Watch needs defenders, the engines are moving!',
   'How do I get to Northwatch Keep from here?', 'Stay out of the circles when the Thresher spins up.', 'Anyone selling a better shield?',
   'Lost my way in Rustwood again.', 'The mill wheel in Sunmere is a fine sight at sunset.', 'Gearlings everywhere in Brightfield today.',
-  'Spent all my talent points in one path. No regrets.', 'Who keeps leaving tonics at the fountain?', 'The night lamps in Sunmere are a welcome sight.',
+  'Spent all my web points down one road. No regrets.', 'Who keeps leaving tonics at the fountain?', 'The night lamps in Sunmere are a welcome sight.',
   'Heading back to town to repair. Anyone need anything?', 'That Forgemaster is no joke. Bring a healer.',
 ];
 
@@ -1030,7 +1030,7 @@ export const RESTED = { hubRate: 0.05, wildRate: 0.0125, cap: 1.5, hubR: 30 }; /
 // ============================================================================ HOMEWARD COMPASS
 // Everyone carries one: stand still for a few seconds and it takes you back to the caravan stop you call home.
 export const RECALL = { secs: 6, cooldown: 15 * 60 * 1000 };
-// a second set of talents to switch to outside combat
+// a second loadout (Skill Web tree and gear) to switch to outside combat
 export const LOADOUT_LEVEL = 10;
 
 // ============================================================================ THE BOUNTY BOARD

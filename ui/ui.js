@@ -1,8 +1,8 @@
 // HUD + windows (DOM). Frames, action bars, cast bar, xp, minimap, chat, quest tracker, nameplates,
 // floating combat text, character / bags / quests / skills / dialog / vendor / loot / map windows.
 import * as THREE from 'three';
-import { CLASSES, SKILLS, xpForLevel, LEVEL_CAP, dailyXp, OLD_TO_NEW } from '/sunmere-play/shared/classes.js';
-import { KIT_V2, kitOf } from '/sunmere-play/shared/kit.js';
+import { CLASSES, xpForLevel, LEVEL_CAP, dailyXp, OLD_TO_NEW } from '/sunmere-play/shared/classes.js';
+import { kitOf } from '/sunmere-play/shared/kit.js';
 import { skillOf, fusionBook } from '/sunmere-play/shared/fusions.js';
 import { treeMods, webEff, pathTo, isLeaf, formOpt, leafRefundCost, treeResetCost } from '/sunmere-play/shared/treeMods.js';
 import { TREE_NODES, TREE_LINKS, TREE_BY_ID, TREE_MAP, TREE_START } from '/sunmere-play/shared/tree.js';
@@ -53,7 +53,7 @@ const NEED_CH = { m_c29_aboard: 'Main Story, Chapter 29', m_c32_cold: 'Main Stor
 const MAP_PX = Math.round(MAP.w); // world map width in pixels (1 px per metre)
 import { DUNGEONS, DUNGEON_AREAS, areaCenter, dungeonAt, cellFloor, CELL } from '/sunmere-play/shared/dungeons.js';
 import { OBJECT_KINDS, SPAWNS, LOOT_TABLES, NODES, OBJECTS, COMPANIONS, FACTIONS, REP_RANKS, repRank, factionOfZone, SETS, RECIPES, STATION_NAME, PAINTS, PETS, ESCORTS, repairCost, TRADE, tradeFair, PROF_NAME, PROF_MAX, profColor, LEDGER } from '/sunmere-play/shared/data.js';
-import { icon, skillIcon, talentArt, pathArt, buffArt, achArt, factionArt, homeArt, menuArt, miscArt } from './icons.js';
+import { icon, skillIcon, buffArt, achArt, factionArt, homeArt, menuArt, miscArt } from './icons.js';
 import { CHANGELOG, CHANGELOG_VERSION } from './changelog.js';
 import { installSocial } from './social.js';
 import { PerfHud } from './perfhud.js';
@@ -90,9 +90,9 @@ const isPhone = () => document.documentElement.classList.contains('phone');
 // the 7 wheel slots of a class: the saved list, or the first 7 skills in learn order
 // the default is the first 7 skills the hero already knows (as ui/touch.js builds the HUD wheel), never a locked one
 // (S2: on the new kit a saved wheel is remapped through OLD_TO_NEW: a slot keeps its place where its skill survives)
-const wheelOf = (cls, lvl = Infinity) => { const kit = kitOf(cls), w = SETTINGS.touch?.wheel?.[cls], known = kit.filter((s) => s.lvl <= lvl), have = new Set(); const rm = (id) => { if (!id || !KIT_V2[cls] || kit.some((s) => s.id === id)) return id; const to = OLD_TO_NEW[id]?.to; return to && kit.some((s) => s.id === to) ? to : null; }; return Array.from({ length: 7 }, (_, i) => { const id = Array.isArray(w) ? rm(w[i] ?? null) : known[i]?.id ?? null; if (!id || have.has(id)) return null; have.add(id); return id; }); };
-import { TALENTS, TALENT_ROW_REQ, TALENT_START, talentResetCost, pathSpent, describeEffect, talentMods, skillCost, skillCd } from '/sunmere-play/shared/talents.js';
-const SKILL_BY_NAME = Object.fromEntries(Object.values(SKILLS).flat().map((k) => [k.name, k]));
+const wheelOf = (cls, lvl = Infinity) => { const kit = kitOf(cls), w = SETTINGS.touch?.wheel?.[cls], known = kit.filter((s) => s.lvl <= lvl), have = new Set(); const rm = (id) => { if (!id || kit.some((s) => s.id === id)) return id; const to = OLD_TO_NEW[id]?.to; return to && kit.some((s) => s.id === to) ? to : null; }; return Array.from({ length: 7 }, (_, i) => { const id = Array.isArray(w) ? rm(w[i] ?? null) : known[i]?.id ?? null; if (!id || have.has(id)) return null; have.add(id); return id; }); };
+import { describeEffect, skillCost, skillCd } from '/sunmere-play/shared/talents.js';
+const SKILL_BY_NAME = Object.fromEntries(Object.keys(CLASSES).flatMap(kitOf).map((k) => [k.name, k]));
 
 const $ = (sel, root = document) => root.querySelector(sel);
 const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html !== undefined) e.innerHTML = html; return e; };
@@ -406,7 +406,7 @@ export class UI {
         <div class="xpbar"><b class="rest"></b><i></i><span></span></div>
         <div class="menubar">
           <button data-w="char" title="Character (C)">C</button><button data-w="skills" title="Skills (K)">K</button><button data-w="quests" title="Quest Log (L)">L</button>
-          <button data-w="talents" title="Talents (N)">N</button><button data-w="bags" title="Bags (B)">B</button><button data-w="ach" title="Achievements (Y)">Y</button><button data-w="journal" title="Valley Journal (J)">J</button><button data-w="map" title="World Map (M)">M</button><button data-w="recall" class="recall-btn" title="Homeward Compass (G)">G</button><button data-w="meter" title="Damage meter (U)">U</button><button data-w="social" title="Players: who is online, friends (/who)">P</button><button data-w="options" title="Options (O or Esc)">O</button><button data-w="help" title="Help (H)">?</button>
+          <button data-w="talents" title="Skill Web (N)">N</button><button data-w="bags" title="Bags (B)">B</button><button data-w="ach" title="Achievements (Y)">Y</button><button data-w="journal" title="Valley Journal (J)">J</button><button data-w="map" title="World Map (M)">M</button><button data-w="recall" class="recall-btn" title="Homeward Compass (G)">G</button><button data-w="meter" title="Damage meter (U)">U</button><button data-w="social" title="Players: who is online, friends (/who)">P</button><button data-w="options" title="Options (O or Esc)">O</button><button data-w="help" title="Help (H)">?</button>
         </div>
         <div class="gold-box"></div>
         <div class="err-text"></div>
@@ -446,7 +446,7 @@ export class UI {
   buildActionBars() {
     const cls = this.g.cls;
     const color = CLASSES[cls].color;
-    const list = kitOf(cls); // (S2: the new kit's seven skills on a class with KIT_V2)
+    const list = kitOf(cls); // (S2: the class's seven core skills)
     const rows = [$('.row1', this.root), $('.row2', this.root), $('.row3', this.root)];
     this.slots = [];
     list.forEach((s, i) => {
@@ -536,15 +536,6 @@ export class UI {
     else if (P.cdt.textContent || P.cd.style.background !== 'none') { P.cd.style.background = 'none'; P.cdt.textContent = ''; }
   }
 
-  // the Fusion Book (S2 data, plain list; the screen with previews and Pin is S6): each fusion of the class with its two
-  // inputs, the gate in plain words, its numbers, uses and rank; unknown ones show their hint only; the triad once unlocked
-  fusionBookHtml() {
-    const y = this.you;
-    if (!y || !KIT_V2[y.cls]) return '';
-    const C = CLASSES[y.cls], R = ['', ' I', ' II', ' III'];
-    const rows = fusionBook(y.cls, y).filter((e) => e.show).map((e) => `<div class="sk fz ${e.known ? '' : 'locked'}" title="${e.known ? e.desc : e.hint}"><img src="${skillIcon(skillOf(e.id))}"><div><b>${e.known ? (this.eff?.[e.id] ? effName(this.eff[e.id]) : e.name) : '?'}</b>${e.rank ? ` <span class="sk-key">Mastery${R[e.rank]}</span>` : ''}<div class="sk-d">${e.fromName}, then ${e.toName}. ${e.gate}.${e.known ? '' : ' <i>' + e.hint + '</i>'}</div><div class="sk-m">${e.cost} ${C.resource} · ${e.cd}s cooldown · ${e.unlocked ? (e.known ? e.uses + ' landed' : 'Not found yet') : e.lvl ? 'Level ' + e.lvl : 'A notable on the Web'}</div></div></div>`).join('');
-    return `<div class="sk-list fz-book"><div class="sk-h"><b>Fusion Book</b> <span>Land the first skill, then press the second within a second.</span></div>${rows}</div>`;
-  }
   // the Fusion Book tab of the Skills window (S6), from an empty pin or the hint
   openBook() { this._skTab = 'book'; if (this.windows.skills?.isConnected) this.windows.skills.refresh(); else this.toggle('skills'); }
   // a morphed slot's tooltip: the fusion it would cast now, and what plain B would be
@@ -673,9 +664,9 @@ export class UI {
     this.renderBuffs($('.buffs', pf), you.buffs);
     this.renderTracker();
     // a hero on the Skill Web (S3): its table, and its compiled kit with Forms, carry and keystone renames for the tooltips
-    this.tmods = you.web ? treeMods(you.cls, you.tree || {}, { forms: you.forms, done: you.done }) : talentMods(you.cls, you.talents);
-    this.eff = you.web ? webEff(you, this.tmods) : null;
-    $('.menubar [data-w="talents"]', this.root)?.classList.toggle('has-pts', (you.talentPts || 0) > 0);
+    this.tmods = treeMods(you.cls, you.tree || {}, { forms: you.forms, done: you.done });
+    this.eff = webEff(you, this.tmods);
+    $('.menubar [data-w="talents"]', this.root)?.classList.toggle('has-pts', (you.treePts || 0) > 0);
     { const rb = $('.menubar .recall-btn', this.root), left = (you.recallReady || 0) - Date.now(); if (rb) { rb.title = `Homeward Compass (G): back to ${you.home || 'Sunmere Village'}${left > 0 ? ` · ready in ${Math.ceil(left / 60000)} min` : ''}`; rb.classList.toggle('cooling', left > 0); clearTimeout(this._recallT); if (left > 0) this._recallT = setTimeout(() => rb.classList.remove('cooling'), Math.min(left, 2 ** 31 - 1)); } }
     for (const k of Object.keys(this.windows)) if (this.windows[k]?.isConnected && this.windows[k].refresh) this.windows[k].refresh();
     // the player frame and the death panel follow every full update too (dying sends one, and no stat tick follows while dead)
@@ -1180,16 +1171,14 @@ export class UI {
   charGearHtml(y, C) {
     const B = this.charBits(y);
     const xpPct = y.level >= LEVEL_CAP ? 100 : (100 * y.xp) / Math.max(1, y.xpNext), restPct = y.rested && y.level < LEVEL_CAP ? Math.min(100, (100 * (y.xp + y.rested)) / Math.max(1, y.xpNext)) : 0;
-    // the talent sets: each also remembers its gear and puts it back on when you switch to it
+    // the two loadouts (level 10): each keeps its own Skill Web tree and Forms, remembers its gear and puts it back on
     let sets = '';
-    if (y.level >= TALENT_START) {
-      const Ls = y.loadouts || [y.talents || {}, {}], lo = y.lo || 0;
-      const top = (t) => TALENTS[y.cls].map((P, pi) => [P, pathSpent(y.cls, t || {}, pi)]).sort((a, b) => b[1] - a[1])[0];
-      sets = `<h5 class="cw-h" title="Switching sets changes your talents and puts back on the gear that set last wore">Talent Sets <span>${IS_TOUCH ? 'tap' : 'click'} to switch</span></h5><div class="cw-sets">${[0, 1].map((i) => {
-        const [P, n] = top(Ls[i]), split = TALENTS[y.cls].map((_, pi) => pathSpent(y.cls, Ls[i] || {}, pi)).join(' / ');
-        const locked = i !== lo && y.level < 10;
+    if (y.level >= 2) {
+      const lo = y.lo || 0, places = (i) => (i === lo ? Object.keys(y.tree || {}).length : y.webSets?.[i] || 0);
+      sets = `<h5 class="cw-h" title="Switching loadouts changes your Skill Web and puts back on the gear that loadout last wore">Loadouts <span>${IS_TOUCH ? 'tap' : 'click'} to switch</span></h5><div class="cw-sets">${[0, 1].map((i) => {
+        const n = places(i), locked = i !== lo && y.level < 10;
         const right = i === lo ? `${B.gem}<b>${Math.round(B.ilvl)}</b>` : y.lgear?.[i] ? `<em>${y.lgear[i]} pieces</em>` : '';
-        return `<div class="cw-set ${i === lo ? 'on' : ''} ${locked ? 'locked' : ''}" data-i="${i}" title="${locked ? 'A second set opens at level 10' : i === lo ? 'The set you are using' : 'Switch to this set (its talents and the gear it last wore)'}"><span class="cw-sn">${i + 1}</span><span class="cw-sic"><img src="${pathArt(y.cls, P) || skillIcon(SKILL_BY_ID[P.ic])}" alt=""></span><div class="cw-st"><b>${n ? P.name : 'No talents yet'}</b><em>${n ? split : i === lo && y.talentPts ? `${y.talentPts} points to spend` : i !== lo && !y.lgear?.[i] ? 'Empty: no gear saved' : 'Empty'}</em></div><span class="cw-sil">${right}</span></div>`;
+        return `<div class="cw-set ${i === lo ? 'on' : ''} ${locked ? 'locked' : ''}" data-i="${i}" title="${locked ? 'A second loadout opens at level 10' : i === lo ? 'The loadout you are using' : 'Switch to this loadout (its Skill Web and the gear it last wore)'}"><span class="cw-sn">${i + 1}</span><span class="cw-sic"><img src="${classArt(y.cls)}" alt=""></span><div class="cw-st"><b>${n ? `Skill Web: ${n} place${n > 1 ? 's' : ''}` : 'Skill Web: empty'}</b><em>${i === lo && y.treePts ? `${y.treePts} point${y.treePts > 1 ? 's' : ''} to spend` : i !== lo && !y.lgear?.[i] ? 'Empty: no gear saved' : ''}</em></div><span class="cw-sil">${right}</span></div>`;
       }).join('')}</div>`;
     }
     const left = `<aside class="cw-left"><div class="cw-card"><div class="cw-cc"><span class="cw-crest" style="--cc:${C.color}">${B.crest}</span><div class="cw-who"><b style="color:${C.color}">${y.name}</b>${B.title ? `<i>${B.title}</i>` : ''}<em>${C.role}</em></div></div>
@@ -1248,7 +1237,7 @@ export class UI {
       ${bar('hp', 'Health', y.hp, y.maxHp)}${bar('res', C.resource, y.res ?? y.maxRes, y.maxRes, C.resColor)}
       ${sec('Attributes', ATTR, [row('Power', y.power.toLocaleString(), 'Raises the damage and healing of every skill'), row('Stamina', (st.hp || 0).toLocaleString(), 'From gear: each point is 4 health'), row('Armour', (st.armor || 0).toLocaleString(), 'From gear: lowers the damage you take'), row('Max health', y.maxHp.toLocaleString())])}
       ${sec('Offensive', SLOT_GLYPH.weapon, [row('Critical strike', pct(y.crit)), row('Critical damage', `${Math.round((1.6 + (M.critDmg || 0)) * 100)}%`, 'Damage of a critical strike'), row('Haste', pct(y.hastePct ?? (st.haste || 0) / 100)), M.dmg ? row('Damage bonus', '+' + pct(M.dmg)) : '', M.heal ? row('Healing bonus', '+' + pct(M.heal)) : '', M.cdr ? row('Cooldowns', '-' + pct(M.cdr)) : ''])}
-      ${sec('Defensive', SLOT_GLYPH.offhand, [row('Damage reduction', pct(y.armorPct), 'From armour, class and talents (up to 75%, more with armour talents)'), row('Dodge', pct(y.dodge)), row('Recovery', pct(M.leech), 'Share of damage dealt that heals you'), M.thorns ? row('Thorns', pct(M.thorns)) : '', M.absorb ? row('Shield strength', '+' + pct(M.absorb)) : ''])}</aside>`;
+      ${sec('Defensive', SLOT_GLYPH.offhand, [row('Damage reduction', pct(y.armorPct), 'From armour, class and the Skill Web (up to 75%, more with armour from the Web)'), row('Dodge', pct(y.dodge)), row('Recovery', pct(M.leech), 'Share of damage dealt that heals you'), M.thorns ? row('Thorns', pct(M.thorns)) : '', M.absorb ? row('Shield strength', '+' + pct(M.absorb)) : ''])}</aside>`;
   }
   charAttrHtml(y, C) {
     const B = this.charBits(y), st = y.stats || {}, M = y.mods || {};
@@ -1258,10 +1247,10 @@ export class UI {
       return `<div class="cw-gr ${it ? '' : 'none'}" data-s="${sl}"><span class="cw-gi">${it ? `<img src="${icon(it.icon || sl, '#3a3226', 48)}" style="border-color:${QUALITY[it.q ?? 1]}">` : slotGlyph(sl)}</span><div class="cw-gt"><b style="color:${it ? QUALITY[it.q ?? 1] : 'inherit'}">${it ? gearName(it) : 'Nothing worn'}</b><small><em>${SLOT_LABEL[sl]}</em>${it ? `${statLine(it)}${it.sockets ? ` · ${it.sockets.filter(Boolean).length}/${it.sockets.length} sockets` : ''}` : ''}</small></div><span class="cw-gl">${it?.ilvl || ''}</span><span class="cw-gdw" title="Durability">${it ? `<span class="cw-gd"><i style="width:${dur}%;background:${B.durCol(dur)}"></i></span><small>${dur}%</small>` : ''}</span></div>`;
     }).join('');
     const tot = Object.keys(STAT_NAME).filter((k) => st[k]).map((k) => `<div class="cw-row"><span>${STAT_NAME[k]}</span><b>+${st[k]}${STAT_PCT[k] ? '%' : ''}</b></div>`).join('') || '<div class="cw-none">Nothing worn yet.</div>';
-    const mods = Object.entries(M).map(([k, v]) => { const t = describeEffect([k, v]); return `<div class="cw-mod">${t.charAt(0).toUpperCase() + t.slice(1)}</div>`; }).join('') || '<div class="cw-none">No bonuses yet: learn talents and wear set pieces.</div>';
+    const mods = Object.entries(M).map(([k, v]) => { const t = describeEffect([k, v]); return `<div class="cw-mod">${t.charAt(0).toUpperCase() + t.slice(1)}</div>`; }).join('') || '<div class="cw-none">No bonuses yet: take places on the Skill Web and wear set pieces.</div>';
     return `<div class="cw-attr"><section class="cw-ledger cw-scroll"><h5 class="cw-h">Equipped <span>${B.gem}${B.ilvl.toFixed(1)}</span></h5>${rows}<div class="cw-note">${IS_TOUCH ? 'Tap a piece, then Unequip or Link in chat' : 'Right-click a piece to take it off · Shift-click to link it in chat'}</div></section>
-      <aside class="cw-right cw-scroll"><div class="cw-sec"><h5>From your gear</h5>${tot}</div><div class="cw-sec"><h5>Talents, sets and effects</h5>${mods}</div>
-      <div class="cw-sec"><h5>Talents</h5><div class="cw-row"><span>Unspent points</span><b>${y.talentPts || 0}</b></div><div class="cw-row"><span>Active set</span><b>${(y.lo || 0) + 1}</b></div></div></aside></div>`;
+      <aside class="cw-right cw-scroll"><div class="cw-sec"><h5>From your gear</h5>${tot}</div><div class="cw-sec"><h5>Skill Web, sets and effects</h5>${mods}</div>
+      <div class="cw-sec"><h5>Skill Web</h5><div class="cw-row"><span>Unspent points</span><b>${y.treePts || 0}</b></div><div class="cw-row"><span>Active loadout</span><b>${(y.lo || 0) + 1}</b></div></div></aside></div>`;
   }
   charLookHtml(y) {
     // the wardrobe: every weapon type, offhand and shine you have owned, worn over what you actually carry
@@ -1504,22 +1493,15 @@ export class UI {
     const w = this.makeWindow('Skills', 'w-skills', 300, 80);
     w.refresh = () => {
       const C = CLASSES[this.you.cls];
-      // (S6) a class on the new kit: two tabs, Skills and the Fusion Book
-      if (KIT_V2[this.you.cls]) {
-        const tab = this._skTab || 'skills';
-        w.classList.toggle('w-book', tab === 'book');
-        const tabs = `<div class="sk-tabs"><button data-t="skills" class="${tab === 'skills' ? 'on' : ''}">Skills</button><button data-t="book" class="${tab === 'book' ? 'on' : ''}">Fusion Book</button></div>`;
-        const wire = () => w.querySelectorAll('.sk-tabs button').forEach((b) => (b.onclick = () => { this._skTab = b.dataset.t; this.g.sfx?.play('ui'); w.refresh(); }));
-        if (tab === 'book') { $('.wb', w).innerHTML = tabs + fusionBookPage(this); wireFusionBook(this, w); wire(); return; }
-        if (IS_TOUCH) { this.skillsTouch(w); $('.wb', w).insertAdjacentHTML('afterbegin', tabs); wire(); return; }
-        $('.wb', w).innerHTML = tabs + `<div class="sk-list">${kitOf(this.you.cls).map((s, i) => `<div class="sk ${s.lvl > this.you.level ? 'locked' : ''}" data-id="${s.id}"><img src="${skillIcon(s)}"><div><b>${this.eff?.[s.id] ? effName(this.eff[s.id]) : s.name}</b> <span class="sk-key">${skillKeyLabel(i)}</span><div class="sk-d">${s.desc}</div><div class="sk-m">${s.cost} ${C.resource}${s.cast ? ' · ' + s.cast + 's cast' : ''}${s.cd ? ' · ' + s.cd + 's cooldown' : ''} · Level ${s.lvl}</div></div></div>`).join('')}</div>`;
-        wire();
-        w.querySelectorAll('.sk').forEach((e) => (e.onclick = () => this.g.useSkill(e.dataset.id)));
-        return;
-      }
-      $('.wb', w).innerHTML = `<div class="sk-list">${kitOf(this.you.cls).map((s, i) => `<div class="sk ${s.lvl > this.you.level ? 'locked' : ''}" data-id="${s.id}"><img src="${skillIcon(s)}"><div><b>${s.name}</b> <span class="sk-key">${skillKeyLabel(i)}</span><div class="sk-d">${s.desc}</div><div class="sk-m">${s.cost} ${C.resource}${s.cast ? ' · ' + s.cast + 's cast' : ''}${s.cd ? ' · ' + s.cd + 's cooldown' : ''} · Level ${s.lvl}</div></div></div>`).join('')}</div>`;
-      if (IS_TOUCH) { this.skillsTouch(w); $('.wb', w).insertAdjacentHTML('beforeend', this.fusionBookHtml()); return; }
-      $('.wb', w).insertAdjacentHTML('beforeend', this.fusionBookHtml());
+      // (S6) two tabs, Skills and the Fusion Book
+      const tab = this._skTab || 'skills';
+      w.classList.toggle('w-book', tab === 'book');
+      const tabs = `<div class="sk-tabs"><button data-t="skills" class="${tab === 'skills' ? 'on' : ''}">Skills</button><button data-t="book" class="${tab === 'book' ? 'on' : ''}">Fusion Book</button></div>`;
+      const wire = () => w.querySelectorAll('.sk-tabs button').forEach((b) => (b.onclick = () => { this._skTab = b.dataset.t; this.g.sfx?.play('ui'); w.refresh(); }));
+      if (tab === 'book') { $('.wb', w).innerHTML = tabs + fusionBookPage(this); wireFusionBook(this, w); wire(); return; }
+      if (IS_TOUCH) { this.skillsTouch(w); $('.wb', w).insertAdjacentHTML('afterbegin', tabs); wire(); return; }
+      $('.wb', w).innerHTML = tabs + `<div class="sk-list">${kitOf(this.you.cls).map((s, i) => `<div class="sk ${s.lvl > this.you.level ? 'locked' : ''}" data-id="${s.id}"><img src="${skillIcon(s)}"><div><b>${this.eff?.[s.id] ? effName(this.eff[s.id]) : s.name}</b> <span class="sk-key">${skillKeyLabel(i)}</span><div class="sk-d">${s.desc}</div><div class="sk-m">${s.cost} ${C.resource}${s.cast ? ' · ' + s.cast + 's cast' : ''}${s.cd ? ' · ' + s.cd + 's cooldown' : ''} · Level ${s.lvl}</div></div></div>`).join('')}</div>`;
+      wire();
       w.querySelectorAll('.sk').forEach((e) => (e.onclick = () => this.g.useSkill(e.dataset.id)));
     };
     w.refresh();
@@ -1563,121 +1545,7 @@ export class UI {
     }));
   }
 
-  winTalents() {
-    if (this.you?.web) return openWebScreen(this); // (S6: the full Skill Web screen)
-    const w = this.makeWindow(this.you?.web ? 'Skill Web' : 'Talents', 'w-talents', Math.max(20, innerWidth / 2 - 380), 70);
-    w.refresh = () => {
-      if (this.you?.web) return this.webPanel(w); // (S3: a class on the Skill Web; the full Web screen is S6)
-      const y = this.you, cls = y.cls, C = CLASSES[cls], tal = y.talents || {};
-      const pts = y.talentPts || 0;
-      const spentAll = Object.values(tal).reduce((a, b) => a + b, 0);
-      const head = y.level < TALENT_START
-        ? `<div class="tl-head"><span>Talents open at level ${TALENT_START}.</span></div>`
-        : `<div class="tl-head"><span>Talent points: <b class="${pts ? 'tl-free' : ''}">${pts}</b></span><span class="tl-spent">${spentAll} spent</span>${spentAll ? `<button class="tl-reset">Unlearn all (${fmtMoneyText(talentResetCost(y.level))})</button>` : ''}</div>`;
-      const cols = TALENTS[cls].map((P, pi) => {
-        const spent = pathSpent(cls, tal, pi);
-        const rows = TALENT_ROW_REQ.map((_, r) => {
-          const open = spent >= TALENT_ROW_REQ[r];
-          const tiles = P.list.filter((t) => t.row === r).map((t) => {
-            const have = tal[t.id] || 0;
-            const can = open && have < t.ranks && pts > 0;
-            const st = have >= t.ranks ? 'max' : have ? 'part' : can ? 'can' : open ? 'open' : 'lock';
-            return `<div class="tl ${st}" data-id="${t.id}"><img src="${talentArt(t) || skillIcon(SKILL_BY_ID[t.ic])}"><span class="tl-r">${have}/${t.ranks}</span></div>`;
-          }).join('');
-          return `<div class="tl-row ${open ? '' : 'shut'}">${tiles}${r ? `<span class="tl-req">${TALENT_ROW_REQ[r]}</span>` : ''}</div>`;
-        }).join('');
-        return `<div class="tl-path" style="--cc:${C.color}"><div class="tl-ph"><img src="${pathArt(cls, P) || skillIcon(SKILL_BY_ID[P.ic])}"><div><b>${P.name}</b><div class="tl-pd">${P.desc}</div></div><span class="tl-ps">${spent}</span></div><div class="tl-grid">${rows}</div></div>`;
-      }).join('');
-      const L = y.loadouts || [tal, {}], lo = y.lo || 0;
-      const lname = (t) => { const s = TALENTS[cls].map((P, pi) => [P.name, pathSpent(cls, t || {}, pi)]).sort((a, b) => b[1] - a[1]); return s[0][1] ? `${s[0][0]} ${s.map((x) => x[1]).join('/')}` : 'Empty'; };
-      const sets = y.level < TALENT_START ? '' : `<div class="tl-sets">${[0, 1].map((i) => `<button class="tl-set ${i === lo ? 'on' : ''}" data-i="${i}" ${i !== lo && y.level < 10 ? 'disabled title="Opens at level 10"' : ''}>${i + 1}. ${lname(L[i])}${i === lo ? ' (active)' : ''}</button>`).join('')}</div>`;
-      const gearNote = y.level < 10 ? '' : `<div class="tl-gearnote">Each set also remembers the gear it wore when you left it${(y.lgear || []).some(Boolean) ? ` (${[0, 1].map((i) => `set ${i + 1}: ${y.lgear?.[i] ? y.lgear[i] + ' pieces' : 'not yet'}`).join(', ')})` : ''}, and puts it back on when you return.</div>`;
-      $('.wb', w).innerHTML = sets + gearNote + head + `<div class="tl-paths">${cols}</div><div class="bag-hint">${IS_TOUCH ? 'Tap' : 'Click'} a talent to learn a rank. Rows open as you spend points in the same path (3, 6, 10, 14, 18, 19, 20, 21, 22, 23 and 24).</div>`;
-      w.querySelectorAll('.tl').forEach((e) => {
-        const t = TALENTS[cls].flatMap((P) => P.list).find((x) => x.id === e.dataset.id);
-        e.onclick = () => { this.g.send({ t: 'talent', id: t.id }); this.g.sfx?.play('ui'); };
-        e.addEventListener('mouseenter', (ev) => this.showTip(ev, this.talentTip(t, tal[t.id] || 0)));
-        e.addEventListener('mouseleave', () => this.hideTip());
-      });
-      w.querySelectorAll('.tl-set').forEach((b) => (b.onclick = () => { if (!b.classList.contains('on')) this.g.send({ t: 'loadout', i: Number(b.dataset.i) }); }));
-      const rs = $('.tl-reset', w);
-      if (rs) rs.onclick = () => { if (rs.dataset.sure) this.g.send({ t: 'talentReset' }); else { rs.dataset.sure = '1'; rs.textContent = IS_TOUCH ? 'Tap again to unlearn' : 'Click again to unlearn'; } };
-    };
-    w.refresh();
-    return w;
-  }
-  // the Skill Web, interim panel (S3): the whole map from above, drawn as rounded squares on parchment. Click a node to
-  // take the road to it (Apply), right-click or long-press the end of a road to hand it back, click a held Form to switch
-  // its option. The full screen with pan, zoom, search and suggested paths is S6
-  webPanel(w) {
-    const y = this.you, cls = y.cls, tree = y.tree || {}, S = 0.42;
-    const held = (id) => id === TREE_START[cls] || !!tree[id];
-    const SZ = { small: [14, 14], notable: [24, 24], form: [26, 26], fusion: [24, 24], triad: [28, 28], keystone: [40, 28], start: [34, 34] };
-    const roads = TREE_LINKS.map(([a, b]) => {
-      const A = TREE_BY_ID[a], B = TREE_BY_ID[b], on = held(a) && held(b), near = held(a) || held(b);
-      return `<line x1="${A.x * S}" y1="${A.y * S}" x2="${B.x * S}" y2="${B.y * S}" stroke="${on ? '#c8962e' : near ? '#9a7a46' : '#8a8070'}" stroke-width="${on ? 3 : 2}" ${!on && near ? 'stroke-dasharray="4 3"' : ''}/>`;
-    }).join('');
-    const boxes = TREE_NODES.map((n) => {
-      const [bw, bh] = SZ[n.kind], k = n.kind === 'small' ? 1 : 1.1, ww = bw * S * 1.7 * k, hh = bh * S * 1.7 * k;
-      const have = held(n.id), can = !have && n.adj.some(held);
-      const fill = have ? (n.kind === 'keystone' ? '#e0703a' : '#e8b850') : n.kind === 'start' ? CLASSES[n.cls]?.color || '#888' : n.kind === 'keystone' ? '#7a5a4a' : n.region === cls ? '#8a8478' : '#9a9488';
-      const split = n.kind === 'form' ? `<line x1="${n.x * S}" y1="${n.y * S - hh / 2 + 2}" x2="${n.x * S}" y2="${n.y * S + hh / 2 - 2}" stroke="#3a2a14" stroke-width="1.5"/>` : '';
-      return `<g class="wn ${can ? 'can' : ''}" data-id="${n.id}"><rect x="${n.x * S - ww / 2}" y="${n.y * S - hh / 2}" width="${ww}" height="${hh}" rx="${Math.min(ww, hh) * 0.25}" fill="${fill}" stroke="${can ? '#f0d890' : '#3a2a14'}" stroke-width="${can ? 2 : 1.2}"/>${split}</g>`;
-    }).join('');
-    const pts = y.treePts || 0, spent = Object.keys(tree).length, free = !!y.treeFree;
-    const L = y.webSets || null, lo = y.lo || 0;
-    const sets = `<div class="tl-sets">${[0, 1].map((i) => `<button class="tl-set ${i === lo ? 'on' : ''}" data-i="${i}" ${i !== lo && y.level < 10 ? 'disabled title="Opens at level 10"' : ''}>${i + 1}. ${i === lo ? spent : L?.[i] ?? 0} places</button>`).join('')}</div>`;
-    const head = `<div class="tl-head"><span>Web points: <b class="${pts ? 'tl-free' : ''}">${pts}</b></span><span class="tl-spent">${spent} taken${free ? ' (respec free)' : ''}</span>${spent ? `<button class="tl-reset">Clear the Web (${free ? 'free' : fmtMoneyText(treeResetCost(y.level))})</button>` : ''}</div>`;
-    const box = $('.wb', w);
-    const keep = $('.web-scroll', box), sx = keep?.scrollLeft, sy = keep?.scrollTop;
-    const tapW = IS_TOUCH ? 'Tap' : 'Click';
-    box.innerHTML = sets + head + `<div class="web-scroll" style="width:min(86vw,920px);height:min(62vh,520px);overflow:auto;background:#ece0c4;border-radius:6px"><svg width="${TREE_MAP.w * S}" height="${TREE_MAP.h * S}" style="display:block">${roads}${boxes}</svg></div><div class="bag-hint">${tapW} a place to take the road to it. ${IS_TOUCH ? 'Long-press' : 'Right-click'} the end of a road to hand it back${free ? '' : ` (${fmtMoneyText(leafRefundCost(y.level))}, in a town)`}. ${tapW} a Form you hold to switch it.</div>`;
-    const sc = $('.web-scroll', box);
-    if (keep) { sc.scrollLeft = sx; sc.scrollTop = sy; } else { const st = TREE_BY_ID[TREE_START[cls]]; sc.scrollLeft = st.x * S - 300; sc.scrollTop = st.y * S - 220; }
-    const back = (id) => { if (tree[id] && isLeaf(cls, tree, id)) { this.g.send({ t: 'treeRefund', id }); this.g.sfx?.play('ui'); } };
-    box.querySelectorAll('.wn').forEach((g) => {
-      const n = TREE_BY_ID[g.dataset.id];
-      g.style.cursor = 'pointer';
-      g.addEventListener('click', () => {
-        if (n.kind === 'form' && tree[n.id]) { const cur = formOpt(n, y.forms || {}, y.done || {}), nx = n.form.opts.find((o) => o.id !== cur.id); this.g.send({ t: 'treeForm', id: n.id, opt: nx.id }); }
-        else if (!held(n.id)) { const ids = pathTo(cls, tree, n.id); if (ids?.length) this.g.send({ t: 'tree', ids }); }
-        this.g.sfx?.play('ui');
-      });
-      g.addEventListener('contextmenu', (ev) => { ev.preventDefault(); back(n.id); });
-      let lp = 0;
-      g.addEventListener('touchstart', () => { lp = setTimeout(() => back(n.id), 600); }, { passive: true });
-      g.addEventListener('touchend', () => clearTimeout(lp));
-      g.addEventListener('mouseenter', (ev) => this.showTip(ev, this.webTip(n)));
-      g.addEventListener('mouseleave', () => this.hideTip());
-    });
-    w.querySelectorAll('.tl-set').forEach((b) => (b.onclick = () => { if (!b.classList.contains('on')) this.g.send({ t: 'loadout', i: Number(b.dataset.i) }); }));
-    const rs = $('.tl-reset', w);
-    if (rs) rs.onclick = () => { if (rs.dataset.sure) this.g.send({ t: 'treeReset' }); else { rs.dataset.sure = '1'; rs.textContent = IS_TOUCH ? 'Tap again to clear' : 'Click again to clear'; } };
-  }
-  webTip(n) {
-    const y = this.you, cls = y.cls, tree = y.tree || {};
-    const KIND = { small: '', notable: 'Notable', form: 'Form', fusion: 'Fusion notable', triad: 'Triad notable', keystone: 'Keystone', start: 'Class start' };
-    const where = n.region === 'common' ? 'Common Ground' : n.region === 'bridge' ? 'Bridge' : CLASSES[n.region]?.name || '';
-    const lines = [`<div class="tt-name" style="color:${CLASSES[cls].color}">${n.name}</div>`, `<div class="tt-row"><span>${KIND[n.kind]}</span><span>${where}</span></div>`];
-    const ex = (e) => (e[0] === 'link' ? `link windows +${e[1]} s` : e[0] === 'brk' ? `${Math.round(e[1] * 100)}% more poise damage` : e[0] === 'fuse' ? `fusions ${Math.round(e[1] * 100)}% stronger` : e[0] === 'range' ? `${Math.round(e[1] * 100)}% more range` : describeEffect(e));
-    if (n.kind === 'keystone') { const K = KEYSTONES[n.id]; lines.push(`<div class="tt-desc">${K.desc}</div><div class="tt-req">${K.price}</div>`); }
-    else if (n.kind === 'form') { const cur = formOpt(n, y.forms || {}, y.done || {}); for (const o of n.form.opts) lines.push(`<div class="tt-desc"><b>${o.name}${tree[n.id] && o.id === cur.id ? ' (chosen)' : ''}</b>: ${o.desc}</div>`); }
-    else if (n.desc) lines.push(`<div class="tt-desc">${n.desc}</div>`);
-    else if (n.e?.length) lines.push(`<div class="tt-desc">${n.e.map(ex).join('; ')}.</div>`);
-    if (!tree[n.id] && n.kind !== 'start') { const pp = pathTo(cls, tree, n.id); if (pp) lines.push(`<div class="tt-sub">Path to here: ${pp.length} point${pp.length > 1 ? 's' : ''}</div>`); }
-    return lines.join('');
-  }
-  talentTip(t, have) {
-    const cls = this.you.cls;
-    const P = TALENTS[cls].find((x) => x.list.includes(t));
-    const lines = [`<div class="tt-name" style="color:${CLASSES[cls].color}">${t.name}</div>`, `<div class="tt-row"><span>Rank ${have}/${t.ranks}</span><span>${P.name}</span></div>`];
-    if (have) lines.push(`<div class="tt-desc">${t.e.map((e) => describeEffect(e, have)).join('; ')}.</div>`);
-    if (have < t.ranks) lines.push(`<div class="tt-sub">${have ? 'Next rank' : 'Rank 1'}:</div><div class="tt-desc">${t.e.map((e) => describeEffect(e, have + 1)).join('; ')}.</div>`);
-    const need = TALENT_ROW_REQ[t.row];
-    if (pathSpent(cls, this.you.talents || {}, TALENTS[cls].indexOf(P)) < need) lines.push(`<div class="tt-req">Requires ${need} points in ${P.name}</div>`);
-    else if (have < t.ranks && !(this.you.talentPts > 0)) lines.push(`<div class="tt-req">${this.you.level < TALENT_START ? 'Talents open at level ' + TALENT_START : 'No talent points left'}</div>`);
-    return lines.join('');
-  }
+  winTalents() { return openWebScreen(this); } // (the 'talents' window is the Skill Web screen, S6; the talent screen went at S16)
 
   // ======================================================== party
   setParty(m) {
@@ -2483,14 +2351,14 @@ export class UI {
       <p><b>Target:</b> click an enemy or press Tab. <b>Skills:</b> 1-0 and Shift+1-0 (you learn one per level); the skills of levels 42 to 65 sit on Q, E, T, V, X, P, [, ], ; and ' (change them in Options).</p>
       <p><b>Talk / loot / gather / enter dungeons:</b> walk up and press <b>F</b>, or right-click people, sparkling remains and glowing mushrooms.</p>
       <p><b>The valley:</b> Sunmere and its meadows (1-5), the Glade and Ironcliff Quarry (5-10), the Sunscar desert (10-15), Rustwood and the Old Foundry (15-20), and the Highreach plateau above the glade falls (20-25). Each of the first four bands ends in a dungeon, marked on the map (M); from level 23 every dungeon can be run on Heroic (24-26).</p>
-      <p><b>Windows:</b> C character · N talents · B bags · L quests · K skills · Y achievements · J journal · M map · I loot history · O options (volume, quality) · Esc closes, or opens options.</p>
-      <p><b>Talents:</b> from level 5 you earn a talent point each level. Spend them in three paths per class (N).</p>
+      <p><b>Windows:</b> C character · N Skill Web · B bags · L quests · K skills · Y achievements · J journal · M map · I loot history · O options (volume, quality) · Esc closes, or opens options.</p>
+      <p><b>Skill Web:</b> from level 2 you earn a Web point each level (and from Main Story chapters). Spend them on the Web (N).</p>
       <p><b>Emotes:</b> /wave /cheer /point /salute /clap /laugh /shrug /nod /sit (target someone to aim it at them).</p>
       <p><b>Salvage:</b> buy a Salvage Hook from a trader, stand by the lake, the stream or the pond and press F to haul things up out of the water.</p>
       <p><b>Runabout:</b> from level 10 Gearwright Ottmar at the Sunmere gate sells a clockwork steam cart. Press <b>R</b> to ride.</p>
       <p><b>Party:</b> target a player and click <i>Invite</i>, or type <code>/invite name</code>. <code>/p</code> talks to your party, <code>/s</code> to players nearby, <code>/w name</code> whispers to one player and <code>/r</code> answers. Right-click a player (or More on their frame) to whisper, invite, trade, inspect or add a friend; the Who button lists everyone online and your friends. Captain Leof in Sunmere hires out companions who fight beside you.</p>
       <p>The <b style="color:#ff8a50">Main Story</b> is one long chain of quests that tells the valley\u2019s tale, step by step: its people wear a crimson crest, and the tracker always says where to go next. Side quests (a gold <b style="color:#f0b020">!</b>) are optional. Turn quests in where you see <b style="color:#f0b020">?</b>.</p>
-      <p><b>Testing:</b> type <code>/level ${LEVEL_CAP}</code> in chat to unlock every skill and talent point.</p></div>`;
+      <p><b>Testing:</b> type <code>/level ${LEVEL_CAP}</code> in chat to unlock every skill and Web point.</p></div>`;
     $('.news-btn', w).onclick = () => { w.remove(); this.windows.help = null; this.toggle('news'); };
     return w;
   }
@@ -3671,13 +3539,13 @@ export class UI {
       $('.sub', tf).textContent = tv.ty === 'm' ? (tv.def.dummy ? 'Practice target' : tv.def.boss ? 'Boss' : tv.def.rare ? 'Rare Elite' : tv.def.elite ? 'Elite' : 'Machine') : tv.ty === 'n' ? (tv.npc?.title || '') : CLASSES[d.c]?.name || '';
       tf.classList.toggle('elite', !!tv.def?.elite);
       const img = $('img', tf);
-      const ik = tv.ty === 'm' ? (tv.def.dummy ? 'shield' : tv.def.humanoid ? 'dagger' : 'gear') : tv.ty === 'n' || !SKILLS[d.c] ? 'person' : SKILLS[d.c][0].icon;
+      const ik = tv.ty === 'm' ? (tv.def.dummy ? 'shield' : tv.def.humanoid ? 'dagger' : 'gear') : tv.ty === 'n' || !CLASSES[d.c] ? 'person' : kitOf(d.c)[0].icon;
       const ic = tv.ty === 'm' ? '#6a2a20' : tv.ty === 'n' || !CLASSES[d.c] ? '#5a4a1a' : CLASSES[d.c].color;
       // friendly townsfolk: their class portrait when they dress as one, else a sign of their trade
       const nl = tv.ty === 'n' ? tv.npc?.look : null;
       const npcSrc = tv.ty === 'n' ? (nl && CLASSES[nl] ? classArt(nl) : miscArt(tv.npc?.vendor ? 'npc_vendor' : tv.npc?.quests?.length ? 'npc_quest' : 'npc') || icon(tv.npc?.vendor ? 'satchel' : tv.npc?.quests?.length ? 'notice' : 'shield', '#2c4a26', 64)) : null;
       const fbArt = tv.ty === 'm' ? (tv.def.dummy ? null : miscArt(tv.def.humanoid ? 'mob_humanoid' : 'mob_machine')) : tv.ty === 'p' ? miscArt('player') : null;
-      const src = npcSrc || (tv.ty === 'p' && SKILLS[d.c] ? classArt(d.c) : tv.ty === 'm' && PORTRAITS.has(d.k) ? `/sunmere-play/ui/portraits/${d.k}.webp` : fbArt || icon(ik, ic, 64));
+      const src = npcSrc || (tv.ty === 'p' && CLASSES[d.c] ? classArt(d.c) : tv.ty === 'm' && PORTRAITS.has(d.k) ? `/sunmere-play/ui/portraits/${d.k}.webp` : fbArt || icon(ik, ic, 64));
       tf.classList.toggle('friendly', tv.ty !== 'm');
       if (tv.ty === 'n') $('.bar.hp span', tf).textContent = 'Friendly';
       if (img.dataset.k !== src.slice(-40)) { img.src = src; img.dataset.k = src.slice(-40); }

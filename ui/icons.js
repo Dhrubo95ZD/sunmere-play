@@ -1,6 +1,5 @@
 import { itemPainter, LEGACY_ICON } from './itemIcons.js';
 import { ITEM_ICONS } from './icons/items/manifest.js';
-import { TALENT_ICONS } from './icons/talents/manifest.js';
 import { ACH_ICONS } from './icons/ach/manifest.js';
 import { BUFF_ICONS } from './icons/buffs/manifest.js';
 import { FACTION_ICONS } from './icons/factions/manifest.js';
@@ -233,8 +232,6 @@ export function skillIcon(skill) { return `/sunmere-play/ui/icons/${skill.id}.we
 // Painted Codex art listed by tools/art_manifests.mjs. Each returns null when the file is missing, so callers keep
 // their procedural or skill-icon fallback.
 const art = (set, dir, k) => (k && set.has(k) ? `/sunmere-play/ui/icons/${dir}/${k}.webp` : null);
-export const talentArt = (t) => art(TALENT_ICONS, 'talents', t.id);
-export const pathArt = (cls, P) => art(TALENT_ICONS, 'talents', `path_${cls}_${P.name.toLowerCase().replace(/[^a-z]/g, '')}`);
 const BUFF_KEY = { Stunned: 'stun', Rooted: 'root', Slowed: 'slow', Sharpened: 'sharpened', Riveted: 'riveted', 'Well Fed': 'wellfed', Hearty: 'hearty', Oiled: 'oiled' };
 export const buffArt = (b) => art(BUFF_ICONS, 'buffs', BUFF_KEY[b.name] || (b.icon ? null : 'generic'));
 export const achArt = (a) => `/sunmere-play/ui/icons/ach/${ACH_ICONS.has(a.id) ? a.id : a.cat.toLowerCase()}.webp`;

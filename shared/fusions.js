@@ -1,12 +1,11 @@
 // Fusions (combat_design.md sections 3 and 5, stage S2): when skill A lands, a link window opens; skill B pressed in it
 // casts the fusion A>B, a new named move with its own rules. Fusions and triads are ordinary skill records with from, to,
 // need, lvl or tree, carry, ai and tier. FUSE[cls]['a>b'] finds one. compileKit(p) builds p.eff (every skill a player can
-// cast, by id) and p.effFuse (its fusions by pair); the sim, the bar, tooltips and bots read those, not SKILL_BY_ID.
+// cast, by id) and p.effFuse (its fusions by pair); the sim, the bar, tooltips and bots read those, not the legacy table (classes.js LEGACY_SKILLS).
 // Choreography: each fusion names its clip (choreo); S4 gave Stormfall, Battering Line, Turning Riposte, Sidewind Cut and
 // Anvil Fall their own DEFs on the authored hero clips (client/game/choreo.js, 'ual'); the rest still name an existing one.
 // Imports only from shared/.
-import { SKILLS, SKILL_BY_ID } from './classes.js';
-import { KIT_V2, CORE, CORE_BY_ID, DODGES, DE_POW, RA_POW, RA_FUSE, CH_POW, CH_FUSE, HB_POW, HB_FUSE, HB_HEAL } from './kit.js';
+import { CORE, CORE_BY_ID, DODGES, DE_POW, RA_POW, RA_FUSE, CH_POW, CH_FUSE, HB_POW, HB_FUSE, HB_HEAL } from './kit.js';
 
 export const LINK = { win: 1.0, afterLock: 0.25, tick: 0.05, grace: 0.15 }; // window from contact; never shorter than the lock + 0.25 s; one tick of grace; 0.15 s for a claimed chain
 export const MASTERY = [25, 100, 300]; // landed uses for ranks I, II, III (a Book badge; III adds the extra beat)
@@ -413,12 +412,8 @@ for (const [cls, list] of Object.entries(FUSIONS)) {
   for (const f of list) f.tags = [...new Set([...(f.triad ? [] : tagsOf(f.from)), ...tagsOf(f.to), ...f.tags])];
 }
 
-// a skill record by id: the new kit (core skills, chain steps' first record, fusions) for a class on KIT_V2, else the legacy one
-export const skillOf = (id) => {
-  const k = CORE_BY_ID[id] || FUSION_BY_ID[id];
-  if (k && KIT_V2[k.cls]) return k;
-  return SKILL_BY_ID[id] || k || null;
-};
+// a skill record by id: a core skill (a chain's first record) or a fusion
+export const skillOf = (id) => CORE_BY_ID[id] || FUSION_BY_ID[id] || null;
 export const nameOf = (id, cls) => (id === 'dodge' ? DODGES[cls]?.name || 'Dodge' : skillOf(id)?.name || id);
 
 // both inputs learned, and the fusion's level reached or its tree notable taken (p.tree, S3)
@@ -433,10 +428,8 @@ export function fusionUnlocked(p, f) {
 // keystones come with the tree (S3) and patch here; number modifiers stay in p.tal (skillCost, skillCd, damage)
 export function compileKit(p) {
   const eff = {}, effFuse = {};
-  if (KIT_V2[p.cls]) {
-    for (const s of CORE[p.cls] || []) eff[s.id] = s;
-    for (const f of FUSIONS[p.cls] || []) { eff[f.id] = f; effFuse[f.key] = f; }
-  } else for (const s of SKILLS[p.cls] || []) eff[s.id] = s;
+  for (const s of CORE[p.cls] || []) eff[s.id] = s;
+  for (const f of FUSIONS[p.cls] || []) { eff[f.id] = f; effFuse[f.key] = f; }
   p.eff = eff; p.effFuse = effFuse;
   return p;
 }

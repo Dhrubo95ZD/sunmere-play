@@ -187,7 +187,7 @@ const T = {
   // small questions a player may ask (classify), answered plainly
   whereami: ['in {zone}', '{zone}, {goal}', 'around {zone}', 'out in {zone}', '{zone} right now', 'over in {zone}', '{zone}. you?', 'still in {zone}'],
   tips: ['do the main story, the gear keeps up', 'keep your gear repaired and take every quest in town', 'quest hubs first, then dungeons', 'craft early, saves a lot of gold',
-    'dont wander above your level', 'spend your talents, they matter', 'group finder for dungeons, saves walking', 'sell what you dont use, keep the ore', 'follow the quest markers on the map'],
+    'dont wander above your level', 'spend your web points, they matter', 'group finder for dungeons, saves walking', 'sell what you dont use, keep the ore', 'follow the quest markers on the map'],
   worth: ['depends on your level, check the map', 'if it fits your level, sure', 'for the quests, yeah', 'yeah if you have a group', 'probably, the xp is decent', 'try it and see',
     'cant hurt to try', 'maybe, depends on your gear'],
   gold: ['gather ore and sell it', 'quests and selling the drops', 'craft stuff and sell it', 'dungeons pay alright', 'sell everything you dont use', 'gather on the way between quests',
