@@ -88,6 +88,8 @@ const newId = (p) => p + (nextId++).toString(36);
 // (S10) the Deadeye's hot loads (Six Chambers' perfect reload: heat, for Ignite) and Bank Shot's skip (spark, for Galvanic):
 // one cached copy of a record per kind, same id, so the sim's contact (this._hc) and the client name the same skill
 const HOT_REC = new WeakMap(), BANK_REC = new WeakMap();
+const POP_REC = new WeakMap(); // (S12 Chain Reaction: one cached pop record per fusion record)
+const ZONE_SLOW = { tar: 'Tar', fire: 'Burning Tar', frost: 'Frost', acid: 'Acid Cloud' }; // (S12: the slow a puddle of each kind lays on what stands in it)
 const tagged = (M, sk, tag) => { let r = M.get(sk); if (!r) { r = { ...sk, tags: [...new Set([...(sk.tags || []), tag])] }; M.set(sk, r); } return r; };
 const MOVERS = new Set([...Object.values(SKILLS), ...Object.values(CORE), ...Object.values(FUSIONS)].flat().filter((s) => s.fx.some((f) => f[0] === 'dash' || f[0] === 'leap' || f[0] === 'back')).map((s) => s.id));
 // a class on the new kit (S2): talent and set modifiers naming a legacy skill move to the skill it became (a Form to its
@@ -1891,7 +1893,7 @@ export class World {
     const ranged = !!CLASSES[b.cls]?.ranged; // classes.js ranged: ranger, chemist, herbalist, deadeye
     const healer = b.cls === 'herbalist';
     let goal = null, stopAt = 0;
-    if (tgt) { goal = tgt; stopAt = (ranged ? (b.cls === 'deadeye' && KIT_V2.deadeye ? 9.5 : 12) : 2.2) + tgt.def.radius * 0.7; if (healer && dO > 16) { goal = o; stopAt = 8; } }
+    if (tgt) { goal = tgt; stopAt = (ranged ? ((b.cls === 'deadeye' && KIT_V2.deadeye) || (b.cls === 'chemist' && KIT_V2.chemist) ? 9.5 : 12) : 2.2) + tgt.def.radius * 0.7; if (healer && dO > 16) { goal = o; stopAt = 8; } }
     else if (H) { goal = H; stopAt = 0.4; }
     else {
       // walk a little behind and to the side of the owner
@@ -2348,7 +2350,14 @@ export class World {
     if (this.hasCC(p, 'stun')) return this.err(p, 'You are stunned.');
     // B pressed in the link A opened casts the fusion A>B (fusionOf: unlock, the fusion's cooldown, the window with one
     // tick of grace and 0.15 s more for a chain the client claims, and the gate); else B plain. A chain casts its next step
-    const fu = this.fusionOf(p, base, m);
+    let fu = this.fusionOf(p, base, m), mix = null;
+    // (S12) Bench Chemist: the third Acid Flask is Mix, the fusion of his last two skills (p.mixLog) at the machine, from range
+    // and without the window, once every tal.benchChemist s. A fusion that moves him is left out
+    if (!fu && p.tal?.benchChemist && base.id === 'c_acid' && base.chain && !m.plain && this.time >= (p.mixT || 0)) {
+      const st = p.chain && p.chain.id === base.id && this.time - p.chain.at <= CHAIN_RESET ? (p.chain.step % base.chain.length) + 1 : 1;
+      const L2 = p.mixLog || [], f = st === 3 && L2.length === 2 ? p.effFuse?.[L2[0] + '>' + L2[1]] : null;
+      if (f && !f.triad && f.target === 'enemy' && !f.fx.some((e) => e[0] === 'dash' || e[0] === 'leap' || e[0] === 'back') && fusionUnlocked(p, f) && !((p.cds[f.id] || 0) > this.time) && p.eff[f.to]) fu = mix = f;
+    }
     const sk = fu || (base.chain ? stepOf(base, p.chain && p.chain.id === base.id && this.time - p.chain.at <= CHAIN_RESET ? (p.chain.step % base.chain.length) + 1 : 1) : base);
     const hold = (until) => { if (until - this.time <= BUFFER + 1e-6) { p.qcast = queued && m.qUntil ? { m, until: m.qUntil } : { m: { ...m, qUntil: this.time + BUFFER }, until: this.time + BUFFER }; return true; } return false; };
     // the first moment it is legal: the current cast's contact, this skill's cooldown and (on the lock) the lock
@@ -2378,7 +2387,7 @@ export class World {
     if (p.cast) return queued ? undefined : this.err(p, 'You are busy.'); // (a multi-hit cast past its first contact)
     if (queued && m.qUntil && this.time > m.qUntil + 0.051) return; // (one tick of grace, then the held press is gone)
     const tal = p.tal || talentMods(p.cls, p.talents);
-    let cost = fu ? skillCost(base, tal) + (fu.extra || 0) : skillCost(sk, tal); // (a fusion: B's cost + its own extra)
+    let cost = fu ? skillCost(mix ? p.eff[mix.to] : base, tal) + (fu.extra || 0) : skillCost(sk, tal); // (a fusion: B's cost + its own extra; Mix: its B's)
     let kmul = 1, encore = false; // (Clean Link, Chainwork's Encore)
     if (tal.keys) { // the Skill Web: fusion cost (Chainwork), then the keystones' onCast (Quick Feet, Last Reserves)
       if (fu && tal.fuseCost) cost *= 1 + tal.fuseCost;
@@ -2429,6 +2438,8 @@ export class World {
     if (base.charges > 1) this.chargeSpend(p, base, skillCd(base, tal));
     else if (base.cd) p.cds[base.id] = this.time + skillCd(base, tal);
     if (fu) p.cds[fu.id] = this.time + skillCd(fu, tal);
+    if (mix) { p.mixT = this.time + p.tal.benchChemist; p.mixLog = []; if (p.eff[mix.to].cd) p.cds[mix.to] = Math.max(p.cds[mix.to] || 0, this.time + skillCd(p.eff[mix.to], tal)); }
+    else if (p.cls === 'chemist' && KIT_V2.chemist && !fu && base.id !== 'c_acid') p.mixLog = [...(p.mixLog || []).slice(-1), base.id];
     // the recovery before another plain skill: the skill's own lock (feel.js, 0.45-0.9 s from its contact), not a flat GCD
     if (sk.gcd) p.gcd = this.time + (FEEL_ON ? skillFeel(sk).win.lock : GCD) / haste;
     const L = p.link; p.link = null; // (any cast spends the open window)
@@ -2449,7 +2460,7 @@ export class World {
     const aFrom = fu ? p.castFrom : null; // (S11: where A began; Highwire Volley's rain comes down on it)
     p.castFrom = { x: p.x, z: p.z };
     const unseen = !!target && target.type === 'mob' && target.target !== p.id; // (S8 Desert Step: it had not turned on him yet)
-    p.cast = { sk, t0: this.time, unseen, end: this.time + Math.max(hitT, (sk.channel || 0)), target: target?.id, gx, gz, hits: 0, channel: !!sk.channel, haste, opening: opening >= 0 || cloak >= 0, fused: !!fu, blocked: fu ? L?.blocked || 0 : 0, mul: kmul, encore, aFrom, holdDraw: !!(sk.draw && m.hold && !p.bot) };
+    p.cast = { sk, t0: this.time, unseen, end: this.time + Math.max(hitT, (sk.channel || 0)), target: target?.id, gx, gz, hits: 0, channel: !!sk.channel, haste, opening: opening >= 0 || cloak >= 0, fused: !!fu, blocked: fu ? L?.blocked || 0 : 0, mul: kmul, encore, aFrom, holdDraw: !!(sk.draw && m.hold && !p.bot), spot: target && target.type === 'mob' ? { x: target.x, z: target.z } : null, mix: !!mix }; // (spot, S12: where the machine stood at the throw)
     if (target && target.type === 'mob') this.addThreat(target, p, 1);
     this.broadcast({ k: 'cast', id: p.id, skill: sk.id, base: fu ? base.id : undefined, step: sk.step || undefined, fc: sk.formChoreo || undefined, target: target?.id, gx, gz, haste, hot: sk.forge ? 1 : undefined, sf: m.slideFire ? 1 : undefined, hd: p.cast.holdDraw ? 1 : undefined }); // (hd, S11: a held draw: other clients hold the clip until 'loose') // (fc: a Form's clip, S8; hot: Forge-Heated Head, S9; sf: the Deadeye's shot out of a slide, S10)
     // (S10) Six Chambers' perfect reload: Snap Shot pressed in the last 0.2 s of the slide (not the slide's own shot) fills both
@@ -2667,7 +2678,11 @@ export class World {
       c = { ...c, trapAt: TL[TL.length - 1] || (target ? { x: target.x, z: target.z } : { x: p.x, z: p.z }), trapList: TL };
     }
     const ahead = (dd) => ({ x: p.x + Math.sin(p.ry) * dd, z: p.z + Math.cos(p.ry) * dd });
-    const center = h.at === 'trap' ? c.trapAt : h.at === 'cast' ? (c.aFrom || p.castFrom || p) : h.at === 'target' && !target && sk.noTarget && sk.fx.some((f) => f[0] === 'trap') ? ahead(Math.min(8, sk.range || 8)) : sk.target === 'ground' ? { x: c.gx, z: c.gz } : h.at === 'target' && target ? target : (h.kind === 'aoe' || h.kind === 'self') ? p : target || p; // (h.at 'target': round the machine, Thousand Cuts, S8)
+    // (S12) the Chemist: c.ctr a bomb's resting place; at 'spot' where the machine stood at the throw; at 'here' where the
+    // fusion began; at 'puddle' his nearest puddle (a burning one first), else the machine; a cluster's bombs land side by side
+    const pud = h.at === 'puddle' && !c.ctr ? this.puddleFor(p, target) : null;
+    let center = c.ctr ? c.ctr : h.at === 'spot' ? (c.spot || target || p) : h.at === 'here' ? (p.castFrom || p) : h.at === 'puddle' ? (pud ? (pud.follow ? p : pud) : target || p) : h.at === 'trap' ? c.trapAt : h.at === 'cast' ? (c.aFrom || p.castFrom || p) : h.at === 'target' && !target && sk.noTarget && sk.fx.some((f) => f[0] === 'trap') ? ahead(Math.min(8, sk.range || 8)) : sk.target === 'ground' ? { x: c.gx, z: c.gz } : h.at === 'target' && target ? target : (h.kind === 'aoe' || h.kind === 'self') ? p : target || p; // (h.at 'target': round the machine, Thousand Cuts, S8)
+    if (h.cluster && !c.ctr && (c.hits || 0) !== 1) { const k = (c.hits || 0) - 1; center = { x: center.x + Math.cos(p.ry || 0) * k * h.cluster, z: center.z - Math.sin(p.ry || 0) * k * h.cluster }; }
     // gather affected entities
     let enemies = [], allies = [];
     if (h.kind === 'melee' || h.kind === 'proj') { if (target && (sk.target === 'enemy' || sk.nearest) && (target.type === 'mob' ? !target.dead : this.foeOf(p, target.id))) enemies = [target]; if (sk.target === 'ally' || sk.target === 'self') allies = [target || p]; }
@@ -2702,6 +2717,9 @@ export class World {
       const o = (h.kind === 'aoe' || h.kind === 'ground') ? center : h.kind === 'proj' && h.r && target ? target : p;
       enemies = enemies.filter((m) => (m === target ? !houseCrosses(p.x, p.z, m.x, m.z) : true) && (m === o || !houseCrosses(o.x, o.z, m.x, m.z)));
     }
+    // (S12) a bomb (sk.fuse): this contact is its landing; it lies there and bursts sk.fuse s later (tickChemist); the link
+    // opens now, landed when a machine is within its reach
+    if (sk.fuse && !c.lit) { this.layBomb(p, sk, c, center, target, enemies, allies, pud); return; }
     const tal = p.tal || talentMods(p.cls, p.talents), tsk = tal.sk[sk.id];
     const area = h.kind === 'aoe' || h.kind === 'ground' || h.kind === 'cone' || h.kind === 'line';
     const skPow = 1 + (tsk?.pow || 0);
@@ -2740,7 +2758,8 @@ export class World {
         case 'res': p.res = Math.min(p.maxRes, p.res + a); break; // the caster's own resource back (the Deadeye's Quick Reload)
         // the new kit's kinds (combat_design.md 3.7; launch, air and brk are read through feel.js above)
         case 'holdLift': for (const m of enemies) { if (m.type !== 'mob' || m.dead || !(m.airT > this.time)) continue; const add = Math.min(a, isElite(m.def) ? POISE.eliteAir : a); const until = Math.max(m.airT, this.time + add); const lb = m.buffs.find((bf) => bf.name === 'Lifted'); if (lb) { lb.t = until - this.time; lb.dur = Math.max(lb.dur, lb.t); } m.airT = until; m.swingT = Math.max(m.swingT || 0, until - this.time); this.broadcast({ k: 'air', id: m.id, dur: +(until - this.time).toFixed(2), h: 2.2, hold: 1, dir: [0, 0] }); } break; // (kept in the air: Stormfall, High Ledger)
-        case 'zone': if (p.type === 'player' && !(c.hits || 0) && !c.after) { const e = fxl.find((f) => f[0] === 'zone'); const Z = (p.zones ||= []); Z.push({ kind: a, coef: b, until: this.time + (cc || 4), r: e?.[4] || 4, x: center.x, z: center.z, slow: sk.zoneSlow || 0, next: this.time + 0.5, sk: sk.id }); if (Z.length > 6) Z.shift(); } if (sk.forge && p.type === 'player' && !(c.hits || 0) && !c.after && type === 'zone') this.broadcast({ k: 'slag', x: +center.x.toFixed(2), z: +center.z.toFixed(2), r: fxl.find((f) => f[0] === 'zone')?.[4] || 2, dur: cc || 3 }); break; // (a ground patch: Cinder Landing's cinders; at most 6 a hero, oldest goes, section 3.6)
+        case 'zone': if (sk.cls === 'chemist' && KIT_V2.chemist) { if (!(c.hits || 0) && !c.after) this.chemZone(p, sk, center, a, b, cc || 4, fxl.find((f) => f[0] === 'zone')?.[4] || 4); break; } // (S12: the Chemist's puddles and clouds)
+          if (p.type === 'player' && !(c.hits || 0) && !c.after) { const e = fxl.find((f) => f[0] === 'zone'); const Z = (p.zones ||= []); Z.push({ kind: a, coef: b, until: this.time + (cc || 4), r: e?.[4] || 4, x: center.x, z: center.z, slow: sk.zoneSlow || 0, next: this.time + 0.5, sk: sk.id }); if (Z.length > 6) Z.shift(); } if (sk.forge && p.type === 'player' && !(c.hits || 0) && !c.after && type === 'zone') this.broadcast({ k: 'slag', x: +center.x.toFixed(2), z: +center.z.toFixed(2), r: fxl.find((f) => f[0] === 'zone')?.[4] || 2, dur: cc || 3 }); break; // (a ground patch: Cinder Landing's cinders; at most 6 a hero, oldest goes, section 3.6)
         // (S5) Stormfall's plunge drives the lifted machine into the ground: a 0.3 m bounce (still Lifted for its 0.8 s, so the
         // air bonus holds), then it lies stunned for a s (Hold Aloft: longer). The client plays the slam on the 'air' hold
         case 'slamDown': for (const m of enemies) { if (m.type !== 'mob' || m.dead) continue; const was = m.airT > this.time; const b = isElite(m.def) ? 0.5 : 0.8; if (was) { m.airT = this.time + b; const lb = m.buffs.find((bf) => bf.name === 'Lifted'); if (lb) { lb.t = b; lb.dur = Math.max(lb.dur, b); } this.broadcast({ k: 'air', id: m.id, dur: b, h: 0.3, hold: 1, slam: 1, dir: [0, 0] }); } if (!m.def.boss && (was || a > 0)) { const st = (was ? b : 0) + a * cc1; this.addBuff(m, { name: 'Slammed', cc: 'stun', t: st, dur: st, debuff: true, icon: 'stun' }); m.swingT = Math.max(m.swingT || 0, st); } } break;
@@ -2781,6 +2800,17 @@ export class World {
         case 'bounce': { let at = enemies[0]; if (!at) break; const coef = (fxl.find((f) => f[0] === 'dmg')?.[1] || 1) * (cc || 0.7), hitSet = new Set(enemies), path = [at.id]; for (let i = 0; i < a; i++) { let nx = null, bd = b; for (const o of this.foesOf(p)) { if (o.dead || hitSet.has(o)) continue; const d = dist(o, at); if (d < bd) { bd = d; nx = o; } } if (!nx) break; hitSet.add(nx); path.push(nx.id); this.damage(p, nx, power * coef * R(0.9, 1.1), sk.id); if (nx.type === 'mob') this.addBuff(nx, { name: 'Marked Target', stat: 'vuln', pct: 10, t: 4, dur: 4, debuff: true, icon: 'mark' }); at = nx; } if (path.length > 1) this.broadcast({ k: 'bounce', id: p.id, path }); break; }
         // Smoke Arrow: a smoke arrow where the cast began (Disengage's spot): machines within a m miss b% for cc s
         case 'smokeAt': if (!(c.hits || 0) && p.castFrom) { const o = p.castFrom; this.broadcast({ k: 'smokebank', x: +o.x.toFixed(2), z: +o.z.toFixed(2), r: a }); for (const m of this.foesOf(p)) if (m.type === 'mob' && Math.hypot(m.x - o.x, m.z - o.z) <= a + this.rad(m)) this.addBuff(m, { name: 'Smoke Arrow', stat: 'miss', pct: b, t: cc, dur: cc, debuff: true, icon: 'smoke' }); } break;
+        // ---- the Chemist's kinds (S12)
+        // Spark Gear's arc: on from the first machine to a more within b m, cc of the blow each (heat and spark: Ignite, Galvanic)
+        case 'arc': { let at = enemies[0]; if (!at) break; const coef = (fxl.find((f) => f[0] === 'dmg')?.[1] || 1) * (cc || 0.6), hitSet = new Set(enemies), path = [at.id]; for (let i = 0; i < a; i++) { let nx = null, bd = b; for (const o of this.foesOf(p)) { if (o.dead || hitSet.has(o)) continue; const d = dist(o, at); if (d < bd) { bd = d; nx = o; } } if (!nx) break; hitSet.add(nx); path.push(nx.id); this.damage(p, nx, power * coef * R(0.9, 1.1), sk.id); at = nx; } if (path.length > 1) this.broadcast({ k: 'sparkarc', id: p.id, path }); break; }
+        // Galvanic Arc: every Corroded machine within a m of the first is struck b x and staggered
+        case 'arcCorroded': { const t0 = enemies[0]; if (!t0) break; const path = [t0.id]; for (const o of this.foesOf(p)) { if (o.dead || o === t0 || o.type !== 'mob' || dist(o, t0) > a + this.rad(o) || !o.buffs.some((x) => x.coat === 'corrode')) continue; path.push(o.id); this.damage(p, o, power * b * R(0.9, 1.1), sk.id); if (!o.dead && !o.def.boss) this.addBuff(o, { name: 'Staggered', cc: 'stun', t: 0.6 * cc1, dur: 0.6 * cc1, debuff: true, icon: 'stun' }); } if (path.length > 1) this.broadcast({ k: 'sparkarc', id: p.id, path, g: 1 }); break; }
+        // Tarfire: the puddle catches (a burns a s at b a second); with Cold Chemistry it freezes. No puddle: a burning patch here
+        case 'ignitePuddle': if (!(c.hits || 0) && !c.after) { const cold = !!sk.cold; if (pud) { Object.assign(pud, { kind: cold ? 'frost' : 'fire', coef: cold ? b * 0.5 : b, until: this.time + a, slow: cold ? 60 : sk.wall || pud.seg ? 80 : 20, coat: cold ? 'chill' : null, next: this.time }); pud.slowName = ZONE_SLOW[pud.kind]; this.broadcast({ k: 'czone', id: p.id, zid: pud.id, kind: pud.kind, x: +pud.x.toFixed(2), z: +pud.z.toFixed(2), r: pud.r, dur: a, seg: pud.seg?.map((v) => +v.toFixed(2)), follow: pud.follow ? 1 : undefined }); } else this.chemZone(p, sk, center, cold ? 'frost' : 'fire', cold ? b * 0.5 : b, a, h.r || 4); } break;
+        // Blast Vault: the rod is planted on his newest bomb, which goes off under him now (it no longer waits for its fuse)
+        case 'useBomb': if (!(c.hits || 0) && p.bombs?.length) { const B = p.bombs.pop(); this.broadcast({ k: 'bombGone', bid: B.id }); } break;
+        // Pitch Vault: a strip of tar along the whole vault (where A began to where the fusion began), a s long, b m wide
+        case 'tarPath': if (!(c.hits || 0) && !c.after) { const f0 = c.aFrom || p.castFrom || p, f1 = p.castFrom || p; this.chemZone(p, sk, { x: (f0.x + f1.x) / 2, z: (f0.z + f1.z) / 2 }, sk.hotTar ? 'fire' : 'tar', sk.hotTar ? 0.3 : 0, a, b, [f0.x, f0.z, f1.x, f1.z]); } break;
         case 'ricochet': { const t0 = enemies[0]; if (!t0) break; const coef = sk.fx.find((f) => f[0] === 'dmg')?.[1] || 1; const near = this.foesOf(p).filter((o) => !o.dead && !enemies.includes(o) && dist(o, t0) <= b).sort((x, y) => dist(x, t0) - dist(y, t0)).slice(0, Math.min(a, 2)); for (const o of near) this.damage(p, o, power * coef * 0.7 * R(0.9, 1.1), sk.id); break; } // (at most 2 bounces a shot, section 3.6)
       }
     }
@@ -2794,10 +2824,11 @@ export class World {
     if (sk.emptyAll && lastHit && p.rounds) p.rounds = [0, 0];
     // (S7) a coat the skill leaves on every machine it reached, after its own blow (so it never sets itself off)
     const ck = enemies.length && p.type === 'player' ? coatOf(sk) : null;
-    if (ck) for (const m of enemies) this.applyCoat(p, m, ck.kind, ck.dur);
+    if (ck) for (const m of enemies) for (let i = 0; i < (sk.coatN || 1); i++) this.applyCoat(p, m, ck.kind, ck.dur); // (S12 coatN: Corrosive Charge's four stacks, Etching Acid's two)
+    if (ck?.kind === 'chill' && sk.deepChill && p.type === 'player') (p.deep ||= []).push({ ids: enemies.filter((m) => m.type === 'mob').map((m) => m.id), at: this.time + 2, t: sk.deepChill }); // (S12 Deep Chill)
     // (S11) a trap fusion springs the traps it used on its last contact: they burst (Closed Ground finds the machines there)
     if (h.at === 'trap' && sk.from && lastHit && !c.extraTrap && c.trapList?.length) { p.trapBurst = { list: c.trapList.map((T) => ({ x: T.x, z: T.z })), until: this.time + 4 }; const used = new Set(c.trapList); p.traps = (p.traps || []).filter((T) => !used.has(T)); for (const T of used) this.broadcast({ k: 'trapgone', tid: T.id, burst: 1 }); }
-    if (KIT_V2[p.cls] && p.type === 'player' && !c.after && !c.extraTrap) this.linkAfter(p, sk, c, enemies, allies); // (fusions: the link window, mastery)
+    if (KIT_V2[p.cls] && p.type === 'player' && !c.after && !c.extraTrap && !c.lit) this.linkAfter(p, sk, c, enemies, allies); // (fusions: the link window, mastery)
     // Aftershock (the Warden, S9): a slam's last contact strikes again 0.6 s later at half strength (one repeat, never of a repeat)
     if (sk.aftershock && !c.after && lastHit && p.type === 'player') {
       (p.delays ||= []).push({ t: this.time + sk.aftershock.t, sk, c: { ...c, after: true, hits: (h.n || 1) - 1, mul: (c.mul || 1) * sk.aftershock.mul, opening: false } });
@@ -2848,7 +2879,12 @@ export class World {
     let rx = null;
     if (m.type === 'mob') {
       if (m.pinT > this.time && fromBehind(m, src.x, src.z)) amt *= 1 + PIN.behind;
-      if (m.coatT > this.time && src.type === 'player') { rx = this.reactCheck(m, hc, skill); if (rx?.mul) amt *= rx.mul; }
+      if (hc?.sk.coatMul) for (const k in hc.sk.coatMul) if (m.buffs.some((b) => b.coat === k && b.t > 0)) amt *= hc.sk.coatMul[k]; // (S12 Thermal Shock: x1.35 on a Chilled machine, before the Shatter takes the frost)
+      if (m.coatT > this.time && src.type === 'player') {
+        rx = this.reactCheck(m, hc, skill); if (rx?.mul) amt *= rx.mul;
+        const by = rx?.by ? this.players.get(rx.by) : null; // (S12 Reactive Chemistry: a Reaction on his coat is 50% stronger and gives him 10 Reagents)
+        if (by?.tal?.reactive && !by.dead) { rx.boost = 1 + by.tal.reactive; if (rx.kind === 'shatter') amt *= rx.boost; by.res = Math.min(by.maxRes, by.res + 10); }
+      }
     }
     if (tal?.keys) { // the Skill Web (S3): notables against a state, then the keystones' onHit (shared/keystones.js)
       for (const [st, v] of Object.entries(tal.vs || {})) if (m.type === 'mob' && this.hasState(m, st)) amt *= 1 + v;
@@ -2892,20 +2928,20 @@ export class World {
       if (!kind) continue;
       m.buffs.splice(i, 1);
       if (kind === 'shatter' && hc) hc.xbrk = REACTIONS.shatter.brk; // (60 more poise on this machine only)
-      return { kind, coat: b.coat, mul: kind === 'shatter' ? REACTIONS.shatter.mul : 1 };
+      return { kind, coat: b.coat, mul: kind === 'shatter' ? REACTIONS.shatter.mul : 1, by: b.src };
     }
     return null;
   }
   // after the blow: Ignite's burn, Galvanic's jump; the word and its effects on every client ({k:'react'})
   reactFire(src, m, rx, amt) {
     let to = null;
-    if (rx.kind === 'ignite' && !m.dead) { const R0 = REACTIONS.ignite; this.addBuff(m, { name: 'Ignite', stat: 'dot', dot: (src.power * R0.burn) / R0.dur, t: R0.dur, dur: R0.dur, src: src.id, tick: 0, debuff: true, icon: 'flame' }); }
+    if (rx.kind === 'ignite' && !m.dead) { const R0 = REACTIONS.ignite; this.addBuff(m, { name: 'Ignite', stat: 'dot', dot: (src.power * R0.burn * (rx.boost || 1)) / R0.dur, t: R0.dur, dur: R0.dur, src: src.id, tick: 0, debuff: true, icon: 'flame' }); }
     if (rx.kind === 'galvanic') {
       let bd = REACTIONS.galvanic.range;
       for (const o of this.mobs.values()) { if (o === m || o.dead || o.def.dummy) continue; const d = dist(o, m); if (d < bd && this.foeOf(src, o.id)) { bd = d; to = o; } }
     }
     this.broadcast({ k: 'react', id: m.id, kind: rx.kind, src: src.id, ...(to ? { to: to.id } : {}) });
-    if (to) this.damage(src, to, amt * REACTIONS.galvanic.share, 'galvanic');
+    if (to) this.damage(src, to, amt * REACTIONS.galvanic.share * (rx.boost || 1), 'galvanic');
   }
   // a pull (S8): the machine is dragged up to a m toward c (never closer than its radius + 0.6), with the same clamps as a
   // knockback (dungeon walls, house walls, the world's edge)
@@ -4085,6 +4121,7 @@ export class World {
     if (p.zones?.length) this.tickZones(p);
     if (p.delays?.length) this.tickDelays(p);
     if (p.cls === 'ranger' && KIT_V2.ranger && (p.traps?.length || p.tal?.rangerStill)) this.tickRanger(p); // (S11: the snares on the ground, Never Still's metres)
+    if (p.cls === 'chemist' && KIT_V2.chemist && (p.bombs?.length || p.deep?.length)) this.tickChemist(p); // (S12: his bombs' fuses, Deep Chill)
     if (p.cls === 'deadeye' && KIT_V2.deadeye) this.tickDeadeye(p); // (S10: Never Still's metres, the slide's shot, Six Chambers' slow reload)
     // Forge-Heated Head (the Warden, S9): the hot head costs 2% of his health every 10 s in a fight (never the last point)
     if (p.tal?.forgeBurn && this.time - p.combatT < 5 && this.time >= (p.forgeT || 0)) { if (p.forgeT) p.hp = Math.max(1, p.hp - p.maxHp * p.tal.forgeBurn); p.forgeT = this.time + 10; }
@@ -4127,8 +4164,9 @@ export class World {
       const tal = p.tal || {};
       for (const m of (foes ||= this.foesOf(p))) {
         if (m.dead || !inZ(z, m)) continue;
-        this._zk = z.kind; this.damage(p, m, p.power * (1 + (tal.dmg || 0)) * z.coef * 0.5, 'zone'); this._zk = null; // (a fire patch is heat: Ignite)
-        if (z.slow && m.type === 'mob') this.addBuff(m, { name: 'Cinders', stat: 'slow', pct: z.slow, t: 0.6, dur: 0.6, debuff: true, icon: 'slow' });
+        if (z.coef) { this._zk = z.kind; this.damage(p, m, p.power * (1 + (tal.dmg || 0)) * z.coef * 0.5, 'zone'); this._zk = null; } // (a fire patch is heat: Ignite; S12: a tar puddle deals nothing)
+        if (z.coat && m.type === 'mob' && !m.dead && (z.coat === 'corrode' ? (z.tk = !z.tk) : !m.buffs.some((x) => x.coat === z.coat))) this.applyCoat(p, m, z.coat, 3); // (S12: tar, acid and frost coat what stands in them; acid a stack a second)
+        if (z.slow && m.type === 'mob') this.addBuff(m, { name: z.slowName || 'Cinders', stat: 'slow', pct: z.slow, t: 0.6, dur: 0.6, debuff: true, icon: 'slow' });
         if (z.blind && m.type === 'mob' && !m.dead) this.addBuff(m, { name: 'Blinded', stat: 'miss', pct: z.blind, t: 1.0, dur: 1.0, debuff: true, icon: 'cloak' });
         if (z.pull && m.type === 'mob' && !m.dead && liftable(m.def) && !m.def.dummy) this.pullMob(m, z, z.pull);
       }
@@ -4205,6 +4243,82 @@ export class World {
     this.damage(p, to, power * coef * B.mul * R(0.9, 1.1), sk.id);
     this._hc = saved;
   }
+  // ---- the Chemist (S12)
+  // his puddles and clouds (p.zones, chem): kind tar (slows, Tarred), fire (burns: heat, Ignite), frost (Cold Chemistry: slows
+  // 60%, Chilled), acid (eats: Corroded a stack a second); Closed Lab carries them round him (follow); Pitch Wall lays a wall
+  // (seg) across the throw. Every client draws them from {k:'czone'} and lets them run out by dur (cpop: one went off early)
+  chemZone(p, sk, center, kind, coef, dur, r, seg = null) {
+    const follow = !!sk.zoneFollow;
+    if (sk.hotTar && kind === 'tar') { kind = 'fire'; coef = Math.max(coef, 0.3); }
+    let slow = kind === 'tar' ? sk.zoneSlow || 50 : kind === 'frost' ? 60 : kind === 'fire' ? sk.zoneSlow || 20 : 0;
+    if (sk.wall && !follow && !seg) { const ux = Math.cos(p.ry || 0), uz = -Math.sin(p.ry || 0); seg = [center.x - ux * 4, center.z - uz * 4, center.x + ux * 4, center.z + uz * 4]; r = 1.3; slow = Math.max(slow, 80); }
+    if (follow) { seg = null; r = 4; }
+    const z = { id: newId('cz'), chem: true, kind, coef, until: this.time + dur, r, x: follow ? p.x : center.x, z: follow ? p.z : center.z, seg, follow, slow, slowName: ZONE_SLOW[kind], coat: { tar: 'tar', acid: 'corrode', frost: 'chill' }[kind] || null, next: this.time + 0.5, sk: sk.id };
+    const Z = (p.zones ||= []);
+    if (follow) for (const o of Z.filter((q) => q.follow && q.chem)) { Z.splice(Z.indexOf(o), 1); this.broadcast({ k: 'czoneEnd', zid: o.id }); } // (one carried cloud at a time)
+    Z.push(z);
+    while (Z.length > 6) { const o = Z.shift(); if (o.chem) this.broadcast({ k: 'czoneEnd', zid: o.id }); }
+    this.broadcast({ k: 'czone', id: p.id, zid: z.id, kind, x: +z.x.toFixed(2), z: +z.z.toFixed(2), r, dur, seg: seg?.map((v) => +v.toFixed(2)), follow: follow ? 1 : undefined });
+    return z;
+  }
+  // the puddle a fusion goes off round: his burning one nearest the machine first, then any (within 16 m of it)
+  puddleFor(p, target) {
+    const o = target || p, L = (p.zones || []).filter((z) => z.chem && z.until > this.time && (z.follow || Math.hypot(z.x - o.x, z.z - o.z) <= 16));
+    if (!L.length) return null;
+    const d = (z) => (z.follow ? Math.hypot(p.x - o.x, p.z - o.z) : Math.hypot(z.x - o.x, z.z - o.z)) - (z.kind === 'fire' || z.kind === 'frost' ? 100 : 0);
+    return L.sort((u, v) => d(u) - d(v))[0];
+  }
+  // a bomb comes to rest (the landing contact): it bursts sk.fuse s later where it lies (or on the machine, Sticky Charge);
+  // Chain Reaction first sets off everything of his within reach, 0.1 s apart, and its cask waits for them
+  layBomb(p, sk, c, center, target, enemies, allies, pud) {
+    const ctr = sk.hit.at === 'target' && target && sk.sticky ? null : { x: center.x, z: center.z };
+    const B = { id: newId('bm'), t: this.time + sk.fuse / (c.haste || 1), sk, c: { ...c, lit: true, ctr, bid: null } };
+    B.c.bid = B.id;
+    const dt = sk.fx.find((f) => f[0] === 'detonateAll');
+    if (dt) B.t += 0.1 * this.detonateAll(p, center, dt[1], dt[2], sk, c);
+    const L = (p.bombs ||= []);
+    L.push(B);
+    while (L.length > 8) L.shift();
+    this.broadcast({ k: 'bomb', id: p.id, bid: B.id, sk: sk.id, x: +center.x.toFixed(2), z: +center.z.toFixed(2), t: +(B.t - this.time).toFixed(2), r: sk.hit.r || 4, on: ctr ? undefined : target.id });
+    if (KIT_V2[p.cls] && p.type === 'player') this.linkAfter(p, sk, c, enemies, allies);
+  }
+  detonateAll(p, center, R, coef, sk, c) {
+    const items = [];
+    for (const z of p.zones || []) if (z.chem && !z.follow && Math.hypot(z.x - center.x, z.z - center.z) <= R) items.push({ x: z.x, z: z.z, zone: z });
+    for (const B of p.bombs || []) if (B.c.ctr && Math.hypot(B.c.ctr.x - center.x, B.c.ctr.z - center.z) <= R) items.push({ x: B.c.ctr.x, z: B.c.ctr.z, bomb: B });
+    const far = (o) => Math.hypot(o.x - center.x, o.z - center.z);
+    const list = items.sort((u, v) => far(v) - far(u)).slice(0, 8); // (the farthest first: the blasts walk toward the cask)
+    let rec = POP_REC.get(sk);
+    if (!rec) { rec = { ...sk, fuse: 0, hit: { t: 0, kind: 'aoe', r: 4 }, fx: [['dmg', coef], ['brk', 12]], fxLast: null, seq: null, tiers: [2], coatN: 0, coatMul: null }; POP_REC.set(sk, rec); }
+    list.forEach((it, i) => {
+      const at = this.time + 0.1 * (i + 1);
+      if (it.bomb) { it.bomb.t = Math.min(it.bomb.t, at); return; }
+      p.zones = p.zones.filter((z) => z !== it.zone);
+      (p.delays ||= []).push({ t: at, sk: rec, c: { ...c, hits: 0, lit: true, ctr: { x: it.x, z: it.z }, opening: false }, pop: { zid: it.zone.id, x: +it.x.toFixed(2), z: +it.z.toFixed(2), r: 4, kind: it.zone.kind } });
+    });
+    return list.length;
+  }
+  tickChemist(p) {
+    if (p.bombs?.length) {
+      const due = p.bombs.filter((B) => B.t <= this.time + 1e-6);
+      if (due.length) {
+        p.bombs = p.bombs.filter((B) => B.t > this.time + 1e-6);
+        for (const B of due) {
+          this.broadcast({ k: 'boom', id: p.id, bid: B.id, sk: B.sk.id });
+          this.applySkill(p, B.sk, B.c);
+          // Unstable Stock's price: one blast in ten scorches him for 5% of his health (never the last point)
+          if (p.tal?.unstable && (B.sk.tags || []).includes('blast') && rand() < p.tal.unstable && !p.dead) { p.hp = Math.max(1, p.hp - p.maxHp * 0.05); this.broadcast({ k: 'scorch', id: p.id }); }
+        }
+      }
+    }
+    if (p.deep?.length) {
+      const due = p.deep.filter((d) => d.at <= this.time + 1e-6);
+      if (due.length) {
+        p.deep = p.deep.filter((d) => d.at > this.time + 1e-6);
+        for (const d of due) for (const id of d.ids) { const m = this.mobs.get(id); if (m && !m.dead && !m.def.boss && m.buffs.some((b) => b.coat === 'chill')) this.addBuff(m, { name: 'Deep Chill', cc: 'root', t: d.t, dur: d.t, debuff: true, icon: 'frost' }); }
+      }
+    }
+  }
   // delayed contacts (S9 Aftershock): each fires once at its time, from where the Warden stands then
   tickDelays(p) {
     const due = p.delays.filter((d) => d.t <= this.time + 1e-6);
@@ -4212,7 +4326,8 @@ export class World {
     p.delays = p.delays.filter((d) => d.t > this.time + 1e-6);
     for (const d of due) {
       const h = d.sk.hit || {}, t = d.c.target ? this.entity(d.c.target) : null;
-      this.broadcast({ k: 'aftershock', id: p.id, sk: d.sk.id, x: +p.x.toFixed(2), z: +p.z.toFixed(2), r: h.r || 3, ...(t && h.at === 'target' ? { x: +t.x.toFixed(2), z: +t.z.toFixed(2) } : {}) });
+      if (d.pop) this.broadcast({ k: 'cpop', id: p.id, ...d.pop }); // (S12 Chain Reaction: one of his puddles or clouds goes off)
+      else this.broadcast({ k: 'aftershock', id: p.id, sk: d.sk.id, x: +p.x.toFixed(2), z: +p.z.toFixed(2), r: h.r || 3, ...(t && h.at === 'target' ? { x: +t.x.toFixed(2), z: +t.z.toFixed(2) } : {}) });
       this.applySkill(p, d.sk, d.c);
     }
   }

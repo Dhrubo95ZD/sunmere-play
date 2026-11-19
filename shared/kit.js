@@ -8,7 +8,7 @@
 import { SKILLS } from './classes.js';
 
 // classes on the new kit. Knight first (the pilot slice); the old path goes at S16
-export const KIT_V2 = { knight: true, sandblade: true, warden: true, deadeye: true, ranger: true }; // (S8: the Sandblade's slice; S9: the Warden's; S10: the Deadeye's; S11: the Ranger's)
+export const KIT_V2 = { knight: true, sandblade: true, warden: true, deadeye: true, ranger: true, chemist: true }; // (S8: the Sandblade's slice; S9: the Warden's; S10: the Deadeye's; S11: the Ranger's; S12: the Chemist's)
 export const onKit2 = (cls) => !!KIT_V2[cls];
 
 const K = (id, name, o) => ({ id, name, gcd: true, cast: 0, cost: 15, cd: 0, range: 4, target: 'enemy', kit: 2, ...o });
@@ -21,6 +21,8 @@ export const DE_POW = 0.7;
 export const DE_SKILL = 1.2; // (the six skills over the chain, S10 tuning)
 // the Ranger's numbers (S11): the design's coefficients x this, tuned on ranger11test's dummy and on realfight against the old kit
 export const RA_POW = 0.95, RA_FILL = 0.5, RA_FUSE = 2.1; // (the skills x RA_POW; Quick Shot x RA_FILL of that, so the filler is not most of the damage; the fusions x RA_FUSE of it)
+// the Chemist's numbers (S12): the design's coefficients x CH_POW; Acid Flask x CH_FILL of that; the fusions x CH_FUSE of it
+export const CH_POW = 1.1, CH_FILL = 0.45, CH_FUSE = 2.0;
 const chain = (base, steps) => {
   const list = steps.map((s, i) => ({ ...base, ...s, step: i + 1, steps: steps.length, fx: s.fx, win: { ...(base.win || {}), ...(s.win || {}) }, tags: [...base.tags, ...(i === steps.length - 1 ? ['finisher'] : [])] }));
   for (const s of list) s.chain = list;
@@ -117,9 +119,31 @@ export const CORE = {
       K('r_thousand', 'Thousand Arrows', { icon: 'storm', slot: 7, lvl: 14, cost: 40, cd: 40, range: 24, hit: { t: 0.6, kind: 'aoe', at: 'target', r: 8, n: 18, gap: 0.14 }, fx: [['dmg', d(0.2)], ['slow', 30, 2], ['brk', 3]], tags: ['arrow', 'rain'], tier: 2, desc: 'Loose arrow after arrow high over the machine: 3 s of rain, eighteen waves over 8 m.' }),
     ];
   })(),
+  // the Chemist (combat_design_fusion.md 4.3 and combat_design.md 5.6, S12): sets up the board, then lights it. Acid Flask's
+  // chain and Tar Pot coat the machines (Corroded, Tarred), Tar Pot leaves a puddle (sim.js zones), Spark Gear's hot arc sets
+  // Tarred machines alight and jumps between Corroded ones, Volatile Mixture and Grand Detonation are bombs that lie on the
+  // ground and burst when their fuse burns out (fuse: s after the landing contact; sim.js p.bombs), Chill Powder is a cone of
+  // cold-pack salts (Chilled), Rod Vault a pole vault back. Every throw is a 'throw' (thrown on the run: move), every bomb a
+  // 'bomb' and a 'blast'. Ids keep the old kit's, so its clips and talents carry over. Signature: Tar Pot > Spark Gear
+  chemist: (() => {
+    const P = CH_POW, d = (v) => +(v * P).toFixed(3), q = (v) => d(v * CH_FILL);
+    return [
+      chain(K('c_acid', 'Acid Flask', { icon: 'acid', slot: 1, lvl: 1, cost: 0, cd: 0, range: 22, move: true, hit: { t: 0.42, kind: 'proj', speed: 26, arc: 0.6 }, tags: ['throw', 'acid', 'chain'], desc: 'A three-step chain of acid flasks thrown on the run, the third a heavier one that splashes 2.5 m. Each flask leaves a Corroded stack on what it strikes (armour 3% thinner a stack, up to five). Costs nothing and builds Reagents.' }), [
+        { fx: [['dmg', q(0.9)], ['coat', 'corrode', 8], ['brk', 3], ['res', 5]], win: { lock: 0.5 }, tier: 1 },
+        { fx: [['dmg', q(0.9)], ['coat', 'corrode', 8], ['brk', 3], ['res', 5]], win: { lock: 0.5 }, tier: 1 },
+        { hit: { t: 0.46, kind: 'proj', speed: 26, arc: 0.7, r: 2.5 }, fx: [['dmg', q(1.3)], ['coat', 'corrode', 8], ['brk', 8], ['res', 6]], win: { lock: 0.6 }, tier: 2 },
+      ]),
+      K('c_tar', 'Tar Pot', { icon: 'tar', slot: 2, lvl: 1, cost: 15, cd: 12, range: 20, hit: { t: 0.6, kind: 'aoe', at: 'target', r: 3 }, fx: [['dmg', d(0.6)], ['coat', 'tar', 8], ['zone', 'tar', 0, 8, 4], ['brk', 8]], zoneSlow: 50, tags: ['throw', 'puddle'], tier: 2, desc: 'Swing an iron pot of pine tar underarm: it bursts on the machine in a 4 m black puddle that lies 8 s. Machines in it are slowed by half and Tarred (any heat sets them alight).' }),
+      K('c_spark', 'Spark Gear', { icon: 'spark', slot: 3, lvl: 3, cost: 18, cd: 7, range: 14, hit: { t: 0.36, kind: 'proj', speed: 80 }, fx: [['dmg', d(1.1)], ['arc', 2, 6, 0.6], ['brk', 12]], tags: ['spark', 'heat', 'rod'], tier: 2, desc: 'Spin the toothed gear on the rod against its flint: a hot spark arc leaps to the machine and on to two more within 6 m (60%). The sparks set Tarred machines alight and jump between Corroded ones.' }),
+      K('c_volatile', 'Volatile Mixture', { icon: 'volatile', slot: 4, lvl: 5, cost: 20, cd: 8, range: 22, fuse: 1.2, hit: { t: 0.5, kind: 'aoe', at: 'spot', r: 5 }, fx: [['dmg', d(2.2)], ['launch', 0.8], ['brk', 25]], tags: ['throw', 'blast', 'bomb'], tier: 3, desc: 'Shake a flask until it hisses and throw it where the machine stands: it lies on the ground, and 1.2 s later it bursts. Everything within 5 m is struck and the small machines are thrown up.' }),
+      K('c_chill', 'Chill Powder', { icon: 'frost', slot: 5, lvl: 8, cost: 15, cd: 10, range: 10, hit: { t: 0.36, kind: 'cone', r: 10, cone: 70 }, fx: [['dmg', d(0.7)], ['coat', 'chill', 5], ['brk', 10]], tags: ['powder', 'cold'], tier: 2, desc: 'Thrust the rod and blow a cone of cold-pack salts 10 m ahead: every machine in it is Chilled for 5 s (slowed 40%; a heavy blow or a blast shatters the frost).' }),
+      K('c_vault', 'Rod Vault', { icon: 'vault', slot: 6, lvl: 11, cost: 10, cd: 14, target: 'self', range: 0, selfDone: true, hit: { t: 0.2, kind: 'self' }, fx: [['back', 9], ['smokeAt', 3, 20, 3]], tags: ['vault', 'jump'], tier: 2, desc: 'Plant the rod and vault 9 m back, leaving a puff of smoke where you stood: machines in it miss 20% of their swings for 3 s.' }),
+      K('c_grand', 'Grand Detonation', { icon: 'cask', slot: 7, lvl: 14, cost: 40, cd: 40, range: 24, fuse: 2.0, hit: { t: 0.62, kind: 'aoe', at: 'spot', r: 8 }, fx: [['dmg', d(4.4)], ['launch', 1.0], ['brk', 60]], tags: ['throw', 'blast', 'bomb'], tier: 4, desc: 'Heave an iron cask of blasting powder underarm with both hands: it rolls to a stop where the machine stood, its fuse burns 2 s, and it bursts over 8 m, throwing the machines up.' }),
+    ];
+  })(),
 };
 // the dodge (feel.js DODGE does the move): it counts as an input, and always as landed (gate 'dodge')
-export const DODGES = { knight: { id: 'dodge', name: 'Shoulder Roll', icon: 'evade', tags: ['dash'] }, sandblade: { id: 'dodge', name: 'Sidestep', icon: 'evade', tags: ['dash'] }, warden: { id: 'dodge', name: 'Brace', icon: 'shield', tags: ['guard', 'shield'] }, deadeye: { id: 'dodge', name: 'Slide', icon: 'evade', tags: ['dash', 'slide'] }, ranger: { id: 'dodge', name: 'Tumble', icon: 'evade', tags: ['dash', 'roll'] } }; // (S11: the Ranger's roll keeps the arrow nocked: the Quick Shot chain goes on) // (S10: the Deadeye's knee slide; with Snap Shot held it fires out of it) // (S9: the Warden does not move: he braces behind the tower shield)
+export const DODGES = { knight: { id: 'dodge', name: 'Shoulder Roll', icon: 'evade', tags: ['dash'] }, sandblade: { id: 'dodge', name: 'Sidestep', icon: 'evade', tags: ['dash'] }, warden: { id: 'dodge', name: 'Brace', icon: 'shield', tags: ['guard', 'shield'] }, deadeye: { id: 'dodge', name: 'Slide', icon: 'evade', tags: ['dash', 'slide'] }, ranger: { id: 'dodge', name: 'Tumble', icon: 'evade', tags: ['dash', 'roll'] }, chemist: { id: 'dodge', name: 'Side Hop', icon: 'evade', tags: ['dash', 'hop'] } }; // (S12: the Chemist's short hop, a puff of smoke left behind) // (S11: the Ranger's roll keeps the arrow nocked: the Quick Shot chain goes on) // (S10: the Deadeye's knee slide; with Snap Shot held it fires out of it) // (S9: the Warden does not move: he braces behind the tower shield)
 export const PARRY = { res: 20, stagger: 1.2 }; // a parry: Valor back and the attacker Staggered
 
 export const CORE_BY_ID = {};

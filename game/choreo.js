@@ -3263,6 +3263,114 @@ for (const cls of Object.keys(TRAIL)) {
   slide('dodgef_deadeye', true);
 }
 
+// ============================== S12: the Chemist's new kit (combat_design_fusion.md 4.3) ==============================
+// The rod stays in the right hand; flasks, the tar pot and the cask go out of the left (both hands for the cask) on the
+// authored clips (Throw_Underhand, Staff_Push_Enter/_Shoot, Leap_Rise, Air_Hang_Loop, Slam_Land, Pole_Vault) with the arms
+// keyed. Contact times come from the new kit (kit.js / fusions.js; the legacy records share the ids, so every DEF names its
+// hit). A thrown flask lands on the server's contact; a bomb's burst, the puddles and clouds and the arcs between machines
+// are drawn from the server's words (game.js 'bomb', 'boom', 'czone', 'cpop', 'sparkarc'). Flasks are blue, green or
+// white; at most one ring a beat.
+{
+  const K12 = (id, step) => { const s = CORE_BY_ID[id]; return step && s?.chain ? s.chain[step - 1] : s; };
+  const TS = (h, i) => (h.ts ? h.ts[Math.min(i, h.ts.length - 1)] : h.t + i * (h.gap || 0));
+  const G = P(guard('chemist'), { spine: [6, 0, 0] }), GL = P(G, LG);
+  const ROD = { armR: [-30, 0, -10], foreR: [-70, 0, 0], handR: [10, 0, 0] };
+  const C12 = (id, dur, keys, ev, o) => (DEF[id] = C('chemist', dur, 'full', keys, ev, o));
+  const WIND = P(ROD, { spine: [-6, 40, 0], chest: [-8, 20, 0], armL: [-150, 30, 50], foreL: [-90, 0, 0], handL: [-30, 0, 0], head: [0, -30, 0] });
+  const REL = P(ROD, { spine: [24, -30, 0], chest: [10, -20, 0], armL: [-110, -10, 10], foreL: [-10, 0, 0], handL: [20, 0, 0], head: [8, 10, 0] });
+  const SIDEW = P(ROD, { spine: [8, 50, 0], armL: [-40, -20, 90], foreL: [-60, 0, 0], handL: [0, 0, 0] });
+  const SIDER = P(ROD, { spine: [20, -40, 0], armL: [-90, 30, 40], foreL: [-10, 0, 0] });
+  const PUSHW = P({ spine: [-4, 35, 0], chest: [-4, 14, 0], head: [0, -30, 0], armR: [-60, 0, -10], foreR: [-60, 0, 0], armL: [-60, 0, 30], foreL: [-80, 0, 0] });
+  const PUSH = P({ spine: [18, -12, 0], chest: [6, -6, 0], head: [4, 10, 0], armR: [-95, 0, -6], foreR: [0, 0, 0], handR: [30, 0, 0], armL: [-90, 0, 10], foreL: [-20, 0, 0] });
+  const UNDER0 = P(ROD, { spine: [30, 20, 0], armL: [30, 0, 20], foreL: [-30, 0, 0], head: [20, 0, 0] }), UNDER1 = P(ROD, { spine: [24, -20, 0], armL: [-70, 0, 10], foreL: [-10, 0, 0], handL: [-30, 0, 0] });
+  const CASK0 = P({ spine: [44, 0, 0], armR: [10, 0, -10], foreR: [-20, 0, 0], armL: [10, 0, 10], foreL: [-20, 0, 0], head: [24, 0, 0] }), CASK1 = P({ spine: [-8, 0, 0], armR: [-100, 0, -10], foreR: [-8, 0, 0], armL: [-100, 0, 10], foreL: [-8, 0, 0] });
+  const out = (pose, legs, g = 0.5) => mixPose(P(pose, legs), GL, g);
+  const flask = (t, item, fly, o = {}) => ({ t, e: 'proj', kind: 'flask', item, from: 'L', arc: 0.6, impact: 'flaskland', spin: 14, time: Math.max(0.1, fly), ...o });
+  const shake = (t, amt) => ({ t, e: 'shake', amt });
+  // ---- Acid Flask: three flasks on the run (upper body): overhand, a side-arm from the other side, a heavier overhand
+  const acid = (id, step) => {
+    const h = K12('c_acid', step).hit, d = 0.62, rel = h.t - 0.12, side = step === 2;
+    const keys = side ? [k(0, GL), k((rel - 0.16) / d, P(SIDEW, L.stepBack), { root: [0, -0.06, -0.06] }), k(rel / d, P(SIDER, L.lungeL), { root: [0, -0.14, 0.2], e: 'snap' }), k(0.82, out(SIDER, L.lungeL)), k(1, GL)]
+      : [k(0, GL), k((rel - 0.16) / d, P(WIND, L.stepBack), { root: [0, -0.04, -0.1] }), k(rel / d, P(REL, L.lungeL), { root: [0, -0.14, 0.22], e: 'snap' }), k(0.82, out(REL, L.lungeL)), k(1, GL)];
+    C12(id, d, keys, [{ t: 0.03, e: 'holdItem', side: 'L', item: 'flaskAcid', on: true }, { t: rel / d, e: 'holdItem', side: 'L', item: 'flaskAcid', on: false }, flask(rel / d, 'flaskAcid', 0.12, { impact: 'acid', r: step === 3 ? 2.5 : 0, arc: step === 3 ? 0.8 : 0.5 }), { t: rel / d, e: 'sound', s: 'whoosh' }], { skill: 'c_acid', hit: h, step });
+  };
+  acid('c_acid', 1); acid('c_acid_2', 2); acid('c_acid_3', 3);
+  for (const id of ['c_acid_2', 'c_acid_3']) BLEND.add(id);
+  // ---- Tar Pot (0.9 s): Throw_Underhand, the iron pot swung low and let go; it bursts on the machine on the contact
+  { const D = 0.9, h = K12('c_tar').hit, rel = 0.36;
+    C12('c_tar', D, [k(0, GL), k(0.2 / D, P(UNDER0, L.lungeL), { root: [0, -0.2, 0.1] }), k(rel / D, P(UNDER1, L.lungeL), { root: [0, -0.2, 0.15], e: 'snap' }), k(0.8, out(UNDER1, L.lungeL)), k(1, GL)],
+      [{ t: 0.06 / D, e: 'holdItem', side: 'L', item: 'pot', on: true }, { t: rel / D, e: 'holdItem', side: 'L', item: 'pot', on: false }, flask(rel / D, 'pot', h.t - rel, { arc: 0.7, ground: true, spin: 6 }), { t: rel / D, e: 'sound', s: 'whoosh' }],
+      { hit: h, ual: { mask: 'body', segs: [['Throw_Underhand', 0, 0.6, 0, 0.667]], end: 0.6 } }); }
+  // ---- Spark Gear (0.75 s): the gear spun against its flint (sparks), the rod pushed out and the arc leaps to the machine
+  const rodPush = (id, h, D, ev, o = {}) => C12(id, D, [k(0, GL), k(Math.max(0.05, h.t - 0.2) / D, P(PUSHW, L.stepBack), { root: [0, -0.03, -0.06] }), k(h.t / D, P(PUSH, L.lungeL), { root: [0, -0.1, 0.14], e: 'snap' }), k(0.72, out(PUSH, L.lungeL, 0.35)), k(1, GL)], ev,
+    { hit: h, ual: { mask: 'body', segs: [['Staff_Push_Enter', 0, Math.max(0.05, h.t - 0.15), 0.1, 0.5], ['Staff_Push_Shoot', Math.max(0.05, h.t - 0.15), D, 0, 0.5]], end: D * 0.8 }, ...o });
+  { const h = K12('c_spark').hit;
+    rodPush('c_spark', h, 0.75, [{ t: 0.02, e: 'spinGear', dur: 0.5 }, { t: 0.04, e: 'sparks', at: 'rod', dur: 0.22 }, { t: 'hit', e: 'rodArc' }, { t: 'hit', e: 'sound', s: 'hiss' }]); }
+  // ---- Volatile Mixture (0.8 s): a quick shake (the flask hisses), wound back and thrown; it lies there with its fuse burning
+  { const D = 0.8, h = K12('c_volatile').hit, rel = 0.34;
+    const SH = (i) => P(ROD, { spine: [6, 10, 0], armL: [-70, 0, 20], foreL: [-100 + (i % 2) * 30, 0, 0], handL: [-30 + (i % 2) * 40, 0, 0], head: [20, 0, 0] });
+    C12('c_volatile', D, [k(0, GL), k(0.06 / D, SH(0)), k(0.12 / D, SH(1)), k(0.18 / D, SH(2)), k(0.26 / D, P(WIND, L.stepBack), { root: [0, -0.04, -0.12] }), k(rel / D, P(REL, L.lungeL), { root: [0, -0.16, 0.24], e: 'snap' }), k(0.84, out(REL, L.lungeL)), k(1, GL)],
+      [{ t: 0.02, e: 'holdItem', side: 'L', item: 'flaskElixir', on: true }, { t: 0.04, e: 'trailSmoke', side: 'L', dur: 0.25 }, { t: rel / D, e: 'holdItem', side: 'L', item: 'flaskElixir', on: false }, flask(rel / D, 'flaskElixir', h.t - rel, { arc: 1.0, ground: true, spin: 16 }), { t: rel / D, e: 'sound', s: 'whoosh' }], { hit: h }); }
+  // ---- Chill Powder (0.8 s): the rod thrust and a cone of cold-pack salts blown 10 m ahead (white, rime on what it touches)
+  { const h = K12('c_chill').hit;
+    rodPush('c_chill', h, 0.8, [{ t: 0.03, e: 'sound', s: 'whoosh' }, { t: (h.t - 0.04) / 0.8, e: 'cloud', kind: 'chill', r: 9, cone: true }, { t: 'hit', e: 'sound', s: 'hiss' }]); }
+  // ---- Rod Vault: the old vault back on the keys, with the body's take-off, hang and landing
+  DEF.c_vault = { ...DEF.c_vault, hit: K12('c_vault').hit, events: [...DEF.c_vault.events, { t: 0.12, e: 'sound', s: 'whoosh' }], ual: { mask: 'body', segs: [['Leap_Rise', 0.1, 0.3, 0.05, 0.4], ['Air_Hang_Loop', 0.3, 0.62, 0, 0.32], ['Slam_Land', 0.72, 1.0, 0.1, 0.5]], end: 0.95 } };
+  // ---- Grand Detonation (1.2 s): the cask hugged low and heaved underarm with both hands, rolling to a stop by the machine
+  const cask = (id, h, D, rel, ev = [], o = {}) => C12(id, D, [k(0, GL), k(0.15 / D, P(CASK0, L.deep), { root: R.deep }), k((rel - 0.12) / D, P(CASK0, { spine: [48, 0, 0] }, L.deep), { root: [0, -0.4, -0.06] }), k(rel / D, P(CASK1, L.stepL), { root: [0, 0.02, 0.2], e: 'snap' }), k(0.82, out(CASK1, L.stepL)), k(1, GL)],
+    [{ t: 0.04 / D, e: 'holdItem', side: 'both', item: 'cask', on: true }, { t: rel / D, e: 'holdItem', side: 'both', item: 'cask', on: false }, { t: rel / D, e: 'proj', kind: 'flask', item: 'cask', from: 'chest', arc: 0.25, impact: 'flaskland', ground: true, spin: 4, time: Math.max(0.1, h.t - rel) }, { t: rel / D, e: 'sound', s: 'whoosh' }, ...ev],
+    { hit: h, ual: { mask: 'body', segs: [['Throw_Underhand', 0, Math.min(D, rel + 0.3), 0, 0.667]], end: Math.min(D, rel + 0.3) }, ...o });
+  cask('c_grand', K12('c_grand').hit, 1.2, 0.5);
+
+  // ---- the fusions (each opens fx.fuseBudget; one light, at most one ring a beat)
+  // Tarfire (0.75 s, the signature): the gear spun, the rod pushed down at the puddle and a spark ribbon runs into the tar;
+  // the flame sheets rise from the puddle's edge inward (the server's czone turns it to fire)
+  { const f = FUSION_BY_ID.cf_tarfire;
+    rodPush('cf_tarfire', f.hit, 0.75, [{ t: 0.01, e: 'spinGear', dur: 0.4 }, { t: 0.02, e: 'sparks', at: 'rod', dur: 0.2 }, { t: 'hit', e: 'rodArc', ground: true, color: '#ffe6b8', dur: 0.3 }, { t: 'hit', e: 'sound', s: 'fire' }, shake('hit', 0.3)]); }
+  // Corrosive Charge and Thermal Shock (0.75 s): the bomb thrown straight off the last throw (the acid flask green, the cold
+  // flask white); the burst is the server's boom
+  for (const [id, item] of [['cf_corrosive', 'flaskAcid'], ['cf_thermalshock', 'flaskLime']]) {
+    const f = FUSION_BY_ID[id], D = 0.75, rel = 0.3;
+    C12(id, D, [k(0, P(WIND, L.stepBack), { root: [0, -0.04, -0.1] }), k(0.16 / D, P(WIND, { spine: [-10, 46, 0] }, L.stepBack), { root: [0, -0.04, -0.14] }), k(rel / D, P(REL, L.lungeL), { root: [0, -0.16, 0.24], e: 'snap' }), k(0.82, out(REL, L.lungeL)), k(1, GL)],
+      [{ t: 0.01, e: 'holdItem', side: 'L', item, on: true }, { t: rel / D, e: 'holdItem', side: 'L', item, on: false }, flask(rel / D, item, f.hit.t - rel, { arc: 0.9, ground: true, spin: 16 }), { t: rel / D, e: 'sound', s: 'whoosh' }], {});
+  }
+  // Pitch Vault (0.95 s): a second, lower vault back off the rod with the pot tipped out behind him (tar spraying down along
+  // the path; the strip itself is the server's czone)
+  { const D = 0.95, h = FUSION_BY_ID.cf_pitchvault.hit;
+    C12('cf_pitchvault', D, [k(0, P(ROD, { spine: [24, 0, 0] }, L.deep), { root: [0, -0.3, 0] }), ...leapRoot(D, { t0: 0.04, t1: 0.26, t2: 0.36, t3: 0.56, h: 1.7, float: 0.05, dist: -4, atTop: 0.4, atEnd: 0.55 }),
+      k(0.6, P(G, { spine: [24, 0, 0] }, L.deep), { root: [0, -0.32, -4] }), k(1, GL, { root: [0, 0, -4], e: 'smooth' })],
+      [{ t: 0.02, e: 'dash' }, { t: 0.02, e: 'holdItem', side: 'L', item: 'pot', on: true }, { t: 0.1 / D, e: 'spray', dur: 0.35 }, { t: h.t / D, e: 'holdItem', side: 'L', item: 'pot', on: false }, { t: 'hit', e: 'impact', kind: 'tar', at: 'target' }, { t: 0.58, e: 'dust' }],
+      { endRoot: [0, 0, -4], ual: { mask: 'body', segs: [['Leap_Rise', 0, 0.26, 0.05, 0.4], ['Air_Hang_Loop', 0.26, 0.4, 0, 0.14], ['Slam_Land', 0.5, D, 0.1, 0.5]], end: 0.9 } }); }
+  // Flash Steam (0.8 s): the hot rod driven into the salts: a huge cone of white steam rolls 10 m forward, a hiss and a boom
+  { const f = FUSION_BY_ID.cf_flashsteam;
+    rodPush('cf_flashsteam', f.hit, 0.8, [{ t: 0.01, e: 'sparks', at: 'rod', dur: 0.2 }, { t: (f.hit.t - 0.02) / 0.8, e: 'cloud', kind: 'steam', r: 10, cone: true }, { t: 'hit', e: 'sound', s: 'hiss' }, { t: 'hit', e: 'sound', s: 'boom' }, shake('hit', 0.45)]); }
+  // Chain Reaction (1.2 s): the cask heaved; his puddles and bombs go off in turn toward it (the server's cpop and boom)
+  cask('cf_chainreaction', FUSION_BY_ID.cf_chainreaction.hit, 1.2, 0.5);
+  // Blast Vault (1.3 s): the rod planted on his own bomb (it bursts under him, the server's first contact), flung 12 m up on
+  // a 16 m arc onto the machine with a smoke ribbon behind, the landing slam T4 with one ring and a crater
+  { const D = 1.3, h = FUSION_BY_ID.cf_blastvault.hit, tl = TS(h, 1);
+    C12('cf_blastvault', D, [k(0, P(ROD, { spine: [26, 0, 0] }, L.deep), { root: [0, -0.32, 0] }), ...leapRoot(D, { t0: 0.1, t1: 0.48, t2: 0.62, t3: tl, h: 12, float: 0.2, dist: 14, atTop: 0.5, atEnd: 0.62 }), k(1, GL, { root: [0, 0, 14], e: 'smooth' })],
+      [{ t: 'hit', e: 'impact', kind: 'blast', at: 'self', r: 3 }, { t: 0.1 / D, e: 'leap' }, { t: 0.1 / D, e: 'camlift', up: 6, back: 5, dur: 1.2 }, { t: 0.12 / D, e: 'selfSmoke', dur: 0.75 },
+        { t: 'hit2', e: 'impact', kind: 'earth', at: 'self', r: 3.5 }, { t: 'hit2', e: 'decal', kind: 'crater', r: 3 }, shake('hit2', 0.7)],
+      { endRoot: [0, 0, 14], toTarget: { gap: 1.2, max: 16 }, ual: { mask: 'full', segs: [['Pole_Vault', 0, 0.22, 0.3, 0.6], ['Leap_Rise', 0.2, 0.48, 0.2, 0.458], ['Air_Hang_Loop', 0.48, 0.62, 0, 0.2], ['Dive_Strike', 0.62, tl], ['Slam_Land', tl, D]] } }); }
+  // Galvanic Arc (0.7 s): the gear spun on the rod; the arc goes to the machine and on through every Corroded one (sparkarc)
+  rodPush('cf_galvanic', FUSION_BY_ID.cf_galvanic.hit, 0.7, [{ t: 0.01, e: 'spinGear', dur: 0.45 }, { t: 0.02, e: 'sparks', at: 'rod', dur: 0.2 }, { t: 'hit', e: 'rodArc', color: '#b8e4ff', dur: 0.3 }, { t: 'hit', e: 'sound', s: 'hiss' }, shake('hit', 0.3)]);
+  // the Furnace Cask (1.2 s, the triad): the cask rolled low into the burning tar
+  cask('ct_furnacedrum', FUSION_BY_ID.ct_furnacedrum.hit, 1.2, 0.48, [{ t: 0.02, e: 'sound', s: 'fire' }]);
+}
+// the Chemist's Side Hop (S12): a short 4 m hop the way he moves, a puff of smoke left where he was, the rod held up
+{
+  const G = P(guard('chemist'), { spine: [8, 0, 0] }), GL = P(G, LG), RODUP = { armR: [-60, 0, -16], foreR: [-80, 0, 0] };
+  const hop = (id, dir) => (DEF[id] = C('chemist', 0.45, 'full', [
+    k(0, GL),
+    k(0.07 / 0.45, P(G, RODUP, { spine: [22, 0, 0] }, L.deep), { root: [0, -0.3, 0.1 * dir] }),
+    k(0.2 / 0.45, P(G, RODUP, { spine: [4, 0, 0] }, L.tuck), { root: [0, 0.45, 2.0 * dir], e: 'out' }),
+    k(0.32 / 0.45, P(G, RODUP, { spine: [18, 0, 0] }, L.deep), { root: [0, -0.3, 3.9 * dir], e: 'in' }),
+    k(1, GL, { root: [0, 0, 4 * dir] }),
+  ], [{ t: 0.02, e: 'sound', s: 'gust' }, { t: 0.06 / 0.45, e: 'cloud', kind: 'smoke', r: 1.3, at: 'self' }, { t: 0.32 / 0.45, e: 'dust' }], { endRoot: [0, 0, 4 * dir], dodge: true }));
+  hop('dodge_chemist', 1); hop('dodgeb_chemist', -1);
+}
+
 // compile: resolve 'hit', 'hit2'.. into normalized times from the skill's impact timing
 export const CHOREO = {};
 for (const [id, def] of Object.entries(DEF)) {

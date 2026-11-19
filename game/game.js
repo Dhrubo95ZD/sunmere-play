@@ -495,6 +495,17 @@ export async function startGame() {
       case 'bank': { const a = entities.get(ev.from), b = entities.get(ev.to); if (a && b) { const pa = a.pos.clone().setY(a.pos.y + 1), pb = b.pos.clone().setY(b.pos.y + 1), d = pb.clone().sub(pa).normalize(); fx.emit('sparks', pa, { n: 6, dir: d, color: '#ffd890' }); fx.emit('sparks', pb, { n: 5, color: '#ffe0a8' }); fx.sound('hit'); } break; }
       // the Ranger (S11): his snares on the ground (placed, closing, gone or burst by a trap fusion), Ricochet Bodkin's path from
       // machine to machine, a held draw let go
+      // the Chemist (S12): his puddles and clouds (a carried one follows him: Closed Lab), bombs lying with a burning fuse and their
+      // bursts, Chain Reaction's pops, Spark Gear's and Galvanic Arc's arcs from machine to machine, Bitter Draught, Unstable Stock
+      case 'czone': { const own = ev.id === me ? local : entities.get(ev.id); fx.chemZone?.(ev, ev.follow && own ? () => own.pos : null); break; }
+      case 'czoneEnd': fx.chemZoneEnd?.(ev.zid); break;
+      case 'bomb': { const on = ev.on ? entities.get(ev.on) : null; fx.bombPlace?.(ev, on ? () => on.pos : null); break; }
+      case 'bombGone': fx.bombGone?.(ev.bid); break;
+      case 'boom': fx.chemBoom?.(ev); break;
+      case 'cpop': fx.chemPop?.(ev); break;
+      case 'sparkarc': { const pts = (ev.path || []).map((id) => entities.get(id)?.pos).filter(Boolean); if (pts.length > 1) fx.sparkPath?.(pts, !!ev.g); break; }
+      case 'draught': { const v = ev.id === me ? local : entities.get(ev.id); if (v) { fx.emit('drops', v.pos.clone().setY(v.pos.y + 1.5), { n: 8, color: '#bfe8ff' }); fx.sound('glass'); } break; }
+      case 'scorch': { const v = ev.id === me ? local : entities.get(ev.id); if (v) { fx.emit('flame', v.pos.clone().setY(v.pos.y + 0.6), { n: 6, size: 0.6 }); fx.sound('hiss'); } break; }
       case 'trap': fx.trapPlace?.(ev.tid, ev.x, ev.z); break;
       case 'trapsnap': fx.trapSnap?.(ev.tid); break;
       case 'trapgone': fx.trapGone?.(ev.tid, ev.burst); break;

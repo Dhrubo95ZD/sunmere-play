@@ -18,7 +18,7 @@ import { STORY } from './story.js';
 import { LINK, compileKit, fusionUnlocked } from './fusions.js';
 
 export { TREE_V };
-export const TREE_CLASSES = new Set(['knight', 'sandblade', 'warden', 'deadeye', 'ranger']); // classes on the Web (the others keep talents until their slice: S8-S13)
+export const TREE_CLASSES = new Set(['knight', 'sandblade', 'warden', 'deadeye', 'ranger', 'chemist']); // classes on the Web (the others keep talents until their slice: S8-S13)
 export const onWeb = (cls) => TREE_CLASSES.has(cls);
 export const TREE_FREE_LEVEL = 20; // refunds and resets are free at this level and below
 export const TREE_FREE_DAYS = 14; // after the move from talents
@@ -173,6 +173,12 @@ export function applyMods(r, mods = {}) {
       case 'addFx': for (const e of v) r.fx.push([...e]); break;
       case 'bounceN': fxSet(r, 'bounce', (e) => [e[0], v, ...e.slice(2)]); break;
       case 'segW': if (r.hit) r.hit.segW = v; break;
+      // (S12, the Chemist) Cluster: the bomb splits into three smaller ones that land side by side (0.42 each, 60% of the
+      // reach, 0.12 s apart); Splash Flask: every flask splashes; Sticky Charge: the bomb sticks to the machine and goes with it
+      case 'cluster': if (r.hit && !r.hit.cluster) { const t0 = r.hit.ts ? r.hit.ts[0] : r.hit.t; r.hit = { ...r.hit, t: t0, n: 3, ts: [t0, +(t0 + 0.12).toFixed(3), +(t0 + 0.26).toFixed(3)], r: +((r.hit.r || 4) * 0.6).toFixed(2), cluster: 1.8 }; delete r.hit.gap; fxSet(r, 'dmg', (e) => [e[0], +(e[1] * 0.42).toFixed(3), ...e.slice(2)]); const tl = r.tiers?.[r.tiers.length - 1] ?? r.tier ?? 3; r.tiers = [2, 2, tl]; } break;
+      case 'splash': if (r.hit) r.hit.r = Math.max(r.hit.r || 0, v); break;
+      case 'sticky': if (r.hit) r.hit.at = 'target'; r.sticky = true; break;
+      case 'hotTar': r.hotTar = true; if (!r.tags.includes('heat')) r.tags.push('heat'); break;
       default: r[k] = v; // noTarget, single, allLifted, step3, shape, field, onRun, charges, split, pierce, chain, coat, parryWin...
     }
   }

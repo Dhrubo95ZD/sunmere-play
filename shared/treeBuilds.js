@@ -29,6 +29,14 @@ export const TREE_BUILDS = {
     { id: 'forge', name: 'The Forge', desc: 'A hot hammer: Forge-Heated Head, Steam Plate, Bedrock, Iron Weight and the Common Ground weight.',
       want: ['w_presence', 'wf_form_charge', 'wf_form_split', 'w_steamplate', 'w_bedrock', 'forge_head', 'w_fortify', 'wf_form_blow', 'w_ironskin', 'cg_thick'] },
   ],
+  chemist: [
+    { id: 'board', name: 'Set the Board', desc: 'Puddles and fire: Measured Pours, Hot Tar or Pitch Wall, Spark Gap, Catalyst, the Furnace Cask and Closed Lab, with the fusion power of the Common Ground.',
+      want: ['c_measured', 'cf_form_acid', 'c_sparkgap', 'cf_form_tar', 'live_rod', 'c_catalyst', 'blast_vault', 'c_heavycask', 'furnace_cask', 'cg_follow'] },
+    { id: 'reactions', name: 'Reactive Chemistry', desc: 'Coats for the whole group: Etching Acid, Flashbang, Deep Chill, Bitter Draught, Cold Packs and Reactive Chemistry.',
+      want: ['c_measured', 'cf_form_acid', 'c_flash', 'cf_form_chill', 'cf_form_volatile', 'c_draught', 'c_coldpacks', 'reactive_chemistry', 'c_sparkgap', 'live_rod'] },
+    { id: 'cold', name: 'Cold Chemistry', desc: 'Frost in place of fire: Flashbang, Frost Line or Deep Chill, Steady Mixing, Cold Chemistry, Bench Chemist and the Furnace Cask (Frost Cask).',
+      want: ['c_flash', 'cf_form_chill', 'c_steady', 'cold_chemistry', 'c_sparkgap', 'cf_form_tar', 'cf_form_volatile', 'bench_chemist', 'c_measured', 'furnace_cask'] },
+  ],
   ranger: [
     { id: 'run', name: 'Never Still', desc: "Arrows on the run: Light Step, Bodkin Points, Fletcher's Kit, Steady Breath, Hunter's Chalk and Never Still, with the fusion power of the Common Ground.",
       want: ['r_lightstep', 'rf_form_quick', 'r_fletcher', 'r_rapid', 'rf_form_pierce', 'r_chalk', 'restless', 'long_draw', 'r_morearrows', 'cg_follow'] },

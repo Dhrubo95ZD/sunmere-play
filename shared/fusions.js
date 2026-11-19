@@ -6,7 +6,7 @@
 // Anvil Fall their own DEFs on the authored hero clips (client/game/choreo.js, 'ual'); the rest still name an existing one.
 // Imports only from shared/.
 import { SKILLS, SKILL_BY_ID } from './classes.js';
-import { KIT_V2, CORE, CORE_BY_ID, DODGES, DE_POW, RA_POW, RA_FUSE } from './kit.js';
+import { KIT_V2, CORE, CORE_BY_ID, DODGES, DE_POW, RA_POW, RA_FUSE, CH_POW, CH_FUSE } from './kit.js';
 
 export const LINK = { win: 1.0, afterLock: 0.25, tick: 0.05, grace: 0.15 }; // window from contact; never shorter than the lock + 0.25 s; one tick of grace; 0.15 s for a claimed chain
 export const MASTERY = [25, 100, 300]; // landed uses for ranks I, II, III (a Book badge; III adds the extra beat)
@@ -280,6 +280,64 @@ export const FUSIONS = {
         tiers: [3, 3, 5], tags: ['rain', 'trap', 'triad'], tier: 5, choreo: 'rt_closedground', hint: 'What the trap holds, the sky can find.',
         carry: { r_volley: { widesky: { r: 1.25 }, bodkinhail: { addFx: [['debuff', 'armor', 10, 8]] } } }, ai: { role: 'burst' },
         desc: 'Three volleys, one after another, on everything the tripwire holds: 1.15x a wave, and the last breaks them.' }),
+    ];
+  })(),
+  // the Chemist (combat_design_fusion.md 4.3, S12). Power as the Ranger's (the fusions x CH_FUSE of the design's numbers to
+  // reach their share). Everything is real chemistry: tar and pine pitch, flame sheets low off a puddle's edge, cold-pack
+  // salts and rime, acid in a low green-grey cloud, steam, sparks jumping between metal, smoke and blasting powder; flask
+  // liquids are green, blue, white or clear (never amber or red). at: 'puddle' is round his nearest puddle (a burning one
+  // first) or the machine; at: 'spot' where the machine stood at the throw; at: 'here' where the fusion began; fuse: s from
+  // the landing to the burst (sim.js p.bombs). The triad's id keeps its art's name; it is a cask, never a drum
+  chemist: (() => {
+    const P = CH_POW * CH_FUSE, d = (v) => +(v * P).toFixed(3);
+    return [
+      F('cf_tarfire', 'Tarfire', { cls: 'chemist', icon: 'flame', from: 'c_tar', to: 'c_spark', lvl: 5, need: 'hit', cd: 14, extra: 10, range: 16,
+        hit: { t: 0.34, kind: 'aoe', at: 'puddle', r: 4.5 }, fx: [['dmg', d(1.3)], ['ignitePuddle', 6, 0.5], ['brk', 30]], tiers: [4],
+        tags: ['heat', 'spark', 'fusion'], choreo: 'cf_tarfire', gateText: 'Tar Pot must strike a machine', hint: 'Tar burns.',
+        carry: { a: { pitchwall: { wall: 1 }, hottar: { pow: 0.15 } } }, ai: { role: 'aoe', want: { minFoes: 1 } },
+        desc: 'A spark ribbon from the gear down into your tar: the puddle catches, flame sheets rise from its edge inward, and it burns 6 s (0.5 a second). Everything Tarred in it is set alight.' }),
+      F('cf_corrosive', 'Corrosive Charge', { cls: 'chemist', icon: 'cloud', from: 'c_acid', to: 'c_volatile', step: 3, lvl: 7, need: 'hit', cd: 12, extra: 5, range: 22, fuse: 0.45,
+        hit: { t: 0.5, kind: 'aoe', at: 'target', r: 5 }, fx: [['dmg', d(1.7)], ['coat', 'corrode', 8], ['zone', 'acid', 0.2, 5, 5], ['brk', 25]], coatN: 4, tiers: [4],
+        tags: ['blast', 'acid', 'fusion'], choreo: 'cf_corrosive', gateText: 'The third Acid Flask must land', hint: 'Finish the chain, then something that bursts.',
+        carry: { a: { etching: { coatN: 6 }, splash: { r: 1.2 } }, b: { cluster: { cluster: 1 }, sticky: { pow: 0.1 } } }, ai: { role: 'aoe' },
+        desc: 'The bomb bursts in the acid: everything within 5 m is struck, eaten four Corroded stacks deep, and a low green-grey cloud lies there 5 s, eating at whatever stands in it.' }),
+      F('cf_thermalshock', 'Thermal Shock', { cls: 'chemist', icon: 'frost', from: 'c_chill', to: 'c_volatile', lvl: 9, need: 'hit', cd: 12, extra: 5, range: 22, fuse: 0.4,
+        hit: { t: 0.5, kind: 'aoe', at: 'target', r: 5 }, fx: [['dmg', d(1.3)], ['brk', 80]], coatMul: { chill: 1.35 }, tiers: [4],
+        tags: ['blast', 'cold', 'fusion'], choreo: 'cf_thermalshock', gateText: 'Chill Powder must strike a machine', hint: 'Cold plate does not like a sudden blow.',
+        carry: { a: { frostline: { r: 1.2 }, deepchill: { pow: 0.15 } }, b: { cluster: { cluster: 1 }, sticky: { pow: 0.1 } } }, ai: { role: 'burst' },
+        desc: 'The bomb bursts on the frozen plate and the frost cracks it apart: twice as hard against a Chilled machine (the Shatter included), and a heavy poise blow.' }),
+      F('cf_pitchvault', 'Pitch Vault', { cls: 'chemist', move: true, icon: 'vault', from: 'c_vault', to: 'c_tar', lvl: 12, need: 'done', cd: 14, extra: 5, target: 'self', range: 0, selfDone: true,
+        hit: { t: 0.3, kind: 'aoe', at: 'cast', r: 4 }, fx: [['back', 4], ['dmg', d(0.7)], ['coat', 'tar', 8], ['tarPath', 8, 1.6], ['brk', 20]], tiers: [3],
+        tags: ['vault', 'puddle', 'fusion'], choreo: 'cf_pitchvault', gateText: 'Rod Vault must go off', hint: 'Spill something on the way.',
+        carry: { b: { pitchwall: { pow: 0.1 }, hottar: { hotTar: 1 } } }, ai: { role: 'control' },
+        desc: 'Vault on 4 m with the pot in the other hand: tar spills along the whole path behind you and the pot splashes where you first stood, Tarring every machine there. The tar strip lies 8 s and slows what crosses it by half.' }),
+      F('cf_flashsteam', 'Flash Steam', { cls: 'chemist', icon: 'cloud', from: 'c_spark', to: 'c_chill', lvl: 15, need: 'hit', cd: 14, extra: 10, range: 10,
+        hit: { t: 0.3, kind: 'cone', r: 10, cone: 80 }, fx: [['dmg', d(1.6)], ['debuff', 'miss', 30, 3], ['knock', 4], ['brk', 40]], tiers: [4],
+        tags: ['steam', 'fusion'], choreo: 'cf_flashsteam', gateText: 'Spark Gear must strike a machine', hint: 'A hot rod in cold salts.',
+        carry: { b: { frostline: { radius: 14, kind: 'line' }, deepchill: { addFx: [['root', 1.5]] } } }, ai: { role: 'control' },
+        desc: 'The hot rod driven into the cold salts: a huge cone of white steam rolls 10 m forward. Every machine in it is struck, thrown back 4 m and blinded (its swings miss 30% for 3 s).' }),
+      F('cf_chainreaction', 'Chain Reaction', { cls: 'chemist', icon: 'chain', from: 'c_volatile', to: 'c_grand', lvl: 18, need: 'hit', cd: 40, extra: 10, range: 24, fuse: 0.3,
+        hit: { t: 0.62, kind: 'aoe', at: 'spot', r: 12 }, fx: [['detonateAll', 15, d(0.7)], ['dmg', d(3.4)], ['launch', 1.0], ['brk', 70]], tiers: [5],
+        tags: ['blast', 'fusion'], choreo: 'cf_chainreaction', gateText: 'Volatile Mixture must land by a machine', hint: 'Everything you left lying about wants to go off.',
+        carry: { a: { cluster: { pow: 0.1 }, sticky: { pow: 0.1 } } }, ai: { role: 'aoe' },
+        desc: 'Every bomb, puddle and cloud of yours within 15 m goes off in turn, 0.1 s apart, walking toward the cask, and then the cask itself bursts over 12 m.' }),
+      F('cf_blastvault', 'Blast Vault', { cls: 'chemist', move: true, icon: 'leap', from: 'c_volatile', to: 'c_vault', tree: 'blast_vault', need: 'hit', cd: 16, extra: 5, range: 16,
+        hit: { t: 0.08, kind: 'aoe', at: 'here', r: 3, n: 2, ts: [0.08, 0.95] }, fx: [['leap', 16], ['dmg', d(1.6)], ['slamDown', 0.5], ['brk', 40]],
+        seq: [{ hit: { kind: 'aoe', at: 'here', r: 3 }, fx: [['useBomb'], ['dmg', d(0.5)], ['brk', 10]] }, { hit: { kind: 'aoe', at: 'target', r: 4 }, fx: [['dmg', d(1.6)], ['slamDown', 0.5], ['brk', 40]] }],
+        tiers: [2, 4], tags: ['air', 'slam', 'fusion'], cam: 'lift', choreo: 'cf_blastvault', gateText: 'Volatile Mixture must land by a machine', hint: 'Plant the rod on something that is about to go off.',
+        carry: { a: { cluster: { pow: 0.1 }, sticky: { pow: 0.1 } } }, ai: { role: 'burst' },
+        desc: 'Plant the rod on a bomb of your own: it bursts under you (no harm to you) and flings you 14 m high on a 16 m arc onto the machine. The landing slams everything within 4 m down.' }),
+      F('cf_galvanic', 'Galvanic Arc', { cls: 'chemist', icon: 'spark', from: 'c_acid', to: 'c_spark', step: 3, tree: 'live_rod', need: 'hit', cd: 12, extra: 5, range: 16,
+        hit: { t: 0.3, kind: 'proj', speed: 90 }, fx: [['dmg', d(1.2)], ['arcCorroded', 12, d(1.2)], ['stun', 0.6], ['brk', 30]], tiers: [4],
+        tags: ['spark', 'fusion'], choreo: 'cf_galvanic', gateText: 'The third Acid Flask must land', hint: 'Acid and metal want a spark.',
+        carry: { a: { etching: { pow: 0.15 }, splash: { pow: 0.1 } } }, ai: { role: 'aoe' },
+        desc: "The gear's spark runs on from machine to machine through every Corroded one within 12 m: each is struck (1.2x) and staggered, sparks dropping where the arc lands." }),
+      // the triad (a deep tree notable): Tarfire > Grand Detonation
+      F('ct_furnacedrum', 'Furnace Cask', { cls: 'chemist', icon: 'cask', from: 'cf_tarfire', to: 'c_grand', tree: 'furnace_cask', need: 'hit', triad: true, cd: 50, extra: 10, range: 24, fuse: 0.5,
+        hit: { t: 0.62, kind: 'aoe', at: 'puddle', r: 10 }, fx: [['dmg', d(3.6)], ['launch', 1.0], ['zone', 'fire', 0.6, 5, 6], ['brk', 120]], zoneSlow: 20,
+        tags: ['heat', 'blast', 'triad'], tier: 5, choreo: 'ct_furnacedrum', hint: 'Roll something heavy into the fire.',
+        carry: { c_tar: { pitchwall: { pow: 0.1 }, hottar: { pow: 0.1 } } }, ai: { role: 'burst' },
+        desc: 'Roll the cask into the burning tar: it bursts over 10 m, throwing the machines up, and leaves a ring of fire burning 5 s.' }),
     ];
   })(),
 };

@@ -439,7 +439,9 @@ export class FX {
     const tar = mk((x) => { for (let i = 0; i < 9; i++) { const g = x.createRadialGradient(128 + r(-50, 50), 128 + r(-50, 50), 0, 128, 128, r(40, 90)); g.addColorStop(0, 'rgba(14,12,10,0.9)'); g.addColorStop(1, 'rgba(14,12,10,0)'); x.fillStyle = g; x.fillRect(0, 0, 256, 256); } });
     // the hunter's mark: one bold ring round a soft glow (no arrowheads or crosshair marks)
     const mark = mk((x) => { const g = x.createRadialGradient(128, 128, 10, 128, 128, 96); g.addColorStop(0, 'rgba(255,110,70,0.35)'); g.addColorStop(1, 'rgba(255,90,60,0)'); x.fillStyle = g; x.beginPath(); x.arc(128, 128, 96, 0, Math.PI * 2); x.fill(); x.strokeStyle = 'rgba(255,90,60,0.95)'; x.lineWidth = 12; x.beginPath(); x.arc(128, 128, 100, 0, Math.PI * 2); x.stroke(); });
-    return { crack, crater, scorch, smudge, tar, mark };
+    // (S12) rime: pale, uneven blotches of frost and cold salts (Cold Chemistry's frost, Thermal Shock)
+    const rime = mk((x) => { blotchy(x, 10, 44, 36, 78, '226,240,250', 0.32); blotchy(x, 6, 26, 16, 36, '246,252,255', 0.4); });
+    return { crack, crater, scorch, smudge, tar, mark, rime };
   }
 
   ground(p) { return this.heightAt(p.x, p.z); }
@@ -661,6 +663,140 @@ export class FX {
   bouncePath(pts) {
     for (let i = 1; i < pts.length; i++) { const a = pts[i - 1].clone().setY(pts[i - 1].y + 1.1), b = pts[i].clone().setY(pts[i].y + 1.1); this.after(0.09 * (i - 1) + 0.01, null, () => { this.emit('sparks', a, { n: 4, dir: b.clone().sub(a).normalize(), color: '#fff0d0' }); this.projectile(arrowMesh(), a, b, { time: 0.09, align: true, onHit: (q) => this.impact('chalk', q) }); }); }
   }
+  // ---- the Chemist (S12): his puddles and clouds (the server's {k:'czone'}), bombs lying on the ground with a burning fuse
+  // ({k:'bomb'}, {k:'boom'}), Chain Reaction's pops ({k:'cpop'}) and Spark Gear's arcs ({k:'sparkarc'}). Everything is
+  // physical: black tar, low flame sheets off a puddle's edge (never a column), rime and cold-pack salts, a low green-grey
+  // acid cloud, white steam, sparks jumping between metal, blasting smoke and rock. At most one ring and one light a blast;
+  // flasks are blue, green or white (never amber or red)
+  chemZone(ev, follow) {
+    const Z = (this._cz ||= new Map());
+    Z.get(ev.zid)?.stop();
+    const at = V(ev.x, 0, ev.z); at.y = this.ground(at);
+    const seg = ev.seg ? [V(ev.seg[0], 0, ev.seg[1]), V(ev.seg[2], 0, ev.seg[3])] : null;
+    const centre = () => { if (follow) { const q = follow(); if (q) at.set(q.x, this.heightAt(q.x, q.z), q.z); } return at; };
+    const pick = (edge) => {
+      let p;
+      if (seg) { p = seg[0].clone().lerp(seg[1], rnd()); p.x += r(-1, 1) * ev.r * 0.7; p.z += r(-1, 1) * ev.r * 0.7; }
+      else { const c = centre(), a = r(0, 6.28), d = edge != null ? ev.r * edge * r(0.85, 1) : Math.sqrt(rnd()) * ev.r * 0.92; p = V(c.x + Math.cos(a) * d, 0, c.z + Math.sin(a) * d); }
+      p.y = this.ground(p) + 0.08;
+      return p;
+    };
+    const kind = ev.kind, dur = Math.max(0.5, ev.dur || 4);
+    const lay = (tex) => {
+      if (follow || ev.re) return;
+      if (seg) { const L = seg[0].distanceTo(seg[1]), n = Math.max(2, Math.round(L / Math.max(1, ev.r * 1.3))); for (let i = 0; i <= n; i++) this.decal(tex, seg[0].clone().lerp(seg[1], i / n), ev.r * 1.15, dur); }
+      else this.decal(tex, at.clone(), ev.r * 1.05, dur);
+    };
+    if (kind === 'tar') { lay('tar'); this.emit('drops', at.clone().setY(at.y + 0.3), { n: 10, color: '#1a1410' }); this.sound('splat'); }
+    if (kind === 'frost') { lay('rime'); this.emit('ringdust', at.clone(), { n: 14, r: Math.min(ev.r, 3), speed: 2.2, color: '#eef6ff', alpha: 0.5 }); this.sound('hiss'); }
+    if (kind === 'fire') { if (!Z.has(ev.zid) && !ev.re) lay('tar'); this.sound('fire'); } // (no light of its own: the fusion's contact has one)
+    if (kind === 'acid') this.sound('hiss');
+    const rate = { tar: 2, fire: 30, frost: 10, acid: 12 }[kind] || 0;
+    let acc = 0;
+    const e = this.after(dur, (k, t, dt) => {
+      // flame sheets: in the first 0.4 s they rise from the puddle's edge and close inward, then burn low over all of it
+      if (kind === 'fire' && t < 0.45) { for (let i = 0; i < 3; i++) this.emit('flame', pick(1 - t / 0.45 * 0.8), { n: 1, size: 0.9, speed: 0.55 }); }
+      acc += dt * rate * (follow ? 0.6 : 1) * (GFX.mobile ? 0.45 : 1);
+      while (acc > 1) {
+        acc--;
+        const p = pick();
+        if (kind === 'fire') { this.emit('flame', p, { n: 1, size: r(0.6, 1.0), speed: 0.5 }); if (rnd() < 0.18) this.emit('smoke', p.clone().setY(p.y + 0.9), { n: 1, size: 0.6, alpha: 0.3, color: '#4a4440', lifeK: 0.6 }); if (rnd() < 0.2) this.emit('embers', p, { n: 1 }); }
+        else if (kind === 'frost') { if (rnd() < 0.6) this.emit('motes', p, { n: 1, color: '#e8f6ff', r: 0.2 }); else this.emit('steam', p, { n: 1, color: '#e4f2fa', alpha: 0.25, speed: 0.3, size: 0.7 }); }
+        else if (kind === 'acid') this.alpha.spawn({ pos: p.setY(p.y + r(0.1, 0.7)), vel: V(r(-0.3, 0.3), r(0.02, 0.2), r(-0.3, 0.3)), age: 0, life: r(1.6, 2.6), size: r(1.3, 2.0), tex: TEX.puff, drag: 1.2, alpha: 0.42, grow: 1.2, spin: r(-0.4, 0.4), rot: r(0, 6), color: col(rnd() < 0.5 ? '#8a9c6c' : '#7c8a68'), fadeIn: 0.3 });
+        else if (kind === 'tar' && rnd() < 0.5) this.emit('drops', p, { n: 1, color: '#1a1410' });
+      }
+    }, () => Z.delete(ev.zid));
+    Z.set(ev.zid, { stop: () => { e.t = e.dur; } });
+  }
+  chemZoneEnd(zid) { this._cz?.get(zid)?.stop(); }
+  // a bomb at rest: the flask or the cask on the ground (on the machine for Sticky Charge), a fuse spitting sparks and smoke
+  bombPlace(ev, onEnt) {
+    const B = (this._bombs ||= new Map());
+    const big = /grand|chain|furnace/.test(ev.sk), item = big ? 'cask' : ev.sk === 'cf_corrosive' ? 'flaskAcid' : ev.sk === 'cf_thermalshock' ? 'flaskLime' : 'flaskElixir';
+    const m = itemMesh(item);
+    const at = V(ev.x, 0, ev.z); at.y = this.ground(at) + (big ? 0.2 : 0.07);
+    m.position.copy(at); m.rotation.set(Math.PI / 2, r(0, 6.28), 0, 'YXZ');
+    if (big) m.scale.setScalar(1.6);
+    this.scene.add(m);
+    let acc = 0;
+    const e = this.after(Math.max(0.1, ev.t), (k, t, dt) => {
+      if (onEnt) { const q = onEnt(); if (q) { m.position.set(q.x, q.y + 1.0, q.z); } }
+      acc += dt * 26;
+      const top = m.position.clone().setY(m.position.y + (big ? 0.35 : 0.1));
+      while (acc > 1) { acc--; this.emit('sparks', top, { n: 1, size: 0.6, color: '#ffe0a0' }); if (rnd() < 0.25) this.emit('smoke', top, { n: 1, size: 0.3, alpha: 0.35, lifeK: 0.4 }); }
+    }, () => { this.scene.remove(m); B.delete(ev.bid); });
+    B.set(ev.bid, { m, e, at: () => m.position.clone() });
+    this.sound('tick');
+  }
+  bombGone(bid) { const b = this._bombs?.get(bid); if (b) b.e.t = b.e.dur; }
+  // the burst, by what it was: a blast of smoke and dust; frost cracking off in white powder and ice; acid in green drops;
+  // a cask: flame, a smoke column, rocks, one ring and one warm light
+  chemBoom(ev) {
+    const b = this._bombs?.get(ev.bid);
+    if (!b) return;
+    if (!(this._fb && (this.clockT || 0) <= this._fb.until)) this.fuseBudget(0.2); // (a fuse burns out after the fusion's own budget: the rocks still share the cap)
+    const p = b.at(); p.y = this.ground(p);
+    b.e.t = b.e.dur;
+    const up = p.clone().setY(p.y + 0.8);
+    if (/grand|chain|furnace/.test(ev.sk)) {
+      const R = ev.sk === 'cf_chainreaction' ? 6 : 5;
+      this.emit('flash', p.clone().setY(p.y + 1.6), { size: 7, color: '#fff4d0', life: 0.25 });
+      for (let i = 0; i < (GFX.mobile ? 3 : 5); i++) this.emit('flame', p.clone().add(V(r(-2, 2), r(0, 0.8), r(-2, 2))), { n: 14, spread: 1.0, size: 1.8, speed: 1.3 });
+      for (let i = 0; i < (GFX.mobile ? 14 : 30); i++) this.alpha.spawn({ pos: p.clone().add(V(r(-1.2, 1.2), r(0, 1.6), r(-1.2, 1.2))), vel: V(r(-1.2, 1.2), r(3, 7), r(-1.2, 1.2)), age: 0, life: r(2.2, 3.4), size: r(1.6, 2.8), tex: TEX.puff, drag: 1.1, alpha: 0.62, grow: 2.0, spin: r(-0.4, 0.4), rot: r(0, 6), color: col('#4a403a'), fadeIn: 0.15 });
+      this.emit('embers', p, { n: 50, spread: 2.4 });
+      this.rocks(p, 8, 1.5);
+      this.dustWall(p, R);
+      this.ring(p.clone().setY(p.y + 0.15), '#ffc070', R + 2, 0.6);
+      this.light(p.clone().setY(p.y + 2.5), '#ff8a30', 24, 1.0, 26);
+      this.decal('crater', p, 3.5, 6);
+      this.shake(1.0); this.sound('boom'); this.sound('boom');
+      return;
+    }
+    if (ev.sk === 'cf_thermalshock') {
+      this.hitCore(up, 2.0, '#f4fbff', 0.16);
+      this.emit('ringdust', p.clone(), { n: 22, r: 1.2, speed: 4, color: '#eef6ff', alpha: 0.7 });
+      this.emit('shards', up, { n: 26, color: '#dff2ff' });
+      this.emit('steam', p.clone().setY(p.y + 0.4), { n: 6, size: 1.2, color: '#e8f4fa' });
+      this.ring(p.clone().setY(p.y + 0.15), '#e8f6ff', 5, 0.5);
+      this.decal('rime', p, 3, 4);
+      this.light(up, '#d8f0ff', 10, 0.3, 12, true);
+      this.shake(0.55); this.sound('crack'); this.sound('glass'); this.sound('boom');
+      return;
+    }
+    this.hitCore(up, 2.2, '#fff0c0', 0.14);
+    this.dustWall(p, 4);
+    this.emit('flecks', up, { n: 8, color: '#ffb060' });
+    this.emit('smoke', p.clone().setY(p.y + 0.6), { n: 7, spread: 1.0, size: 1.2, alpha: 0.5 });
+    if (ev.sk === 'cf_corrosive') this.emit('drops', up, { n: 26, color: '#8ee04a', additive: true });
+    else this.emit('steam', p.clone().setY(p.y + 0.3), { n: 4, size: 1.2 });
+    this.rocks(p, 6, 1);
+    this.light(up, '#ffc080', 10, 0.3, 12, true);
+    this.decal('scorch', p, 2.2, 4);
+    this.shake(0.5); this.sound('boom'); this.sound('glass');
+  }
+  // one of his puddles or clouds going off in Chain Reaction: a short blast of its own stuff
+  chemPop(ev) {
+    this.chemZoneEnd(ev.zid);
+    if (!(this._fb && (this.clockT || 0) <= this._fb.until)) this.fuseBudget(0.2);
+    const p = V(ev.x, 0, ev.z); p.y = this.ground(p);
+    const up = p.clone().setY(p.y + 0.7);
+    this.hitCore(up, 1.5, '#fff0c0', 0.12);
+    this.emit('ringdust', p.clone(), { n: 10, r: 1, speed: 3 });
+    if (ev.kind === 'acid') this.emit('drops', up, { n: 14, color: '#8ee04a', additive: true });
+    else if (ev.kind === 'frost') this.emit('shards', up, { n: 12, color: '#dff2ff' });
+    else { this.emit('flame', up, { n: 10, spread: 0.6, size: 1.1 }); this.emit('drops', up, { n: 8, color: '#1a1410' }); }
+    this.emit('smoke', up, { n: 4, size: 1.0, alpha: 0.45 });
+    this.rocks(p, 3, 0.8);
+    this.shake(0.3); this.sound('boom');
+  }
+  // Spark Gear's arc and Galvanic Arc: a crackling arc from machine to machine (one after another, never fanned from one
+  // point), sparks dropping where each lands
+  sparkPath(pts, galv) {
+    for (let i = 1; i < pts.length; i++) {
+      const a = pts[i - 1].clone().setY(pts[i - 1].y + 1.1), b = pts[i].clone().setY(pts[i].y + 1.1);
+      this.after(0.06 * (i - 1) + 0.01, null, () => { this.arc(a, b, galv ? '#b8e4ff' : '#dcecff', 0.28, false); this.emit('sparks', b, { n: 8, dir: V(0, -1, 0), color: '#e8f4ff' }); });
+    }
+  }
   fuseBudget(dur) { const cap = GFX.mobile ? 8 : 18; this._fb = { until: (this.clockT || 0) + dur + 1, left: cap, cap }; }
   rocks(pos, n = 10, power = 1) {
     const fb = this._fb && (this.clockT || 0) <= this._fb.until ? this._fb : null;
@@ -797,7 +933,7 @@ export class FX {
 
   after(dur, update, done) { const e = { t: 0, dur, update, done }; this.timed.push(e); return e; }
   // a crackling electric arc between two points: a jagged line re-drawn every frame for a moment, a flash at the end
-  arc(from, to, color = '#a8dcff', dur = 0.3) {
+  arc(from, to, color = '#a8dcff', dur = 0.3, lit = true) {
     const N = 14, pos = new Float32Array(N * 3);
     const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
     const mats = [new THREE.LineBasicMaterial({ color, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }), new THREE.LineBasicMaterial({ color: '#ffffff', transparent: true, blending: THREE.AdditiveBlending, depthWrite: false })];
@@ -816,7 +952,7 @@ export class FX {
     jag();
     this.emit('flash', to, { size: 1.6, color });
     this.emit('sparks', to, { n: 14, color });
-    this.light(to, color, 7, 0.2, 9);
+    if (lit) this.light(to, color, 7, 0.2, 9, lit === 'soft'); // (S12: a chain of arcs lights only its first)
     this.sound('tick'); this.sound('hiss', 0.6);
     this.after(dur, (k) => { jag(); mats[0].opacity = 1 - k; mats[1].opacity = (1 - k) * 0.7; }, () => { for (const l of lines) this.scene.remove(l); geo.dispose(); mats.forEach((m) => m.dispose()); });
   }
@@ -840,6 +976,8 @@ export class FX {
       mud: { color: '#7a4a32', alpha: 0.5, size: 1.3, low: true }, resin: { color: '#e8e0d0', alpha: 0.4, size: 1.7 },
       // the Deadeye's Smoke Charge: a low, uneven bank of grey powder smoke (no glow)
       gunsmoke: { color: '#9a948a', alpha: 0.72, size: 2.7, low: true, dens: 1.6 },
+      // the Chemist's Flash Steam (S12): a big rolling white steam cloud, no glow
+      steam: { color: '#eef3f5', alpha: 0.62, size: 2.3, dens: 1.5 },
     }[kind] || { color: '#888', alpha: 0.5, size: 1.4 };
     const dir = o.dir;
     let acc = 0;
@@ -1015,6 +1153,7 @@ export class FX {
         this.sound('boom'); this.sound('boom');
         break;
       }
+      case 'flaskland': this.emit('shards', at.clone().setY(g + 0.2), { n: 5, color: '#dfeef0' }); this.emit('dust', at.clone().setY(g + 0.15), { n: 3, size: 0.5 }); this.sound('glass'); break; // (S12: a flask or cask coming to rest; its burst is the server's boom)
       case 'acid': this.emit('drops', at, { n: 22, color: '#8ee04a', additive: true }); this.emit('smoke', at, { n: 8, color: '#7ab040', alpha: 0.4 }); this.emit('shards', at, { n: 8 }); this.sound('glass'); this.sound('hiss'); break;
       case 'acidcloud': this.emit('shards', at, { n: 10 }); this.cloud('acid', pos, 5, 6); this.sound('glass'); this.sound('hiss'); break;
       case 'nick': this.hitCore(up, 0.7, '#fff2d0'); this.emit('fan', up, { n: 10, dir, color: '#ffe6a8' }); this.sound('hit'); break; // (S8: a quick cut in a flurry, no light)
@@ -1591,6 +1730,10 @@ export class FX {
       case 'lanternFlare': { const p = () => ctx.animator.weaponPoint('R', 1.2); this.light(p(), '#a8ff6a', 14, ev.dur || 1, 14); let acc = 0; this.after(ev.dur || 1, (k, t, dt) => { acc += dt * 30; while (acc > 1) { acc--; this.emit('motes', p(), { n: 1, color: '#c8ff9a', r: 0.2 }); } this.emit('glow', p(), { size: 2.5 * (1 - k * 0.5), color: '#c8ff8a', life: 0.06, alpha: 0.6 }); }); break; }
       case 'petals': { const c = feet(); this.emit('petals', c, { n: ev.n || 100 }); this.emit('motes', c, { n: 60, color: '#e8ffd0', r: 3 }); break; }
       case 'spinGear': break;
+      // (S12) the Chemist: an arc from the rod's gear to the machine (Spark Gear, Tarfire's spark ribbon down into the puddle:
+      // ev.ground), and a smoke ribbon behind the hero in the air (Blast Vault)
+      case 'rodArc': { const t = tgt(); t.y = ev.ground ? this.ground(t) + 0.15 : Math.max(t.y + 1.1, this.ground(t) + 1); this.arc(where('rod'), t, ev.color || '#dcecff', ev.dur || 0.25, false); break; }
+      case 'selfSmoke': { let acc = 0; this.after(ev.dur || 0.8, (k, t, dt) => { acc += dt * 34; while (acc > 1) { acc--; this.emit('smoke', feet().add(V(r(-0.2, 0.2), 0.9 + r(0, 0.4), r(-0.2, 0.2))), { n: 1, size: 0.5, alpha: 0.5, speed: 0.15, lifeK: 0.7, color: '#8a847c' }); } }); break; }
       // the Deadeye: a shot with no ball to follow (a cone of loose shot, a shot into the ground): the muzzle alone
       // (side 'R', 'L' or 'alt'); dry: the hammer falls on an empty pan, a click and a thread of smoke only
       case 'muzzle': {

@@ -227,6 +227,70 @@ export const KEYSTONES = {
     onCompile(rec) { if (rec.id === 'r_trap') rec.cost = (rec.cost || 0) + 10; return rec; },
   },
 
+  // ------------------------------------------------------------------ Chemist (combat_design_fusion.md 4.3, combat_design.md 5.6, S12)
+  // Unstable Stock: fuses (rec.fuse, sim.js p.bombs) burn half as long and every blast reaches 30% further; the sim scorches
+  // the Chemist for 5% of his health on one blast in ten (tal.unstable)
+  unstable_stock: {
+    name: 'Unstable Stock', cls: 'chemist',
+    desc: 'Every fuse burns half as long, and every blast reaches 30% further.',
+    price: 'One blast in ten also scorches you for 5% of your health.',
+    mods: { unstable: 0.1 },
+    onCompile(rec) {
+      if (rec.fuse) rec.fuse = +(rec.fuse * 0.5).toFixed(3);
+      if (has(rec, 'blast') && rec.hit?.r) { rec.hit = { ...rec.hit, r: +(rec.hit.r * 1.3).toFixed(2) }; for (const q of rec.seq || []) if (q.hit?.r) q.hit = { ...q.hit, r: +(q.hit.r * 1.3).toFixed(2) }; }
+      return rec;
+    },
+  },
+  // Closed Lab: no puddles on the ground; Tar Pot's puddle and every puddle a fusion leaves become a 4 m cloud carried round
+  // him (sim.js zones with follow), and the puddle fusions go off round him
+  closed_lab: {
+    name: 'Closed Lab', cls: 'chemist',
+    desc: 'No puddles: Tar Pot and every fusion that leaves a puddle or a cloud lay it as a 4 m cloud carried round you, which slows, coats and burns whatever comes close.',
+    price: 'Tar Pot\'s puddle no longer lies where you throw it: it is always round you.',
+    onCompile(rec) {
+      if ((rec.fx || []).some((e) => e[0] === 'zone')) { rec.zoneFollow = true; rec.fx = rec.fx.map((e) => (e[0] === 'zone' ? [e[0], e[1], e[2], e[3], 4] : e)); }
+      if ((rec.fx || []).some((e) => e[0] === 'ignitePuddle' || e[0] === 'tarPath')) rec.zoneFollow = true;
+      return rec;
+    },
+  },
+  // Reactive Chemistry: a Reaction anyone sets off on a machine the Chemist coated is 50% stronger and gives him 10 Reagents
+  // (sim.js reactCheck / reactFire read the coat's src); his own direct hits are 15% lighter
+  reactive_chemistry: {
+    name: 'Reactive Chemistry', cls: 'chemist',
+    desc: 'A Reaction anyone sets off on a machine you coated is 50% stronger and gives you 10 Reagents.',
+    price: 'Your own direct hits deal 15% less.',
+    mods: { reactive: 0.5 },
+    onHit(w, p, ctx) { if (ctx.sk) ctx.amt *= 0.85; },
+  },
+  // Cold Chemistry (combat_design.md 5.6): cold in place of heat in every heat-tagged Chemist skill and fusion: they Chill
+  // instead of burn, burning ground becomes frost (sim.js zone kind 'frost': slows 60%, Chills), holds last 50% longer, and
+  // Tarfire becomes Tar Freeze (the tar sets hard: held 2 s, then Chilled); the Furnace Cask becomes the Frost Cask
+  cold_chemistry: {
+    name: 'Cold Chemistry', cls: 'chemist',
+    desc: 'Cold takes the place of heat in every Chemist skill and fusion: they Chill instead of burn, burning ground becomes frost that slows 60%, and slows and holds last 50% longer. Tarfire becomes Tar Freeze (the tar sets hard and holds the machines 2 s) and Furnace Cask becomes Frost Cask.',
+    price: 'Those skills deal 15% less.',
+    renames: { cf_tarfire: { name: 'Tar Freeze', fx: 'frost' }, ct_furnacedrum: { name: 'Frost Cask', fx: 'frost' } },
+    onCompile(rec) {
+      if (!has(rec, 'heat')) return rec;
+      rec.tags = rec.tags.filter((t) => t !== 'heat'); addTag(rec, 'cold'); rec.cold = true;
+      fxMul(rec, 'dmg', 0.85);
+      rec.fx = rec.fx.map((e) => (e[0] === 'zone' && e[1] === 'fire' ? ['zone', 'frost', +(e[2] * 0.5).toFixed(3), e[3], e[4]] : e[0] === 'slow' ? [e[0], e[1], +(e[2] * 1.5).toFixed(2), ...e.slice(3)] : e[0] === 'root' || e[0] === 'stun' ? [e[0], +(e[1] * 1.5).toFixed(2), ...e.slice(2)] : e));
+      if (!rec.fx.some((e) => e[0] === 'coat')) rec.fx.push(['coat', 'chill', 5]);
+      if (rec.id === 'cf_tarfire') rec.fx.push(['root', 2]);
+      if (rec.zoneSlow) rec.zoneSlow = 60;
+      return rec;
+    },
+  },
+  // Bench Chemist (combat_design.md 5.6): the third Acid Flask becomes Mix (sim.js on_cast: the fusion of his last two skills,
+  // p.mixLog, at the machine, from range and without the window, once every tal.benchChemist s); fusions 10% weaker
+  bench_chemist: {
+    name: 'Bench Chemist', cls: 'chemist',
+    desc: 'The third Acid Flask becomes Mix: it mixes your last two skills into their fusion at the machine, from range and without the link window, once every 8 s.',
+    price: 'Fusions are 10% weaker.',
+    mods: { benchChemist: 8, fuse: -0.1 },
+    onCompile(rec) { if (rec.id === 'c_acid' && rec.step === 3) { rec.was = rec.was || rec.name; rec.name = 'Mix'; rec.mix = true; } return rec; },
+  },
+
   // ------------------------------------------------------------------ Common Ground (4.4)
   chainwork: {
     name: 'Chainwork', cls: 'common', desc: 'A landed fusion opens a 0.8 s link: the next core skill is an Encore, 25% stronger with a heavy stop.',
@@ -286,6 +350,18 @@ export const NOTABLE_HOOKS = {
       const o = p.dodgeFrom;
       w.broadcast?.({ k: 'smokebank', x: +o.x.toFixed(2), z: +o.z.toFixed(2), r: 3 });
       for (const m of w.foesOf(p)) if (m.type === 'mob' && !m.dead && Math.hypot(m.x - o.x, m.z - o.z) <= 3 + (m.def?.radius || 1)) w.addBuff(m, { name: 'Smoke Charge', stat: 'miss', pct: 30, t: 3, dur: 3, debuff: true, icon: 'smoke' });
+    },
+  },
+  // the Chemist's Bitter Draught (S12, the old Healing Draught): once a minute, below 30% health, he drinks a bitter remedy
+  // from the belt without stopping: 2 heals' worth back (the client plays the drink, {k:'draught'})
+  bitter_draught: {
+    onTaken(w, p, ctx) {
+      const now = w?.time || 0;
+      if (p.dead || (p.bdT || 0) > now || (p.hp - ctx.amt) / p.maxHp >= 0.3) return;
+      p.bdT = now + 60;
+      w?.broadcast?.({ k: 'draught', id: p.id });
+      w?.addBuff?.(p, { name: 'Bitter Draught', stat: 'draught', pct: 0, t: 1, dur: 1, icon: 'potion' });
+      if (w?.heal) w.heal(p, p, (p.power || 10) * 2); else p.hp = Math.min(p.maxHp, p.hp + (p.power || 10) * 2);
     },
   },
   // the Sandblade's Dust Cloak (S8): after a dodge the next skill strikes critically (sim.js on_dodge gives the buff)

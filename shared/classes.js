@@ -364,7 +364,12 @@ const MIG = {
     d_hotshot: ['form', 'd_snap'], d_saltshot: ['form', 'd_snap'], d_slug: ['form', 'd_pair'],
     d_reload: ['notable', 'd_reload'], d_cartridge: ['notable', 'd_cartridge'], d_chalk: ['notable', 'd_chalk'], d_priming: ['notable', 'd_priming'], d_smoke: ['notable', 'd_smoke'],
   },
-  chemist: { core: ['c_staff', 'c_smokebomb', 'c_fire', 'c_acid', 'c_chill', 'c_tar', 'c_concussion'], fusion: ['c_thermite', 'c_chain', 'c_boiler'], triad: ['c_grand'], form: ['c_volatile', 'c_naphtha'], notable: ['c_catalyst', 'c_flash', 'c_spark', 'c_draught'], retired: ['c_clockwork'] },
+  chemist: {
+    core: ['c_acid', 'c_tar', 'c_spark', 'c_volatile', 'c_chill', 'c_vault', 'c_grand'], c_staff: ['core', 'c_spark'], c_fire: ['core', 'c_volatile'], c_concussion: ['core', 'c_volatile'],
+    c_thermite: ['fusion', 'cf_tarfire'], c_chain: ['fusion', 'cf_chainreaction'], c_boiler: ['fusion', 'cf_flashsteam'], c_corrosive: ['fusion', 'cf_corrosive'], c_frostpack: ['fusion', 'cf_thermalshock'], c_tarpot: ['fusion', 'cf_tarfire'],
+    c_naphtha: ['form', 'c_tar'], c_shrapnel: ['form', 'c_volatile'], c_quicklime: ['form', 'c_acid'], c_brine: ['form', 'c_acid'],
+    c_catalyst: ['notable', 'c_catalyst'], c_flash: ['notable', 'c_flash'], c_draught: ['notable', 'c_draught'], c_smokebomb: ['notable', 'c_flash'], c_vigor: ['notable', 'c_steady'],
+  }, // (S12: the Chemist's slice, combat_design_fusion.md 4.3; Clockwork Bomb is retired)
   herbalist: { core: ['h_sweep', 'h_net', 'h_salve', 'h_poultice', 'h_dart', 'h_smoke', 'h_lantern'], fusion: ['h_remedy', 'h_bandage', 'h_sneeze', 'h_sap'], form: ['h_seed', 'h_swift', 'h_bark'], notable: ['h_antidote', 'h_brew', 'h_camphor', 'h_willowsteam', 'h_tonic', 'h_revive'] },
 };
 export const OLD_TO_NEW = {};

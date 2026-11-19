@@ -1,6 +1,14 @@
 // What's new: shown once after an update (newest first). Bump `v` on the first entry whenever something is added.
 export const CHANGELOG = [
   {
+    v: 135, date: '19 November 2026', title: 'The Chemist',
+    items: [
+      ['The Chemist, rebuilt', 'The sixth class on the new combat. Acid Flask is a three-throw chain thrown on the run, Tar Pot leaves a slowing puddle, Spark Gear arcs from machine to machine, and bombs lie on the ground until their fuse runs out. Old Chemists get their talent points back with a letter from the trainer.'],
+      ['Chemist fusions', 'Nine new moves: Tarfire sets your puddle alight, Flash Steam blasts a cone of steam, Galvanic Arc chains sparks through every corroded machine, Chain Reaction sets off everything you left lying around, and the Furnace Cask finishes it all.'],
+      ['His own Skill Web', 'The Chemist has his own region of the Skill Web, with keystones like Cold Chemistry, which turns Tarfire into Tar Freeze, and Bench Chemist, whose third flask mixes your last two skills at range. Everyone gets another free Web reset.'],
+    ],
+  },
+  {
     v: 134, date: '19 November 2026', title: 'Pistols and Bows',
     items: [
       ['The Deadeye, rebuilt', 'The fourth class on the new combat. Snap Shot is a three-shot chain, right, left, then both; every skill fires on the move, and a Slide lets you shoot out of it. Time a reload right for a quick refill. Old Deadeyes get their talent points back with a letter from the trainer.'],
