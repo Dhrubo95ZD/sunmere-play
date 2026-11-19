@@ -156,6 +156,7 @@ export async function startGame() {
   await progress(0.95, 'Gathering heroes…');
   const entities = new EntityManager(engine.scene, heightAt);
   fx.shadowSource = entities; // contact shadow blobs under characters, mobs and mounts
+  fx.partyOf = (id) => !!ui?.partyIds?.has(id); // (S14: party members' effects show more than others')
   const ambient = new Ambient(fx, T);
   const townsfolk = new Townsfolk(engine.scene, world, { fx, sfx });
   const qobjects = new QuestObjects(engine.scene, heightAt);
@@ -413,7 +414,15 @@ export async function startGame() {
 
   function entPos(id) { const v = entities.get(id); return v ? v.pos.clone() : null; }
 
+  // (S14) a hero's server event (a bomb, a zone, a pop, an arc) plays on that hero's effect budget (fx.js budgetOf); damage
+  // and heal events take theirs at the contact (EntityView.hit -> fx.tierHit)
   function onEvent(ev) {
+    const who = ev.k === 'dmg' || ev.k === 'heal' ? null : ev.id ?? ev.from ?? ev.src;
+    const v = who == null ? null : who === game.localId ? local : entities.get(who);
+    const b = v && v.ty === 'p' && fx.budgetOf ? fx.budgetOf(v) : null;
+    return b ? fx.withBudget(b, () => onEvent0(ev)) : onEvent0(ev);
+  }
+  function onEvent0(ev) {
     const me = game.localId;
     switch (ev.k) {
       case 'cast': {

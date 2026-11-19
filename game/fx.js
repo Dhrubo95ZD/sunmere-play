@@ -10,6 +10,8 @@ import { tierOf, tierInfo } from '/sunmere-play/shared/feel.js';
 import { skillOf } from '/sunmere-play/shared/fusions.js'; // (S2: the new kit and fusions by id; legacy skills otherwise)
 import { SETTINGS } from '../engine/settings.js';
 import { QUALITY as GFX } from '../engine/globals.js';
+import { capsFor, levelFor, makeBudget, worldBudget, scaledCount, ringOk, safeInt, TELEGRAPH_ORDER } from './fxbudget.js'; // (S14 central budgets)
+import { hapticTier } from '../engine/haptics.js';
 // effect lights in the fixed pool (a fixed count: lights added or removed recompile every lit material). High keeps 4,
 // phones 2; QUALITY.fxLights, or half of QUALITY.lights, overrides
 export const fxLightCount = () => GFX.fxLights ?? (GFX.lights != null ? Math.max(1, Math.floor(GFX.lights / 2)) : GFX.mobile ? 2 : 4);
@@ -23,6 +25,7 @@ const col = (c) => new THREE.Color(c);
 const C_DUST = col('#d4c4a2'), C_GRIT = col('#5a4a3a'), C_STEAM = col('#ecebe6'), C_DARK = col('#14100c'), C_WHITE = col('#ffffff'), C_COOL = col('#7a1c06'), C_GATHER = col('#ffd080');
 // impact marks (crack / crater / scorch / smudge): at most this many on the ground at once
 const MARK_MAX = 5;
+const C_EMBER = col('#ff7418'); // (S14: embers cool to a deep amber, not the telegraphs' red-orange)
 
 // ---------------------------------------------------------------- atlas
 function atlasTexture() {
@@ -109,7 +112,8 @@ class Particles {
     scene.add(this.mesh);
     this.list = [];
   }
-  spawn(p) { if (this.list.length < this.max) this.list.push(p); }
+  // (S14) gate: FX.admit, the budget of whoever is emitting (fxbudget.js); p.b is that budget, counted down when p dies
+  spawn(p) { if (this.list.length >= this.max) return; if (this.gate && !this.gate(p)) return; this.list.push(p); }
   update(dt) {
     const cam = this.camera;
     const L = this.list;
@@ -118,7 +122,7 @@ class Particles {
     for (let i = 0; i < L.length; i++) {
       const p = L[i];
       p.age += dt;
-      if (p.age >= p.life) continue;
+      if (p.age >= p.life) { if (p.b) p.b.p--; continue; }
       p.vel.y -= (p.grav ?? 0) * dt;
       p.vel.multiplyScalar(Math.max(0, 1 - (p.drag ?? 0) * dt));
       if (p.swirl) { const a = p.swirl * dt; const x = p.pos.x - p.cx, z = p.pos.z - p.cz; p.pos.x = p.cx + x * Math.cos(a) - z * Math.sin(a); p.pos.z = p.cz + x * Math.sin(a) + z * Math.cos(a); }
@@ -371,6 +375,11 @@ export class FX {
     const atlas = atlasTexture();
     this.add = new Particles(scene, camera, 6500, true, atlas);
     this.alpha = new Particles(scene, camera, 4500, false, atlas);
+    // (S14, combat_design.md 10.3) the central budgets: this.cur is the budget of the cast (or the hero's server event) now
+    // emitting; FX.after keeps it for later beats. Without one it is the world's (machines, ambient): only the scene caps
+    this.caps = capsFor(!!GFX.mobile); this.world = worldBudget(); this.cur = null; this._kindOk = false; this._fb = null;
+    this.casters = new Map(); this.rockLive = new Map(); this.liveRings = 0; this.patchList = []; this._safe = new Map();
+    this.add.gate = this.alpha.gate = (p) => this.admit(p);
     this.marks = []; // live impact-mark decals, oldest first
     this.trails = [];
     this.timed = [];
@@ -406,7 +415,7 @@ export class FX {
     const t = new Trail(tmp, '#ffffff', 1); made.push(t.mesh);
     const plane = new THREE.PlaneGeometry(1, 1);
     keep(new THREE.Mesh(plane, new THREE.MeshBasicMaterial({ map: this.ringTex, color: '#ffffff', transparent: true, depthWrite: false, blending: THREE.AdditiveBlending })));
-    keep(new THREE.Mesh(plane, new THREE.MeshBasicMaterial({ map: this.telegraphTex(), color: '#ff3a20', transparent: true, depthWrite: false, opacity: 0.5, blending: THREE.AdditiveBlending })));
+    keep(new THREE.Mesh(plane, new THREE.MeshBasicMaterial({ map: this.telegraphTex(), color: '#ff3a20', transparent: true, depthWrite: false, depthTest: false, opacity: 0.5, blending: THREE.AdditiveBlending }))); // (the telegraph's own material)
     keep(new THREE.Mesh(plane, new THREE.MeshBasicMaterial({ map: this.decalTex.crack, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 })));
     keep(new THREE.Mesh(this.spikeGeo, this.spikeMat));
     const lg = new THREE.BufferGeometry(); lg.setAttribute('position', new THREE.BufferAttribute(new Float32Array(6), 3));
@@ -442,7 +451,8 @@ export class FX {
     const scorch = mk((x) => { blotchy(x, 10, 38, 42, 82, '24,16,10', 0.36); blotchy(x, 4, 16, 20, 40, '12,8,6', 0.45); });
     const tar = mk((x) => { for (let i = 0; i < 9; i++) { const g = x.createRadialGradient(128 + r(-50, 50), 128 + r(-50, 50), 0, 128, 128, r(40, 90)); g.addColorStop(0, 'rgba(14,12,10,0.9)'); g.addColorStop(1, 'rgba(14,12,10,0)'); x.fillStyle = g; x.fillRect(0, 0, 256, 256); } });
     // the hunter's mark: one bold ring round a soft glow (no arrowheads or crosshair marks)
-    const mark = mk((x) => { const g = x.createRadialGradient(128, 128, 10, 128, 128, 96); g.addColorStop(0, 'rgba(255,110,70,0.35)'); g.addColorStop(1, 'rgba(255,90,60,0)'); x.fillStyle = g; x.beginPath(); x.arc(128, 128, 96, 0, Math.PI * 2); x.fill(); x.strokeStyle = 'rgba(255,90,60,0.95)'; x.lineWidth = 12; x.beginPath(); x.arc(128, 128, 100, 0, Math.PI * 2); x.stroke(); });
+    // (S14: amber, the red-orange is the telegraphs')
+    const mark = mk((x) => { const g = x.createRadialGradient(128, 128, 10, 128, 128, 96); g.addColorStop(0, 'rgba(255,190,90,0.35)'); g.addColorStop(1, 'rgba(255,180,80,0)'); x.fillStyle = g; x.beginPath(); x.arc(128, 128, 96, 0, Math.PI * 2); x.fill(); x.strokeStyle = 'rgba(255,184,84,0.95)'; x.lineWidth = 12; x.beginPath(); x.arc(128, 128, 100, 0, Math.PI * 2); x.stroke(); });
     // (S12) rime: pale, uneven blotches of frost and cold salts (Cold Chemistry's frost, Thermal Shock)
     const rime = mk((x) => { blotchy(x, 10, 44, 36, 78, '226,240,250', 0.32); blotchy(x, 6, 26, 16, 36, '246,252,255', 0.4); });
     // (S13) a patch of crushed herbs and leaves on the ground (uneven, never a disc)
@@ -452,9 +462,82 @@ export class FX {
 
   ground(p) { return this.heightAt(p.x, p.z); }
 
+  // ---------------------------------------------------------------- S14 budgets (fxbudget.js)
+  // a particle: refused when the cast's live count is at its cap, when the level does not draw that kind (minimal: the
+  // core flash only), or when the scene is full (your own effects keep a reserve above it); a player's colour is moved off
+  // the red-orange that telegraphs own
+  admit(p) {
+    const b = this.cur, C = this.caps, tot = this.add.list.length + this.alpha.list.length;
+    if (!b || !b.player) return tot < C.scene;
+    if (b.kinds && !this._kindOk) return false;
+    if (b.p >= b.pcap) return false;
+    if (tot >= C.scene + (b.lvl === 'own' ? C.ownReserve : 0)) return false;
+    p.b = b; b.p++;
+    p.color = this.safeColor(p.color); if (p.c2) p.c2 = this.safeColor(p.c2);
+    return true;
+  }
+  safeColor(c) {
+    if (!c || typeof c.getHex !== 'function') return c;
+    const h = c.getHex();
+    let v = this._safe.get(h);
+    if (v === undefined) { const n = safeInt(h); v = n === h ? null : new THREE.Color(n); this._safe.set(h, v); }
+    return v || c;
+  }
+  safeStr(c) { if (c == null) return c; const n = new THREE.Color(c).getHex(), m = safeInt(n); return m === n ? c : '#' + m.toString(16).padStart(6, '0'); }
+  // the level of a hero's effects for this client (own / party / other / minimal / far / none)
+  levelOf(view) {
+    if (!view) return 'own';
+    if (view.id != null && view.id === view.mgr?.localId) return 'own';
+    const d = view.dist ?? (view.pos ? this.camera.position.distanceTo(view.pos) - (this.rig?.dist || 0) : 0);
+    return levelFor({ party: !!this.partyOf?.(view.id), dist: d, crowd: this.crowdCount(), others: SETTINGS.othersFx, mobile: !!GFX.mobile });
+  }
+  // a hero's cast (EntityView.playSkill): a fresh budget for all its beats; a fusion of your own also takes the machine's
+  // reactions while it lasts (rocks with no budget of their own)
+  castBudget(view, o = {}) {
+    this.noteCaster(view);
+    const b = makeBudget(this.levelOf(view), !!GFX.mobile, { share: GFX.particles ?? 1, fusion: !!o.fusion });
+    b.owner = view?.char || null; b.view = view || null; b.until = (this.clockT || 0) + (o.dur || 1) + 1;
+    if (view) view.fxB = b;
+    if (b.lvl === 'own' && o.fusion) this._fb = b;
+    return b;
+  }
+  // the budget for a hero's server event or contact: the cast still playing, else a short-lived one of its level. Machines
+  // and townsfolk: null (the world)
+  budgetOf(view) {
+    if (!view || (view.ty && view.ty !== 'p')) return null;
+    const now = this.clockT || 0;
+    if (view.fxB && now <= view.fxB.until) return view.fxB;
+    if (!view.fxA || now > view.fxA.until) { const b = view.fxA = makeBudget(this.levelOf(view), !!GFX.mobile, { share: GFX.particles ?? 1 }); b.owner = view.char || null; b.view = view; b.until = now + 1; }
+    return view.fxA;
+  }
+  withBudget(b, fn) { const prev = this.cur; this.cur = b; try { return fn(); } finally { this.cur = prev; } }
+  noteCaster(view) { if (view?.id != null && view.id !== view.mgr?.localId) this.casters.set(view.id, { v: view, t: this.clockT || 0 }); }
+  // other heroes who cast in the last 2.5 s and are on screen (a crowd drops others to minimal)
+  crowdCount() {
+    const now = this.clockT || 0; let n = 0;
+    for (const [id, c] of this.casters) {
+      if (now - c.t > 2.5 || (c.v.mgr && !c.v.mgr.views?.has(id))) { this.casters.delete(id); continue; }
+      if (c.v.onScreen !== false && !c.v.culled) n++;
+    }
+    return n;
+  }
+  // the live counts (the perf HUD, tools/combatshots, tests)
+  stats() {
+    return { particles: this.add.list.length + this.alpha.list.length, scene: this.caps.scene, lights: this.lights.filter((s) => s.l.intensity > 0.01).length, lightPool: this.lights.length,
+      debris: this.debrisList.length, debrisCap: this.caps.sceneRocks, rings: this.liveRings, trails: this.trails.filter((e) => e.trail.active).length, trailCap: this.caps.trailsAll,
+      patches: this.patchList.length, marks: this.marks.length, casters: this.crowdCount() };
+  }
+
   // ---------------------------------------------------------------- particle presets
   emit(kind, pos, o = {}) {
-    const n = Math.round((o.n ?? 10) * (o.scale ?? 1));
+    let n = Math.round((o.n ?? 10) * (o.scale ?? 1));
+    const b = this.cur;
+    if (b && b.player) {
+      if (b.kinds && !b.kinds.has(kind)) return;
+      if (b.k !== 1) n = kind === 'flash' || kind === 'glow' ? (b.k > 0 ? n : 0) : scaledCount(n, b.k, rnd());
+      if (!(n > 0)) return;
+    }
+    this._kindOk = true;
     const cc = col(o.color ?? '#ffffff');
     const dir = o.dir;
     let gy; const fy = () => (gy ??= this.ground(pos)); // one height sample per burst, not per particle
@@ -507,7 +590,7 @@ export class FX {
           p = { ...base, color: o.color ? cc : C_GATHER, pos: pos.clone().add(off), vel: off.clone().multiplyScalar(-1 / 0.2), life: 0.2, size: r(0.03, 0.06), tex: TEX.streak, stretch: 2.4, alpha: 0.9, fadeIn: 0.05 };
           this.add.spawn(p); break;
         }
-        case 'embers': p = { ...base, vel: V(r(-1, 1), r(1, 3.5), r(-1, 1)), life: r(0.8, 1.8), size: r(0.04, 0.09), tex: TEX.glow, drag: 0.5, grav: -0.5, alpha: 1, c2: col('#ff4010') }; this.add.spawn(p); break;
+        case 'embers': p = { ...base, vel: V(r(-1, 1), r(1, 3.5), r(-1, 1)), life: r(0.8, 1.8), size: r(0.04, 0.09), tex: TEX.glow, drag: 0.5, grav: -0.5, alpha: 1, c2: C_EMBER }; this.add.spawn(p); break;
         case 'flash': p = { ...base, vel: V(), life: o.life ?? 0.18, size: o.size ?? 2.4, tex: TEX.glow, alpha: o.alpha ?? 1, grow: 0.6, fadePow: 1 }; this.add.spawn(p); i = n; break;
         case 'glow': p = { ...base, vel: V(), life: o.life ?? 0.6, size: o.size ?? 1.5, tex: TEX.glow, alpha: o.alpha ?? 0.6, fadePow: 2 }; this.add.spawn(p); i = n; break;
         case 'flame': p = { ...base, vel: V(r(-1.2, 1.2), r(1.5, 4.5), r(-1.2, 1.2)).multiplyScalar(o.speed ?? 1), life: r(0.35, 0.8), size: r(0.5, 1.1) * (o.size ?? 1), tex: TEX.flame, drag: 1.5, grav: -2, alpha: 1, grow: 0.4, shrink: 0.3 }; this.add.spawn(p); break;
@@ -525,33 +608,56 @@ export class FX {
         case 'sand': { const v = rv(r(1.5, 4)); v.y = Math.abs(v.y) * 0.5 + 0.4; p = { ...base, color: col(rnd() < 0.5 ? '#e8cc96' : '#c8a46a'), vel: v.multiplyScalar(o.speed ?? 1), life: r(0.7, 1.4), size: r(0.4, 0.9) * (o.size ?? 1), tex: TEX.puff, drag: 2, alpha: 0.7, grow: 1.5, spin: r(-1, 1) }; this.alpha.spawn(p); break; }
       }
     }
+    this._kindOk = false;
   }
 
   // soft: a minor pop that is simply skipped when every pooled light is busy (never steals a big flash's light)
   light(pos, color, intensity = 8, dur = 0.3, dist = 10, soft = false) {
+    // (a flash with no hero's budget while your fusion plays, an arc the server sent or the machine's reaction to it, is the
+    // fusion's light: Tarfire, Galvanic Arc and the Furnace Drum lit two at once before S14)
+    const now = this.clockT || 0;
+    const b = this.cur && this.cur.player ? this.cur : this._fb && now <= this._fb.until ? this._fb : null;
+    if (b) {
+      if (b.light === 'no') return;
+      if (b.light === 'soft') soft = true;
+      color = this.safeStr(color);
+      // (S14) one light a cast: a second flash while the cast's light still burns moves that light (a held one stays)
+      const mine = this.lights.find((x) => x.b === b && (x.owner ? x.seen >= this.frameN - 1 : x.dur > 0 && x.t < x.dur));
+      if (mine) { if (!mine.owner) { mine.l.position.copy(pos); mine.l.color.set(color); mine.l.distance = dist; mine.t = 0; mine.dur = dur; mine.peak = Math.max(intensity, mine.peak * 0.6); } return; }
+    }
     const free = this.lights.find((x) => !x.owner && (x.dur === 0 || x.t >= x.dur));
     if (!free && soft) return;
     let s = free;
     if (!s) for (const x of this.lights) if (!x.owner && (!s || x.t / x.dur > s.t / s.dur)) s = x;
     if (!s) return;
-    s.l.position.copy(pos); s.l.color.set(color); s.l.distance = dist; s.l.decay = 1.6; s.t = 0; s.dur = dur; s.peak = intensity;
+    s.l.position.copy(pos); s.l.color.set(color); s.l.distance = dist; s.l.decay = 1.6; s.t = 0; s.dur = dur; s.peak = intensity; s.b = b;
   }
   // a steady light held by an owner (a boss machine's furnace) for as long as it is refreshed every frame: one of the
   // pool's lights, so no light is added to the scene. At most half the pool is held; a holder that stops calling
   // gives its light back the next frame.
   steadyLight(owner, pos, color, intensity, dist = 12, decay = 1.6) {
+    const b = this.cur && this.cur.player ? this.cur : null;
+    if (b && b.light === 'no') return;
     let s = this.lights.find((x) => x.owner === owner);
     if (!s) {
       if (this.lights.filter((x) => x.owner).length >= Math.floor(this.lights.length / 2)) return;
       s = this.lights.find((x) => !x.owner && (x.dur === 0 || x.t >= x.dur));
       if (!s) return;
-      s.owner = owner;
+      s.owner = owner; s.b = b;
     }
     s.seen = this.frameN;
     s.l.position.copy(pos); s.l.color.set(color); s.l.distance = dist; s.l.decay = decay; s.l.intensity = intensity;
   }
 
   ring(pos, color, radius = 4, dur = 0.55, o = {}) {
+    const wave = () => this.emit('ringdust', V(pos.x, this.ground(pos), pos.z), { n: Math.round(10 + radius * 2), r: radius * 0.35, speed: 1.6 + radius * 0.7, size: 1.1, alpha: 0.5 });
+    const b = this.cur && this.cur.player ? this.cur : null;
+    if (b) {
+      // (S14) at most ringsBeat rings in a beat for your own cast (2 desktop, 1 phones), one in all for others' casts,
+      // and others' none once the scene holds ringsLive
+      if ((b.lvl !== 'own' && this.liveRings >= this.caps.ringsLive) || !ringOk(b, (this.clockT || 0) + (o.delay || 0), this.caps)) { if (o.delay > 0) this.after(o.delay, null, wave); else wave(); return; }
+      color = this.safeStr(color);
+    }
     const m = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: this.ringTex, color, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
     m.rotation.x = -Math.PI / 2;
     m.position.copy(pos); m.position.y = this.ground(pos) + 0.08;
@@ -565,13 +671,13 @@ export class FX {
     // above (Kingsfall, Stormfall). A second ring on the same spot while the first still shows is a low dust wave instead)
     if (LR && now + delay - LR.t > -0.01 && now + delay - LR.t < LR.dur * 0.85 && Math.hypot(pos.x - LR.x, pos.z - LR.z) < 2) {
       this.scene.remove(m); m.geometry.dispose(); m.material.dispose();
-      const go = () => this.emit('ringdust', V(pos.x, this.ground(pos), pos.z), { n: Math.round(10 + radius * 2), r: radius * 0.35, speed: 1.6 + radius * 0.7, size: 1.1, alpha: 0.5 });
-      if (delay > 0) this.after(delay, null, go); else go();
+      if (delay > 0) this.after(delay, null, wave); else wave();
       return;
     }
     if (LR && Math.abs(now + delay - LR.t) < 0.08 && Math.hypot(pos.x - LR.x, pos.z - LR.z) < 2) delay = LR.t + 0.08 - now;
     this._lastRing = { t: now + delay, x: pos.x, z: pos.z, dur };
     m.visible = delay === 0;
+    this.liveRings++;
     this.after(dur + delay, (k, t) => {
       if (t < delay) return;
       m.visible = true;
@@ -579,7 +685,7 @@ export class FX {
       const s = radius * 2 * (0.15 + 0.85 * (1 - Math.pow(1 - kk, 3)));
       m.scale.set(s, s, 1);
       m.material.opacity = (1 - kk) * 0.95;
-    }, () => { this.scene.remove(m); m.geometry.dispose(); m.material.dispose(); });
+    }, () => { this.liveRings--; this.scene.remove(m); m.geometry.dispose(); m.material.dispose(); });
   }
 
   // telegraph: a red circle on the ground that glows stronger and pulses faster as the hit nears, then the hit lands.
@@ -587,8 +693,10 @@ export class FX {
   // ring, like a target or an emblem, from straight above)
   telegraph(pos, radius, dur, color = '#ff3a20') {
     const y = this.ground(pos) + 0.12;
-    const area = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: this.telegraphTex(), color, transparent: true, depthWrite: false, opacity: 0.16, blending: THREE.AdditiveBlending }));
-    area.rotation.x = -Math.PI / 2; area.position.set(pos.x, y, pos.z); area.renderOrder = 16; this.scene.add(area);
+    // (S14) red-orange is the telegraphs' alone (player effects are moved off it), and a telegraph draws over every player
+    // effect: TELEGRAPH_ORDER (30) above the particles, rings and decals, with no depth test
+    const area = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: this.telegraphTex(), color, transparent: true, depthWrite: false, depthTest: false, opacity: 0.16, blending: THREE.AdditiveBlending }));
+    area.rotation.x = -Math.PI / 2; area.position.set(pos.x, y, pos.z); area.renderOrder = TELEGRAPH_ORDER; this.scene.add(area);
     area.scale.set(radius * 2, radius * 2, 1);
     this.after(dur, (k, t) => {
       const ph = t * (6 + 14 * k);
@@ -613,6 +721,16 @@ export class FX {
   // once: the oldest is faded out quickly to make room.
   decal(kind, pos, radius = 2, life = 6) {
     const isMark = kind === 'crack' || kind === 'crater' || kind === 'scorch' || kind === 'smudge';
+    const b = this.cur && this.cur.player ? this.cur : null;
+    if (isMark && b && !b.marks) return null;
+    let prec = null;
+    if (!isMark) {
+      // (S14) ground patches: at most caps.patches in the scene (24, phones 10) and patchesHero (6) a hero; the oldest go
+      const P = this.patchList;
+      while (P.length >= this.caps.patches) { const old = P.shift(); old.e.t = Math.max(old.e.t, old.e.dur - 0.25); }
+      if (b && b.patches >= this.caps.patchesHero) { const j = P.findIndex((q) => q.b === b); if (j >= 0) { const old = P.splice(j, 1)[0]; old.e.t = Math.max(old.e.t, old.e.dur - 0.25); } }
+      prec = { b, e: null };
+    }
     if (isMark) {
       life = Math.min(life, 4);
       for (const d of this.marks) if (d.e.t < 0.3 && radius <= d.r * 1.35 && Math.hypot(d.x - pos.x, d.z - pos.z) < Math.max(0.8, d.r * 0.6)) return d.m;
@@ -634,7 +752,9 @@ export class FX {
     const entry = this.after(life, (k, t) => { m.material.opacity = Math.max(0, Math.min(1, (entry.dur - t) / fadeT, isMark ? t / 0.08 : 1)); }, () => {
       this.scene.remove(m); g.dispose(); m.material.dispose();
       if (rec) { const i = this.marks.indexOf(rec); if (i >= 0) this.marks.splice(i, 1); }
+      if (prec) { const i = this.patchList.indexOf(prec); if (i >= 0) this.patchList.splice(i, 1); if (prec.b) prec.b.patches--; }
     });
+    if (prec) { prec.e = entry; this.patchList.push(prec); if (prec.b) prec.b.patches++; }
     const rec = isMark ? { m, e: entry, x: pos.x, z: pos.z, r: radius } : null;
     if (rec) this.marks.push(rec);
     return m;
@@ -863,16 +983,27 @@ export class FX {
     for (let i = 0; i < 7; i++) this.after(0.03 * i + 0.01, null, () => { const m = itemMesh('remedyjar'); m.scale.setScalar(0.25); this.projectile(m, A.clone().add(V(r(-0.2, 0.2), r(-0.1, 0.2), r(-0.2, 0.2))), B.clone().add(V(r(-0.3, 0.3), r(-0.1, 0.3), r(-0.3, 0.3))), { time: 0.35, arc: 0.8, spin: 4, onHit: (q) => this.emit('drops', q, { n: 4, color: '#7ed05a' }) }); });
     this.after(0.4, null, () => this.impact('remedy', b.clone()));
   }
-  fuseBudget(dur) { const cap = GFX.mobile ? 8 : 18; this._fb = { until: (this.clockT || 0) + dur + 1, left: cap, cap }; }
+  // (S14) the old per-fusion rock window: a server event of a hero's (a bomb, a pop) keeps that hero's budget open a moment
+  fuseBudget(dur) { const b = this.cur; if (b && b.player) b.until = Math.max(b.until, (this.clockT || 0) + dur + 1); }
+  // rocks from the instanced pool. (S14) LIVE caps: a hero holds at most rockCap at once (own fusion 18, phones 8; less
+  // for others, none at minimal or far; its newest beat replaces its oldest rocks), the scene at most sceneRocks (48,
+  // phones 16; others' go first). Rocks with no hero budget (a machine's reaction) count on your own fusion while it lasts
   rocks(pos, n = 10, power = 1) {
-    const fb = this._fb && (this.clockT || 0) <= this._fb.until ? this._fb : null;
-    if (fb) { n = Math.min(n, fb.left); fb.left -= n; if (n > 0) this.debrisList.splice(0, Math.max(0, this.debrisList.length + n - fb.cap)); }
+    const now = this.clockT || 0, C = this.caps;
+    // (the machine's reactions to your fusion land up to a second after its own window: they count on it too)
+    const b = this.cur && this.cur.player ? this.cur : this._fb && now <= this._fb.until + 1 ? this._fb : this.world;
+    n = Math.min(n, b.rockCap);
+    // a hero's rocks are one pool (the plain skill before a fusion, the fusion, a triad on top): keyed by the hero's body
+    const L = this.debrisList, key = b.owner || b, live = this.rockLive;
     for (let i = 0; i < n; i++) {
-      if (this.debrisList.length >= 120) break;
+      if ((live.get(key) || 0) >= b.rockCap) { const j = L.findIndex((d) => d.k === key); if (j < 0) break; this.rockGone(L.splice(j, 1)[0]); }
+      if (L.length >= C.sceneRocks) { let j = L.findIndex((d) => d.lvl !== 'own'); if (j < 0 && b.lvl === 'own') j = 0; if (j < 0) break; this.rockGone(L.splice(j, 1)[0]); }
       const v = rv(r(2, 6) * power); v.y = Math.abs(v.y) * 1.2 + 3 * power;
-      this.debrisList.push({ p: pos.clone().add(V(r(-0.5, 0.5), 0.2, r(-0.5, 0.5))), v, s: r(0.08, 0.26) * power, rot: V(r(0, 6), r(0, 6), r(0, 6)), w: rv(r(4, 12)), age: 0, life: r(1.4, 2.4) });
+      L.push({ p: pos.clone().add(V(r(-0.5, 0.5), 0.2, r(-0.5, 0.5))), v, s: r(0.08, 0.26) * power, rot: V(r(0, 6), r(0, 6), r(0, 6)), w: rv(r(4, 12)), age: 0, life: r(1.4, 2.4), k: key, lvl: b.lvl });
+      live.set(key, (live.get(key) || 0) + 1);
     }
   }
+  rockGone(d) { const n = (this.rockLive.get(d.k) || 1) - 1; if (n > 0) this.rockLive.set(d.k, n); else this.rockLive.delete(d.k); }
 
   spike(pos, h = 1.4, life = 1.6) {
     const m = new THREE.Mesh(this.spikeGeo, this.spikeMat);
@@ -997,7 +1128,7 @@ export class FX {
     this.after(dur, (k, t, dt) => { acc += dt * 8; while (acc > 1) { acc--; const p = pos.clone().add(V(r(-r0, r0) * 0.5, 0.1, r(-r0, r0) * 0.5)); this.emit('flecks', p, { n: 1, color: '#d8702c' }); if (rnd() < 0.5) this.emit('smoke', p, { n: 1, size: 0.5, alpha: 0.25, lifeK: 0.6, color: '#5a524a' }); } });
   }
 
-  after(dur, update, done) { const e = { t: 0, dur, update, done }; this.timed.push(e); return e; }
+  after(dur, update, done) { const e = { t: 0, dur, update, done, b: this.cur }; this.timed.push(e); return e; } // (S14: a later beat counts on the budget that scheduled it)
   // a crackling electric arc between two points: a jagged line re-drawn every frame for a moment, a flash at the end
   arc(from, to, color = '#a8dcff', dur = 0.3, lit = true) {
     const N = 14, pos = new Float32Array(N * 3);
@@ -1024,8 +1155,16 @@ export class FX {
   }
 
   trail(getA, getB, color, width = 1) {
+    const b = this.cur && this.cur.player ? this.cur : null;
+    if (b) {
+      // (S14) weapon trails: b.trails a hero (2, phones and others 1, minimal and far none), caps.trailsAll in the scene
+      let all = 0, mine = 0;
+      for (const e of this.trails) if (e.trail.active) { all++; if (b.owner && e.owner === b.owner) mine++; }
+      if (mine >= b.trails || all >= this.caps.trailsAll) return { stop: () => {} };
+      color = this.safeStr(color);
+    }
     const t = new Trail(this.scene, color, width);
-    const entry = { trail: t, getA, getB };
+    const entry = { trail: t, getA, getB, owner: b?.owner || null };
     this.trails.push(entry);
     return { stop: () => { t.active = false; } };
   }
@@ -1083,7 +1222,11 @@ export class FX {
     }, () => { this.scene.remove(mesh); onHit?.(b.clone()); });
   }
 
-  shake(a) { this.rig?.addShake(a); }
+  shake(a) {
+    const b = this.cur;
+    if (b && b.player && b.lvl !== 'own') { if (!(b.view?.dist <= 12)) return; a *= 0.5; } // (others' fusions: within 12 m, half strength; 2.7)
+    this.rig?.addShake(a);
+  }
   // hit-stop is scoped: only the characters in `who` (EntityViews or character Object3Ds: the attacker and the
   // target) freeze for d seconds; every EntityView reads its own char.userData.hitstopT (see EntityView.update),
   // so other players, mobs, particles and the camera keep running. With no scope it is a no-op.
@@ -1107,9 +1250,11 @@ export class FX {
   }
   // a tiny dark-to-bright hit core: a brief dark smudge with a hot white pinpoint blooming over it
   hitCore(p, s = 1, color = '#fff2d0', life = 0.12) {
+    this._kindOk = true; // (the contact core is what a minimal level keeps)
     this.alpha.spawn({ pos: p.clone(), vel: V(), age: 0, rot: r(0, 6.28), life: 0.13, size: s * 0.75, tex: TEX.puff, alpha: 0.6, color: C_DARK, grow: 0.7, fadePow: 1 });
     this.add.spawn({ pos: p.clone(), vel: V(), age: 0, rot: 0, life: life * 0.6, size: s * 0.4, tex: TEX.glow, alpha: 1, color: C_WHITE, grow: 1.6, fadePow: 1 });
     this.emit('flash', p, { size: s * 1.3, color, life });
+    this._kindOk = false;
   }
   // layered dust wall for slams: a fast low skirt along the floor and a slower, taller billow behind it
   dustWall(p, R) {
@@ -1149,7 +1294,7 @@ export class FX {
         // (review 18 Nov) a narrower spray: at width 6 a thrown shield's clang, seen along the throw from behind the hero,
         // splayed into rays round a point behind his head (a sunburst; Anvil Fall's return)
         this.emit('fan', up, { n: 14, dir, color: '#f4f8ff', width: 2.6 });
-        this.emit('flecks', up, { n: 4, color: '#fff4e0', c2: '#ff7020' });
+        this.emit('flecks', up, { n: 4, color: '#fff4e0', c2: '#ff9030' });
         this.light(up, '#d8e8ff', 6, 0.12, 9); this.sound('clang'); break;
       // blunt: thud of dust thrown along the floor under the target, grit, a small soft light pop
       case 'blunt':
@@ -1204,7 +1349,7 @@ export class FX {
         this.light(up, '#ffc080', 10, 0.25, 14); this.sound('boom'); break;
       }
       case 'fire': this.emit('flame', at, { n: 18, spread: 0.6 }); this.emit('embers', at, { n: 16, spread: 0.8 }); this.emit('smoke', at, { n: 6, spread: 0.6 }); this.emit('shards', at, { n: 8, color: '#e8f0ff' }); this.light(at, '#ff8030', 10, 0.6, 12); this.decal('scorch', at, 1.6, 5); this.sound('glass'); this.sound('fire'); break;
-      case 'bigfire': for (let i = 0; i < 3; i++) this.emit('flame', at.clone().add(V(r(-1, 1), 0, r(-1, 1))), { n: 18, spread: 0.8, size: 1.4 }); this.emit('embers', at, { n: 40, spread: 1.5 }); this.emit('smoke', at, { n: 18, spread: 1.4, size: 1.6 }); this.ring(at, '#ffa050', 4.5, 0.5); this.light(at, '#ff7020', 16, 0.8, 16); this.shake(0.5); this.decal('scorch', at, 3.2, 7); this.sound('boom'); break;
+      case 'bigfire': for (let i = 0; i < 3; i++) this.emit('flame', at.clone().add(V(r(-1, 1), 0, r(-1, 1))), { n: 18, spread: 0.8, size: 1.4 }); this.emit('embers', at, { n: 40, spread: 1.5 }); this.emit('smoke', at, { n: 18, spread: 1.4, size: 1.6 }); this.ring(at, '#ffa050', 4.5, 0.5); this.light(at, '#ff9030', 16, 0.8, 16); this.shake(0.5); this.decal('scorch', at, 3.2, 7); this.sound('boom'); break;
       case 'grand': {
         const p = at.clone();
         this.emit('flash', p.clone().setY(g + 2), { size: 10, color: '#fff4d0', life: 0.3 });
@@ -1251,7 +1396,7 @@ export class FX {
       case 'pepperpot': this.emit('dust', up, { n: 14, size: 0.9, color: '#c8b87a' }); this.emit('shards', up, { n: 6, color: '#8a6a4a' }); this.sound('glass'); this.sound('puff'); break;
       case 'bark': case 'sap': this.emit('motes', pos.clone().setY(g), { n: 24, color: '#ffc860', r: 0.6 }); this.emit('glow', up, { size: 2, color: '#ffb040', alpha: 0.5 }); this.sound('heal'); break;
       case 'elixir': this.emit('drops', up.clone().setY(up.y + 2), { n: 30, color: '#9adcff', additive: true }); this.emit('flash', up.clone().setY(up.y + 2), { size: 3, color: '#c0f0ff' }); this.sound('glass'); break;
-      case 'mark': { const d = this.decal('mark', pos, 1.3, 2.2); this.emit('flash', up, { size: 1.6, color: '#ff7050' }); break; }
+      case 'mark': { const d = this.decal('mark', pos, 1.3, 2.2); this.emit('flash', up, { size: 1.6, color: '#ffb060' }); break; }
       case 'sand': this.emit('sand', at, { n: 16, spread: o.r ? o.r * 0.4 : 0.6 }); this.sound('puff'); break;
       case 'net': this.emit('leaves', up, { n: 10, color: '#a08a5a' }); this.sound('thud'); break;
       case 'pin': this.hitCore(up, 0.5, '#fff0d0'); this.emit('dust', at, { n: 3, size: 0.55 }); this.emit('sparks', up, { n: 5 }); this.emit('grit', up, { n: 4 }); break;
@@ -1418,6 +1563,7 @@ export class FX {
   // later, one plain dust ring from T3 (never a second where the kind already threw one), a mark on T4 slams, and for your
   // own hits the camera (shove, punch) and a short buzz on phones. o: { at, feet, dir, who, local, kind, slam, ranged, upgrade }
   tierHit(T, o) {
+    if (!this.cur && o.who?.[0]?.mgr) { const bb = this.budgetOf(o.who[0]); if (bb) return this.withBudget(bb, () => this.tierHit(T, o)); } // (a contact the server reported: its hero's budget)
     const t = T.tier;
     if (!t) { if (!o.upgrade) this.sound('tick'); return; }
     const stopOn = SETTINGS.hitstop !== false;
@@ -1430,10 +1576,10 @@ export class FX {
     const dir = o.dir || V(1, 0, 0), at = o.at, feet = (o.feet || at).clone();
     feet.y = this.ground(feet);
     const spk = [0, 0, 6, 12, 20, 26][t];
-    if (spk && !o.upgrade) this.emit('fan', at, { n: GFX.mobile ? Math.ceil(spk / 2) : spk, dir, color: '#ffe0a0' });
+    if (spk && !o.upgrade) this.emit('fan', at, { n: spk, dir, color: '#ffe0a0' }); // (S14: phones' counts from the budget's share)
     const ROCKY = new Set(['earth', 'grand', 'blast']);
     const deb = [0, 0, 4, 10, 16, 16][t];
-    if (deb && !ROCKY.has(o.kind)) this.rocks(feet.clone().setY(feet.y + 0.5), GFX.mobile ? Math.ceil(deb / 2) : deb, 0.32 + t * 0.06);
+    if (deb && !ROCKY.has(o.kind)) this.rocks(feet.clone().setY(feet.y + 0.5), deb, 0.32 + t * 0.06); // (the rock caps live in rocks())
     const RINGED = new Set(['sweep', 'blunt', 'execute', 'shatter', 'earth', 'blast', 'grand']);
     this.after(0.03, null, () => {
       this.emit('dust', feet.clone().setY(feet.y + 0.15), { n: 2 + t * 2, spread: 0.3, size: 0.55 + t * 0.12, alpha: 0.5 });
@@ -1443,7 +1589,7 @@ export class FX {
     if (o.local) {
       this.rig?.shove?.(dir, T.kick, o.slam ? -0.6 : 0);
       if (T.punch) this.rig?.punch?.(T.punch, t >= 4 ? 0.2 : 0.14);
-      if (t >= 3 && GFX.mobile && SETTINGS.vibrate !== false) try { navigator.vibrate?.(t >= 4 ? 28 : 14); } catch { /* no vibration */ }
+      hapticTier(t); // (S14, client/engine/haptics.js: phones only, T3 light, T4 medium, T5 heavy, behind Vibration)
     }
   }
 
@@ -1459,12 +1605,15 @@ export class FX {
       if (e.trail.active) e.trail.push(e.getA(), e.getB());
       if (!e.trail.update(dt)) { e.trail.dispose(this.scene); this.trails.splice(i, 1); }
     }
+    const cur0 = this.cur;
     for (let i = this.timed.length - 1; i >= 0; i--) {
       const t = this.timed[i];
       t.t += dt;
+      this.cur = t.b;
       t.update?.(Math.min(1, t.t / t.dur), t.t, dt);
       if (t.t >= t.dur) { t.done?.(); this.timed.splice(i, 1); }
     }
+    this.cur = cur0;
     for (const s of this.lights) {
       if (s.owner) { if (s.seen >= this.frameN - 1) continue; s.owner = null; s.dur = 0; }
       if (s.dur > 0 && s.t < s.dur) { s.t += dt; const k = s.t / s.dur; s.l.intensity = s.peak * (k < 0.15 ? k / 0.15 : 1 - (k - 0.15) / 0.85); }
@@ -1476,7 +1625,7 @@ export class FX {
     for (let i = this.debrisList.length - 1; i >= 0; i--) {
       const d = this.debrisList[i];
       d.age += dt;
-      if (d.age > d.life) { this.debrisList.splice(i, 1); continue; }
+      if (d.age > d.life) { this.rockGone(d); this.debrisList.splice(i, 1); continue; }
       d.v.y -= 18 * dt;
       d.p.addScaledVector(d.v, dt);
       const gy = this.heightAt(d.p.x, d.p.z) + d.s * 0.4;
@@ -1493,6 +1642,12 @@ export class FX {
   // ======================================================================
   // run a choreography event. ctx: { char, animator, cls, origin(V3 feet), yaw, target(V3), targetEnt, color, held:{} }
   run(ev, ctx) {
+    // (S14) every beat of a cast counts on its budget (EntityView.playSkill: ctx.fb); the gallery's casts are your own
+    const b = ctx.fb || (ctx.fb = ctx.src ? this.castBudget(ctx.src) : makeBudget('own', !!GFX.mobile, { share: GFX.particles ?? 1 }));
+    const prev = this.cur; this.cur = b;
+    try { return this.runEv(ev, ctx); } finally { this.cur = prev; }
+  }
+  runEv(ev, ctx) {
     const char = ctx.char, bones = char.userData.bones;
     const fwd = V(Math.sin(ctx.yaw), 0, Math.cos(ctx.yaw));
     const feet = () => char.getWorldPosition(V());
@@ -1789,12 +1944,12 @@ export class FX {
         const m = itemMesh('clockbomb'); m.position.copy(p).add(V(0, 0.06, 0)); m.scale.setScalar(1.6);
         this.scene.add(m);
         let blink = 0;
-        this.after(ev.delay || 1.8, (k, t, dt) => { blink += dt * (4 + k * 14); m.children.forEach((c) => (c.visible = true)); if (Math.floor(blink) % 2 === 0) this.emit('glow', p.clone().add(V(0, 0.3, 0)), { size: 0.5, color: '#ff4030', life: 0.08 }); if (Math.floor(blink * 2) % 4 === 0) this.sound('tick'); }, () => { this.scene.remove(m); this.impact('bigfire', p.clone().add(V(0, 0.3, 0))); this.impact('earth', p, { r: 4 }); this.shake(0.8); });
+        this.after(ev.delay || 1.8, (k, t, dt) => { blink += dt * (4 + k * 14); m.children.forEach((c) => (c.visible = true)); if (Math.floor(blink) % 2 === 0) this.emit('glow', p.clone().add(V(0, 0.3, 0)), { size: 0.5, color: '#ffb040', life: 0.08 }); if (Math.floor(blink * 2) % 4 === 0) this.sound('tick'); }, () => { this.scene.remove(m); this.impact('bigfire', p.clone().add(V(0, 0.3, 0))); this.impact('earth', p, { r: 4 }); this.shake(0.8); });
         break;
       }
       case 'bladeGlow': {
         let acc = 0;
-        this.after(ev.dur || 8, (k, t, dt) => { acc += dt * 14; while (acc > 1) { acc--; const p = ctx.animator.weaponPoint('R', r(0.2, 0.85)); this.add.spawn({ pos: p, vel: V(r(-0.2, 0.2), r(0.3, 1), r(-0.2, 0.2)), age: 0, life: r(0.3, 0.6), size: r(0.05, 0.1), tex: TEX.glow, alpha: 1, rot: 0, color: col(ev.color || '#ff8a30'), c2: col('#ff3010') }); } });
+        this.after(ev.dur || 8, (k, t, dt) => { acc += dt * 14; while (acc > 1) { acc--; const p = ctx.animator.weaponPoint('R', r(0.2, 0.85)); this.add.spawn({ pos: p, vel: V(r(-0.2, 0.2), r(0.3, 1), r(-0.2, 0.2)), age: 0, life: r(0.3, 0.6), size: r(0.05, 0.1), tex: TEX.glow, alpha: 1, rot: 0, color: col(ev.color || '#ff8a30'), c2: C_EMBER }); } });
         break;
       }
       case 'fadeSelf': {

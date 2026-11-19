@@ -9,6 +9,7 @@ import { effName } from '/sunmere-play/shared/keystones.js';
 import { skillIcon } from './icons.js';
 import { SETTINGS, saveSettings, keyFor, keyLabel } from '../engine/settings.js';
 import { IS_TOUCH } from '../engine/platform.js';
+import { haptic } from '../engine/haptics.js';
 
 const $ = (sel, root = document) => root.querySelector(sel);
 const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html !== undefined) e.innerHTML = html; return e; };
@@ -19,15 +20,8 @@ export const CLEAN_FIRST = 0.35; // Clean Link: the first 0.35 s of a window (co
 // ------------------------------------------------------------------ haptics (2.10): light on T3, medium on T4, a light
 // tick when a link window opens on a phone. Capacitor's Haptics plugin when the app has it, else the page's vibrate.
 // The "Vibration" option (SETTINGS.vibrate) is on by default; desktops never vibrate
-export function haptic(kind = 'light') {
-  if (!IS_TOUCH || SETTINGS.vibrate === false) return false;
-  try {
-    const H = globalThis.Capacitor?.Plugins?.Haptics;
-    if (H?.impact) { H.impact({ style: kind === 'medium' ? 'MEDIUM' : 'LIGHT' }); return true; }
-    if (navigator.vibrate) return navigator.vibrate(kind === 'medium' ? 24 : 10);
-  } catch { /* no vibration here */ }
-  return false;
-}
+// (S14: moved to client/engine/haptics.js, phones only; the hits buzz from fx.tierHit on the contact frame)
+export { haptic };
 
 // ------------------------------------------------------------------ the fusion a skill would make now
 // The link (this client's own predicted one, then the server's), an authored pair, unlocked, inside the window with the
@@ -176,7 +170,6 @@ export class CombatHud {
     const now = performance.now();
     if (now - this.combo.t > 2000) this.combo.n = 0;
     this.combo.n++; this.combo.t = now;
-    if (ev.ht >= 4) haptic('medium'); else if (ev.ht === 3) haptic('light');
   }
   update(now) {
     const g = this.g, y = g.you;

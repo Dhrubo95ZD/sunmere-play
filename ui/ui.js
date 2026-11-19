@@ -57,6 +57,7 @@ import { icon, skillIcon, talentArt, pathArt, buffArt, achArt, factionArt, homeA
 import { CHANGELOG, CHANGELOG_VERSION } from './changelog.js';
 import { installSocial } from './social.js';
 import { PerfHud } from './perfhud.js';
+import { OTHERS_FX } from '../game/fxbudget.js';
 import { CombatHud, setPin, pinsOf, pinnable, pinCast } from './combathud.js';
 import { openWebScreen } from './webscreen.js';
 import { fusionBookPage, wireFusionBook } from './fusionbook.js';
@@ -2195,13 +2196,15 @@ export class UI {
         ${IS_MOBILE && !SETTINGS.qualityPicked && SETTINGS.qualityAuto ? '<div class="o-qhint">Picked to suit the graphics chip in this device. Mobile High is sharpest (smooth edges); Mobile and Mobile Low run cooler.</div>' : ''}
         <div class="o-note">Quality changes take effect when the world view reloads. <a class="o-reload">Reload now</a></div>
         <label class="opt chk"><input type="checkbox" class="o-shake" ${SETTINGS.shake ? 'checked' : ''}> Camera shake on big hits</label>
+        <div class="opt o-trow"><span>Others' effects</span><div class="o-seg o-ofx">${OTHERS_FX.map(([v, n]) => `<button data-v="${v}" class="${SETTINGS.othersFx === v ? 'on' : ''}">${n}</button>`).join('')}</div></div>
+        <div class="o-note">How much of other heroes' and bots' fusions you see. Your party always shows more, far casters show only dust, and in a crowd the others drop to the contact flash. Minimal is lightest on the phone.</div>
         <label class="opt chk"><input type="checkbox" class="o-perfhud" ${SETTINGS.perfHud ? 'checked' : ''}> Performance readout: frame rate, frame times and draw counts in a small corner panel, with Copy and a 20 s Bench here</label>
         <label class="opt chk"><input type="checkbox" class="o-herobody" ${SETTINGS.heroBody !== false ? 'checked' : ''}> New hero body: the reworked body and animation for every hero and townsperson (untick for the old body). Takes effect when the world view reloads.</label>
         ${IS_TOUCH ? '' : `<h4>Camera</h4>${this.freeCamHtml()}`}
         ${IS_TOUCH ? '' : '<h4>Performance</h4>' + this.perfOptsHtml()}
         <h4>Combat</h4>
         <label class="opt chk"><input type="checkbox" class="o-fusealt" ${SETTINGS.fuseAlt ? 'checked' : ''}> ${IS_TOUCH ? 'Fuse only with a two-finger tap (a one-finger tap casts the second skill plain)' : 'Fuse only while Alt is held (without Alt the second skill casts plain)'}</label>
-        ${IS_TOUCH ? `<label class="opt chk"><input type="checkbox" class="o-vib" ${SETTINGS.vibrate !== false ? 'checked' : ''}> Vibration: a light tick when a fusion window opens, and on heavy hits</label>` : ''}
+        ${IS_TOUCH ? `<label class="opt chk"><input type="checkbox" class="o-vib" ${SETTINGS.vibrate !== false ? 'checked' : ''}> Vibration: a light tick when a fusion window opens, and a short buzz on your big hits (stronger for the biggest)</label>` : ''}
         <h4>Interface</h4>
         <div class="opt"><span>Interface size</span><div class="o-s">${[0.85, 1, 1.15, 1.3].map((v) => `<button data-s="${v}" class="${SETTINGS.uiScale === v ? 'on' : ''}">${Math.round(v * 100)}%</button>`).join('')}</div></div>
         ${this.botChatHtml()}
@@ -2217,6 +2220,7 @@ export class UI {
       const mj = $('.o-junk', w); if (mj) mj.onchange = (e) => { SETTINGS.autoJunk = e.target.checked; set(); };
       const qt = $('.o-trail', w); if (qt) qt.onchange = (e) => { SETTINGS.questTrail = e.target.checked; set(); };
       $('.o-shake', w).onchange = (e) => { SETTINGS.shake = e.target.checked; set(); };
+      w.querySelectorAll('.o-ofx button').forEach((b) => (b.onclick = () => { SETTINGS.othersFx = b.dataset.v; set(); this.g.sfx?.play('ui'); w.refresh(); })); // (S14: live, fx.js reads it on each cast)
       $('.o-perfhud', w).onchange = (e) => { SETTINGS.perfHud = e.target.checked; set(); this.perfHud?.setOn(SETTINGS.perfHud); };
       { const fa = $('.o-fusealt', w); if (fa) fa.onchange = (e) => { SETTINGS.fuseAlt = e.target.checked; set(); }; const vb = $('.o-vib', w); if (vb) vb.onchange = (e) => { SETTINGS.vibrate = e.target.checked; set(); }; }
       const hb = $('.o-herobody', w); if (hb) hb.onchange = (e) => { SETTINGS.heroBody = e.target.checked; set(); }; // (assets/hero/heroBody.js reads it at load)

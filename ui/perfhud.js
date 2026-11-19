@@ -122,6 +122,16 @@ export class PerfHud {
     };
   }
 
+  // (S14) the effects' live counts against their caps (fx.js stats): particles, lights, debris rocks, rings, weapon trails,
+  // ground patches, and how many other heroes cast on screen (over 6, phones 3: their effects drop to minimal)
+  fxStats() { try { return this.g.fx?.stats?.() || null; } catch { return null; } }
+  fxLine(F = this.fxStats()) {
+    if (!F) return '';
+    return `
+fx ${F.particles}/${F.scene} lights ${F.lights}/${F.lightPool} debris ${F.debris}/${F.debrisCap}
+rings ${F.rings} trails ${F.trails}/${F.trailCap} patches ${F.patches} casters ${F.casters}`;
+  }
+
   gpuName() {
     if (this._gpu !== undefined) return this._gpu;
     try {
@@ -132,7 +142,8 @@ export class PerfHud {
   }
 
   line(s = this.stats()) {
-    return `Sunmere perf: ${f1(s.fps)} fps, frame p50 ${f1(s.p50)} / p95 ${f1(s.p95)} ms, CPU ${f1(s.cpu50)} / ${f1(s.cpu95)} ms, draws ${Math.round(s.main)} + shadow ${Number.isFinite(s.shadow) ? Math.round(s.shadow) : 0} (${Math.round(s.shadowHz)} Hz), tris ${kfmt(s.tris)}, ${s.preset}, scale ${s.scale.toFixed(2)} (dyn ${s.dyn}), ${s.size}, cap ${s.cap || 'none'}, ${this.place()}, ${this.gpuName()}`;
+    const F = this.fxStats();
+    return `Sunmere perf: ${F ? `fx ${F.particles} particles, ${F.lights} lights, ${F.debris} debris, ${F.rings} rings, ` : ''}${f1(s.fps)} fps, frame p50 ${f1(s.p50)} / p95 ${f1(s.p95)} ms, CPU ${f1(s.cpu50)} / ${f1(s.cpu95)} ms, draws ${Math.round(s.main)} + shadow ${Number.isFinite(s.shadow) ? Math.round(s.shadow) : 0} (${Math.round(s.shadowHz)} Hz), tris ${kfmt(s.tris)}, ${s.preset}, scale ${s.scale.toFixed(2)} (dyn ${s.dyn}), ${s.size}, cap ${s.cap || 'none'}, ${this.place()}, ${this.gpuName()}`;
   }
   place() {
     const p = this.g.playerPos?.(), W = this.g.world;
@@ -166,7 +177,7 @@ export class PerfHud {
     if (!this.el) return;
     const s = this.stats();
     const txt = `<b>${f1(s.fps)} fps</b>  frame ${f1(s.p50)}/${f1(s.p95)} ms\nCPU ${f1(s.cpu50)}/${f1(s.cpu95)} ms  ${kfmt(s.tris)} tris\ndraws ${Math.round(s.main)} + shadow ${Number.isFinite(s.shadow) ? Math.round(s.shadow) : 0} @${Math.round(s.shadowHz)}Hz\n${s.preset}, scale ${s.scale.toFixed(2)}${s.dyn === 'off' ? '' : ` (${s.dyn})`}`;
-    this.el.querySelector('.ph-txt').innerHTML = txt;
+    this.el.querySelector('.ph-txt').innerHTML = txt + this.fxLine();
     const B = this.bench, res = this.el.querySelector('.ph-res');
     if (B) res.textContent = `Stand still... ${Math.max(0, Math.ceil((B.t0 + BENCH_MS - performance.now()) / 1000))} s`;
     else res.textContent = this.result ? this.result.short : '';

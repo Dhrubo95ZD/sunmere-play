@@ -2,6 +2,7 @@
 // next load of the world view (it decides render targets, shadow maps and grass counts at startup).
 import { IS_MOBILE, deviceTier } from './platform.js';
 import { normalizeCap } from './pacer.js';
+import { othersNorm } from '../game/fxbudget.js';
 const KEY = 'sunmere:opts';
 
 // fpsCap: THE frame cap, every platform: 30 | 60 | 90 | 120 | 0 (0 = every vsync: the monitor's rate, or uncapped when
@@ -13,6 +14,9 @@ const KEY = 'sunmere:opts';
 //   wisps and sparks on hits (desktop: the 8 nearest +10 characters within 20 m; phones: your own character as you attack);
 //   Simple: a steady glow and only your own sparks as you attack; Off: plain steel (the Prismatic sheen stays). Phones Simple.
 // perfHud: (v116) the Performance readout panel (ui/perfhud.js), off by default
+// othersFx: (S14) Others' effects, 'full' | 'reduced' | 'minimal': how much of other heroes' and bots' casts this client draws
+//   (game/fxbudget.js levels; party members always as a party, a crowd drops others to minimal). Phones Minimal, desktop Reduced
+// vibrate: (S6/S14) Vibration on phones (engine/haptics.js), on by default; desktops never vibrate
 // botChat / botInvites / botWhispers: (living bots C.11) show adventurers' (bots') chat per channel; adventurers may invite
 //   me to groups; adventurers may whisper me first. The server is told (net.js botPrefsMsg) and skips hidden channels.
 // heroBody: (S0, hero rework stage 2) the new skinned hero body for every humanoid, on by default since the S0 perf review (18 Nov), false = the old body (assets/hero/heroBody.js
@@ -83,6 +87,7 @@ export function normalizeTouch(t) {
 if (_saved.fpsCap == null && IS_MOBILE && _saved.touch?.fps) SETTINGS.fpsCap = +_saved.touch.fps === 30 ? 30 : 60;
 SETTINGS.fpsCap = normalizeCap(SETTINGS.fpsCap, IS_MOBILE ? 60 : 0);
 SETTINGS.touch = normalizeTouch(SETTINGS.touch);
+SETTINGS.othersFx = othersNorm(SETTINGS.othersFx, IS_MOBILE);
 export const UPGRADE_FX = [['full', 'Full'], ['simple', 'Simple'], ['off', 'Off']];
 if (!UPGRADE_FX.some(([k]) => k === SETTINGS.upgradeFx)) SETTINGS.upgradeFx = IS_MOBILE ? 'simple' : 'full';
 // ONE frame-cap setting: touch.fps reads and writes SETTINGS.fpsCap (non-enumerable, so it is never saved twice and

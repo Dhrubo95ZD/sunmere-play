@@ -540,7 +540,9 @@ export class EntityView {
     let travelK = 1;
     // (toTarget.behind, S5 Pierce the Line: the gap is past the machine, its own radius further, so the hero ends clear of it)
     if (ch.toTarget && ch.endRoot?.[2] > 0 && tgt?.pos) travelK = Math.max(0, Math.min(ch.toTarget.max, Math.hypot(tgt.pos.x - this.pos.x, tgt.pos.z - this.pos.z) - ch.toTarget.gap + (ch.toTarget.behind ? tgt.radius || 0.6 : 0))) / ch.endRoot[2];
-    if (skillOf(id)?.from) fx.fuseBudget?.(ch.dur / (haste || 1)); // (a fusion's beats share 18 rocks, fx.js; S5)
+    // (S14) the cast's effect budget (fx.js castBudget, fxbudget.js): its level for this client (own, party, others by the
+    // Options setting, minimal in a crowd, far) and the caps every beat of it counts on
+    ctx.fb = fx.castBudget?.(this, { fusion: !!skillOf(id)?.from, dur: ch.dur / (haste || 1) }) || null;
     this.anim.play(ch.clip, { speed: haste, fadeIn: cut ? 0.06 : undefined, travelK, onEvent: (ev) => { ctx.yaw = this.ry; fx.run(ev, ctx); } });
     if (this.char.userData.dsList && !(this.dist > 45)) dsAttack(this.char, fx); // Dragonslayer pieces vent steam
     heatAttack(this); // a +10 piece: the phones' and Simple's sparks and wisp follow your own attacks (heat.js)

@@ -631,18 +631,21 @@ function goggleMask(rb, cap, brass) {
 
 function pressureTank(rb, brass) {
   const w = () => [['chest', 1]];
-  rb.addW(cyl(0.085, 0.085, 0.42, 16), 'metal', w, { p: [0, 1.34, -0.25], c: '#c0703a', paint: 0.4 });
-  rb.addW(sphere(0.085, 16, 8, 0, PI * 2, 0, PI / 2), 'metal', w, { p: [0, 1.55, -0.25], c: '#c0703a' });
-  rb.addW(sphere(0.085, 16, 8, 0, PI * 2, PI / 2, PI / 2), 'metal', w, { p: [0, 1.13, -0.25], c: '#c0703a' });
+  rb.addW(cyl(0.085, 0.085, 0.42, 16), 'metal', w, { p: [0, 1.34, -0.33], c: '#c0703a', paint: 0.4 });
+  rb.addW(sphere(0.085, 16, 8, 0, PI * 2, 0, PI / 2), 'metal', w, { p: [0, 1.55, -0.33], c: '#c0703a' });
+  rb.addW(sphere(0.085, 16, 8, 0, PI * 2, PI / 2, PI / 2), 'metal', w, { p: [0, 1.13, -0.33], c: '#c0703a' });
   // (review 18 Nov) the bands sit flush (no wider than the tank), so from straight above the dome is not ringed by them
-  for (const y of [1.2, 1.34, 1.48]) rb.addW(torus(0.08, 0.007, 5, 18), 'metal', w, { p: [0, y, -0.25], r: [PI / 2, 0, 0], c: brass });
+  for (const y of [1.2, 1.34, 1.48]) rb.addW(torus(0.08, 0.007, 5, 18), 'metal', w, { p: [0, y, -0.33], r: [PI / 2, 0, 0], c: brass });
   // pressure gauge dial
-  rb.addW(cyl(0.035, 0.035, 0.02, 14), 'metal', w, { p: [0.07, 1.42, -0.2], r: [0, 0, PI / 2], c: brass });
-  rb.addW(cyl(0.028, 0.028, 0.022, 14), 'cloth', w, { p: [0.075, 1.42, -0.2], r: [0, 0, PI / 2], c: '#f0e8d0' });
+  rb.addW(cyl(0.035, 0.035, 0.02, 14), 'metal', w, { p: [0.07, 1.42, -0.28], r: [0, 0, PI / 2], c: brass });
+  rb.addW(cyl(0.028, 0.028, 0.022, 14), 'cloth', w, { p: [0.075, 1.42, -0.28], r: [0, 0, PI / 2], c: '#f0e8d0' });
   // coiled hose
   const pts = [];
-  for (let i = 0; i <= 30; i++) { const t = i / 30; pts.push(V3(-0.07 + Math.sin(t * PI * 3) * 0.04, 1.58 - t * 0.5, -0.22 + Math.cos(t * PI * 3) * 0.04)); }
+  for (let i = 0; i <= 30; i++) { const t = i / 30; pts.push(V3(-0.07 + Math.sin(t * PI * 3) * 0.04, 1.58 - t * 0.5, -0.30 + Math.cos(t * PI * 3) * 0.04)); }
   rb.addW(tube(pts, 0.012, 6, 60), 'leather', w, { uv: 'keep', c: '#2a2220' });
+  // (owner 19 Nov) the tank stands 8 cm off the back on a short frame, so a worn cloak lies against the back under it
+  // (cloak first, tank over it) instead of bulging out behind the tank: two brackets join the tank to the straps
+  for (const y of [1.24, 1.46]) rb.addW(box(0.05, 0.03, 0.1), 'metal', w, { p: [0, y, -0.215], c: '#3a2a20' });
   // shoulder straps
   for (const sx of [-1, 1]) rb.addW(box(0.04, 0.42, 0.02), 'leather', (x, y) => torsoW(y), { p: [sx * 0.11, 1.38, -0.17], c: '#3a2616' });
 }
@@ -1084,8 +1087,8 @@ export function setCharArmor(root, sh) {
 // class's own cape hides under it. Its colours, a border in the quality colour, a shaped hem and (q4+) border stripes
 // follow the cloak's quality. ck = quality or null.
 const CLOAK = { 1: ['#6a5a44', '#3e3428'], 2: ['#3e6a34', '#24401e'], 3: ['#2c4a8a', '#1a2a50'], 4: ['#4e2e7a', '#c8a050'], 5: ['#9a1e1e', '#e8c060'], 6: ['#1e2a50', '#7a52c8'] };
-// the sandblade's back tabard, the chemist's pressure tank and the ranger's quiver stand out from the back
-const CLOAK_OUT = { sandblade: 0.13, chemist: 0.2, ranger: 0.1, knight: 0.02, warden: 0.04, deadeye: 0.07 };
+// the sandblade's back tabard and the ranger's quiver stand out from the back (the chemist's cloak lies under his tank)
+const CLOAK_OUT = { sandblade: 0.13, chemist: 0, ranger: 0.1, knight: 0.02, warden: 0.04, deadeye: 0.07 };
 export function setCharCape(root, ck) {
   const U = root.userData;
   if (!U.skeleton || U.capeKey === (ck || '')) return;

@@ -342,7 +342,7 @@ export function herbStaff(q = 1) {
   if (q >= 4) for (let i = 0; i < 3; i++) b.add(torus(0.032, 0.006, 5, 14), 'wQ' + q, { p: [0, 0.25 + i * 0.3, 0], r: [PI / 2, 0, 0], c: 0xffffff });
   if (T.gem) b.add(ico(0.03, 0), T.gem, { p: [0, top + 0.08, 0], flat: true, c: 0xffffff });
   const g = finish(b, T, q >= 5 ? along(top, top + 0.3, 10, 0, 0.12) : null, V3(0.15, top, 0));
-  const lantern = lanternBuilder('green', 0.7, new Builder(13)).build({ shadow: false });
+  const lantern = lanternBuilder('yellow', 0.7, new Builder(13)).build({ shadow: false }); // (S14: a warm oil flame behind the glass, like the S13 effects; was bright green)
   lantern.position.set(0.17, top + 0.18, 0);
   g.add(lantern);
   return g;

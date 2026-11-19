@@ -1763,7 +1763,7 @@ function leapRoot(dur, o) {
     k(0.45, P({ spine: [-6, 0, 0], armL: [-70, 60, 30], foreL: [-90, 0, 0], armR: [-130, 30, -20], foreR: [-80, 0, 0] }, L.wide)),
     k(0.55, P({ spine: [-18, 0, 0], chest: [-14, 0, 0], head: [-24, 0, 0], armL: [-70, 60, 30], foreL: [-90, 0, 0], armR: [-80, 50, 0], foreR: [-60, 0, 0] }, L.wide), { e: 'snap' }),
     k(1, GL, { root: R.guard }),
-  ], [{ t: 0.32, e: 'impact', kind: 'clang', at: 'shieldL' }, { t: 0.55, e: 'impact', kind: 'clang', at: 'shieldL' }, { t: 0.56, e: 'ring', color: '#ff8a5a', r: 12 }, { t: 0.56, e: 'shake', amt: 0.35 }]);
+  ], [{ t: 0.32, e: 'impact', kind: 'clang', at: 'shieldL' }, { t: 0.55, e: 'impact', kind: 'clang', at: 'shieldL' }, { t: 0.56, e: 'ring', color: '#ffb070', r: 12 }, { t: 0.56, e: 'shake', amt: 0.35 }]);
   W1('w_wall', 1.0, 'full', [
     k(0, GL),
     k(0.32, P({ spine: [28, -6, 0], chest: [8, 0, 0], armL: [-60, 50, 10], foreL: [-60, 0, 0], armR: [-60, 0, -20], foreR: [-80, 0, 0], handR: [40, 0, 0], head: [16, 0, 0] }, L.deep), { root: [0, -0.4, 0], e: 'snap' }),
@@ -1851,7 +1851,7 @@ function leapRoot(dur, o) {
     k(0.42, P({ spine: [-24, 0, 0], chest: [-20, 0, 0], head: [-34, 0, 0], armR: [-150, 0, -50], foreR: [-30, 0, 0], handR: [-30, 0, 0], armL: [-110, 50, 60], foreL: [-60, 0, 0] }, L.wide), { root: [0, -0.06, 0], e: 'snap' }),
     k(0.72, P({ spine: [-20, 0, 0], chest: [-18, 0, 0], head: [-30, 0, 0] }, L.wide), {}),
     k(1, GL, { root: R.guard }),
-  ], [{ t: 0.42, e: 'ring', color: '#ff7050', r: 8 }, { t: 0.42, e: 'shake', amt: 0.45 }, { t: 0.44, e: 'impact', kind: 'heal', at: 'self' }, { t: 0.44, e: 'aura', color: '#ff9a7a', dur: 2 }]);
+  ], [{ t: 0.42, e: 'ring', color: '#ffb060', r: 8 }, { t: 0.42, e: 'shake', amt: 0.45 }, { t: 0.44, e: 'impact', kind: 'heal', at: 'self' }, { t: 0.44, e: 'aura', color: '#ff9a7a', dur: 2 }]);
   W1('w_stomp', 0.95, 'full', [
     k(0, GL),
     k(0.28, P(G, { spine: [-10, 0, 0], armR: [-40, 0, -50], armL: [-40, 50, 40] }, { thighR: [-110, 0, -10], shinR: [100], footR: [0], thighL: [0, 0, 6], shinL: [16] }), { root: [0, 0.1, 0] }),
@@ -2896,7 +2896,7 @@ const MELEE = new Set(['slash', 'blunt', 'pierce', 'sweep', 'shield', 'sand', 'e
   DEF.s_step = { ...DEF.s_step, events: [{ t: 0.03, e: 'dash' }, { t: 0.03, e: 'cloud', kind: 'sand', r: 1.6, at: 'self' }, { t: 0.05, e: 'sandtrail', dur: 0.22, rate: 90 }, { t: 0.5, e: 'cloud', kind: 'sand', r: 1.6, at: 'self' }, { t: 'hit', e: 'impact', kind: 'slash', at: 'target' }],
     toTarget: { gap: -1.6, max: 8, behind: true }, through: true, ual: { mask: 'body', segs: [['Slide_Start', 0, 0.22, 0.1, 0.5], ['Slide_Exit', 0.22, 0.55, 0, 0.5]], end: 0.5 } };
   // ---- Searing Edge (the Needle Thrust Form): the same thrust with the edge heated, a dull red that cools over 2 s
-  DEF.s_needle_hot = { ...DEF.s_needle, skill: 's_needle', events: [...DEF.s_needle.events, { t: 0.02, e: 'bladeGlow', color: '#e0602a', dur: 2 }] };
+  DEF.s_needle_hot = { ...DEF.s_needle, skill: 's_needle', events: [...DEF.s_needle.events, { t: 0.02, e: 'bladeGlow', color: '#e8902a', dur: 2 }] };
   // ---- Counter Stance: low behind the raised round shield, blade drawn back, held for the second; the answer is its own clip
   DEF.s_counter = C('sandblade', 1.15, 'full', [
     k(0, GL),
