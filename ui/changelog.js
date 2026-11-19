@@ -1,6 +1,14 @@
 // What's new: shown once after an update (newest first). Bump `v` on the first entry whenever something is added.
 export const CHANGELOG = [
   {
+    v: 139, date: '19 November 2026', title: 'One Way to Fight',
+    items: [
+      ['The old skills are gone', 'Every class now fights only the new way: fewer skills that fuse in pairs, and the Skill Web. The old talent screen and the old skill keys are retired.'],
+      ['Your points come back', 'Any talent points from before are returned as Skill Web points, with a free Web reset for 14 days, and the trainer’s letter tells you how many came back. Old achievements for talents count on the Web.'],
+      ['Pinned fusions on Q and E', 'Your two pinned fusions now sit on Q and E by default. Each loadout keeps its own Skill Web and gear.'],
+    ],
+  },
+  {
     v: 138, date: '19 November 2026', title: 'Smarter Allies',
     items: [
       ['Bots that fuse', 'Companions, volunteers and the bots around the world now plan their fusions: they open with the right skill, finish the pair in time, set off coats on machines and dodge what they see coming. Each bot follows its own Skill Web path.'],
