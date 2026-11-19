@@ -32,6 +32,29 @@ const chain = (base, steps) => {
   return list[0];
 };
 
+// (S15) the balance table (combat_design.md 9, tools/balance/targets.mjs): per class, multipliers on the damage heroes and
+// bots deal to machines at the levels of BAL_L (straight lines between, flat outside): pow on all of it, fill on the free
+// chain (FILL), fuse on fusions, skill on the rest (the core skills pressed plain, damage over time, zones). Read by sim.js damage() at the moment of the blow, so the skills' own numbers (tooltips,
+// the Fusion Book, the slice tests' ratios) stay as designed and the tuning lives in one place
+export const BAL_L = [3, 6, 10, 20, 30, 45, 60];
+export const BAL = {
+  knight: { pow: [0.822, 0.535, 0.458, 0.547, 0.793, 0.875, 0.656], fill: [1, 1, 1, 0.7, 0.4, 0.522, 0.645], fuse: [4.5, 4.5, 4.5, 2.709, 1.525, 1.654, 1.45], skill: [1, 1, 1, 1.21, 1.419, 1.707, 1.349] },
+  warden: { pow: [0.61, 0.463, 0.506, 0.917, 1.52, 2.201, 1.808], fill: [1, 1, 1, 0.7, 0.4, 0.4, 0.4], fuse: [2.601, 4.5, 2.601, 1.593, 1.141, 1.21, 1.28], skill: [1, 1, 1, 1, 1, 1.032, 1.064] },
+  sandblade: { pow: [0.518, 0.414, 0.495, 0.686, 1.058, 0.878, 0.662], fill: [1, 1, 1, 0.7, 0.4, 0.4, 0.4], fuse: [4.362, 4.5, 4.362, 2.977, 1.592, 1.995, 3.185], skill: [1, 1, 1, 1, 1, 1.75, 2.5] },
+  ranger: { pow: [1.874, 2.5, 2.125, 1.766, 1.301, 1.597, 2.045], fill: [0.81, 0.81, 0.81, 1.068, 1.326, 0.94, 0.554], fuse: [0.678, 0.678, 0.678, 0.683, 0.689, 0.638, 0.509], skill: [0.448, 0.448, 0.448, 0.724, 1, 1.013, 1.026] },
+  deadeye: { pow: [1.385, 1.19, 1.223, 1.224, 0.957, 1.035, 0.978], fill: [1, 1, 1, 1, 1, 1, 1], fuse: [3.155, 4.5, 3.155, 2.722, 2.747, 2.792, 2.171], skill: [1, 1, 1, 1, 1, 1, 1] },
+  chemist: { pow: [0.826, 0.623, 0.805, 0.89, 0.827, 0.947, 0.899], fill: [1, 1, 1, 1.3, 1.6, 1.6, 1.6], fuse: [1.674, 4.5, 1.674, 1.316, 1.394, 0.883, 0.909], skill: [1, 1, 1, 0.908, 0.976, 0.543, 0.561] },
+  herbalist: { pow: [1.062, 1.489, 1.32, 1.749, 1.431, 1.973, 1.634], fill: [1, 1, 1, 1, 1, 1, 1], fuse: [1.047, 1.047, 1.047, 1.119, 1.191, 1.422, 1.654], skill: [1, 1, 1, 1, 1, 1, 1] },
+};
+export const FILL = { knight: 'k_valiant', warden: 'w_blow', sandblade: 's_slash', ranger: 'r_quick', deadeye: 'd_snap', chemist: 'c_acid', herbalist: 'h_dart' };
+const balAt = (v, L) => { if (L <= BAL_L[0]) return v[0]; for (let i = 1; i < BAL_L.length; i++) if (L <= BAL_L[i]) return v[i - 1] + (v[i] - v[i - 1]) * (L - BAL_L[i - 1]) / (BAL_L[i] - BAL_L[i - 1]); return v[v.length - 1]; };
+// kind: 'fuse' (a fusion's blow), 'fill' (the chain's), anything else plain
+export function balMul(cls, level, kind) {
+  const B = BAL[cls];
+  if (!B || !KIT_V2[cls]) return 1;
+  return balAt(B.pow, level) * (kind === 'fuse' ? balAt(B.fuse, level) : kind === 'fill' ? balAt(B.fill, level) : balAt(B.skill, level));
+}
+
 export const CORE = {
   knight: [
     chain(K('k_valiant', 'Valiant Strike', { icon: 'slash', slot: 1, lvl: 1, cost: 0, cd: 0, hit: { t: 0.34, kind: 'melee' }, tags: ['strike', 'blade', 'chain'], desc: 'A three-step chain: a diagonal cut, a return cut and a stepping overhead. Costs nothing and builds Valor.' }), [

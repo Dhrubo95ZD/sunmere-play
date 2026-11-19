@@ -123,7 +123,8 @@ export const SOCIAL_UI = {
         if (a === 'w') return this.whisperTo(n);
         if (a === 'i') return this.g.send({ t: 'chat', text: '/invite ' + n });
         if (a === 'x') return this.g.send({ t: 'friend', op: 'remove', name: n });
-        if (!r.classList.contains('bot') && id && id !== me) this.playerMenu(id, n, e.clientX, e.clientY);
+        // (owner 19 Nov) bots too: the world's right-click menu already works on them, and the list was nearly all bots
+        if (id && id !== me) this.playerMenu(id, n, e.clientX, e.clientY);
       };
     });
   },

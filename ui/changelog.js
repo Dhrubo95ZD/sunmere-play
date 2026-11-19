@@ -1,6 +1,14 @@
 // What's new: shown once after an update (newest first). Bump `v` on the first entry whenever something is added.
 export const CHANGELOG = [
   {
+    v: 138, date: '19 November 2026', title: 'Smarter Allies',
+    items: [
+      ['Bots that fuse', 'Companions, volunteers and the bots around the world now plan their fusions: they open with the right skill, finish the pair in time, set off coats on machines and dodge what they see coming. Each bot follows its own Skill Web path.'],
+      ['Fairer classes', 'Damage between the classes is now even at every level, so every class pulls its weight. Tanks and healers trade some damage for what they bring to a group.'],
+      ['Players window', 'Clicking a name in the Players window now opens the menu for bots too.'],
+    ],
+  },
+  {
     v: 137, date: '19 November 2026', title: 'Clearer Fights',
     items: [
       ['Big fights stay readable', 'Every fusion now keeps to firm limits on dust, rocks, lights and rings, so a crowd of heroes fusing at once stays clear and smooth. Phones show a lighter version of everything.'],

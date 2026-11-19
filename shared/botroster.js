@@ -50,6 +50,16 @@ export function nameSeed(name, salt = 0) {
 }
 
 // B.2: made once from the name, then saved and never re-rolled
+// (S15) how a bot fights, from its own seed so the older persona fields keep their values: skill, the share of planned
+// fusions it completes (0.35 casual to 0.85 skilled, combat_design.md 8), and build, the Skill Web list it follows by role
+// (shared/botplan.js BOT_BUILDS: a tank or a healer mostly the defence/support list, a damage bot mostly the damage one)
+export function fightStyle(seed) {
+  const r = mulberry32(nameSeed(seed.name, 0x5c11));
+  const skill = +(0.35 + 0.5 * Math.sqrt(r())).toFixed(2);
+  const role = ROLE_OF[seed.cls] || 'damage', u = r();
+  const build = role === 'damage' ? (u < 0.6 ? 'damage' : 'mixed') : (u < 0.7 ? 'defence' : 'mixed');
+  return { skill, build };
+}
 export function makePersona(seed) {
   const r = mulberry32(nameSeed(seed.name, 0x5eed));
   const f = (a, b) => +(a + (b - a) * r()).toFixed(2);
@@ -65,7 +75,7 @@ export function makePersona(seed) {
   return {
     v: 1, social: f(0.1, 0.9), talk: f(0.1, 0.9), case: r() < 0.55 ? 'lower' : 'normal', punct: pick(['none', 'light', 'full']),
     typo: f(0, 0.04), mood: pick(PERSONA.moods), likes, quirk: pick(PERSONA.quirks),
-    play: { days, start, len: Math.round(40 + r() * 120) }, pace: f(0.4, 0.9), role: ROLE_OF[seed.cls] || 'damage',
+    play: { days, start, len: Math.round(40 + r() * 120) }, pace: f(0.4, 0.9), role: ROLE_OF[seed.cls] || 'damage', ...fightStyle(seed),
   };
 }
 

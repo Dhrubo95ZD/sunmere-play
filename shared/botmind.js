@@ -292,7 +292,7 @@ export const BOT_MIND_METHODS = {
       x = g.x + R(-4, 4); z = g.z + R(-4, 4);
     }
     [x, z] = housePush(x, z, 0.5);
-    const b = this.makeBot({ wander: true, name: r.name, cls: r.cls, level: P.level, x, z, ry: R(0, 6.28), mail: [], gearBonus: P.gearBonus || 0 });
+    const b = this.makeBot({ wander: true, name: r.name, cls: r.cls, level: P.level, x, z, ry: R(0, 6.28), mail: [], gearBonus: P.gearBonus || 0, botBuild: r.persona.build || null });
     b.xp = P.xp || 0; b.gold = P.gold || 0; b.prof = { ...(P.prof || {}) }; b.bag = (P.bag || []).slice(0, BOTS_MIND.bagMax);
     b.quests = {}; for (const [q, v] of Object.entries(P.quests || {})) if (QUESTS[q]) b.quests[q] = { ...v };
     b.done = {}; for (const q of P.done || []) b.done[q] = true;
@@ -388,7 +388,7 @@ export const BOT_MIND_METHODS = {
     const tgt = b.target ? this.foeOf(b, b.target) : null;
     if (!tgt) { b.speed = 0; return; }
     this.botMove(b, tgt, (CLASSES[b.cls]?.ranged ? 12 : 2.2), 1, tgt);
-    if (!b.cast && this.time >= b.gcd && !this.hasCC(b, 'stun')) { const c = this.botChooseSkill(b, b, tgt); if (c) this.on_cast(b, c); }
+    if (!b.cast && this.time >= b.gcd && !this.hasCC(b, 'stun')) { const c = this.botChooseSkill(b, b, tgt); this.botAct(b, c); }
   },
   mindLevelled(b) {
     const M = b.mind; M.lvlSeen = b.level;
@@ -664,7 +664,7 @@ export const BOT_MIND_METHODS = {
       const foe = b.target ? this.foeOf(b, b.target) : null;
       if (foe) {
         this.botMove(b, foe, (CLASSES[b.cls]?.ranged ? 12 : 2.2) + this.rad(foe) * 0.7, 1, foe);
-        if (!b.cast && this.time >= b.gcd && !this.hasCC(b, 'stun')) { const c = this.botChooseSkill(b, b, foe); if (c) this.on_cast(b, c); }
+        if (!b.cast && this.time >= b.gcd && !this.hasCC(b, 'stun')) { const c = this.botChooseSkill(b, b, foe); this.botAct(b, c); }
         return;
       }
     }
@@ -673,7 +673,7 @@ export const BOT_MIND_METHODS = {
       if (tgt) {
         const ranged = !!CLASSES[b.cls]?.ranged;
         this.botMove(b, tgt, (ranged ? 12 : 2.2) + this.rad(tgt) * 0.7, 1, tgt);
-        if (!b.cast && this.time >= b.gcd && !this.hasCC(b, 'stun')) { const c = this.botChooseSkill(b, b, tgt); if (c) this.on_cast(b, c); }
+        if (!b.cast && this.time >= b.gcd && !this.hasCC(b, 'stun')) { const c = this.botChooseSkill(b, b, tgt); this.botAct(b, c); }
         return;
       }
       if (this.time - b.combatT >= 5 && b.hp < b.maxHp * 0.7) { if (!b.eating) { b.eating = this.time; b.eatAmt = 0.3; } b.speed = 0; return; }

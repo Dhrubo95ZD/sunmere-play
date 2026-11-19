@@ -22,12 +22,13 @@ import { BOT_SOCIAL_METHODS, BOT_PARTY } from './botsocial.js';
 import { BOT_CHAT_METHODS } from './botchat.js';
 import { BOT_MEMORY_METHODS } from './botmemory.js';
 import { skillFeel, tierOf, poiseMax, liftable, isElite, dodgeFor, dodgeWith, POISE, BUFFER, CUT_KINDS, CANCEL_AFTER, hitAt, lastHitT } from './feel.js';
-import { KIT_V2, CORE, kitOf, stepOf, CHAIN_RESET, PARRY } from './kit.js';
+import { KIT_V2, CORE, kitOf, stepOf, CHAIN_RESET, PARRY, balMul, FILL } from './kit.js';
 import { FUSIONS, FUSION_BY_ID, compileKit, fusionUnlocked, gateOk, nameOf, MASTERY, LINK, DISCOVER_XP, DUEL_FUSE } from './fusions.js';
 import { TALENT_BY_ID, TALENTS, TALENT_ROW_REQ, talentMods, talentPoints, talentResetCost, pathSpent, totalSpent, skillCost, skillCd } from './talents.js';
 import { onWeb, treeMods, treeCompile, treePoints, treeSpent, allocBlock, isLeaf, pruneAlloc, freeRespec, formAllowed, leafRefundCost, treeResetCost, TREE_V, TREE_FREE_DAYS } from './treeMods.js';
 import { TREE_BY_ID } from './tree.js';
 import { runKeys } from './keystones.js';
+import { linkFusion, opener, planWait, reservedB, coatScore, coatFirst, botTree, botBuildOf } from './botplan.js';
 import { COATS, REACTIONS, WALL, KNOCKDOWN, RECOVER, PIN, PIN_SKILLS, elemsOf, coatOf, reactionFor, fromBehind } from './reactions.js';
 const HEAT_ONLY = Object.freeze(['heat']); // (a fire patch's tick, S7)
 
@@ -59,6 +60,9 @@ export const mobDmgMul = (lvl) => lerpT(MOB_DMG_T, lvl);
 // a bot tank (volunteer or companion Knight or Warden) draws this much more threat from its damage, so a geared hero
 // dealing several times its damage does not pull the boss off it unless they really overdo it (v120 review follow-up)
 export const BOT_TANK_THREAT = 6;
+// (S15) a bot's power while it holds its Skill Web build (botGear): the Web's damage nodes made the volunteer party ~1.6x as
+// strong as before and raid fights ~35% shorter than the v120 lengths (realfight); this keeps their fights where they were
+export const BOT_WEB_POW = 0.56;
 export const BOT_TANK_HP = 5; // and wears this much more health on its two armour pieces (botGear)
 const TANK_CLS = new Set(['knight', 'warden']);
 const BOT_BRACE = { slam: 0.8, boss: 0.55, other: 0.4 }; // (S9: how often a bot Warden braces for a swing it sees coming; its 2 charges limit it)
@@ -356,7 +360,7 @@ export class World {
   recalc(p) {
     const c = CLASSES[p.cls];
     if (totalSpent(p.talents) > talentPoints(p.level)) p.talents = {}; // level went down: hand the points back
-    const web = !p.bot && p.tree && onWeb(p.cls); // a hero on the Skill Web (S3): the Web's table replaces talents
+    const web = (!p.bot || p.botWeb) && p.tree && onWeb(p.cls); // a hero on the Skill Web (S3): the Web's table replaces talents (S15: and a bot on its build, botGear)
     if (web && treeSpent(p.tree) > treePoints(p.level, p.done)) p.tree = {}; // level went down: hand the points back
     const tal = p.tal = web ? treeMods(p.cls, p.tree, { forms: p.forms, done: p.done }) : talentMods(p.cls, p.talents);
     if (KIT_V2[p.cls]) remapSk(tal);
@@ -378,7 +382,7 @@ export class World {
     p.maxHp = Math.round((c.hp * (1 + 0.18 * (p.level - 1)) + st.hp * 4) * (1 + tal.hp));
     p.hp = Math.max(1, Math.round(p.maxHp * ratio));
     p.maxRes = c.res;
-    p.power = powerAt(p.level) + st.power;
+    p.power = (powerAt(p.level) + st.power) * (p.botWeb ? BOT_WEB_POW : 1); // (S15: a bot on its Skill Web build: see BOT_WEB_POW)
     // the armour that halves a hit grows with level (200 + 50 per level), so cloth, mail and plate stay apart at every level;
     // 75% at most, and armour talents also raise that cap by a quarter of what they give
     p.armorPct = clamp(c.armor + st.armor / (st.armor + 200 + 50 * p.level) + (tal.armor || 0), 0, 0.75 + (tal.armor || 0) / 4);
@@ -1715,7 +1719,7 @@ export class World {
     this.botMove(b, goal, stopAt, tgt ? 1 : 0.62, tgt);
     if (!b.cast && this.time >= b.gcd && !this.hasCC(b, 'stun') && tgt) {
       const c = this.botChooseSkill(b, b, tgt);
-      if (c) this.on_cast(b, c);
+      this.botAct(b, c);
     }
   }
   // a companion goes in and out of a house by its door: the next point to walk to on the way to goal
@@ -1753,6 +1757,8 @@ export class World {
     const hpk = TANK_CLS.has(b.cls) ? BOT_TANK_HP : 1;
     b.equip = { weapon: { stats: { power: Math.round(budget * 0.9) } }, chest: { stats: { armor: Math.round(budget * 7.5), hp: Math.round(budget * 0.8 * hpk) } }, legs: { stats: { armor: Math.round(budget * 7.5), hp: Math.round(budget * 0.8 * hpk) } } };
     for (const [slot, g] of Object.entries(given)) b.equip[slot] = g;
+    // (S15) a bot on the Skill Web holds the first treePoints(level) nodes of its role's suggested path (shared/botplan.js botTree)
+    if (KIT_V2[b.cls] && onWeb(b.cls) && !b.noWeb) { b.botWeb = true; b.tree = { ...botTree(b.cls, botBuildOf(b), b.level) }; b.forms = b.forms || {}; }
     this.recalc(b);
   }
   // ------------------------------------------------------------------ the Homestead: look at another player's trophies and furnishings
@@ -1925,7 +1931,7 @@ export class World {
     }
     if (!b.cast && this.time >= b.gcd && !this.hasCC(b, 'stun')) {
       const c = this.botChooseSkill(b, o, tgt);
-      if (c) this.on_cast(b, c);
+      this.botAct(b, c);
     }
   }
   botPickTarget(b, o, hold) {
@@ -1939,6 +1945,9 @@ export class World {
     for (const m of this.mobs.values()) { if (!ok(m)) continue; const d = dist(m, b); if (d < bd) { bd = d; best = m; } }
     return best?.id || null;
   }
+  // (S15) a bot's press: a cast, or a dodge that opens a fusion (botplan.js opener); with botNoFuse (realfight --nofusion)
+  // every press is plain
+  botAct(b, c) { if (!c) return; if (c.dodge) this.on_dodge(b, c.dodge); else this.on_cast(b, this.botNoFuse ? { ...c, plain: true } : c); }
   botChooseSkill(b, o, tgt) {
     const tal = b.tal || talentMods(b.cls, b.talents);
     const usable = kitOf(b.cls).filter((s) => s.lvl <= b.level && !((b.cds[s.id] || 0) > this.time) && b.res >= skillCost(s, tal)
@@ -1977,6 +1986,7 @@ export class World {
         const direct = ally.filter((s) => has(s, 'heal')).sort((a, c) => (r < 0.5 ? hv(c) - hv(a) : hv(c) / skillCost(c, tal) - hv(a) / skillCost(a, tal)));
         if (direct[0]) return { skill: direct[0].id, target: hurt.id };
       }
+      if (KIT_V2.herbalist && tgt?.type === 'mob' && !planWait(this, b)) { const op = opener(this, b, tgt, team, o !== b ? o : null); if (op) return op; } // (S15: Bitterroot, Bark Poultice, Thistle Net by the table)
       if (tgt && b.res < b.maxRes * 0.5 && team.some((q) => q.hp / q.maxHp < 0.9 || tgt.def?.boss)) { const dart = KIT_V2.herbalist && usable.find((s) => s.id === 'h_dart'); return dart && dist(b, tgt) <= dart.range + this.rad(tgt) ? { skill: dart.id, target: tgt.id } : null; } // (S13: Nettle Dart costs nothing and builds Herbs)
     }
     if (hurt && hurt.hp / hurt.maxHp < 0.72) {
@@ -1987,22 +1997,10 @@ export class World {
     }
     if (!tgt) return null;
     const dT = dist(b, tgt);
-    // (S8) a bot on the new kit presses B in the link its last skill opened, and the server fuses it as it does a player's:
-    // companions 85%, volunteers 80%, the rest 60% of the time (combat_design.md 8; the opener tables are S15). A fusion
-    // that moves the hero (a dash or a leap) is left to players, as the plain movers are
-    if (KIT_V2[b.cls] && b.link && b.effFuse && !b.link.open) {
-      const rate = b.botRole === 'Volunteer' ? 0.8 : b.owner ? 0.85 : 0.6;
-      for (const f of FUSIONS[b.cls] || []) {
-        if (f.from !== b.link.from || f.fx.some((e) => e[0] === 'dash' || e[0] === 'leap' || e[0] === 'back')) continue; // (S10: Recoil Vault's jump back is the player's too)
-        const B = b.eff?.[f.to];
-        if (!B || B.lvl > b.level || (b.cds[B.id] || 0) > this.time || b.res < skillCost(B, tal) + (f.extra || 0)) continue;
-        if (f.target === 'enemy' && dT > (f.range || 4) + this.rad(tgt) + 0.4) continue;
-        if (this.fusionOf(b, B, { target: tgt.id }) !== b.effFuse[f.key]) continue;
-        if (b.fuseLink !== b.link.at) { b.fuseLink = b.link.at; b.fuseOk = rand() < rate; } // (one roll a link)
-        if (!b.fuseOk) continue;
-        return { skill: B.id, target: tgt.id, gx: tgt.x, gz: tgt.z };
-      }
-    }
+    // (S15) the fusion planner (shared/botplan.js): B in an open link, at the bot's skill rate and after its reaction time;
+    // a plan waiting for A's contact holds the next press. Coarse bots never get here (they do not cast)
+    const lead = o !== b ? o : null;
+    if (KIT_V2[b.cls]) { if (!healer) { const fz = linkFusion(this, b, tgt, team, lead); if (fz) return fz; } if (planWait(this, b)) return null; }
     // tanks pull enemies off the others
     // (and taunt before losing it: when someone else's threat on a boss comes within a tenth of the tank's own; and a taunt
     // round the tank also takes back the boss's adds that went for the others, the healer most of all)
@@ -2022,6 +2020,9 @@ export class World {
     }
     // a reload when the resource runs low (the Deadeye's Quick Reload: a skill that gives resource back)
     if (b.res < 30) { const rl = usable.find((s) => has(s, 'res')); if (rl) return { skill: rl.id }; }
+    // (S15) the opener table: cast A of the first fusion that fits, and plan B
+    if (KIT_V2[b.cls] && tgt.type === 'mob') { const op = opener(this, b, tgt, team, lead); if (op) return op; }
+    const keepB = KIT_V2[b.cls] ? reservedB(this, b) : null;
     const onFoe = (s) => tgt.buffs?.some((x) => x.name === s.name);
     // a marking debuff with no damage (Chalk Mark, Marked Target, Feint) when the target does not carry it yet
     const mark = usable.find((s) => s.target === 'enemy' && s.fx.every((f) => f[0] === 'debuff') && !onFoe(s) && dT <= s.range + this.rad(tgt) + 0.4);
@@ -2040,9 +2041,14 @@ export class World {
     if (buff && rand() < 0.5) return { skill: buff.id };
     const attacks = usable.filter((s) => (s.fx.some((f) => f[0] === 'dmg' || f[0] === 'dot' || f[0] === 'execute') || (has(s, 'stun') && rand() < 0.3))
       && (s.target === 'enemy' ? dT <= s.range + this.rad(tgt) + 0.4 : s.target === 'ground' ? dT <= s.range : (s.hit.kind === 'aoe' && dT <= (s.hit.r || 4) + this.rad(tgt))));
-    if (!attacks.length) return null;
-    attacks.sort((a, c) => (c.cd || 0) - (a.cd || 0) + (rand() - 0.5) * 6);
-    const s = attacks[0];
+    const pool = keepB?.size ? attacks.filter((s) => !keepB.has(s.id)) : attacks; // (a B kept for its A: pressed plain it wastes the fusion)
+    if (!pool.length) return null;
+    // coat-then-trigger (S15): a coat on the machine is set off by the skill of the right kind; a coat skill goes first when a
+    // trigger is ready
+    const first = coatFirst(tgt, pool);
+    if (first) return { skill: first.id, target: tgt.id, gx: tgt.x, gz: tgt.z };
+    pool.sort((a, c) => (c.cd || 0) - (a.cd || 0) + 8 * (coatScore(tgt, c) - coatScore(tgt, a)) + (rand() - 0.5) * 6);
+    const s = pool[0];
     return { skill: s.id, target: tgt.id, gx: tgt.x, gz: tgt.z };
   }
 
@@ -2907,6 +2913,7 @@ export class World {
       return this.playerDamaged(m, src, amt * (src.type === 'player' ? DUEL.scale * fz * (rand() < 0.1 ? 1.5 : 1) : 1), skill);
     }
     const tal = src.type === 'player' ? src.tal : null;
+    if (tal) amt *= balMul(src.cls, src.level, FUSION_BY_ID[skill] ? 'fuse' : skill === FILL[src.cls] ? 'fill' : ''); // (S15: the class balance table, kit.js BAL)
     const hc = this._hc && skill === this._hc.sk.id ? this._hc : null; // a skill contact being resolved (applySkill): feel.js
     let crit = !!hc?.opening || !!hc?.sk.sureCrit || (skill !== 'galvanic' && rand() < 0.1 + (hc?.sk.critAdd || 0) + (src.type === 'player' ? this.buffVal(src, 'crit') + (tal?.crit || 0) : 0)); // (S7: Galvanic's jump is a share of a blow that already rolled; S8: Needle Thrust's +30%, Glasscutter's certain crit)
     if (hc?.sk.behindMul && m.type === 'mob' && fromBehind(m, src.x, src.z)) amt *= hc.sk.behindMul; // (S8: Needle Thrust, Glasscutter from behind)
@@ -4187,6 +4194,7 @@ export class World {
     if (p.qdodge) { if (this.time > p.qdodge.until + 0.051) p.qdodge = null; else this.on_dodge(p, p.qdodge.m, true); }
     if (p.botDodge && this.time >= p.botDodge.at) { const bd = p.botDodge; p.botDodge = null; if (!p.dead && !p.cast?.channel) this.on_dodge(p, bd); }
     // (S9) a bot Warden braces behind the tower shield just before a swing it sees coming lands (botBrace, set by the swing)
+    if (p.botGuard && this.time >= p.botGuard.at) { const bg = p.botGuard; p.botGuard = null; const m = this.mobs.get(bg.src); if (!p.dead && !p.cast && m && !m.dead) { p.ry = Math.atan2(m.x - p.x, m.z - p.z); this.on_cast(p, { skill: 'k_guard' }); } }
     if (p.botBrace && this.time >= p.botBrace.at) { const bb = p.botBrace; p.botBrace = null; const m = this.mobs.get(bb.src); if (!p.dead && !p.cast?.channel && m && !m.dead) { p.ry = Math.atan2(m.x - p.x, m.z - p.z); this.on_dodge(p, { dx: 0, dz: 0 }); } }
     if (p.qcast && !p.dead) { if (this.time > p.qcast.until + 0.051) p.qcast = null; else this.on_cast(p, p.qcast.m, true); }
     // send hp/res a few times a second
@@ -4688,6 +4696,8 @@ export class World {
           m.pending = { t: this.time + hitDelay, tgt: target.id, dmg: special ? dmg * 1.8 : dmg, aoe: special ? 6 : 0, splash: special && def.boss && inDungeon ? dmg / BOSS_SWING : 0 };
           // (S9) a bot Warden on the new kit sees the swing and braces for it: a boss's slam most of the time, other swings less
           if (target.bot && target.type === 'player' && dodgeFor(target.cls).brace && KIT_V2[target.cls] && !target.botBrace && rand() < (special ? BOT_BRACE.slam : def.boss ? BOT_BRACE.boss : BOT_BRACE.other)) target.botBrace = { at: m.pending.t - 0.2, src: m.id };
+          // (S15) a bot Knight raises Guard for it (its parry opens every skill with Oathbound, Turning Riposte with Riposte Drill)
+          else if (target.bot && target.type === 'player' && target.cls === 'knight' && KIT_V2.knight && !target.botGuard && target.level >= 14 && !((target.cds.k_guard || 0) > this.time) && target.res >= 10 && rand() < (special ? BOT_BRACE.slam : def.boss ? BOT_BRACE.boss : BOT_BRACE.other)) target.botGuard = { at: m.pending.t - 0.4, src: m.id };
         }
       } else m.swingT = Math.min(m.swingT, 0.6);
     } else if (m.state === 'leash') {
