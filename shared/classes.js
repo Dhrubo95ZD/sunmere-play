@@ -352,8 +352,18 @@ const MIG = {
     s_twin: ['form', 's_slash'], s_scorch: ['form', 's_needle'], s_sweep: ['form', 's_whirl'], s_ram: ['form', 's_step'],
     s_evasion: ['notable', 's_evasion'], s_finish: ['notable', 's_finish'], s_cloak: ['notable', 's_cloak'], s_rend: ['notable', 's_rend'],
   },
-  ranger: { core: ['r_quick', 'r_disengage', 'r_volley', 'r_trap', 'r_aimed', 'r_pierce', 'r_explosive'], fusion: ['r_deadweight', 'r_ripsaw', 'r_kick', 'r_roll'], form: ['r_arcing', 'r_fan'], notable: ['r_mark', 'r_rapid', 'r_smoke', 'r_thousand'] },
-  deadeye: { core: ['d_snap', 'd_pair', 'd_recoil', 'd_knee', 'd_scatter', 'd_fan', 'd_quick'], fusion: ['d_chain', 'd_rollingfire', 'd_lastround', 'd_breach', 'd_slide'], form: ['d_hotshot', 'd_saltshot', 'd_slug'], notable: ['d_reload', 'd_cartridge', 'd_chalk', 'd_priming', 'd_smoke'] },
+  ranger: {
+    core: ['r_quick', 'r_disengage', 'r_volley', 'r_trap', 'r_pierce', 'r_mark', 'r_thousand'], r_aimed: ['core', 'r_pierce'], r_twin: ['core', 'r_quick'],
+    r_roll: ['fusion', 'rf_rolling'], r_deadweight: ['fusion', 'rf_longdraw'], r_ridgeline: ['fusion', 'rf_ridgeline'], r_cloudburst: ['fusion', 'rf_cloudburst'], r_hail: ['fusion', 'rf_cloudburst'], r_springtide: ['fusion', 'rf_longdraw'],
+    r_tarhead: ['form', 'r_pierce'], r_chisel: ['form', 'r_quick'], r_fan: ['form', 'r_quick'], r_pin: ['form', 'r_trap'], r_tether: ['form', 'r_trap'], r_arcing: ['form', 'r_volley'],
+    r_rapid: ['notable', 'r_rapid'], r_smoke: ['notable', 'r_smoke'], r_cripple: ['notable', 'r_lightstep'], r_explosive: ['notable', 'r_fletcher'],
+  }, // (S11: the Ranger's slice, combat_design_fusion.md 4.2)
+  deadeye: {
+    core: ['d_snap', 'd_pair', 'd_recoil', 'd_knee', 'd_scatter', 'd_fan', 'd_quick'],
+    d_chain: ['fusion', 'df_chainshot'], d_rollingfire: ['fusion', 'df_broadside'], d_broadside: ['fusion', 'df_broadside'], d_lastround: ['fusion', 'df_lastround'], d_breach: ['fusion', 'df_pointblank'], d_slide: ['fusion', 'df_slideshot'], d_splitter: ['fusion', 'df_platesplitter'],
+    d_hotshot: ['form', 'd_snap'], d_saltshot: ['form', 'd_snap'], d_slug: ['form', 'd_pair'],
+    d_reload: ['notable', 'd_reload'], d_cartridge: ['notable', 'd_cartridge'], d_chalk: ['notable', 'd_chalk'], d_priming: ['notable', 'd_priming'], d_smoke: ['notable', 'd_smoke'],
+  },
   chemist: { core: ['c_staff', 'c_smokebomb', 'c_fire', 'c_acid', 'c_chill', 'c_tar', 'c_concussion'], fusion: ['c_thermite', 'c_chain', 'c_boiler'], triad: ['c_grand'], form: ['c_volatile', 'c_naphtha'], notable: ['c_catalyst', 'c_flash', 'c_spark', 'c_draught'], retired: ['c_clockwork'] },
   herbalist: { core: ['h_sweep', 'h_net', 'h_salve', 'h_poultice', 'h_dart', 'h_smoke', 'h_lantern'], fusion: ['h_remedy', 'h_bandage', 'h_sneeze', 'h_sap'], form: ['h_seed', 'h_swift', 'h_bark'], notable: ['h_antidote', 'h_brew', 'h_camphor', 'h_willowsteam', 'h_tonic', 'h_revive'] },
 };

@@ -15,10 +15,10 @@
 import { TREE_NODES, TREE_BY_ID, TREE_START, TREE_V } from './tree.js';
 import { KEYSTONES, keyCompile } from './keystones.js';
 import { STORY } from './story.js';
-import { LINK, compileKit } from './fusions.js';
+import { LINK, compileKit, fusionUnlocked } from './fusions.js';
 
 export { TREE_V };
-export const TREE_CLASSES = new Set(['knight', 'sandblade', 'warden']); // classes on the Web (the others keep talents until their slice: S8-S13)
+export const TREE_CLASSES = new Set(['knight', 'sandblade', 'warden', 'deadeye', 'ranger']); // classes on the Web (the others keep talents until their slice: S8-S13)
 export const onWeb = (cls) => TREE_CLASSES.has(cls);
 export const TREE_FREE_LEVEL = 20; // refunds and resets are free at this level and below
 export const TREE_FREE_DAYS = 14; // after the move from talents
@@ -130,8 +130,9 @@ export function treeMods(cls, alloc = {}, o = {}) {
 }
 
 // ---------------------------------------------------------------------------------------------- compile (3.3 steps 2-5)
-const copy = (r) => ({ ...r, fx: (r.fx || []).map((e) => [...e]), hit: r.hit ? { ...r.hit } : r.hit, tags: [...(r.tags || [])] });
-const fxSet = (r, kind, f) => { let hit = false; r.fx = r.fx.map((e) => { if (e[0] !== kind) return e; hit = true; return f(e); }); return hit; };
+const copy = (r) => ({ ...r, fx: (r.fx || []).map((e) => [...e]), hit: r.hit ? { ...r.hit } : r.hit, tags: [...(r.tags || [])], ...(r.seq ? { seq: r.seq.map((q) => ({ ...q, fx: (q.fx || []).map((e) => [...e]) })) } : {}) });
+// (S10) a record with seq (one { hit, fx } a contact) has its numbers changed in each contact's own fx too
+const fxSet = (r, kind, f) => { let hit = false; r.fx = r.fx.map((e) => { if (e[0] !== kind) return e; hit = true; return f(e); }); for (const q of r.seq || []) q.fx = q.fx.map((e) => { if (e[0] !== kind) return e; hit = true; return f(e); }); return hit; };
 // one Form option's or carry rule's mods on a record (the fixed list in 3.4 plus the carry keys of section 5)
 export function applyMods(r, mods = {}) {
   for (const [k, v] of Object.entries(mods)) {
@@ -163,6 +164,15 @@ export function applyMods(r, mods = {}) {
       case 'dash': fxSet(r, 'dash', () => ['dash', v]); r.range = Math.max(r.range || 0, v + 2); break;
       case 'toss': r.hit = { t: 0.45, kind: 'proj', speed: 22, n: 2, gap: 0.6 }; r.range = 20; r.toss = true; break;
       case 'wallPin': if (!r.fx.some((e) => e[0] === 'wallSlam')) r.fx.push(['wallSlam', v]); r.wallStun = true; break;
+      // (S10, the Deadeye) High Recoil's extra apex shot (one more contact like the last); Rock Salt's stacking slow
+      case 'addShot': if (r.seq && r.hit) { for (let i = 0; i < v; i++) { r.seq.push({ ...r.seq[r.seq.length - 1] }); const ts = r.hit.ts || [r.hit.t]; r.hit = { ...r.hit, n: (r.hit.n || 1) + 1, ts: [...ts, +(ts[ts.length - 1] + 0.12).toFixed(3)] }; if (r.tiers) r.tiers = [...r.tiers.slice(0, -1), 2, r.tiers[r.tiers.length - 1]]; } } break;
+      case 'slowStack': r.fx.push(['slowStack', v, 3, 40]); break;
+      case 'back': fxSet(r, 'back', () => ['back', v]); break; // (High Recoil: thrown 10 m)
+      case 'knockFlat': if (!fxSet(r, 'slamDown', () => ['slamDown', v])) r.fx.push(['slamDown', v]); break; // (Wide Bore: the machines knocked flat)
+      // (S11, the Ranger) an added effect (Bodkin Hail's armour break, Tar-Head's coat); Ricochet's bounces; Ridgeline's wider stretch
+      case 'addFx': for (const e of v) r.fx.push([...e]); break;
+      case 'bounceN': fxSet(r, 'bounce', (e) => [e[0], v, ...e.slice(2)]); break;
+      case 'segW': if (r.hit) r.hit.segW = v; break;
       default: r[k] = v; // noTarget, single, allLifted, step3, shape, field, onRun, charges, split, pierce, chain, coat, parryWin...
     }
   }
@@ -184,7 +194,7 @@ export function compileEff(rec, tal, ctx = {}) {
   // 3. a fusion carries its inputs' Forms through its own carry rules
   if (r.from && r.carry) {
     r.carried = [];
-    for (const [side, input] of [['a', r.from], ['b', r.to]]) {
+    for (const [side, input] of [['a', r.from], ['b', r.to], ...Object.keys(r.carry).filter((k) => k !== 'a' && k !== 'b').map((k) => [k, k])]) { // (S10: a rule keyed by a skill id, Snap Shot's Forms into Falling Storm)
       const pick = tal.forms?.[input], rule = pick && r.carry[side]?.[pick];
       if (rule) { applyMods(r, rule); r.carried.push(pick); }
     }
@@ -221,7 +231,9 @@ export function treeCompile(p) {
     out[id] = steps[0];
   }
   const ef = {};
-  for (const [k, f] of Object.entries(p.effFuse || {})) ef[k] = out[f.id] || compileEff(f, tal);
+  // (S11) a keystone may re-key a fusion (One Arrow: the fusions with Quick Shot take Piercing Arrow): the compiled record's own
+  // from > to keys it, an unlocked fusion before a locked one on the same pair
+  for (const [k, f] of Object.entries(p.effFuse || {})) { const g = out[f.id] || compileEff(f, tal), k2 = g.from + '>' + g.to; if (!ef[k2] || (fusionUnlocked(p, g) && (!fusionUnlocked(p, ef[k2]) || k2 === k))) ef[k2] = g; }
   p.eff = out; p.effFuse = ef;
   return p;
 }

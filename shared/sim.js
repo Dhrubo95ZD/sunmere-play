@@ -21,7 +21,7 @@ import { BOT_MIND_METHODS } from './botmind.js';
 import { BOT_SOCIAL_METHODS, BOT_PARTY } from './botsocial.js';
 import { BOT_CHAT_METHODS } from './botchat.js';
 import { BOT_MEMORY_METHODS } from './botmemory.js';
-import { skillFeel, tierOf, poiseMax, liftable, isElite, dodgeFor, dodgeWith, POISE, BUFFER, CUT_KINDS, CANCEL_AFTER } from './feel.js';
+import { skillFeel, tierOf, poiseMax, liftable, isElite, dodgeFor, dodgeWith, POISE, BUFFER, CUT_KINDS, CANCEL_AFTER, hitAt, lastHitT } from './feel.js';
 import { KIT_V2, CORE, kitOf, stepOf, CHAIN_RESET, PARRY } from './kit.js';
 import { FUSIONS, FUSION_BY_ID, compileKit, fusionUnlocked, gateOk, nameOf, MASTERY, LINK, DISCOVER_XP, DUEL_FUSE } from './fusions.js';
 import { TALENT_BY_ID, TALENTS, TALENT_ROW_REQ, talentMods, talentPoints, talentResetCost, pathSpent, totalSpent, skillCost, skillCd } from './talents.js';
@@ -71,11 +71,24 @@ const SPAWN_POINT = { x: 2, z: 10 };
 const GCD = 1.0; // (the old flat lock; FEEL_ON uses each skill's own lock from feel.js instead)
 const FEEL_ON = true; // S1 feel layer: per-skill locks, poise, lifts, the dodge (combat_design.md section 2)
 const VIEW = 110;
+// server perf (docs/ai/server_perf.md): on the world server a mob with no human within MOB_SLEEP.r (the view range plus a
+// margin) and no full-detail bot within 60 m sleeps (if mobSleepy says it may): every MOB_SLEEP.step s it
+// only heals, wears off its buffs and goes home from a leash; it wakes the tick a human comes within range. Dead mobs keep
+// their respawn timers every tick. SUNMERE_NO_SLEEP=1 turns it off (tests). MOB_CELL: the mob grid's square, in metres.
+export const MOB_SLEEP = { r: VIEW + 90, step: 1, off: typeof process !== 'undefined' && !!process.env?.SUNMERE_NO_SLEEP };
+const MOB_CELL = 16;
+// who may sleep: not an event's or a boss's add (temp), a patrol on its beat (they follow the weather), a world boss or a
+// rare (they keep moving), nor a mob in a fight or with a blow on its way (the spawn's part is kept on the mob: m._sl)
+const mobSleepy = (m) => (m._slSp === m.sp ? m._sl : ((m._slSp = m.sp), (m._sl = !m.sp.temp && !m.sp.path && !m.def.world && !m.def.rare))) && !m.threat.size && !m.pending;
 
 let nextId = 1;
 const newId = (p) => p + (nextId++).toString(36);
 
 // skills whose own effect moves the caster (dash, leap, back): the client plays that move at once, so it never interrupts them
+// (S10) the Deadeye's hot loads (Six Chambers' perfect reload: heat, for Ignite) and Bank Shot's skip (spark, for Galvanic):
+// one cached copy of a record per kind, same id, so the sim's contact (this._hc) and the client name the same skill
+const HOT_REC = new WeakMap(), BANK_REC = new WeakMap();
+const tagged = (M, sk, tag) => { let r = M.get(sk); if (!r) { r = { ...sk, tags: [...new Set([...(sk.tags || []), tag])] }; M.set(sk, r); } return r; };
 const MOVERS = new Set([...Object.values(SKILLS), ...Object.values(CORE), ...Object.values(FUSIONS)].flat().filter((s) => s.fx.some((f) => f[0] === 'dash' || f[0] === 'leap' || f[0] === 'back')).map((s) => s.id));
 // a class on the new kit (S2): talent and set modifiers naming a legacy skill move to the skill it became (a Form to its
 // core skill, an old skill that is now a fusion to that fusion); a notable, zone or retired one becomes a plain +damage of
@@ -156,7 +169,50 @@ export class World {
       buffs: [], speed: 0, cast: null, lootedBy: null, abT: null, enraged: false, addsDone: null, pi: null, pdir: 1, heroic, tempest, vet, rh, baseHp: undefined, raidK: undefined, phaseDone: null,
     });
     this.mobs.set(m.id, m);
+    if (this._mg) this.mobGridMove(m);
     return m;
+  }
+
+  // the mob grid (server perf, docs/ai/server_perf.md): every mob filed by its MOB_CELL square (keys fit squares within
+  // about 32 km of the origin). Checked at the start of each mob pass (so moves from skills and knockbacks are caught),
+  // kept up to date as mobs move, respawn and go, and filed afresh once a minute
+  mobGridBuild() {
+    let G = this._mg;
+    if (!G || ++G.n >= 1200) {
+      G = this._mg = { cells: new Map(), stamp: (G?.stamp || 0) + 1, maxR: 0, n: 0 };
+    }
+    for (const m of this.mobs.values()) this.mobGridMove(m);
+  }
+  mobGridDrop(m) {
+    const G = this._mg;
+    if (!G || m._gs !== G.stamp) return;
+    const a = G.cells.get(m._gk), i = a ? a.indexOf(m) : -1;
+    if (i >= 0) { a[i] = a[a.length - 1]; a.pop(); }
+    m._gs = -1;
+  }
+  // every mob filed in the grid squares within r of e (and one square more, for mobs moved since they were filed): a
+  // superset of the mobs within r, in a reused list
+  mobsAround(e, r) {
+    const G = this._mg, out = this._mAround || (this._mAround = []);
+    out.length = 0;
+    const k = Math.ceil(r / MOB_CELL) + 1, cx = Math.floor(e.x / MOB_CELL), cz = Math.floor(e.z / MOB_CELL);
+    for (let i = cx - k; i <= cx + k; i++) for (let j = cz - k; j <= cz + k; j++) {
+      const a = G.cells.get((i + 2048) * 4096 + (j + 2048));
+      if (a) for (let n = 0; n < a.length; n++) out.push(a[n]);
+    }
+    return out;
+  }
+  mobGridMove(m) {
+    const G = this._mg, k = (Math.floor(m.x / MOB_CELL) + 2048) * 4096 + (Math.floor(m.z / MOB_CELL) + 2048);
+    if (m._gs === G.stamp) {
+      if (m._gk === k) return;
+      const a = G.cells.get(m._gk), i = a ? a.indexOf(m) : -1;
+      if (i >= 0) { a[i] = a[a.length - 1]; a.pop(); }
+    }
+    let b = G.cells.get(k);
+    if (!b) G.cells.set(k, (b = []));
+    b.push(m); m._gk = k; m._gs = G.stamp;
+    if (m.def.radius > G.maxR) G.maxR = m.def.radius;
   }
 
   // ------------------------------------------------------------------ sessions
@@ -334,7 +390,7 @@ export class World {
       stats: p.stats, power: Math.round(p.power), armorPct: p.armorPct, cds: p.cds, gcd: p.gcd, dead: p.dead, grave: p.dead ? this.graveName(p) : null, x: p.x, z: p.z,
       buffs: p.buffs.map((b) => ({ name: b.name, icon: b.icon, t: b.t, dur: b.dur, debuff: !!b.debuff })), absorb: Math.round(p.absorb),
       duel: p.duel ? { with: p.duel.with, start: p.duel.start, end: p.duel.end } : null, mailNew: (p.mail || []).filter((m) => !m.read).length, bagSize: this.bagMax(p), rested: Math.round(p.rested || 0), home: CARAVANS.find((c) => c.id === p.home)?.name || 'Sunmere Village', recallReady: p.recallReady || 0, recalling: !!p.recall, looks: p.looks || [], wlook: p.wlook || null, ohlooks: p.ohlooks || [], ohlook: p.ohlook || null, shines: p.shines || [], wshine: p.wshine || null, shlooks: p.shlooks || [], shlook: p.shlook || null, cklooks: p.cklooks || [], cklook: p.cklook || null, heats: p.heats || [], wheat: p.wheat ?? null, temper: this.temperState(p), homeDeco: p.homeDeco || {}, homePos: p.homePos || {}, buyback: (p.buyback || []).map((b) => ({ it: b.it, value: b.value })), compGear: p.compGear || {}, comps: this.myBots(p).filter((b) => !b.escort).map((b) => ({ id: b.id, name: b.name, cls: b.cls, power: Math.round(b.power), hp: b.maxHp, armor: Math.round(b.armorPct * 100) })), guild: p.guild ? { name: p.guild.name, rank: p.guild.rank, roster: this.guildRoster(p) } : null, ledger: p.ledger || [], ridesOwed: p.ridesOwed?.k || 0, ramOwed: p.ramOwed?.k || 0, prof: p.prof || {}, lo: p.lo || 0, loadouts: this.loadouts(p), lgear: (p.lgear || [null, null]).map((g) => (g ? Object.keys(g).length : 0)), runaboutMk: p.runaboutMk || 1, runabout: !!p.runabout, crawler: !!p.crawler, mountKind: mountKind(p), mounted: !!p.mounted, paint: p.paint || 'brass', pets: p.pets || {}, pet: p.pet || null, rep: p.rep || {}, daily: p.daily || {}, today: this.today(),
-      link: p.link ? { from: p.link.from, until: p.link.until, landed: !!p.link.landed, parried: !!p.link.parried, step: p.link.step || 0, tgt: p.link.tgt || null } : null, chain: p.chain || null, fusions: p.fusions || [], fmastery: p.fmastery || {}, tree: p.tree || {}, kitV: p.kitV || 0, skc: p.skc ? Object.fromEntries(Object.entries(p.skc).map(([k, c]) => [k, c.n])) : null, forms: p.forms || {}, web: onWeb(p.cls) ? 1 : 0, treePts: onWeb(p.cls) ? treePoints(p.level, p.done) - treeSpent(p.tree) : 0, treeFree: onWeb(p.cls) && freeRespec(p) ? 1 : 0, webSets: onWeb(p.cls) && p.webSets ? p.webSets.map((w) => Object.keys(w?.tree || {}).length) : null,
+      link: p.link ? { from: p.link.from, until: p.link.until, landed: !!p.link.landed, parried: !!p.link.parried, step: p.link.step || 0, tgt: p.link.tgt || null } : null, chain: p.chain || null, fusions: p.fusions || [], fmastery: p.fmastery || {}, tree: p.tree || {}, kitV: p.kitV || 0, rounds: p.tal?.sixChambers ? [p.rounds?.[0] ?? 6, p.rounds?.[1] ?? 6, p.hotN || 0] : null, skc: p.skc ? Object.fromEntries(Object.entries(p.skc).map(([k, c]) => [k, c.n])) : null, forms: p.forms || {}, web: onWeb(p.cls) ? 1 : 0, treePts: onWeb(p.cls) ? treePoints(p.level, p.done) - treeSpent(p.tree) : 0, treeFree: onWeb(p.cls) && freeRespec(p) ? 1 : 0, webSets: onWeb(p.cls) && p.webSets ? p.webSets.map((w) => Object.keys(w?.tree || {}).length) : null,
       talents: p.talents, talentPts: talentPoints(p.level) - totalSpent(p.talents), speedMul: 1 + (p.tal?.speed || 0), crit: 0.1 + (p.tal?.crit || 0), dodge: p.tal?.dodge || 0, hastePct: p.hastePct || 0, title: p.title || '',
       mods: Object.fromEntries(['dmg', 'critDmg', 'heal', 'leech', 'cdr', 'thorns', 'regen', 'hp', 'armor', 'haste', 'crit', 'dodge', 'speed', 'absorb'].filter((k) => typeof p.tal?.[k] === 'number' && p.tal[k]).map((k) => [k, p.tal[k]])),
     };
@@ -1835,7 +1891,7 @@ export class World {
     const ranged = !!CLASSES[b.cls]?.ranged; // classes.js ranged: ranger, chemist, herbalist, deadeye
     const healer = b.cls === 'herbalist';
     let goal = null, stopAt = 0;
-    if (tgt) { goal = tgt; stopAt = (ranged ? 12 : 2.2) + tgt.def.radius * 0.7; if (healer && dO > 16) { goal = o; stopAt = 8; } }
+    if (tgt) { goal = tgt; stopAt = (ranged ? (b.cls === 'deadeye' && KIT_V2.deadeye ? 9.5 : 12) : 2.2) + tgt.def.radius * 0.7; if (healer && dO > 16) { goal = o; stopAt = 8; } }
     else if (H) { goal = H; stopAt = 0.4; }
     else {
       // walk a little behind and to the side of the owner
@@ -1922,7 +1978,7 @@ export class World {
     if (KIT_V2[b.cls] && b.link && b.effFuse && !b.link.open) {
       const rate = b.botRole === 'Volunteer' ? 0.8 : b.owner ? 0.85 : 0.6;
       for (const f of FUSIONS[b.cls] || []) {
-        if (f.from !== b.link.from || f.fx.some((e) => e[0] === 'dash' || e[0] === 'leap')) continue;
+        if (f.from !== b.link.from || f.fx.some((e) => e[0] === 'dash' || e[0] === 'leap' || e[0] === 'back')) continue; // (S10: Recoil Vault's jump back is the player's too)
         const B = b.eff?.[f.to];
         if (!B || B.lvl > b.level || (b.cds[B.id] || 0) > this.time || b.res < skillCost(B, tal) + (f.extra || 0)) continue;
         if (f.target === 'enemy' && dT > (f.range || 4) + this.rad(tgt) + 0.4) continue;
@@ -2286,6 +2342,7 @@ export class World {
     if (!p.eff) compileKit(p);
     const base = typeof m.skill === 'string' && Object.hasOwn(p.eff, m.skill) ? p.eff[m.skill] : null; // (the hero's compiled kit, shared/fusions.js; a class on the old kit: its legacy skills. Own ids only: '__proto__' or 'constructor' used to reach the cost with NaN and leave the resource NaN, free casts for ever)
     if (!base || base.from) return; // (a fusion is never cast by its own id: it is B pressed in A's link window)
+    if (base.swapTo && p.eff[base.swapTo] && !p.eff[base.swapTo].swapTo) return this.on_cast(p, { ...m, skill: base.swapTo }, queued); // (S11 One Arrow: Quick Shot's key looses Piercing Arrow)
     if (queued) p.qcast = null;
     if (base.lvl > p.level) return this.err(p, 'You have not learned that yet.');
     if (this.hasCC(p, 'stun')) return this.err(p, 'You are stunned.');
@@ -2295,7 +2352,7 @@ export class World {
     const sk = fu || (base.chain ? stepOf(base, p.chain && p.chain.id === base.id && this.time - p.chain.at <= CHAIN_RESET ? (p.chain.step % base.chain.length) + 1 : 1) : base);
     const hold = (until) => { if (until - this.time <= BUFFER + 1e-6) { p.qcast = queued && m.qUntil ? { m, until: m.qUntil } : { m: { ...m, qUntil: this.time + BUFFER }, until: this.time + BUFFER }; return true; } return false; };
     // the first moment it is legal: the current cast's contact, this skill's cooldown and (on the lock) the lock
-    const castEnd = p.cast ? Math.max(p.cast.end, p.cast.t0 + ((p.cast.sk.hit.t || 0) + ((p.cast.sk.hit.n || 1) - 1) * (p.cast.sk.hit.gap || 0)) / (p.cast.haste || 1)) : 0;
+    const castEnd = p.cast ? Math.max(p.cast.end, p.cast.t0 + lastHitT(p.cast.sk) / (p.cast.haste || 1)) : 0; // (S10: hit.ts, uneven contacts)
     // a fusion key pressed while A still winds up is held to A's contact + the buffer (press Rising Cut, press Skybreaker
     // at once: Stormfall if Rising Cut lands)
     if (!fu && p.cast && !p.cast.channel && !p.cast.hits && p.effFuse) {
@@ -2335,6 +2392,7 @@ export class World {
     // (S5 review) enough Valor for plain B but not for the fusion: B casts plain instead of the press being refused
     if (p.res < cost && fu && !m.plain && p.res >= skillCost(base, tal)) return this.on_cast(p, { ...m, plain: true }, queued);
     if (p.res < cost) return this.err(p, `Not enough ${CLASSES[p.cls].resource}.`);
+    if (sk.rounds && tal.sixChambers && !this.roundsLeft(p)) return this.err(p, 'Both pistols are empty: slide or jump to reload.'); // (S10 Six Chambers)
     // a leap from the air (the client says it is airborne, m.air or its last pos): only with Iron Comet (S5)
     if (p.air && !p.bot && (sk.tags || []).includes('leap') && !sk.airCast) return this.err(p, 'You must be on the ground to leap.');
     let target = null, gx = null, gz = null;
@@ -2347,6 +2405,10 @@ export class World {
         if (dist(p, target) > range) return this.err(p, 'Out of range.');
         if (houseCrosses(p.x, p.z, target.x, target.z)) return this.err(p, 'No clear line of sight.'); // never through a house wall
       }
+    } else if (sk.nearest) { // (S11 Disengage: a self move that shoots the picked machine, else the nearest within reach; none is fine)
+      target = this.foeOf(p, m.target);
+      if (target && dist(p, target) > sk.nearest + this.rad(target)) target = null;
+      if (!target) { let bd = sk.nearest; for (const q of this.foesOf(p)) { const d = dist(p, q) - this.rad(q); if (d < bd && !houseCrosses(p.x, p.z, q.x, q.z)) { bd = d; target = q; } } }
     } else if (sk.target === 'ally') {
       target = this.players.get(m.target) || p;
       if (target.dead || target.id === p.duel?.with) target = p;
@@ -2370,6 +2432,7 @@ export class World {
     // the recovery before another plain skill: the skill's own lock (feel.js, 0.45-0.9 s from its contact), not a flat GCD
     if (sk.gcd) p.gcd = this.time + (FEEL_ON ? skillFeel(sk).win.lock : GCD) / haste;
     const L = p.link; p.link = null; // (any cast spends the open window)
+    if (m.keepLink && !fu && L) p.link = L; // (S10: the Snap Shot fired out of a slide keeps the slide's link for Slide Shot)
     p.chain = base.chain && !fu ? { id: base.id, step: sk.step, at: this.time } : null;
     p.combatT = this.time;
     p.eating = 0;
@@ -2383,11 +2446,18 @@ export class World {
     if (sk.untarget) p.untargT = Math.max(p.untargT || 0, this.time + sk.untarget);
     if (sk.guardNext) p.guardT = this.time + sk.guardNext;
     if (sk.ccImmune) p.ccImmT = this.time + hitT + 0.3; // (S9 Unstoppable: no stun or hold lands while the charge runs)
+    const aFrom = fu ? p.castFrom : null; // (S11: where A began; Highwire Volley's rain comes down on it)
     p.castFrom = { x: p.x, z: p.z };
     const unseen = !!target && target.type === 'mob' && target.target !== p.id; // (S8 Desert Step: it had not turned on him yet)
-    p.cast = { sk, t0: this.time, unseen, end: this.time + Math.max(hitT, (sk.channel || 0)), target: target?.id, gx, gz, hits: 0, channel: !!sk.channel, haste, opening: opening >= 0 || cloak >= 0, fused: !!fu, blocked: fu ? L?.blocked || 0 : 0, mul: kmul, encore };
+    p.cast = { sk, t0: this.time, unseen, end: this.time + Math.max(hitT, (sk.channel || 0)), target: target?.id, gx, gz, hits: 0, channel: !!sk.channel, haste, opening: opening >= 0 || cloak >= 0, fused: !!fu, blocked: fu ? L?.blocked || 0 : 0, mul: kmul, encore, aFrom, holdDraw: !!(sk.draw && m.hold && !p.bot) };
     if (target && target.type === 'mob') this.addThreat(target, p, 1);
-    this.broadcast({ k: 'cast', id: p.id, skill: sk.id, base: fu ? base.id : undefined, step: sk.step || undefined, fc: sk.formChoreo || undefined, target: target?.id, gx, gz, haste, hot: sk.forge ? 1 : undefined }); // (fc: a Form's clip, S8; hot: Forge-Heated Head, S9)
+    this.broadcast({ k: 'cast', id: p.id, skill: sk.id, base: fu ? base.id : undefined, step: sk.step || undefined, fc: sk.formChoreo || undefined, target: target?.id, gx, gz, haste, hot: sk.forge ? 1 : undefined, sf: m.slideFire ? 1 : undefined, hd: p.cast.holdDraw ? 1 : undefined }); // (hd, S11: a held draw: other clients hold the clip until 'loose') // (fc: a Form's clip, S8; hot: Forge-Heated Head, S9; sf: the Deadeye's shot out of a slide, S10)
+    // (S10) Six Chambers' perfect reload: Snap Shot pressed in the last 0.2 s of the slide (not the slide's own shot) fills both
+    // pistols with hot loads: the next six shots are 25% stronger and heat
+    if (tal.sixChambers && base.id === 'd_snap' && !m.slideFire && p.dodgeAt != null && p.hotFrom !== p.dodgeAt) {
+      const D = this.dodgeOf(p), e = this.time - p.dodgeAt;
+      if (e >= D.dur - 0.2 - 1e-6 && e <= D.dur + 0.15) { p.hotFrom = p.dodgeAt; p.hotN = 6; p.rounds = [6, 6]; this.broadcast({ k: 'hotload', id: p.id }); }
+    }
     if (fu) this.fusionFound(p, fu); // (the keystones' onLink runs when the fusion lands: linkAfter)
     this.pushSelf(p);
   }
@@ -2443,7 +2513,7 @@ export class World {
   // after a contact of a hero on the new kit: a core skill that landed opens the link window; a fusion counts a landed use
   // (mastery) and opens a link only to its triad's last input when the triad's notable is taken
   linkAfter(p, sk, c, enemies, allies) {
-    const hit = enemies.length > 0, done = hit || allies.length > 0;
+    const hit = enemies.length > 0 || (!!sk.sureLand && !sk.from), done = hit || allies.length > 0 || !!sk.selfDone; // (S10: Quickdraw counts as landed; Recoil Jump as done)
     if (sk.from) {
       if ((c.hits || 0) < (sk.hit.n || 1) - 1 || !done) return;
       p.fmastery ||= {};
@@ -2489,6 +2559,9 @@ export class World {
     const until = queued ? m.qUntil : this.time + BUFFER;
     const hold = (t) => { if (t - this.time <= BUFFER + 1e-6 && this.time <= until + 0.051) { p.qdodge = { m: { dx: m.dx, dz: m.dz, qUntil: until }, until }; return true; } return false; };
     if (p.dodgeN < 1) { if (!hold(p.dodgeNext)) return queued ? undefined : this.err(p, 'No dodge left.'); return; }
+    // (S10) the Deadeye's gun on the run: a slide cuts a shot's wind-up by firing it now (its first contact comes forward, the
+    // rest of a multi-shot is cut), so a shot never holds the slide back
+    if (D.slide && p.cast && !p.cast.channel && p.cast.hits === 0 && (p.cast.sk.tags || []).includes('shot') && p.cast.sk.hit.kind === 'proj') { p.cast.t0 = this.time - hitAt(p.cast.sk.hit, 0) / (p.cast.haste || 1); this.updateCast(p); }
     if (p.cast && !p.cast.channel && !p.cast.sk.cast && p.cast.hits === 0) { hold(p.cast.end); return; } // held to the contact
     if (p.cast) this.cancelCast(p);
     p.dodgeN--;
@@ -2497,7 +2570,14 @@ export class World {
     if (D.parry) { p.parryT = this.time + D.parry; p.parryFrom = 's_counter'; p.parryCounter = 0; } // (Counter Guard, S8: the sidestep is a parry that opens Riptide)
     if (p.tal?.hooks?.length) runKeys(this, p, 'onDodge', {}); // (Dust Cloak)
     p.blockT = D.block ? this.time + D.block : 0; // (Oathbound's Shield Step: a frontal block)
-    p.chain = null;
+    if (!D.keepChain) p.chain = null; // (S11: the Ranger's Tumble keeps the arrow nocked)
+    // (S10) the Deadeye's Slide: Six Chambers reloads the emptier pistol; with Snap Shot held (m.fire) a shot goes off out of the
+    // slide; Never Still counts a slide double (the move itself is counted as it goes, tickDeadeye)
+    if (D.slide && p.type === 'player') {
+      if (p.tal?.sixChambers) { const R0 = (p.rounds ||= [6, 6]); R0[R0[0] <= R0[1] ? 0 : 1] = 6; }
+      if (m.fire && p.eff?.d_snap) p.slideFire = { at: this.time + (D.slideShot || 0.14), target: m.target ?? p.target ?? null };
+      if (p.tal?.neverStill) { (p.mvLog ||= []).push([this.time, D.dist]); p.mvAt = this.time; }
+    }
     if (KIT_V2[p.cls]) p.link = { from: 'dodge', at: this.time, until: this.time + D.dur + LINK.win + (p.tal?.linkWin || 0), landed: true, done: true, step: 0, tgt: null, parried: false }; // (the dodge is an input: gate 'dodge')
     let dx = Number(m.dx), dz = Number(m.dz), l = Math.hypot(dx, dz);
     if (D.shieldStep) { dx = Math.sin(p.ry); dz = Math.cos(p.ry); l = 1; } // (Shield Step: always forward, behind the shield)
@@ -2510,7 +2590,7 @@ export class World {
       else { [nx, nz] = clampWorld(nx, nz, ox, oz, 0); if (houseCrosses(ox, oz, nx, nz)) { nx = ox; nz = oz; } else [nx, nz] = housePush(nx, nz, 0.4); }
       p.x = nx; p.z = nz; p.y = walkHeight(nx, nz);
     }
-    this.broadcast({ k: 'dodge', id: p.id, dx: +dx.toFixed(2), dz: +dz.toFixed(2), s: D.shieldStep ? 1 : undefined });
+    this.broadcast({ k: 'dodge', id: p.id, dx: +dx.toFixed(2), dz: +dz.toFixed(2), s: D.shieldStep ? 1 : undefined, f: p.slideFire ? 1 : undefined, tg: p.slideFire?.target || undefined }); // (f, tg: S10, the Deadeye's slide fires out of it at tg)
     p.session?.send?.({ t: 'dodgeN', n: p.dodgeN, next: p.dodgeNext });
   }
 
@@ -2532,6 +2612,20 @@ export class World {
     }
   }
 
+  // (S11) the Ranger lets go of a held draw (the client's key or touch coming up): a tap (under 0.25 s) leaves the press to
+  // draw to full and loose by itself; a hold looses now (never before the shortest draw), its power from draw.lo at the
+  // shortest to 1 at full, and the contact follows 0.04 s after
+  on_release(p) { const c = p.cast; if (c?.holdDraw && !p.dead) { if ((this.time - c.t0) * c.haste < 0.25) c.holdDraw = false; else this.looseDraw(p); } }
+  looseDraw(p) {
+    const c = p.cast, D = c.sk.draw, el = Math.max(D.min, (this.time - c.t0) * c.haste);
+    c.holdDraw = false;
+    const k = el >= D.full ? 1 : D.lo + (1 - D.lo) * (el - D.min) / Math.max(1e-3, D.full - D.min);
+    c.mul = (c.mul || 1) * k; c.drawK = +k.toFixed(2);
+    const at = Math.max(this.time, c.t0 + D.min / c.haste) + 0.04 / c.haste;
+    c.t0 = at - c.sk.hit.t / c.haste; c.end = at;
+    this.broadcast({ k: 'loose', id: p.id, at: +(at - this.time).toFixed(2), dk: c.drawK });
+  }
+
   cancelCast(p, why) {
     p.cast = null;
     this.broadcast({ k: 'castStop', id: p.id });
@@ -2544,8 +2638,9 @@ export class World {
     if (!c) return;
     const sk = c.sk;
     const n = sk.hit.n || 1, gap = (sk.hit.gap || 0) / c.haste;
+    if (c.holdDraw) { if ((this.time - c.t0) * c.haste >= sk.draw.max - 1e-6) this.looseDraw(p); else return; } // (S11 Piercing Arrow held)
     const t = this.time - c.t0;
-    while (c.hits < n && t >= sk.hit.t / c.haste + c.hits * gap) {
+    while (c.hits < n && t >= (sk.hit.ts ? hitAt(sk.hit, c.hits) / c.haste : sk.hit.t / c.haste + c.hits * gap)) { // (S10: hit.ts, Fan the Hammer's and Broadside's uneven gaps)
       this.applySkill(p, sk, c);
       c.hits++;
       if (c.hits >= n) p.cutAt = this.time + CANCEL_AFTER / c.haste; // (A's cancel point: a fusion may cut its follow-through from here)
@@ -2555,11 +2650,27 @@ export class World {
 
   applySkill(p, sk, c) {
     const target = c.target ? this.entity(c.target) : null;
-    const h = sk.hit;
-    const center = sk.target === 'ground' ? { x: c.gx, z: c.gz } : h.at === 'target' && target ? target : (h.kind === 'aoe' || h.kind === 'self') ? p : target || p; // (h.at 'target': round the machine, Thousand Cuts, S8)
+    // (S10) the Deadeye's rounds (Six Chambers): a shot contact spends one; none left is a dry click; a hot load is 25% and heat
+    let rmul = 1;
+    if (sk.rounds && p.type === 'player' && p.tal?.sixChambers && !c.after) {
+      if (!this.roundsLeft(p)) { if (!c.dry) { c.dry = true; this.broadcast({ k: 'dry', id: p.id }); } return; } // (one click a cast)
+      this.spendRound(p);
+      if (p.hotN > 0) { p.hotN--; rmul = 1.25; sk = tagged(HOT_REC, sk, 'heat'); }
+    }
+    // (S10) a record with seq names each contact's own hit and effects (Recoil Vault: the ground blast, then the apex shots)
+    const S0 = sk.seq ? sk.seq[Math.min(c.hits || 0, sk.seq.length - 1)] : null;
+    const h = S0?.hit ? { ...sk.hit, ...S0.hit } : sk.hit;
+    // (S11) at 'trap': round the Ranger's trap; with Trapper's Ground each other trap gets its own pass first (no link)
+    if (h.at === 'trap' && !c.trapAt) {
+      const TL = this.trapsFor(p), all = p.tal?.trapAll && TL.length > 1;
+      if (all) for (const T of TL.slice(0, -1)) this.applySkill(p, sk, { ...c, trapAt: T, extraTrap: true });
+      c = { ...c, trapAt: TL[TL.length - 1] || (target ? { x: target.x, z: target.z } : { x: p.x, z: p.z }), trapList: TL };
+    }
+    const ahead = (dd) => ({ x: p.x + Math.sin(p.ry) * dd, z: p.z + Math.cos(p.ry) * dd });
+    const center = h.at === 'trap' ? c.trapAt : h.at === 'cast' ? (c.aFrom || p.castFrom || p) : h.at === 'target' && !target && sk.noTarget && sk.fx.some((f) => f[0] === 'trap') ? ahead(Math.min(8, sk.range || 8)) : sk.target === 'ground' ? { x: c.gx, z: c.gz } : h.at === 'target' && target ? target : (h.kind === 'aoe' || h.kind === 'self') ? p : target || p; // (h.at 'target': round the machine, Thousand Cuts, S8)
     // gather affected entities
     let enemies = [], allies = [];
-    if (h.kind === 'melee' || h.kind === 'proj') { if (target && sk.target === 'enemy' && (target.type === 'mob' ? !target.dead : this.foeOf(p, target.id))) enemies = [target]; if (sk.target === 'ally' || sk.target === 'self') allies = [target || p]; }
+    if (h.kind === 'melee' || h.kind === 'proj') { if (target && (sk.target === 'enemy' || sk.nearest) && (target.type === 'mob' ? !target.dead : this.foeOf(p, target.id))) enemies = [target]; if (sk.target === 'ally' || sk.target === 'self') allies = [target || p]; }
     if (h.kind === 'self') allies = h.r ? [...this.players.values()].filter((q) => !q.dead && dist(q, p) <= h.r && q.id !== p.duel?.with) : [p];
     if (h.kind === 'aoe' || h.kind === 'ground') enemies = this.foesOf(p).filter((m) => dist(m, center) <= (h.r || 4) + this.rad(m));
     if (h.kind === 'proj' && h.r && target) enemies = this.foesOf(p).filter((m) => dist(m, target) <= h.r + this.rad(m));
@@ -2578,9 +2689,13 @@ export class World {
         if (d > (h.r || 6) + this.rad(m)) continue;
         const along = vx * dx0 + vz * dz0;
         if (h.kind === 'cone') { if (along / (d || 1) >= Math.cos(((h.cone || 60) * Math.PI) / 360) || d < 1.5) enemies.push(m); }
-        else { const side = Math.abs(vx * dz0 - vz * dx0); if (along > 0 && side < 1.6 + this.rad(m)) enemies.push(m); }
+        else { const side = Math.abs(vx * dz0 - vz * dx0), s0 = h.seg ? (c.hits || 0) * h.seg : 0; if (along > s0 && (!h.seg || along <= s0 + (h.segW || h.seg)) && side < 1.6 + this.rad(m)) enemies.push(m); } // (h.seg, S11 Ridgeline Salvo: one stretch of the line a contact, down its length)
       }
     }
+    // (S10) Iron Slug's pierce: the shot goes on through every machine on its line; Split Pair and Chain Shot: the machine
+    // nearest the target (within splitR, 6 m) is struck too
+    if (target && h.kind === 'proj' && sk.pierce && enemies.length) { const ax = target.x - p.x, az = target.z - p.z, al = Math.hypot(ax, az) || 1; for (const m of this.foesOf(p)) { if (m === target || m.dead) continue; const vx = m.x - p.x, vz = m.z - p.z, along = (vx * ax + vz * az) / al; if (along > 0 && along < (sk.range || 22) + 2 && Math.abs(vx * az - vz * ax) / al < 1.4 + this.rad(m)) enemies.push(m); } }
+    if (target && sk.split && enemies.length && (h.kind === 'proj' || h.kind === 'melee' || (h.kind === 'line' && !(c.hits || 0)))) { const near = this.foesOf(p).filter((m) => !m.dead && !enemies.includes(m) && dist(m, target) <= (sk.splitR || 6) + this.rad(m)).sort((x, y) => dist(x, target) - dist(y, target)).slice(0, sk.split); enemies.push(...near); }
     // house walls block every hit: an area hit from its centre, all others from the caster
     // (a splashing bolt: the struck target from the caster, the splash from the target)
     if (enemies.length) {
@@ -2590,16 +2705,17 @@ export class World {
     const tal = p.tal || talentMods(p.cls, p.talents), tsk = tal.sk[sk.id];
     const area = h.kind === 'aoe' || h.kind === 'ground' || h.kind === 'cone' || h.kind === 'line';
     const skPow = 1 + (tsk?.pow || 0);
-    const power = p.power * (1 + this.buffVal(p, 'dmg')) * (1 + tal.dmg) * skPow * (area ? 1 + tal.aoe : 1) * (c.mul || 1);
+    const power = p.power * (1 + this.buffVal(p, 'dmg')) * (1 + tal.dmg) * skPow * (area ? 1 + tal.aoe : 1) * (c.mul || 1) * rmul; // (rmul: a hot load, S10)
     const healPow = p.power * (1 + tal.heal) * skPow;
     const cc1 = 1 + tal.ccDur;
     // the contact being resolved: poise, lifts, the hit-stop tier and Opening's crit are read by damage() (feel.js)
     const fe = FEEL_ON ? skillFeel(sk) : null;
     this._hc = fe ? { sk, i: c.hits || 0, opening: !!c.opening, brk: fe.brk, launch: fe.launch, bash: fe.bash, air: sk.fx.find((f) => f[0] === 'air')?.[1] || 0, src: p, broke: new Set(), encore: !!c.encore } : null;
+    if (S0 && this._hc) { const b2 = S0.fx?.find((f) => f[0] === 'brk'); if (b2) this._hc.brk = b2[1]; this._hc.air = S0.fx?.find((f) => f[0] === 'air')?.[1] || 0; this._hc.launch = S0.fx?.find((f) => f[0] === 'launch')?.[1] || 0; } // (S10: a seq contact's own poise and air bonus)
     // a fusion's last contact may add its own effects (fxLast: Kingsfall's slam, High Ledger's re-lift)
     const lastHit = (c.hits || 0) >= (h.n || 1) - 1;
     // (S8: a finisher's added damage joins the contact's own, one blow and one number: Sandspout's dive)
-    const fxl = lastHit && sk.fxLast ? (sk.fxLast.some((f) => f[0] === 'dmg') ? [...sk.fx.map((f) => (f[0] === 'dmg' ? ['dmg', f[1] + sk.fxLast.filter((g) => g[0] === 'dmg').reduce((t, g) => t + g[1], 0), ...f.slice(2)] : f)), ...sk.fxLast.filter((f) => f[0] !== 'dmg')] : [...sk.fx, ...sk.fxLast]) : sk.fx;
+    const fxl = lastHit && sk.fxLast ? (sk.fxLast.some((f) => f[0] === 'dmg') ? [...sk.fx.map((f) => (f[0] === 'dmg' ? ['dmg', f[1] + sk.fxLast.filter((g) => g[0] === 'dmg').reduce((t, g) => t + g[1], 0), ...f.slice(2)] : f)), ...sk.fxLast.filter((f) => f[0] !== 'dmg')] : [...sk.fx, ...sk.fxLast]) : (S0?.fx || sk.fx);
     if (lastHit && sk.fxLast && this._hc) { const b2 = sk.fxLast.find((f) => f[0] === 'brk'); if (b2) this._hc.brk = b2[1]; const l2 = sk.fxLast.find((f) => f[0] === 'launch'); if (l2) this._hc.launch = l2[1]; } // (S9 Trip Hammer: the upswing lifts, the smash before it does not)
     if (c.after && this._hc) { this._hc.brk = Math.round(this._hc.brk * 0.5); this._hc.after = true; } // (an Aftershock: half the poise too)
     for (const [type, a, b, cc] of fxl) {
@@ -2614,7 +2730,7 @@ export class World {
         case 'root': case 'pin': for (const m of enemies) if (m.type === 'mob' && !m.def.boss) { const pin = type === 'pin' || PIN_SKILLS.has(sk.id) || !!sk.tags?.includes('pin'); this.addBuff(m, { name: pin ? 'Pinned' : 'Rooted', cc: 'root', t: a * cc1, dur: a * cc1, debuff: true, icon: 'root' }); if (pin) m.pinT = Math.max(m.pinT || 0, this.time + a * cc1); } break;
         case 'slow': for (const m of enemies) if (m.type === 'mob') this.addBuff(m, { name: 'Slowed', stat: 'slow', pct: a, t: b, dur: b, debuff: true, icon: 'slow' }); break;
         // (S7) a knockback stopped short by a wall, a rock face or another machine is a wall slam (knockMob)
-        case 'knock': { const kd = sk.fx.find((f) => f[0] === 'dmg')?.[1] || 0.5; for (const m of enemies) { if (m.type !== 'mob' || m.def.boss || m.dead) continue; this.knockMob(p, m, a, power * kd, sk.id); } break; }
+        case 'knock': { const kd = sk.fx.find((f) => f[0] === 'dmg')?.[1] || 0.5; for (const m of enemies) { if (m.type !== 'mob' || m.def.boss || m.dead || m.def.dummy) continue; /* (S10: a training dummy stays where it is planted) */ this.knockMob(p, m, a, power * kd, sk.id); } break; }
         case 'buff': for (const q of allies) this.addBuff(q, { name: sk.name, stat: a, pct: b, t: cc, dur: cc, icon: sk.icon }); break;
         case 'debuff': for (const m of enemies) this.addBuff(m, { name: sk.name, stat: a, pct: b, t: cc, dur: cc, debuff: true, icon: sk.icon }); break;
         // a taunt lifts the taunter above the top of the threat list (v120: long boss fights let a damage dealer outrun a flat +5000)
@@ -2654,14 +2770,34 @@ export class World {
         case 'knockOthers': { const kd = sk.fx.find((f) => f[0] === 'dmg')?.[1] || 0.5; for (const m of enemies) { if (m.type !== 'mob' || m.def.boss || m.dead || m.id === c.target || m.airT > this.time) continue; this.knockMob(p, m, a, power * kd, sk.id); } break; }
         // Intercept: the ally's next a blows within cc s land on the Warden instead, at b of their strength
         case 'intercept': if (!(c.hits || 0)) { const q = target && target.type === 'player' && target !== p ? target : null; if (q) { q.icpt = { by: p.id, n: a, mul: b, until: this.time + cc }; this.addBuff(q, { name: 'Intercepted', stat: 'icpt', pct: 0, t: cc, dur: cc, icon: 'shield' }); this.broadcast({ k: 'intercept', id: p.id, to: q.id }); for (const m of this.mobs.values()) if (!m.dead && m.target === q.id && dist(m, q) < 12) this.addThreat(m, p, 1); } } break;
+        // ---- the Deadeye's kinds (S10)
+        // Rock Salt: every shot slows the machine a% more for b s, up to cc% (one Slowed that grows)
+        case 'slowStack': for (const m of enemies) { if (m.type !== 'mob' || m.dead) continue; const ex = m.buffs.find((bf) => bf.name === 'Rock Salt'); this.addBuff(m, { name: 'Rock Salt', stat: 'slow', pct: Math.min(cc || 40, (ex?.pct || 0) + a), t: b, dur: b, debuff: true, icon: 'slow' }); } break;
+        // ---- the Ranger's kinds (S11)
+        // Snare Trap: the snare lies where it was thrown (a s Pinned on what it closes on, cc s on the ground); on a machine it
+        // closes at once (Spring Trap: throws it up instead, through the contact's lift)
+        case 'trap': if (!(c.hits || 0) && !c.extraTrap) { const T = this.layTrap(p, center, a, b, sk); const hold = enemies.filter((m) => m.type === 'mob' && !m.dead && !m.def.boss); if (hold.length) { T.caught = true; this.broadcast({ k: 'trapsnap', tid: T.id, id: p.id, mob: hold[0].id }); } if (sk.springTrap && this._hc) this._hc.launch = 1.0; else for (const m of hold) { this.addBuff(m, { name: 'Pinned', cc: 'root', t: a * cc1, dur: a * cc1, debuff: true, icon: 'root' }); m.pinT = Math.max(m.pinT || 0, this.time + a * cc1); } } break;
+        // Ricochet Bodkin: the arrow glances on from machine to machine (a bounces within b m, cc of the blow each), Marking each
+        case 'bounce': { let at = enemies[0]; if (!at) break; const coef = (fxl.find((f) => f[0] === 'dmg')?.[1] || 1) * (cc || 0.7), hitSet = new Set(enemies), path = [at.id]; for (let i = 0; i < a; i++) { let nx = null, bd = b; for (const o of this.foesOf(p)) { if (o.dead || hitSet.has(o)) continue; const d = dist(o, at); if (d < bd) { bd = d; nx = o; } } if (!nx) break; hitSet.add(nx); path.push(nx.id); this.damage(p, nx, power * coef * R(0.9, 1.1), sk.id); if (nx.type === 'mob') this.addBuff(nx, { name: 'Marked Target', stat: 'vuln', pct: 10, t: 4, dur: 4, debuff: true, icon: 'mark' }); at = nx; } if (path.length > 1) this.broadcast({ k: 'bounce', id: p.id, path }); break; }
+        // Smoke Arrow: a smoke arrow where the cast began (Disengage's spot): machines within a m miss b% for cc s
+        case 'smokeAt': if (!(c.hits || 0) && p.castFrom) { const o = p.castFrom; this.broadcast({ k: 'smokebank', x: +o.x.toFixed(2), z: +o.z.toFixed(2), r: a }); for (const m of this.foesOf(p)) if (m.type === 'mob' && Math.hypot(m.x - o.x, m.z - o.z) <= a + this.rad(m)) this.addBuff(m, { name: 'Smoke Arrow', stat: 'miss', pct: b, t: cc, dur: cc, debuff: true, icon: 'smoke' }); } break;
         case 'ricochet': { const t0 = enemies[0]; if (!t0) break; const coef = sk.fx.find((f) => f[0] === 'dmg')?.[1] || 1; const near = this.foesOf(p).filter((o) => !o.dead && !enemies.includes(o) && dist(o, t0) <= b).sort((x, y) => dist(x, t0) - dist(y, t0)).slice(0, Math.min(a, 2)); for (const o of near) this.damage(p, o, power * coef * 0.7 * R(0.9, 1.1), sk.id); break; } // (at most 2 bounces a shot, section 3.6)
       }
     }
     this._hc = null;
+    // (S10) Bank Shot: every shot skips once off the plate into the nearest other machine within 8 m at half strength (spark:
+    // Galvanic on a Corroded machine); Chalk Mark: a fusion's machines take 8% more from everyone for 6 s; Six Chambers:
+    // Recoil Jump reloads both pistols, Twelve Rounds empties both
+    if (sk.bank && enemies.length && p.type === 'player' && (S0?.fx || sk.fx).some((f) => f[0] === 'dmg')) this.bankShot(p, sk, enemies, power, S0?.fx || sk.fx);
+    if (sk.from && p.tal?.flags?.chalk && !(c.hits || 0) && p.type === 'player') for (const m of enemies) if (m.type === 'mob' && !m.dead) this.addBuff(m, { name: 'Chalk Mark', stat: 'vuln', pct: 8, t: 6, dur: 6, debuff: true, icon: 'mark' });
+    if (p.type === 'player' && p.tal?.sixChambers && !(c.hits || 0) && (sk.id === 'd_recoil' || sk.to === 'd_recoil')) { p.rounds = [6, 6]; this.broadcast({ k: 'reload', id: p.id, n: 2 }); }
+    if (sk.emptyAll && lastHit && p.rounds) p.rounds = [0, 0];
     // (S7) a coat the skill leaves on every machine it reached, after its own blow (so it never sets itself off)
     const ck = enemies.length && p.type === 'player' ? coatOf(sk) : null;
     if (ck) for (const m of enemies) this.applyCoat(p, m, ck.kind, ck.dur);
-    if (KIT_V2[p.cls] && p.type === 'player' && !c.after) this.linkAfter(p, sk, c, enemies, allies); // (fusions: the link window, mastery)
+    // (S11) a trap fusion springs the traps it used on its last contact: they burst (Closed Ground finds the machines there)
+    if (h.at === 'trap' && sk.from && lastHit && !c.extraTrap && c.trapList?.length) { p.trapBurst = { list: c.trapList.map((T) => ({ x: T.x, z: T.z })), until: this.time + 4 }; const used = new Set(c.trapList); p.traps = (p.traps || []).filter((T) => !used.has(T)); for (const T of used) this.broadcast({ k: 'trapgone', tid: T.id, burst: 1 }); }
+    if (KIT_V2[p.cls] && p.type === 'player' && !c.after && !c.extraTrap) this.linkAfter(p, sk, c, enemies, allies); // (fusions: the link window, mastery)
     // Aftershock (the Warden, S9): a slam's last contact strikes again 0.6 s later at half strength (one repeat, never of a repeat)
     if (sk.aftershock && !c.after && lastHit && p.type === 'player') {
       (p.delays ||= []).push({ t: this.time + sk.aftershock.t, sk, c: { ...c, after: true, hits: (h.n || 1) - 1, mul: (c.mul || 1) * sk.aftershock.mul, opening: false } });
@@ -3839,16 +3975,51 @@ export class World {
     const anchors = this._anchH || (this._anchH = []), weak = this._anchB || (this._anchB = []);
     anchors.length = 0; weak.length = 0;
     for (const p of this.players.values()) { if (p.dead || p.away) continue; if (!p.bot) anchors.push(p); else if (!p.mind || p.mind.lod !== 'coarse') weak.push(p); }
+    this.mobGridBuild();
+    const sleepOn = !MOB_SLEEP.off, SR2 = MOB_SLEEP.r * MOB_SLEEP.r;
+    // a grid square whose centre is further than the sleep range plus a square from every human (and 60 m plus a square
+    // from every full-detail bot) holds only mobs that would sleep: they skip the distance checks (worked out once a tick)
+    const far = this._mFar || (this._mFar = new Map()), FH = (MOB_SLEEP.r + MOB_CELL) ** 2, FW = (60 + MOB_CELL) ** 2;
+    far.clear();
     for (const m of this.mobs.values()) {
       if (m.dead || m.state === 'chase') { this.tickMob(m, dt); continue; }
-      let near = false;
-      for (const p of anchors) { const dx = p.x - m.x, dz = p.z - m.z; if (dx * dx + dz * dz < 130 * 130) { near = true; break; } }
-      if (near) { if (m.sleepAcc) { this.tickMob(m, m.sleepAcc + dt); m.sleepAcc = 0; } else this.tickMob(m, dt); continue; }
+      if (sleepOn && mobSleepy(m)) {
+        const cx = Math.floor(m.x / MOB_CELL), cz = Math.floor(m.z / MOB_CELL), k = (cx + 2048) * 4096 + (cz + 2048);
+        let f = far.get(k);
+        if (f === undefined) {
+          f = true;
+          const x = (cx + 0.5) * MOB_CELL, z = (cz + 0.5) * MOB_CELL;
+          for (let i = 0; f && i < anchors.length; i++) { const dx = anchors[i].x - x, dz = anchors[i].z - z; if (dx * dx + dz * dz < FH) f = false; }
+          for (let i = 0; f && i < weak.length; i++) { const dx = weak[i].x - x, dz = weak[i].z - z; if (dx * dx + dz * dz < FW) f = false; }
+          far.set(k, f);
+        }
+        if (f) {
+          m.sleepAcc = (m.sleepAcc || 0) + dt;
+          if (m.sleepAcc >= MOB_SLEEP.step) { this.mobDoze(m, m.sleepAcc); m.sleepAcc = 0; }
+          continue;
+        }
+      }
+      let d2 = Infinity;
+      for (let i = 0; i < anchors.length; i++) { const p = anchors[i], dx = p.x - m.x, dz = p.z - m.z, d = dx * dx + dz * dz; if (d < d2) { d2 = d; if (d < 130 * 130) break; } }
+      if (d2 < 130 * 130) { if (m.sleepAcc) { this.tickMob(m, m.sleepAcc + dt); m.sleepAcc = 0; } else this.tickMob(m, dt); continue; }
       let step = 0.5;
-      for (const p of weak) { const dx = p.x - m.x, dz = p.z - m.z; if (dx * dx + dz * dz < 60 * 60) { step = 0.25; break; } }
+      for (let i = 0; i < weak.length; i++) { const p = weak[i], dx = p.x - m.x, dz = p.z - m.z; if (dx * dx + dz * dz < 60 * 60) { step = 0.25; break; } }
+      if (sleepOn && step === 0.5 && d2 >= SR2 && mobSleepy(m)) { // asleep (MOB_SLEEP)
+        m.sleepAcc = (m.sleepAcc || 0) + dt;
+        if (m.sleepAcc >= MOB_SLEEP.step) { this.mobDoze(m, m.sleepAcc); m.sleepAcc = 0; }
+        continue;
+      }
       m.sleepAcc = (m.sleepAcc || 0) + dt;
       if (m.sleepAcc >= step) { this.tickMob(m, Math.min(m.sleepAcc, 1)); m.sleepAcc = 0; }
     }
+  }
+  // a sleeping mob's second (MOB_SLEEP): what an idle mob nobody can see would do with its time, without walking about
+  mobDoze(m, dt) {
+    if (m.buffs.length) { this.tickBuffs(m, dt); if (m.dead) return; }
+    if (m.poiseMax && m.poise < m.poiseMax && this.time - m.poiseT > POISE.refill && !(m.brokenT > this.time)) m.poise = m.poiseMax;
+    if (m.def.inert || m.def.dummy) return;
+    if (m.state === 'leash') { m.x = m.home.x; m.z = m.home.z; m.y = walkHeight(m.x, m.z); m.leashT = 0; m.state = 'idle'; m.target = null; m.speed = 0; this.mobGridMove(m); }
+    if (m.hp < m.maxHp) m.hp = Math.min(m.maxHp, m.hp + m.maxHp * 0.1 * dt);
   }
 
   // offline play only (the phone and the browser fallback set world.tiers; the server never does), perf plan E2: only the
@@ -3859,6 +4030,7 @@ export class World {
   tickMobsTiered(dt, T) {
     const real = this._tierReal || (this._tierReal = []), bots = this._tierBots || (this._tierBots = []);
     real.length = 0; bots.length = 0;
+    this.mobGridBuild();
     for (const p of this.players.values()) if (!p.dead && !p.away && !(p.bot && p.mind?.lod === 'coarse')) (p.bot ? bots : real).push(p); // (coarse bots never wake mobs: living bots B.6)
     const far = 1 / Math.max(0.5, T.farHz || 2);
     for (const m of this.mobs.values()) {
@@ -3912,6 +4084,8 @@ export class World {
     if (p.dead) return;
     if (p.zones?.length) this.tickZones(p);
     if (p.delays?.length) this.tickDelays(p);
+    if (p.cls === 'ranger' && KIT_V2.ranger && (p.traps?.length || p.tal?.rangerStill)) this.tickRanger(p); // (S11: the snares on the ground, Never Still's metres)
+    if (p.cls === 'deadeye' && KIT_V2.deadeye) this.tickDeadeye(p); // (S10: Never Still's metres, the slide's shot, Six Chambers' slow reload)
     // Forge-Heated Head (the Warden, S9): the hot head costs 2% of his health every 10 s in a fight (never the last point)
     if (p.tal?.forgeBurn && this.time - p.combatT < 5 && this.time >= (p.forgeT || 0)) { if (p.forgeT) p.hp = Math.max(1, p.hp - p.maxHp * p.tal.forgeBurn); p.forgeT = this.time + 10; }
     if (p.link && (this.hasCC(p, 'stun') || this.time > p.link.until + LINK.tick + LINK.grace + 0.05)) p.link = null; // (a stun closes the window early)
@@ -3959,6 +4133,77 @@ export class World {
         if (z.pull && m.type === 'mob' && !m.dead && liftable(m.def) && !m.def.dummy) this.pullMob(m, z, z.pull);
       }
     }
+  }
+  // ---- the Deadeye (S10)
+  // Never Still keeps the metres moved in the last 2 s (p.mvLog) and when he last moved (p.mvAt); Snap Shot held through a
+  // slide fires out of it (p.slideFire, keeping the slide's link); Six Chambers reloads one round a second into the emptier
+  // pistol after 1.5 s without a shot, and both pistols out of a fight
+  tickDeadeye(p) {
+    if (p.tal?.neverStill) {
+      const d = p.mvX == null ? 0 : Math.hypot(p.x - p.mvX, p.z - p.mvZ);
+      p.mvX = p.x; p.mvZ = p.z;
+      if (d > 0.02 && d < 6) { (p.mvLog ||= []).push([this.time, d]); p.mvAt = this.time; }
+      if (p.mvLog?.length && p.mvLog[0][0] < this.time - 2) p.mvLog = p.mvLog.filter((e) => e[0] >= this.time - 2);
+    }
+    if (p.slideFire && this.time >= p.slideFire.at) { const f = p.slideFire; p.slideFire = null; if (!p.dead && !p.cast && f.target) this.on_cast(p, { skill: 'd_snap', target: f.target, keepLink: true, slideFire: true }); }
+    if (p.tal?.sixChambers) {
+      const R0 = (p.rounds ||= [6, 6]);
+      if (this.time - (p.combatT || 0) > 5) { R0[0] = 6; R0[1] = 6; }
+      else if (this.time - (p.shotT || 0) > 1.5 && this.time >= (p.reloadT || 0) && (R0[0] < 6 || R0[1] < 6)) { R0[R0[0] <= R0[1] ? 0 : 1]++; p.reloadT = this.time + 1; }
+    }
+  }
+  // ---- the Ranger (S11)
+  // his snares (p.traps: one, three with Trapper's Ground; the oldest goes): each arms 0.5 s after it lands and closes on the
+  // first machine that comes within reach; a sprung one stays until it is used or its time runs out
+  layTrap(p, at, hold, dur, sk) {
+    const T = { id: newId('tr'), x: +at.x, z: +at.z, until: this.time + (dur || 20), arm: this.time + 0.5, hold: hold || 3, caught: false, spring: !!sk.springTrap, sk: sk.id };
+    const L = (p.traps ||= []);
+    L.push(T);
+    while (L.length > (p.tal?.trapMax || 1)) this.broadcast({ k: 'trapgone', tid: L.shift().id });
+    this.broadcast({ k: 'trap', id: p.id, tid: T.id, x: +T.x.toFixed(2), z: +T.z.toFixed(2), dur: +(T.until - this.time).toFixed(1) });
+    return T;
+  }
+  // the traps a trap fusion goes off round: the live ones, else the ones a fusion just burst (Closed Ground after Tripwire)
+  trapsFor(p) { const L = (p.traps || []).filter((T) => T.until > this.time); return L.length ? L : p.trapBurst && p.trapBurst.until > this.time ? p.trapBurst.list : []; }
+  tickRanger(p) {
+    if (p.tal?.rangerStill) {
+      const d = p.mvX == null ? 0 : Math.hypot(p.x - p.mvX, p.z - p.mvZ);
+      p.mvX = p.x; p.mvZ = p.z;
+      if (d > 0.02 && d < 6) { (p.mvLog ||= []).push([this.time, d]); p.mvAt = this.time; }
+      if (p.mvLog?.length && p.mvLog[0][0] < this.time - 2) p.mvLog = p.mvLog.filter((e) => e[0] >= this.time - 2);
+    }
+    if (!p.traps?.length) return;
+    p.traps = p.traps.filter((T) => { if (T.until > this.time) return true; this.broadcast({ k: 'trapgone', tid: T.id }); return false; });
+    for (const T of p.traps) {
+      if (T.caught || this.time < T.arm) continue;
+      for (const m of this.mobs.values()) {
+        if (m.dead || m.def.boss || m.def.inert || Math.abs(m.x - T.x) > 3 || Math.hypot(m.x - T.x, m.z - T.z) > 1.2 + this.rad(m)) continue;
+        T.caught = true;
+        this.broadcast({ k: 'trapsnap', tid: T.id, id: p.id, mob: m.id });
+        const rec = p.eff?.[T.sk] || p.eff?.r_trap, coef = rec?.fx?.find((f) => f[0] === 'dmg')?.[1] || 0.4, saved = this._hc;
+        this._hc = { sk: rec, i: 0, opening: false, brk: 10, launch: T.spring ? 1.0 : 0, bash: false, air: 0, src: p, broke: new Set(), encore: false };
+        this.damage(p, m, p.power * (1 + (p.tal?.dmg || 0)) * coef * R(0.9, 1.1), T.sk);
+        this._hc = saved;
+        if (!T.spring && !m.dead) { this.addBuff(m, { name: 'Pinned', cc: 'root', t: T.hold, dur: T.hold, debuff: true, icon: 'root' }); m.pinT = Math.max(m.pinT || 0, this.time + T.hold); }
+        this.provoke(m, p, 1);
+        break;
+      }
+    }
+  }
+  roundsLeft(p) { const R0 = (p.rounds ||= [6, 6]); return R0[0] + R0[1]; }
+  // a shot from the pistol with more rounds left (the right first), so the two cylinders empty together
+  spendRound(p) { const R0 = (p.rounds ||= [6, 6]), i = R0[0] >= R0[1] ? 0 : 1; if (R0[i] > 0) R0[i]--; p.shotT = this.time; }
+  // Bank Shot's skip off the first machine struck into the nearest other within 8 m, at half strength, as a spark
+  bankShot(p, sk, enemies, power, fx) {
+    const t0 = enemies[0], B = sk.bank, coef = fx.find((f) => f[0] === 'dmg')?.[1] || 0;
+    let to = null, bd = B.r;
+    for (const m of this.foesOf(p)) { if (m.dead || enemies.includes(m)) continue; const d = dist(m, t0); if (d < bd) { bd = d; to = m; } }
+    if (!to || !coef) return;
+    const bk = tagged(BANK_REC, sk, 'spark'), saved = this._hc;
+    this._hc = { sk: bk, i: 0, opening: false, brk: 0, launch: 0, bash: false, air: 0, src: p, broke: new Set([to.id]), encore: false };
+    this.broadcast({ k: 'bank', id: p.id, from: t0.id, to: to.id });
+    this.damage(p, to, power * coef * B.mul * R(0.9, 1.1), sk.id);
+    this._hc = saved;
   }
   // delayed contacts (S9 Aftershock): each fires once at its time, from where the Warden stands then
   tickDelays(p) {
@@ -4123,7 +4368,7 @@ export class World {
 
   tickMob(m, dt) {
     if (m.dead) {
-      if (m.sp.temp) { if (this.time > m.respawnT + 60 || m.respawnT === 0) this.mobs.delete(m.id); return; }
+      if (m.sp.temp) { if (this.time > m.respawnT + 60 || m.respawnT === 0) { this.mobs.delete(m.id); this.mobGridDrop(m); } return; }
       if (this.time > m.respawnT) { this.spawnMob(m.sp, m); this.broadcast({ k: 'spawn', id: m.id }); if (m.def.world) this.worldBossNotice(m); }
       return;
     }
@@ -4239,14 +4484,29 @@ export class World {
     }
     // separation from other mobs (a fixed engine, speed 0 like the Great Governor, is never shoved about by its own adds:
     // they step round it instead)
-    if (def.speed !== 0) for (const o of this.mobs.values()) {
+    // (server perf: only the mobs in the grid cells around it, docs/ai/server_perf.md; the whole list when there is no grid)
+    const G = this._mg;
+    if (def.speed !== 0 && G) {
+      const k = Math.ceil((def.radius + G.maxR) / MOB_CELL), cx = Math.floor(m.x / MOB_CELL), cz = Math.floor(m.z / MOB_CELL);
+      for (let i = cx - k; i <= cx + k; i++) for (let j = cz - k; j <= cz + k; j++) {
+        const a = G.cells.get((i + 2048) * 4096 + (j + 2048));
+        if (a) for (let n = 0; n < a.length; n++) {
+          const o = a[n];
+          if (o === m || o.dead) continue;
+          const dx = m.x - o.x, dz = m.z - o.z, d2 = dx * dx + dz * dz, rr = def.radius + o.def.radius;
+          if (d2 < rr * rr && d2 > 1e-4) { const d = Math.sqrt(d2), push = (rr - d) * 0.5; m.x += (dx / d) * push; m.z += (dz / d) * push; }
+        }
+      }
+    } else if (def.speed !== 0) for (const o of this.mobs.values()) {
       if (o === m || o.dead) continue;
       const dx = m.x - o.x, dz = m.z - o.z, d2 = dx * dx + dz * dz, rr = def.radius + o.def.radius;
       if (d2 < rr * rr && d2 > 1e-4) { const d = Math.sqrt(d2), push = (rr - d) * 0.5; m.x += (dx / d) * push; m.z += (dz / d) * push; }
     }
     if (inDungeon) [m.x, m.z] = dungeonPush(m.x, m.z, Math.min(1.2, def.radius));
     else [m.x, m.z] = housePush(m.x, m.z, Math.min(1.2, def.radius));
-    m.y = walkHeight(m.x, m.z);
+    if (m.x !== m._hx || m.z !== m._hz) { m._hx = m.x; m._hz = m.z; m._hy = walkHeight(m.x, m.z); } // (the ground under a mob that stood still is the same)
+    m.y = m._hy;
+    if (G) this.mobGridMove(m);
     if (m.pending && this.time >= m.pending.t) {
       const pd = m.pending; m.pending = null;
       if (pd.aoe) { for (const p of this.players.values()) if (!p.dead && dist(p, m) < pd.aoe && (inDungeon || !houseCrosses(m.x, m.z, p.x, p.z))) this.playerDamaged(p, m, pd.splash && p.id !== pd.tgt ? pd.splash : pd.dmg); this.broadcast({ k: 'slam', id: m.id, r: pd.aoe }); }
@@ -4485,7 +4745,7 @@ export class World {
         if (q.away || dist2(p, q) > VIEW * VIEW) continue; // (a living bot away on a crossing or a run is hidden: B.3)
         list.push({ id: q.id, ty: 'p', n: q.name, b: q.bot ? 1 : undefined, v: q.cv || undefined, ti: q.botRole ? '<' + q.botRole + '>' : q.title ? achTitle(q.title) : undefined, c: q.cls, l: q.level, x: +q.x.toFixed(2), y: +q.y.toFixed(2), z: +q.z.toFixed(2), r: +q.ry.toFixed(2), s: +q.speed.toFixed(1), a: q.air ? 1 : 0, h: q.hp / q.maxHp, d: q.dead ? 1 : 0, t: q.target, e: q.eating ? 1 : 0, mt: q.mounted ? 1 : undefined, si: q.sit ? 1 : undefined, mp: q.mounted && q.paint && q.paint !== 'brass' ? q.paint : undefined, mk: q.mounted && q.runaboutMk >= 2 ? q.runaboutMk : undefined, mc: q.crawler ? (mountKind(q) === 'crawler' ? 1 : 0) : undefined, g: (q.bot ? gtags.get(q.name) : q.guild?.name) || undefined, pt: q.pet || undefined, ...(() => { const L = wornLook(q); return { wt: L.wt || undefined, oh: L.oh || undefined, wq: L.wq >= 2 ? L.wq : undefined, wu: q.equip?.weapon ? this.heatShown(q, q.equip.weapon) : undefined, ou: q.equip?.offhand ? this.heatShown(q, q.equip.offhand) : undefined, ar: L.sh || undefined, ck: L.ck || undefined, gr: L.gr || undefined }; })() });
       }
-      for (const m of this.mobs.values()) {
+      for (const m of this._mg ? this.mobsAround(p, VIEW) : this.mobs.values()) { // (server perf: only the grid cells in view)
         if (dist2(p, m) > VIEW * VIEW) continue;
         list.push({ id: m.id, ty: 'm', k: m.kind, l: m.level, x: +m.x.toFixed(2), y: +m.y.toFixed(2), z: +m.z.toFixed(2), r: +m.ry.toFixed(2), s: +m.speed.toFixed(1), h: m.hp / m.maxHp, hp: Math.round(m.hp), mh: m.maxHp, d: m.dead ? 1 : 0, t: m.target, lt: m.loot && m.loot.owners.includes(p.id) ? 1 : 0, lq: m.loot && m.loot.owners.includes(p.id) ? this.lootBest(m.loot)?.q : undefined, ln: m.loot && m.loot.owners.includes(p.id) ? this.lootBest(m.loot)?.name : undefined, st: this.hasCC(m, 'stun') ? 1 : 0, po: m.poiseMax && m.poise < m.poiseMax ? +(m.poise / m.poiseMax).toFixed(2) : undefined }); // (po: the poise bar of S6, only while worn down)
       }

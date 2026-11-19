@@ -203,12 +203,13 @@ export function initTouch({ game, ui, rig, canvas, act }) {
         if (tw) { if (tw.wait) { clearTimeout(tw.wait); tw.wait = 0; useSkill(S.s, { plain: !T2() }); } return; }
         const st = KIT_V2[game.cls] ? fuseFor(game, ui, S.s.id, game.serverTime()) : null;
         if (st && !st.cooling) me.wait = setTimeout(() => { me.wait = 0; useSkill(S.s, { plain: T2() }); }, 70);
-        else useSkill(S.s, { plain: !!st && T2() });
+        else useSkill(S.s, { plain: !!st && T2(), hold: !!S.s.draw }); // (S11: a draw is held while the finger stays on the button)
         dragS = { S, id: e.pointerId, x: e.clientX, y: e.clientY, moved: false };
         clearTimeout(hold);
+        if (S.s.draw) return; // (no tip while a draw is held)
         hold = setTimeout(() => { if (dragS?.moved) return; ui.showTip({ currentTarget: S.el }, S.el.dataset.fz ? ui.fuseTip(S.el.dataset.fz, S.s) : ui.skillTip(S.s)); tipShownAt = performance.now(); }, 550);
       });
-      const off = () => { clearTimeout(hold); };
+      const off = () => { clearTimeout(hold); if (S.s.draw) game.releaseDraw?.(); };
       S.el.addEventListener('pointerup', off); S.el.addEventListener('pointercancel', off); S.el.addEventListener('pointerleave', off);
     }
     $('.tc-page', wheel).addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); if (pages < 2) return; page = (page + 1) % pages; buildWheel(); game.sfx?.play('ui'); });

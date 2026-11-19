@@ -5,7 +5,8 @@
 // root: hips offset [x, y, z] (z forward). turn: whole-body spin (deg, + = to the left).
 import { compileClip } from './anim.js';
 import { SKILLS, SKILL_BY_ID } from '/sunmere-play/shared/classes.js';
-import { FUSION_BY_ID } from '/sunmere-play/shared/fusions.js'; // (S4: a fusion's own clip times itself by the fusion's hit)
+import { FUSION_BY_ID } from '/sunmere-play/shared/fusions.js';
+import { CORE_BY_ID } from '/sunmere-play/shared/kit.js'; // (S10: the Deadeye's new contact times; its core skills keep their legacy ids) // (S4: a fusion's own clip times itself by the fusion's hit)
 import { STANCES } from './anim.js';
 import * as THREE from 'three';
 import { HUMANOID } from '../assets/rig.js';
@@ -966,6 +967,160 @@ function leapRoot(dur, o) {
     DEF.r_cloudburst = C('ranger', 1.6, 'full', keys.map((q) => (q.t === rel[0] ? { ...q, e: 'snap' } : q)), [{ t: 0.08, e: 'bowstring', pull: 1 },
       ...rel.flatMap((u, i) => [{ t: u, e: 'proj', kind: 'arrow', from: 'bow', up: true }, { t: u, e: 'bowstring', pull: 0 }, { t: u + 0.01, e: 'sound', s: 'bow' }, ...(i < 3 ? [{ t: u + 0.05, e: 'bowstring', pull: 1 }] : [])]),
       { t: 'hit', e: 'rain', kind: 'arrow', r: 6, n: 60, dur: 1.0 }, { t: 'hit', e: 'cloud', kind: 'mud', r: 6 }, { t: 'hit2', e: 'impact', kind: 'mud', at: 'target', r: 3 }, { t: 'hit3', e: 'shake', amt: 0.25 }, { t: 'hit4', e: 'impact', kind: 'mud', at: 'target', r: 4 }, { t: 'hit4', e: 'shake', amt: 0.35 }]);
+  }
+
+  // ============================== S11: the Ranger's new kit (combat_design_fusion.md 4.2) ==============================
+  // Every shot is drawn on the solved archer poses (AIM, NOCK, REL), the bow always side-on and the arrows flying parallel
+  // (a twin pair leaves the string together, never fanned); the planted moves use the authored clips (Backflip, Kneel_Aim,
+  // Throw_Underhand) on the body with the arms keyed. Effects are wood, rope, chalk, dust and splinters; a rain falls at one
+  // slant and lands stitched (uneven). Contact times come from the new kit (kit.js / fusions.js), so the arrow leaves the
+  // string on the server's contact; Piercing Arrow's clip waits at full draw while it is held (drawHold, game.js).
+  {
+    const K11 = (id, step) => { const s = CORE_BY_ID[id]; return step && s?.chain ? s.chain[step - 1] : s; };
+    const TS = (h, i) => (h.ts ? h.ts[Math.min(i, h.ts.length - 1)] : h.t + i * (h.gap || 0));
+    const arrow = (t, o = {}) => ({ t, e: 'proj', kind: 'arrow', from: 'bow', trail: 'streak', ...o }); // (a thin pale streak, never a glow)
+    const str = (t, pull) => ({ t, e: 'bowstring', pull });
+    const R11 = (id, dur, mask, keys, ev, o) => (DEF[id] = C('ranger', dur, mask, keys, ev, o));
+    const DIS = set({ torso: lean(T_AIM, 18), nockTorso: lean(T_NOCK, 12), pitch: -28 }); // (from the top of a flip, down at the machine)
+    const STEEP = set({ torso: lean(T_AIM, -22), nockTorso: lean(T_NOCK, -10), pitch: 68 });
+    // ---- Quick Shot: a short nock, draw and loose on the upper body (on the run); the third step looses Twin Arrows, two on
+    // the string together, a hand's width apart
+    const quick = (id, step) => {
+      const h = K11('r_quick', step).hit, d = 0.62, tr = h.t, twin = (h.n || 1) > 1;
+      const keys = [k(0, GL), k((tr - 0.16) / d, P(NOCK, SIDE)), k((tr - 0.05) / d, P(AIM, SIDE)), k(tr / d, P(AIM, SIDE), { hold: true }), k((tr + 0.05) / d, P(REL, SIDE), { e: 'snap' }), k(0.82, mixPose(P(REL, SIDE), GL, 0.5)), k(1, GL)];
+      R11(id, d, 'full', keys, [str((tr - 0.14) / d, 1), arrow('hit'), ...(twin ? [arrow('hit2')] : []), str('hit', 0), { t: 'hit', e: 'sound', s: 'bow' }], { skill: 'r_quick', hit: h, step });
+    };
+    quick('r_quick', 1); quick('r_quick_2', 2); quick('r_quick_3', 3);
+    // Fletcher's Rhythm: the third step looses three side by side
+    { const h = { ...K11('r_quick', 3).hit, n: 3 }; DEF.r_quick_3r = { ...DEF.r_quick_3, hit: h, events: [...DEF.r_quick_3.events, arrow('hit3')] }; }
+    // ---- Disengage (0.85 s): a crouch, the Backflip 8 m back (root up 1.7 m), at the top the bow comes round onto the machine
+    // and looses (the server's contact, 0.30), a crouched landing
+    const flipBack = (D, dist, h, tUp, tLand) => { const out = []; for (let t = tUp + 1 / 60; t < tLand - 1e-6; t += 1 / 60) { const u = (t - tUp) / (tLand - tUp); out.push(k(t / D, {}, { root: [0, +(h * Math.sin(Math.PI * u)).toFixed(3), +(-dist * (1 - (1 - u) ** 1.6)).toFixed(3)], e: 'linear' })); } return out; };
+    {
+      const D = 0.85, h = K11('r_disengage').hit, tr = h.t;
+      const keys = [k(0, GL), k(0.08 / D, P(G, { spine: [22, 0, 0] }, L.deep), { root: [0, -0.32, 0] }), ...flipBack(D, 8, 1.7, 0.08, 0.66),
+        k((tr - 0.1) / D, P(DIS.NOCK, L.tuck)), k((tr - 0.02) / D, P(DIS.AIM, L.tuck)), k(tr / D, P(DIS.AIM, L.tuck), { hold: true }), k((tr + 0.05) / D, P(DIS.REL, L.air), { e: 'snap' }),
+        k(0.66 / D, P(G, { spine: [22, 0, 0] }, L.deep), { root: [0, -0.32, -8] }), k(1, GL, { root: [0, 0, -8] })];
+      R11('r_disengage', D, 'full', keys.sort((a, b) => a.t - b.t).filter((q, i, a) => i === 0 || q.t > a[i - 1].t + 1e-4), [{ t: 0.02, e: 'sound', s: 'gust' }, { t: 0.08 / D, e: 'dust' }, { t: 0.08 / D, e: 'dash' }, str((tr - 0.1) / D, 1), arrow('hit', { time: 0.08 }), str('hit', 0), { t: 'hit', e: 'sound', s: 'bow' }, { t: 0.66 / D, e: 'dust' }],
+        { hit: h, endRoot: [0, 0, -8], ual: { mask: 'body', segs: [['Backflip', 0.08, 0.66, 0.08, 0.72]], end: 0.64 } });
+    }
+    // ---- Volley (1.15 s): the bow tipped up, a dozen loosed high; they come down on the machine in three stitched waves
+    // (each wave starts falling 0.35 s before its contact)
+    {
+      const D = 1.15, h = K11('r_volley').hit, tr = 0.32;
+      R11('r_volley', D, 'full', [k(0, GL), k(0.12 / D, P(HIGH.NOCK, SIDE)), k(0.26 / D, P(HIGH.AIM, L.wide), { root: [0, -0.1, 0] }), k(tr / D, P(HIGH.REL, L.wide), { root: [0, -0.1, 0], e: 'snap' }), k(0.6 / D, mixPose(P(HIGH.REL, L.wide), GL, 0.5)), k(1, GL)],
+        [str(0.1 / D, 1), arrow(tr / D, { up: true }), arrow((tr + 0.02) / D, { up: true }), str(tr / D, 0), { t: tr / D, e: 'sound', s: 'bow' },
+          ...[0, 1, 2].map((i) => ({ t: (TS(h, i) - 0.35) / D, e: 'rain', kind: 'arrow', r: 4.5, n: 5, dur: 0.12 })), { t: 'hit3', e: 'shake', amt: 0.15 }], { hit: h });
+    }
+    // ---- Snare Trap (0.85 s): Throw_Underhand, the snare swung low and let go; it lands on the server's contact
+    {
+      const D = 0.85, h = K11('r_trap').hit, rel = 0.36;
+      R11('r_trap', D, 'full', [k(0, GL), k(0.22 / D, P(G, { spine: [30, -20, 0], armR: [30, 0, -20], foreR: [-30, 0, 0], head: [20, 0, 0] }, L.lungeR), { root: [0, -0.2, 0.1] }),
+        k(rel / D, P(G, { spine: [24, 20, 0], armR: [-70, 0, -10], foreR: [-10, 0, 0], handR: [-30, 0, 0] }, L.lungeR), { root: [0, -0.2, 0.15], e: 'snap' }), k(1, GL)],
+        [{ t: 0.12 / D, e: 'holdItem', side: 'R', item: 'trap', on: true }, { t: rel / D, e: 'holdItem', side: 'R', item: 'trap', on: false }, { t: rel / D, e: 'proj', kind: 'trap', from: 'R', arc: 0.5, ground: true, time: h.t - rel }, { t: rel / D, e: 'sound', s: 'whoosh' }],
+        { hit: h, ual: { mask: 'body', segs: [['Throw_Underhand', 0, 0.6, 0, 0.667]], end: 0.6 } });
+    }
+    // ---- Piercing Arrow (1.5 s): nocked, drawn to the ear by 0.45 s and held; at full draw (0.98) the clip waits while the key
+    // is held (drawHold), the loose 0.04 s after, the shoulders kicked back, a line of dust down the path
+    {
+      const D = 1.5, h = K11('r_pierce').hit, tr = h.t;
+      R11('r_pierce', D, 'full', [k(0, GL), k(0.15 / D, P(DEEP.NOCK, SIDE)), k(0.45 / D, P(DEEP.AIM, SIDE)), k(0.98 / D, P(DEEP.AIM, SIDE, { spine: [7, -58, 0] })), k(tr / D, P(DEEP.AIM, SIDE, { spine: [7, -58, 0] }), { hold: true }), k((tr + 0.06) / D, P(DEEP.REL, SIDE), { e: 'snap' }), k(0.88, mixPose(P(DEEP.REL, SIDE), GL, 0.5)), k(1, GL)],
+        [str(0.13 / D, 1), arrow('hit', { pierce: true, big: true, time: 0.1 }), str('hit', 0), { t: 'hit', e: 'shake', amt: 0.22 }, { t: 'hit', e: 'sound', s: 'bow' }, { t: 'hit', e: 'wave', kind: 'dust', len: 10 }],
+        { hit: h, drawHold: { at: 0.98 / D, rel: tr / D } });
+    }
+    // ---- Marked Target (0.6 s): a quick loose on the run; the blunt head bursts in a puff of pale chalk on the plate
+    { const h = K11('r_mark').hit, d = 0.6, tr = h.t; R11('r_mark', d, 'full', [k(0, GL), k((tr - 0.16) / d, P(NOCK, SIDE)), k((tr - 0.04) / d, P(AIM, SIDE)), k(tr / d, P(AIM, SIDE), { hold: true }), k((tr + 0.05) / d, P(REL, SIDE), { e: 'snap' }), k(1, GL)], [str((tr - 0.14) / d, 1), arrow('hit', { impact: 'chalk' }), str('hit', 0), { t: 'hit', e: 'sound', s: 'bow' }], { hit: h }); }
+    // ---- Thousand Arrows (3.3 s): on wide feet the bow tipped steeply up, arrow after arrow loosed high (every 0.32 s), and
+    // the rain comes down on the machine for 3 s at one slant
+    {
+      const D = 3.3, h = K11('r_thousand').hit, rel = [0.3, 0.62, 0.94, 1.26, 1.58, 1.9, 2.22, 2.54];
+      const keys = [k(0, GL), k(0.12 / D, P(STEEP.NOCK, SIDE)), k(0.24 / D, P(STEEP.AIM, L.wide), { root: [0, -0.12, 0] })];
+      rel.forEach((u, i) => { keys.push(k(u / D, P(STEEP.REL, L.wide), { root: [0, -0.12, 0], e: 'snap' })); if (i < rel.length - 1) keys.push(k((u + 0.12) / D, P(STEEP.NOCK, L.wide), { root: [0, -0.12, 0] }), k((u + 0.26) / D, P(STEEP.AIM, L.wide), { root: [0, -0.12, 0] })); });
+      keys.push(k(2.9 / D, mixPose(P(STEEP.REL, L.wide), GL, 0.5)), k(1, GL));
+      R11('r_thousand', D, 'full', keys, [str(0.1 / D, 1), ...rel.flatMap((u, i) => [arrow(u / D, { up: true }), str(u / D, 0), { t: u / D, e: 'sound', s: 'bow' }, ...(i < rel.length - 1 ? [str((u + 0.1) / D, 1)] : [])]),
+        { t: (h.t - 0.35) / D, e: 'rain', kind: 'arrow', r: 7.5, n: 54, dur: 2.5 }, { t: 'hit9', e: 'shake', amt: 0.15 }], { hit: h });
+    }
+
+    // ---- the fusions (each opens fx.fuseBudget; no lights; at most two rings a beat)
+    // Highwire Volley (1.1 s, the signature): out of Disengage's flip (it starts at the flip's height and carries on up and
+    // back to 3.2 m), the body tipped over the bow drawn straight down, a 0.15 s own slow beat at the top, the loose, and the
+    // twelve arrows come down on the spot he left in a stitched line; a crouched landing
+    {
+      const D = 1.1, f = FUSION_BY_ID.rf_highwire, h = f.hit, tr = 0.3;
+      const y = (t) => (t < tr ? 1.5 + 1.7 * (1 - (1 - t / tr) ** 2) : t < 0.82 ? 3.2 * (1 - ((t - tr) / 0.52) ** 2) : 0);
+      const keys = [k(0, P(DOWN.NOCK, L.tuck), { root: [0, 1.5, 0] })];
+      for (let t = 1 / 60; t < 0.82 - 1e-6; t += 1 / 60) keys.push(k(t / D, {}, { root: [0, +Math.max(0, y(t)).toFixed(3), +(-4 * Math.min(1, t / 0.82)).toFixed(3)], e: 'linear' }));
+      keys.push(k((tr - 0.08) / D, P(DOWN.AIM, L.air)), k(tr / D, P(DOWN.AIM, L.air), { hold: true }), k((tr + 0.05) / D, P(DOWN.REL, L.air), { e: 'snap' }), k(0.6 / D, P(DOWN.AIM, L.air)), k(0.82 / D, P(G, { spine: [24, 0, 0] }, L.deep), { root: [0, -0.34, -4] }), k(1, GL, { root: [0, 0, -4], e: 'smooth' }));
+      R11('rf_highwire', D, 'full', keys.sort((a, b) => a.t - b.t).filter((q, i, a) => i === 0 || q.t > a[i - 1].t + 1e-4), [
+        { t: 0.02, e: 'camlift', up: 1.6, back: 2.4, dur: 1.0 }, str(0.04, 1), { t: (tr - 0.05) / D, e: 'hitstop', dur: 0.15, self: true },
+        arrow(tr / D, { down: true, impact: 'pin' }), arrow((tr + 0.01) / D, { down: true, impact: 'pin' }), str(tr / D, 0), { t: tr / D, e: 'sound', s: 'bow' },
+        { t: (TS(h, 0) - 0.35) / D, e: 'rain', kind: 'arrow', at: 'castA', stitch: true, r: 4, n: 12, dur: TS(h, 3) - TS(h, 0) }, { t: 'hit4', e: 'shake', amt: 0.3 }, { t: 0.82 / D, e: 'dust' }],
+        { endRoot: [0, 0, -4], ual: { mask: 'body', segs: [['Backflip', 0, 0.3, 0.36, 0.6], ['Air_Hang_Loop', 0.3, 0.62, 0, 0.32], ['Slam_Land', 0.8, D, 0.1, 0.42]] } });
+    }
+    // Rolling Shot (0.75 s): up out of the tumble on one knee, three arrows loosed from the kneel as he rises (the last heavy)
+    {
+      const D = 0.75, h = FUSION_BY_ID.rf_rolling.hit, keys = [k(0, P(NOCK, L.kneel), { root: R.kneel })];
+      for (let i = 0; i < 3; i++) { const t = TS(h, i); keys.push(k((t - 0.03) / D, P(AIM, L.kneel), { root: R.kneel }), k(t / D, P(AIM, L.kneel), { root: R.kneel, hold: true }), k((t + 0.04) / D, P(REL, L.kneel), { root: R.kneel, e: 'snap' }), k((t + 0.08) / D, P(NOCK, L.kneel), { root: R.kneel })); }
+      keys.push(k(0.82, mixPose(P(REL, L.kneel), GL, 0.5), { root: [0, -0.2, 0] }), k(1, GL));
+      R11('rf_rolling', D, 'full', keys.filter((q, i, a) => i === 0 || q.t > a[i - 1].t + 1e-4), [{ t: 0.01, e: 'dust' }, { t: 0.02, e: 'sound', s: 'gust' }, ...[0, 1, 2].flatMap((i) => [arrow(i ? 'hit' + (i + 1) : 'hit', { big: i === 2, time: 0.06 }), { t: i ? 'hit' + (i + 1) : 'hit', e: 'sound', s: 'bow' }])], {});
+    }
+    // Tripwire Burst (0.75 s): a quick deep draw and an arrow into his own snare: the snare bursts (game.js 'trapgone') in
+    // splinters and flying rope with one ring of dust
+    {
+      const D = 0.75, tr = FUSION_BY_ID.rf_tripwire.hit.t - 0.08;
+      R11('rf_tripwire', D, 'full', [k(0, GL), k(0.08 / D, P(DEEP.NOCK, SIDE)), k((tr - 0.04) / D, P(DEEP.AIM, SIDE, { spine: [12, -54, 0] })), k(tr / D, P(DEEP.AIM, SIDE, { spine: [12, -54, 0] }), { hold: true }), k((tr + 0.05) / D, P(DEEP.REL, SIDE), { e: 'snap' }), k(0.8, mixPose(P(DEEP.REL, SIDE), GL, 0.5)), k(1, GL)],
+        [str(0.06 / D, 1), arrow(tr / D, { low: true, time: 0.08, impact: 'pin' }), str(tr / D, 0), { t: tr / D, e: 'sound', s: 'bow' }, { t: 'hit', e: 'shake', amt: 0.3 }], {});
+    }
+    // Ridgeline Salvo (1.1 s): the bow tipped up, three loosed high, and the volley lands along the line the arrow flew, one
+    // stretch after another away from him (rainline), dust at each
+    {
+      const D = 1.1, h = FUSION_BY_ID.rf_ridgeline.hit, tr = 0.14;
+      R11('rf_ridgeline', D, 'full', [k(0, GL), k(0.06 / D, P(HIGH.AIM, L.wide), { root: [0, -0.1, 0] }), k(tr / D, P(HIGH.REL, L.wide), { root: [0, -0.1, 0], e: 'snap' }), k(0.6 / D, mixPose(P(HIGH.REL, L.wide), GL, 0.4)), k(1, GL)],
+        [arrow(tr / D, { up: true }), arrow((tr + 0.02) / D, { up: true }), arrow((tr + 0.04) / D, { up: true }), { t: tr / D, e: 'sound', s: 'bow' },
+          { t: (h.t - 0.35) / D, e: 'rainline', n: 16, len: 14, dur: (h.n - 1) * h.gap + 0.05 }, { t: 'hit7', e: 'shake', amt: 0.3 }], {});
+    }
+    // Ricochet Bodkin (0.6 s): a quick loose on the run; the glances from machine to machine are game.js 'bounce'
+    { const d = 0.6, h = FUSION_BY_ID.rf_ricochet.hit, tr = h.t; R11('rf_ricochet', d, 'full', [k(0, GL), k((tr - 0.14) / d, P(NOCK, SIDE)), k((tr - 0.04) / d, P(AIM, SIDE)), k(tr / d, P(AIM, SIDE), { hold: true }), k((tr + 0.05) / d, P(REL, SIDE), { e: 'snap' }), k(1, GL)], [str(0.04, 1), arrow('hit', { impact: 'chalk', big: true }), str('hit', 0), { t: 'hit', e: 'sound', s: 'bow' }], {}); }
+    // Cloudburst (2.6 s): the steep bow loosed as fast as it goes, and a dense rain on the volley's ground for 2 s, the
+    // ground pocked with shafts
+    {
+      const D = 2.6, h = FUSION_BY_ID.rf_cloudburst.hit, rel = [0.14, 0.38, 0.62, 0.86, 1.1, 1.34];
+      const keys = [k(0, P(STEEP.AIM, L.wide), { root: [0, -0.12, 0] })];
+      rel.forEach((u, i) => { keys.push(k(u / D, P(STEEP.REL, L.wide), { root: [0, -0.12, 0], e: 'snap' })); if (i < rel.length - 1) keys.push(k((u + 0.08) / D, P(STEEP.NOCK, L.wide), { root: [0, -0.12, 0] }), k((u + 0.2) / D, P(STEEP.AIM, L.wide), { root: [0, -0.12, 0] })); });
+      keys.push(k(2.3 / D, mixPose(P(STEEP.REL, L.wide), GL, 0.5)), k(1, GL));
+      R11('rf_cloudburst', D, 'full', keys, [...rel.flatMap((u) => [arrow(u / D, { up: true }), { t: u / D, e: 'sound', s: 'bow' }]), { t: (h.t - 0.35) / D, e: 'rain', kind: 'arrow', r: 4.5, n: 60, dur: (h.n - 1) * h.gap }, { t: 'hit6', e: 'cloud', kind: 'dust', r: 4 }, { t: 'hit12', e: 'shake', amt: 0.35 }], {});
+    }
+    // Spring Snare (1.2 s): a stamp on the snare's bar (it snaps up and throws the machine), the vault off it 12 m back and up
+    // 3.5 m on the Backflip, two loose-downs of three arrows each from the top, a crouched landing
+    {
+      const D = 1.2, h = FUSION_BY_ID.rf_springsnare.hit, t1 = TS(h, 1), t2 = TS(h, 2);
+      const keys = [k(0, GL), k(0.1 / D, P(G, { spine: [24, 0, 0] }, L.deep), { root: [0, -0.32, 0] }), ...flipBack(D, 12, 3.5, 0.12, 0.95)];
+      for (const t of [t1, t2]) keys.push(k((t - 0.08) / D, P(DOWN.AIM, L.air)), k(t / D, P(DOWN.AIM, L.air), { hold: true }), k((t + 0.04) / D, P(DOWN.REL, L.air), { e: 'snap' }));
+      keys.push(k(0.95 / D, P(G, { spine: [24, 0, 0] }, L.deep), { root: [0, -0.34, -12] }), k(1, GL, { root: [0, 0, -12], e: 'smooth' }));
+      R11('rf_springsnare', D, 'full', keys.sort((a, b) => a.t - b.t).filter((q, i, a) => i === 0 || q.t > a[i - 1].t + 1e-4), [
+        { t: 'hit', e: 'impact', kind: 'net', at: 'target' }, { t: 'hit', e: 'dust' }, { t: 0.12 / D, e: 'camlift', up: 2.2, back: 3, dur: 1.1 }, { t: 0.12 / D, e: 'dash' },
+        ...[t1, t2].flatMap((t) => [arrow((t - 0.01) / D, { down: true, time: 0.2, impact: 'pin' }), arrow(t / D, { down: true, time: 0.2, impact: 'pin' }), arrow((t + 0.01) / D, { down: true, time: 0.2, impact: 'pin' }), { t: t / D, e: 'sound', s: 'bow' }]), str(0.2 / D, 1),
+        { t: 0.95 / D, e: 'dust' }],
+        { endRoot: [0, 0, -12], ual: { mask: 'body', segs: [['Leap_Rise', 0, 0.12, 0.05, 0.3], ['Backflip', 0.12, 0.55, 0.1, 0.7], ['Air_Hang_Loop', 0.55, 0.9, 0, 0.35], ['Slam_Land', 0.92, D, 0.1, 0.42]] } });
+    }
+    // Long Draw (1.45 s): down on one knee (Kneel_Aim on the body), the full draw held on the chalk, a 0.1 s still beat, the
+    // loose: dust kicked up at his knee and a line of dust down the path; T4 at the machine
+    {
+      const D = 1.45, tr = FUSION_BY_ID.rf_longdraw.hit.t;
+      R11('rf_longdraw', D, 'full', [k(0, GL), k(0.12 / D, P(DEEP.NOCK, L.kneel), { root: R.kneel }), k(0.5 / D, P(DEEP.AIM, L.kneel), { root: R.kneel }), k((tr - 0.02) / D, P(DEEP.AIM, L.kneel, { spine: [6, -58, 0] }), { root: R.kneel }), k(tr / D, P(DEEP.AIM, L.kneel, { spine: [6, -58, 0] }), { root: R.kneel, hold: true }), k((tr + 0.06) / D, P(DEEP.REL, L.kneel), { root: [0, -0.44, -0.1], e: 'snap' }), k(0.86, mixPose(P(DEEP.REL, L.kneel), GL, 0.5), { root: [0, -0.22, -0.05] }), k(1, GL)],
+        [str(0.1 / D, 1), { t: (tr - 0.1) / D, e: 'hitstop', dur: 0.1, self: true }, arrow('hit', { pierce: true, big: true }), str('hit', 0), { t: 'hit', e: 'sound', s: 'bow' }, { t: 'hit', e: 'dust' }, { t: 'hit', e: 'wave', kind: 'dust', len: 16 }, { t: 'hit', e: 'shake', amt: 0.35 }],
+        { ual: { mask: 'body', segs: [['Kneel_Aim', 0, 0.3, 0, 0.42], ['Kneel_Aim', 0.3, 1.05, 0.42, 0.45], ['Kneel_Aim', 1.05, D, 0.8, 1.0]] } });
+    }
+    // Closed Ground (1.75 s, the triad): three volleys loosed high one after another; each comes down on the burst trap's
+    // ground (the machines the tripwire holds), the last breaking them
+    {
+      const D = 1.75, h = FUSION_BY_ID.rt_closedground.hit, rel = [0.16, 0.52, 0.88];
+      const keys = [k(0, P(HIGH.AIM, L.wide), { root: [0, -0.1, 0] })];
+      rel.forEach((u, i) => { keys.push(k(u / D, P(HIGH.REL, L.wide), { root: [0, -0.1, 0], e: 'snap' })); if (i < 2) keys.push(k((u + 0.1) / D, P(HIGH.NOCK, L.wide), { root: [0, -0.1, 0] }), k((u + 0.26) / D, P(HIGH.AIM, L.wide), { root: [0, -0.1, 0] })); });
+      keys.push(k(1.45 / D, mixPose(P(HIGH.REL, L.wide), GL, 0.5)), k(1, GL));
+      R11('rt_closedground', D, 'full', keys, [...rel.flatMap((u) => [arrow(u / D, { up: true }), arrow((u + 0.02) / D, { up: true }), { t: u / D, e: 'sound', s: 'bow' }]),
+        ...[0, 1, 2].map((i) => ({ t: (TS(h, i) - 0.35) / D, e: 'rain', kind: 'arrow', r: 4, n: 14, dur: 0.14 })), { t: 'hit3', e: 'ring', color: '#c8b898', r: 4 }, { t: 'hit3', e: 'shake', amt: 0.45 }], {});
+    }
   }
 }
 
@@ -2477,6 +2632,182 @@ function gunArm(torso, side, aim, o = {}) {
       ...[0, 1, 2, 3].flatMap((i) => { const h = i ? 'hit' + (i + 1) : 'hit'; return [ball(i % 2 ? 'L' : 'R', { t: h, impact: 'gravel' }), { t: h, e: 'shake', amt: 0.15 + 0.06 * i }]; }),
       { t: 'hit4', e: 'cloud', kind: 'gunsmoke', r: 3 },
     ]); }
+
+  // ============================== S10: the Deadeye's new kit (combat_design.md 5.5) ==============================
+  // Gun-kata in a long road coat: every core shot plays on the upper body over the running legs (BLEND), the planted moves
+  // on the authored clips (Pistols_Twin_Shoot, Kneel_Aim, Backflip, Leap_Rise, Air_Hang_Loop, Slide_*), the pistols always
+  // held parallel (never crossed), muzzle smoke a plain puff pushed along the barrel (fx.muzzle: no flash, no star), spent
+  // brass flicked out of the pan side, gravel off the ground. Contact times from the new kit (kit.js / fusions.js), so the
+  // ball leaves the barrel on the server's contact; multi-shots on their uneven hit.ts.
+  {
+    const K10 = (id, step) => { const s = CORE_BY_ID[id]; return step && s?.chain ? s.chain[step - 1] : s; };
+    const brass = (side, t = 'hit') => ({ t, e: 'brass', side });
+    const TS = (h, i) => (h.ts ? h.ts[Math.min(i, h.ts.length - 1)] : h.t + i * (h.gap || 0));
+    const B2 = (o = {}) => BOTH({ inward: 0.12, kickK: 1.2, ...o });
+    const DOWN2 = (tor) => P(G, tor, gunArm(tor, 'R', D2(-72), { reach: 0.46 }), gunArm(tor, 'L', D2(-72), { reach: 0.46 })); // (both barrels at the ground by the feet)
+    // ---- Snap Shot: the right pistol, the left, then both together (each step its own clip)
+    { const h = K10('d_snap', 1).hit; D1('d_snap', 0.5, 'upper', shot1(0.5, 'R', h.t), [ball('R'), brass('R')], { hit: h }); }
+    { const h = K10('d_snap', 2).hit; D1('d_snap_2', 0.5, 'upper', shot1(0.5, 'L', h.t), [ball('L'), brass('L')], { skill: 'd_snap', hit: h, step: 2 }); }
+    {
+      const h = K10('d_snap', 3).hit, d = 0.6, tf = h.t;
+      const keys3 = [k(0, G), k((tf - 0.12) / d, B2(), { e: 'snap' }), k(tf / d, B2(), { hold: true }), k((tf + 0.05) / d, B2({ kR: 1.1, kL: 1.1 }), { e: 'out' }), k((tf + 0.24) / d, B2({ kR: 0.15, kL: 0.15 })), k(1, G)];
+      D1('d_snap_3', d, 'upper', keys3, [ball('R'), ball('L'), brass('R'), brass('L')], { skill: 'd_snap', hit: h, step: 3 });
+      // Hot Shot (the Snap Shot Form): the third pair are furnace-heated balls that burn on the plate
+      D1('d_snap_hot', d, 'upper', keys3, [ball('R', { impact: 'hotball' }), ball('L', { impact: 'hotball' }), brass('R'), brass('L')], { skill: 'd_snap', hit: h, step: 3 });
+    }
+    // ---- Paired Shot: both arms up level on Pistols_Twin_Shoot's raise, both barrels fired as one, both kick
+    {
+      const h = K10('d_pair').hit, d = 0.62, tf = h.t;
+      D1('d_pair', d, 'upper', [k(0, G), k((tf - 0.12) / d, B2(), { e: 'snap' }), k(tf / d, B2(), { hold: true }), k((tf + 0.05) / d, B2({ kR: 1.25, kL: 1.25 }), { e: 'out' }), k((tf + 0.26) / d, B2({ kR: 0.15, kL: 0.15 })), k(1, G)],
+        [ball('R', { big: true }), ball('L', { big: true }), brass('R'), brass('L')], { hit: h, ual: { mask: 'upper', segs: [['Pistols_Twin_Shoot', 0, tf, 0, 0.083]], end: tf } });
+    }
+    // ---- Recoil Jump: crouch on Leap_Rise with both barrels at the feet, the blast into the ground, then the kick carries him
+    // up and back 7 m in the Backflip, landing crouched (Slam_Land); the arms stay keyed so the pistols never swing out wide
+    const recoil = (id, dist, fwd, o = {}) => {
+      const h = K10('d_recoil').hit, D = 0.95, tf = h.t, s = fwd ? 1 : -1, H = o.h || 1.5;
+      const DN = DOWN2({ spine: [22, 0, 0], chest: [6, 0, 0], head: [10, 0, 0] });
+      const keys = [k(0, GL), k(tf / D, P(DN, L.deep), { root: [0, -0.3, 0], e: 'out' })];
+      for (let t = tf + 1 / 60; t < 0.72 - 1e-6; t += 1 / 60) { const u = (t - tf) / (0.72 - tf); keys.push(k(t / D, {}, { root: [0, +(H * Math.sin(Math.PI * u) - 0.3 * (1 - u)).toFixed(3), +(s * dist * (1 - (1 - u) ** 2)).toFixed(3)], e: 'linear' })); }
+      keys.push(k(0.72 / D, P(G, { spine: [24, 0, 0] }, L.deep), { root: [0, -0.32, s * dist] }), k(1, GL, { root: [0, 0, s * dist] }));
+      D1(id, D, 'full', keys.filter((q, i, a) => i === 0 || q.t > a[i - 1].t), [
+        { t: 'hit', e: 'muzzle', side: 'R', ground: true, big: true }, { t: 'hit', e: 'muzzle', side: 'L', ground: true, big: true }, { t: 'hit', e: 'gravelSpray', n: 10, back: !fwd }, { t: 'hit', e: 'dash' },
+        brass('R'), brass('L'), { t: 0.72 / D, e: 'dust' }, { t: 0.74 / D, e: 'gravelSpray', n: 5, back: fwd }],
+      { skill: 'd_recoil', hit: h, endRoot: [0, 0, s * dist], ual: { mask: 'body', segs: fwd ? [['Leap_Rise', 0, 0.3, 0, 0.3], ['Air_Hang_Loop', 0.3, 0.6, 0, 0.3], ['Slam_Land', 0.68, D, 0.1, 0.58]] : [['Leap_Rise', 0, tf, 0, 0.15], ['Backflip', tf, 0.74, 0.25, 0.7], ['Slam_Land', 0.74, D, 0.2, 0.58]] } });
+    };
+    recoil('d_recoil', 7, false);
+    recoil('d_recoil_fwd', 7, true); // (Forward Recoil: thrown forward instead, no flip)
+    // ---- Knee Shot: the right pistol aimed low at a leg joint on the pistol clips (aim down, then the shot), over the run
+    { const h = K10('d_knee').hit; D1('d_knee', 0.6, 'upper', shot1(0.6, 'R', h.t, { pitch: -14, torso: lean(TOR.R, 8) }), [ball('R', { low: true }), brass('R')], { hit: h, ual: { mask: 'upper', segs: [['Pistol_Aim_Down', 0, h.t, 0, 0.16], ['Pistol_Shoot', h.t, 0.5, 0.12, 0.5]], end: 0.45 } }); }
+    // ---- Scatter Charge: from the hip on a step back, the twin-shoot raise first
+    DEF.d_scatter = { ...DEF.d_scatter, hit: K10('d_scatter').hit, events: [...DEF.d_scatter.events, brass('R'), brass('L'), { t: 'hit', e: 'cloud', kind: 'gunsmoke', r: 2.5, cone: true }],
+      ual: { mask: 'upper', segs: [['Pistols_Twin_Shoot', 0, 0.3, 0, 0.083], ['Pistols_Twin_Shoot', 0.3, 0.5, 0.083, 0.2]], end: 0.5 } };
+    // ---- Fan the Hammer: the left palm sweeps the hammer for each of the six shots, on the new kit's uneven times
+    {
+      const h = K10('d_fan').hit, d = 1.0, T = { spine: [6, 8, 0], chest: [2, 4, 0], neck: [0, -4, 0], head: [0, -8, 0] };
+      const FR = (kick) => gunArm(lean(T, -2 * kick), 'R', D2(2 + 14 * kick), { reach: 0.54 - 0.04 * kick });
+      const FL = (lo) => gunArm(T, 'L', D2(4 - 6 * lo), { at: [-0.03 - 0.03 * lo, 1.6 - 0.06 * lo, 0.4 + 0.06 * lo], pole: [0.55, 1.2, -0.1] });
+      const keys = [k(0, G), k(Math.max(0.04, (TS(h, 0) - 0.1) / d), P(G, T, FR(0), FL(0)), { e: 'out' })];
+      for (let i = 0; i < 6; i++) { const t = TS(h, i) / d; keys.push(k(t - 0.02, P(G, T, FR(0), FL(1)), { e: 'in' }), k(t + 0.03, P(G, T, FR(0.6), FL(0.4)), { e: 'out' }), k(t + 0.06, P(G, T, FR(0.1), FL(0)))); }
+      keys.push(k(1, G));
+      D1('d_fan', d, 'upper', keys.filter((q, i, a) => i === 0 || q.t > a[i - 1].t), [...[0, 1, 2, 3, 4, 5].map((i) => ball('R', { t: i ? 'hit' + (i + 1) : 'hit' })), brass('R', 'hit2'), brass('R', 'hit4'), brass('R', 'hit6')], { hit: h });
+    }
+    // ---- Quickdraw: the draw is the same; spent brass after
+    DEF.d_quick = { ...DEF.d_quick, hit: K10('d_quick').hit, events: [...DEF.d_quick.events, brass('R')] };
+
+    // ---- the fusions (each opens fx.fuseBudget: at most 18 rocks; no lights; at most two rings a beat)
+    // Recoil Vault (1.15 s, the signature): 0.06 both barrels into the ground (shotbig x2, two gravel sprays, a shake), the
+    // body thrown up and back on the Backflip (root +2.8 m, 8 m back), 0.50 and 0.62 the apex shots down at the machine with
+    // smoke streaks hanging in the air, 0.85 the landing in Slide_Exit with a dust and gravel spray
+    {
+      const D = 1.15, f = FUSION_BY_ID.df_recoilvault, h = f.hit, t1 = TS(h, 1), t2 = TS(h, 2);
+      const DN = DOWN2({ spine: [24, 0, 0], chest: [8, 0, 0], head: [12, 0, 0] });
+      const AT = (kR, kL) => B2({ pitch: -18, kR, kL, torso: { spine: [-4, 0, 0], chest: [-2, 0, 0], head: [8, 0, 0] } });
+      const keys = [k(0, GL), k(0.06 / D, P(DN, L.deep), { root: [0, -0.32, 0], e: 'out' })];
+      const y = (t) => (t < 0.42 ? 2.8 * (1 - (1 - (t - 0.06) / 0.36) ** 2) : t < 0.66 ? 2.8 - 0.25 * ((t - 0.42) / 0.24) : 2.55 * (1 - ((t - 0.66) / 0.19) ** 2));
+      const z = (t) => -8 * (t < 0.66 ? 0.8 * (1 - (1 - (t - 0.06) / 0.6) ** 2) : 0.8 + 0.2 * ((t - 0.66) / 0.19));
+      for (let t = 0.06 + 1 / 60; t < 0.85 - 1e-6; t += 1 / 60) keys.push(k(t / D, {}, { root: [0, +Math.max(0, y(t)).toFixed(3), +z(t).toFixed(3)], e: 'linear' }));
+      keys.push(k(0.85 / D, P(G, B2({ kR: 0.2, kL: 0.2 }), L.kneel), { root: [0, -0.42, -8] }), k(1, GL, { root: [0, 0, -8.4], e: 'smooth' }));
+      // the arms come round onto the machine for the apex shots (keyed: the flip's body carries them)
+      const arms = [k((t1 - 0.08) / D, AT(0, 0)), k(t1 / D, AT(0, 0), { hold: true }), k((t1 + 0.04) / D, AT(1.1, 0), { e: 'out' }), k(t2 / D, AT(0.2, 0)), k((t2 + 0.04) / D, AT(0.1, 1.1), { e: 'out' }), k((t2 + 0.16) / D, AT(0.1, 0.2))];
+      const all = [...keys, ...arms].sort((a, b) => a.t - b.t).filter((q, i, a) => i === 0 || q.t > a[i - 1].t + 1e-4);
+      DEF.df_recoilvault = C('deadeye', D, 'full', all, [
+        { t: 'hit', e: 'muzzle', side: 'R', ground: true, big: true }, { t: 'hit', e: 'muzzle', side: 'L', ground: true, big: true }, { t: 'hit', e: 'gravelSpray', n: 12, back: true }, { t: 'hit', e: 'gravelSpray', n: 10, back: true, side: 1 },
+        { t: 'hit', e: 'shake', amt: 0.35 }, { t: 0.06 / D, e: 'camlift', up: 1.2, back: 2.2, dur: 1.0 }, brass('R'), brass('L'),
+        ball('R', { t: 'hit2' }), ball('L', { t: 'hit3' }), { t: 'hit2', e: 'airSmoke', side: 'R' }, { t: 'hit3', e: 'airSmoke', side: 'L' }, brass('R', 'hit2'), brass('L', 'hit3'),
+        { t: 0.85 / D, e: 'dust' }, { t: 0.86 / D, e: 'gravelSpray', n: 6, back: false }],
+      { endRoot: [0, 0, -8.4], ual: { mask: 'body', segs: [['Leap_Rise', 0, 0.06, 0, 0.12], ['Backflip', 0.06, 0.42, 0.25, 0.64], ['Air_Hang_Loop', 0.42, 0.78, 0, 0.36], ['Slide_Exit', 0.8, D, 0, 0.5]] } });
+    }
+    // Overhead Pair (1.1 s): a forward recoil arc over the machine (both barrels kicked off the ground behind him), at the top
+    // a held beat (his own stop, 0.1 s) and both pistols straight down into it (two soft puffs), then down behind it: one ring
+    {
+      const D = 1.1, h = FUSION_BY_ID.df_overhead.hit, tf = h.t - 0.1; // (the clip's shot sits 0.1 s early: the held beat makes up the time)
+      const DWN = (kk) => P(G, { spine: [34, 0, 0], chest: [10, 0, 0], head: [30, 0, 0] }, gunArm({ spine: [34, 0, 0], chest: [10, 0, 0] }, 'R', D2(-84 + 10 * kk), { reach: 0.5 - 0.05 * kk }), gunArm({ spine: [34, 0, 0], chest: [10, 0, 0] }, 'L', D2(-84 + 10 * kk), { reach: 0.5 - 0.05 * kk }));
+      const keys = [k(0, GL), k(0.08 / D, P(DOWN2({ spine: [20, 0, 0], chest: [6, 0, 0] }), L.deep), { root: [0, -0.3, 0] }), ...leapRoot(D, { t0: 0.1, t1: 0.36, t2: 0.5, t3: 0.74, h: 3.6, float: 0.1, dist: 6, atTop: 0.48, atEnd: 0.58 }),
+        k((tf - 0.08) / D, DWN(0)), k(tf / D, DWN(0), { hold: true }), k((tf + 0.05) / D, DWN(1), { e: 'out' }), k(0.74 / D, P(G, B2({ kR: 0.2, kL: 0.2 }), L.deep), { root: [0, -0.34, 6] }), k(1, GL, { root: [0, 0, 6], e: 'smooth' })];
+      DEF.df_overhead = C('deadeye', D, 'full', keys.sort((a, b) => a.t - b.t).filter((q, i, a) => i === 0 || q.t > a[i - 1].t + 1e-4), [
+        { t: 0.08 / D, e: 'muzzle', side: 'R', ground: true }, { t: 0.08 / D, e: 'muzzle', side: 'L', ground: true }, { t: 0.1 / D, e: 'leap' }, { t: 0.1 / D, e: 'camlift', up: 2.0, back: 2.6, dur: 1.0 },
+        { t: (tf - 0.04) / D, e: 'hitstop', dur: 0.1, self: true }, { t: tf / D, e: 'proj', kind: 'ball', from: 'muzzleR', big: true }, { t: tf / D, e: 'proj', kind: 'ball', from: 'muzzleL', big: true }, brass('R', tf / D), brass('L', tf / D),
+        { t: 0.74 / D, e: 'ring', color: '#cfc6b4', r: 3.2 }, { t: 0.74 / D, e: 'dust' }],
+      { endRoot: [0, 0, 6], toTarget: { gap: -2.6, max: 18, behind: true }, through: true, ual: { mask: 'body', segs: [['Leap_Rise', 0, 0.36, 0, 0.458], ['Air_Hang_Loop', 0.36, 0.56, 0, 0.2], ['Dive_Strike', 0.56, 0.72, 0.1, 0.33], ['Slam_Land', 0.72, D, 0.1, 0.58]] } });
+    }
+    // Plate Splitter (0.75 s): both arms up on the twin-shoot raise, both hardened balls into the rivet line together: plate
+    // chips and sparks off the staggered machine
+    {
+      const D = 0.75, tf = FUSION_BY_ID.df_platesplitter.hit.t;
+      D1('df_platesplitter', D, 'upper', [k(0, G), k((tf - 0.12) / D, B2({ inward: 0.16 }), { e: 'snap' }), k(tf / D, B2({ inward: 0.16 }), { hold: true }), k((tf + 0.05) / D, B2({ inward: 0.16, kR: 1.3, kL: 1.3 }), { e: 'out' }), k((tf + 0.28) / D, B2({ inward: 0.16, kR: 0.15, kL: 0.15 })), k(1, G)],
+        [ball('R', { big: true, impact: 'plates' }), ball('L', { big: true }), brass('R'), brass('L')], { ual: { mask: 'upper', segs: [['Pistols_Twin_Shoot', 0, tf, 0, 0.083]], end: tf } });
+    }
+    // Chain Shot (0.8 s): both pistols together send the two balls on their straight chain, spinning flat as one bar (it never
+    // crosses itself), wrapping the machine and the one beside it; the chain's rattle
+    {
+      const D = 0.8, tf = FUSION_BY_ID.df_chainshot.hit.t;
+      D1('df_chainshot', D, 'upper', [k(0, G), k((tf - 0.12) / D, B2({ pitch: -8, inward: 0.18 }), { e: 'snap' }), k(tf / D, B2({ pitch: -8, inward: 0.18 }), { hold: true }), k((tf + 0.05) / D, B2({ pitch: -8, inward: 0.18, kR: 1.1, kL: 1.1 }), { e: 'out' }), k((tf + 0.28) / D, B2({ kR: 0.1, kL: 0.1 })), k(1, G)],
+        [{ t: 'hit', e: 'muzzle', side: 'R' }, { t: 'hit', e: 'proj', kind: 'chainshot', from: 'muzzleL', spin: 14, low: true, time: 0.16 }, { t: 'hit', e: 'sound', s: 'chain' }, brass('R'), brass('L')], { ual: { mask: 'upper', segs: [['Pistols_Twin_Shoot', 0, tf, 0, 0.083]], end: tf } });
+    }
+    // Point Blank (0.95 s): a step in through the smoke; 0.20 the pistol grip cracked across the plate on Melee_Hook (T2); 0.50
+    // both barrels against it (T4): the machine thrown back trailing smoke
+    {
+      const D = 0.95, h = FUSION_BY_ID.df_pointblank.hit, t1 = TS(h, 1);
+      const PB = (kk) => B2({ inward: 0.14, reach: 0.4, pitch: -6, kR: kk, kL: kk, kickK: 1.5, torso: { spine: [14, 0, 0], chest: [6, 0, 0], head: [4, 0, 0] } });
+      DEF.df_pointblank = C('deadeye', D, 'full', [
+        k(0, GL), k(0.12 / D, P(G, { spine: [18, -10, 0] }, L.lungeL), { root: [0, -0.16, 2.6], e: 'out' }),
+        k(0.3 / D, P(G, { spine: [10, 20, 0] }, L.stepL), { root: [0, -0.1, 3.4] }),
+        k((t1 - 0.1) / D, P(PB(0), L.wide), { root: [0, -0.14, 3.6], e: 'snap' }), k(t1 / D, P(PB(0), L.wide), { root: [0, -0.14, 3.6], hold: true }),
+        k((t1 + 0.06) / D, P(PB(1.2), L.stepBack), { root: [0, -0.1, 3.3], e: 'out' }), k((t1 + 0.3) / D, P(PB(0.2), L.stepBack), { root: [0, -0.06, 3.2] }), k(1, GL, { root: [0, 0, 3.2], e: 'smooth' }),
+      ], [{ t: 0.02, e: 'dash' }, { t: 0.04, e: 'cloud', kind: 'gunsmoke', r: 1.6, at: 'self' }, { t: 'hit', e: 'impact', kind: 'clang', at: 'target' },
+        { t: 'hit2', e: 'muzzle', side: 'R', big: true }, { t: 'hit2', e: 'muzzle', side: 'L', big: true }, { t: 'hit2', e: 'impact', kind: 'ball', at: 'target' }, { t: 'hit2', e: 'smokeTrail', dur: 0.7 }, brass('R', 'hit2'), brass('L', 'hit2')],
+      { endRoot: [0, 0, 3.2], toTarget: { gap: 1.2, max: 7 }, ual: { mask: 'body', segs: [['Melee_Hook', 0.08, 0.36, 0.05, 0.42]], end: 0.36 } });
+    }
+    // Broadside (1.6 s): down on one knee on Kneel_Aim (the body), the arms keyed: right, left, right, left at the uneven
+    // gaps, each pair of balls heavy, smoke piling up in front. Twelve Rounds (Six Chambers): the same kneel, both cylinders
+    // emptied right and left, twelve shots
+    const kneelFire = (id, n, skill, hitRec, D) => {
+      const KN = L.kneel, keys = [k(0, GL), k(Math.max(0.04, (TS(hitRec, 0) - 0.16) / D), P(AIM('R', { pitch: -6 }), KN), { root: R.kneel, e: 'snap' })];
+      for (let i = 0; i < n; i++) { const side = i % 2 ? 'L' : 'R', t = TS(hitRec, i) / D; keys.push(k(t, P(AIM(side, { pitch: -6 }), KN), { root: R.kneel, hold: true }), k(t + 0.04 / D, P(AIM(side, { pitch: -6, kick: 1.2 }), KN), { root: [0, -0.42, -0.08], e: 'out' }), k(t + 0.1 / D, P(AIM(i % 2 ? 'R' : 'L', { pitch: -6, kick: 0.1 }), KN), { root: R.kneel })); }
+      keys.push(k(0.94, mixPose(P(AIM('L', { pitch: -6 }), KN), GL, 0.5), { root: [0, -0.22, -0.04] }), k(1, GL));
+      const evs = [];
+      for (let i = 0; i < n; i++) { const hh = i ? 'hit' + (i + 1) : 'hit'; evs.push(ball(i % 2 ? 'L' : 'R', { t: hh, big: n <= 4 }), { t: hh, e: 'shake', amt: n <= 4 ? 0.18 + 0.05 * i : 0.08 }); if (i % 2 === 1 && (n <= 4 || i % 4 === 3)) evs.push({ t: hh, e: 'cloud', kind: 'gunsmoke', r: 1.0 + 0.2 * Math.min(i, 4), cone: true }); /* (small: the smoke piles up in front, he stays in sight) */ if (i % 3 === 0) evs.push(brass(i % 2 ? 'L' : 'R', hh)); }
+      DEF[id] = C('deadeye', D, 'full', keys.filter((q, i, a) => i === 0 || q.t > a[i - 1].t + 1e-4), evs, { skill, hit: hitRec, ual: { mask: 'body', segs: [['Kneel_Aim', 0, 0.3, 0, 0.42], ['Kneel_Aim', 0.3, D - 0.3, 0.42, 0.45], ['Kneel_Aim', D - 0.3, D, 0.8, 1.0]] } });
+    };
+    kneelFire('df_broadside', 4, 'df_broadside', FUSION_BY_ID.df_broadside.hit, 1.6);
+    kneelFire('df_twelve', 12, 'df_broadside', { ...FUSION_BY_ID.df_broadside.hit, n: 12, ts: [0.34, 0.42, 0.52, 0.59, 0.7, 0.78, 0.9, 0.97, 1.08, 1.16, 1.27, 1.36] }, 1.7);
+    // Slide Shot (0.7 s): still low out of the slide, on one knee, both barrels tipped up and the loose shot fired upward; a
+    // gravel spray along the slide behind him
+    {
+      const D = 0.7, tf = FUSION_BY_ID.df_slideshot.hit.t;
+      const UP = (kk) => P(HIP({ pitch: 18 + 10 * kk, y: 0.92, kR: kk, kL: kk, torso: { spine: [-6, 0, 0], chest: [-4, 0, 0], head: [-8, 0, 0] } }), L.kneel);
+      DEF.df_slideshot = C('deadeye', D, 'full', [k(0, P(UP(0), {}), { root: [0, -0.44, 0] }), k(tf / D, UP(0), { root: [0, -0.44, 0.2], hold: true }), k((tf + 0.06) / D, UP(1), { root: [0, -0.42, 0.1], e: 'out' }), k(0.62, UP(0.15), { root: [0, -0.4, 0.1] }), k(1, GL, { root: [0, 0, 0.1], e: 'smooth' })],
+        [{ t: 'hit', e: 'muzzle', side: 'R', scatter: true }, { t: 'hit', e: 'muzzle', side: 'L', scatter: true }, { t: 'hit', e: 'impact', kind: 'gravel', at: 'cone' }, { t: 0.02, e: 'gravelSpray', n: 10, back: true }, brass('R'), brass('L')],
+      { endRoot: [0, 0, 0.1], ual: { mask: 'body', segs: [['Slide_Exit', 0, 0.12, 0.05, 0.12], ['Kneel_Aim', 0.12, 0.45, 0.25, 0.42], ['Kneel_Aim', 0.45, D, 0.8, 1.0]] } });
+    }
+    // Last Round (0.85 s): both pistols raised slowly onto the line, a held breath (a 0.15 s still pose, a click of the locks),
+    // then the heavy double charge: a big kick that rocks him back
+    {
+      const D = 0.85, tf = FUSION_BY_ID.df_lastround.hit.t, LB = (kk) => B2({ inward: 0.16, reach: 0.55, kR: kk, kL: kk, kickK: 1.6, torso: { spine: [8, 0, 0], chest: [4, 0, 0], head: [2, 0, 0] } });
+      D1('df_lastround', D, 'upper', [k(0, G), k(0.12 / D, LB(0), { e: 'out' }), k(0.15 / D, LB(0), { hold: true }), k(tf / D - 0.005, LB(0), { hold: true }), k(tf / D, LB(0), { hold: true }), k((tf + 0.07) / D, LB(1), { e: 'out' }), k((tf + 0.34) / D, LB(0.2)), k(1, G)],
+        [{ t: 0.14 / D, e: 'sound', s: 'click' }, ball('R', { big: true }), ball('L', { big: true }), { t: 'hit', e: 'shake', amt: 0.4 }, brass('R'), brass('L')], { ual: { mask: 'upper', segs: [['Pistols_Twin_Shoot', 0, 0.15, 0, 0.083]], end: 0.15 } });
+    }
+    // Falling Storm (1.6 s, the triad): both barrels kick him up off the ground once more (4 m), then a slow drop with the
+    // right pistol fanned straight down, twelve shots scattered over 8 m round the machine at uneven gaps, gun smoke hanging
+    // round him; Slam_Land, one ring at the last shot
+    {
+      const D = 1.6, h = FUSION_BY_ID.dt_fallingstorm.hit;
+      const T = { spine: [30, 8, 0], chest: [10, 4, 0], neck: [0, -4, 0], head: [24, -8, 0] };
+      const FR = (kick) => gunArm(T, 'R', D2(-70 + 12 * kick), { reach: 0.5 - 0.04 * kick });
+      const FL = (lo) => gunArm(T, 'L', D2(-64 - 6 * lo), { at: [-0.03 - 0.03 * lo, 1.38 - 0.06 * lo, 0.44 + 0.04 * lo], pole: [0.55, 1.2, -0.1] });
+      const y = (t) => (t < 0.06 ? 0 : t < 0.3 ? 4 * (1 - (1 - (t - 0.06) / 0.24) ** 2) : t < 1.22 ? 4 - 3.4 * ((t - 0.3) / 0.92) ** 1.6 : Math.max(0, 0.6 * (1 - ((t - 1.22) / 0.08))));
+      const keys = [k(0, GL), k(0.05 / D, P(DOWN2({ spine: [20, 0, 0], chest: [6, 0, 0] }), L.deep), { root: [0, -0.3, 0] })];
+      for (let t = 0.06 + 1 / 60; t < 1.3 - 1e-6; t += 1 / 60) keys.push(k(t / D, {}, { root: [0, +y(t).toFixed(3), 0], e: 'linear' }));
+      for (let i = 0; i < 12; i++) { const t = TS(h, i); keys.push(k((t - 0.02) / D, P(G, T, FR(0), FL(1)), { e: 'in' }), k((t + 0.03) / D, P(G, T, FR(0.6), FL(0.3)), { e: 'out' })); }
+      keys.push(k(1.3 / D, P(G, { spine: [24, 0, 0] }, L.deep), { root: [0, -0.32, 0] }), k(1, GL, { root: [0, 0, 0], e: 'smooth' }));
+      DEF.dt_fallingstorm = C('deadeye', D, 'full', keys.sort((a, b) => a.t - b.t).filter((q, i, a) => i === 0 || q.t > a[i - 1].t + 1e-4), [
+        { t: 0.05 / D, e: 'muzzle', side: 'R', ground: true, big: true }, { t: 0.05 / D, e: 'muzzle', side: 'L', ground: true, big: true }, { t: 0.06 / D, e: 'leap' }, { t: 0.06 / D, e: 'camlift', up: 2.4, back: 3, dur: 1.4 },
+        ...Array.from({ length: 12 }, (_, i) => ({ t: i ? 'hit' + (i + 1) : 'hit', e: 'proj', kind: 'ball', from: 'muzzleR', ground: true, scatter: 4 })),
+        ...[1, 4, 7, 10].map((i) => brass('R', 'hit' + (i + 1))), { t: 'hit6', e: 'cloud', kind: 'gunsmoke', r: 3 },
+        { t: 'hit12', e: 'ring', color: '#cfc6b4', r: 4 }, { t: 'hit12', e: 'shake', amt: 0.5 }, { t: 1.3 / D, e: 'dust' }],
+      { ual: { mask: 'body', segs: [['Leap_Rise', 0, 0.3, 0.1, 0.458], ['Air_Hang_Loop', 0.3, 0.8, 0, 0.5], ['Air_Hang_Loop', 0.8, 1.24, 0, 0.44], ['Slam_Land', 1.24, D, 0.1, 0.58]] } });
+    }
+  }
 }
 
 // --------------------------------------------------------------------------
@@ -2521,6 +2852,8 @@ const BLEND = new Set([
   // the Deadeye fires on the run: every shot plays on the upper body (Powder Storm and Pressure Volley too)
   'd_snap', 'd_snap_l', 'd_pair', 'd_reload', 'd_powderburn', 'd_knee', 'd_fan', 'd_chalk', 'd_ricochet', 'd_cartridge', 'd_slug', 'd_chain', 'd_quick',
   'd_lastround', 'd_splitter', 'd_hotshot', 'd_dry', 'd_storm', 'd_pressure', 'd_saltshot', 'd_gravel',
+  'd_snap_2', 'd_snap_3', 'd_snap_hot', 'df_platesplitter', 'df_chainshot', 'df_lastround', // (S10: the new kit's shots on the run)
+  'r_quick_2', 'r_quick_3', 'r_quick_3r', 'rf_ricochet', // (S11: the Ranger's shots on the run)
 ]);
 const MELEE = new Set(['slash', 'blunt', 'pierce', 'sweep', 'shield', 'sand', 'execute', 'shatter', 'earth']);
 
@@ -2904,6 +3237,32 @@ for (const cls of Object.keys(TRAIL)) {
   ], [{ t: 0.02, e: 'sound', s: 'scrape' }, { t: 0.07 / 0.55, e: 'dust' }], { dodge: true, ual: { mask: 'body', segs: [['Idle_Shield_Loop', 0.04, 0.46, 0, 0.42]], end: 0.44 } });
 }
 
+// the Deadeye's Slide (S10, 5.5): a run-in drop into a 4 m knee slide on Slide_Start, Slide_Loop and Slide_Exit (the body),
+// both pistols kept low at the hips pointing ahead (the arms keyed, parallel), the coat trailing behind; gravel and dust off
+// the ground. dodgef_deadeye: the same slide with Snap Shot held, the right pistol fired out of it at 0.14 s (the server's
+// slide shot); the hop back stays the plain one
+{
+  const G = P(guard('deadeye'), { spine: [4, 0, 0] }), GL = P(G, LG);
+  const hipT = { spine: [-8, 0, 0], chest: [-4, 0, 0], head: [6, 0, 0] };
+  const HIPS = (kR = 0) => P(G, hipT, gunArm(hipT, 'R', D2(-4 + 16 * kR), { at: [-0.24, 1.02 + 0.03 * kR, 0.34 - 0.05 * kR] }), gunArm(hipT, 'L', D2(-4), { at: [0.24, 1.02, 0.34] }));
+  const slide = (id, fire) => {
+    const D = 0.55, keys = [
+      k(0, GL),
+      k(0.07 / D, P(HIPS(), { spine: [16, 0, 0] }, L.lungeL), { root: [0, -0.16, 0.5] }),
+      k(0.14 / D, P(HIPS(), L.kneel), { root: [0, -0.46, 1.4], e: 'linear' }),
+      ...(fire ? [k(0.16 / D, P(HIPS(1), L.kneel), { root: [0, -0.46, 1.7], e: 'out' }), k(0.24 / D, P(HIPS(0.15), L.kneel), { root: [0, -0.46, 2.4] })] : []),
+      k(0.34 / D, P(HIPS(), L.kneel), { root: [0, -0.44, 3.3], e: 'linear' }),
+      k(0.44 / D, P(HIPS(), L.deep), { root: [0, -0.3, 3.85] }),
+      k(1, GL, { root: [0, 0, 4] }),
+    ];
+    DEF[id] = C('deadeye', D, 'full', keys, [{ t: 0.02, e: 'sound', s: 'gust' }, { t: 0.07 / D, e: 'dust' }, { t: 0.12 / D, e: 'gravelSpray', n: 8, back: true }, { t: 0.3 / D, e: 'gravelSpray', n: 5, back: true }, { t: 0.44 / D, e: 'dust' },
+      ...(fire ? [{ t: 0.14 / D, e: 'proj', kind: 'ball', from: 'muzzleR' }, { t: 0.14 / D, e: 'brass', side: 'R' }] : [])],
+    { endRoot: [0, 0, 4], dodge: true, ual: { mask: 'body', segs: [['Slide_Start', 0, 0.14, 0.3, 0.6], ['Slide_Loop', 0.14, 0.36, 0, 0.5], ['Slide_Exit', 0.36, D, 0.05, 0.5]], end: 0.5 } });
+  };
+  slide('dodge_deadeye', false);
+  slide('dodgef_deadeye', true);
+}
+
 // compile: resolve 'hit', 'hit2'.. into normalized times from the skill's impact timing
 export const CHOREO = {};
 for (const [id, def] of Object.entries(DEF)) {
@@ -2913,7 +3272,7 @@ for (const [id, def] of Object.entries(DEF)) {
   const resolveT = (t) => {
     if (typeof t !== 'string') return t;
     const i = t === 'hit' ? 0 : Number(t.slice(3)) - 1;
-    return Math.min(0.98, (hit.t + Math.min(i, n - 1) * gap) / def.dur);
+    return Math.min(0.98, (hit.ts ? hit.ts[Math.min(i, hit.ts.length - 1)] : hit.t + Math.min(i, n - 1) * gap) / def.dur); // (hit.ts: uneven contacts, S10)
   };
   // every melee contact gets a hit-stop: big hits already stop the world; the rest stick the attacker's own swing
   const events = def.events.map((e) => {

@@ -578,10 +578,11 @@ class HeroRig {
     sampleInto(us, list, n);
     let e = Math.max(0, Math.min(1, T / Math.max(1e-3, act.fadeIn), (c.dur - T) / Math.max(1e-3, act.fadeOut)));
     if (U.end != null) e *= Math.max(0, Math.min(1, (U.end + 0.12 - T) / 0.12)); // (end: the clips hand back to the keys)
-    const w = e * Math.min(1, sum), body = U.mask === 'body', ub = this.ub, grp = HeroRig.tables().grp;
+    const w = e * Math.min(1, sum), body = U.mask === 'body', upper = U.mask === 'upper', ub = this.ub, grp = HeroRig.tables().grp; // (upper, S10: the Deadeye's shots on the run take the spine and arms, the legs keep running)
     if (w <= 0) return 0;
     for (let i = 0; i < ub.length; i++) {
       if (body && grp[i] >= 3) continue;
+      if (upper && grp[i] === 0) continue;
       ub[i].quaternion.slerp(us[i].quaternion, w);
       ub[i].position.lerp(us[i].position, w);
     }

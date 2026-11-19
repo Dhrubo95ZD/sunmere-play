@@ -22,16 +22,19 @@ export const LOCK_MIN = 0.45, LOCK_MAX = 0.9;
 // (the pilot class, combat_design.md section 11): a shorter lock changes each class's damage by how much resource it
 // has spare (deadeyetest: the Deadeye fell to x0.82 of the Ranger with every class on it), so the others move over with
 // their own slices (S8-S13) where their numbers are tuned with it
-export const LOCK_CLASSES = new Set(['knight', 'sandblade', 'warden']); // (S8: the Sandblade's slice; S9: the Warden's)
+export const LOCK_CLASSES = new Set(['knight', 'sandblade', 'warden', 'deadeye', 'ranger']); // (S8: the Sandblade's slice; S9: the Warden's; S10: the Deadeye's; S11: the Ranger's)
 export const OLD_GCD = 1.0;
 
 export const DODGE = { charges: 2, regen: 3.5, dist: 4, dur: 0.35, evade: 0.3, opening: 2, worldStop: 0.06 };
 // class flavours (same timing): Sandblade's extra charge and shorter step, the Ranger's longer one (the Warden's Brace
 // with no movement and the other clips come with each class's slice; S1 gives every class the roll and the hop back)
-export const DODGE_CLS = { sandblade: { charges: 3, dist: 2.5 }, ranger: { dist: 5 },
+export const DODGE_CLS = { sandblade: { charges: 3, dist: 2.5 }, ranger: { name: 'Tumble', dist: 5, keepChain: true }, // (S11: the Ranger's Tumble keeps the arrow nocked: the Quick Shot chain goes on through it)
   // the Warden's Brace (S9, 5.2): no movement, a frontal block for 0.4 s behind the tower shield, 2 charges; a blow blocked
   // in it is a perfect Brace (Opening, and the gate of Breakwater, which throws the blocked damage back)
-  warden: { name: 'Brace', brace: true, charges: 2, dist: 0, dur: 0.4, evade: 0, block: 0.4, blockArc: 80 } };
+  warden: { name: 'Brace', brace: true, charges: 2, dist: 0, dur: 0.4, evade: 0, block: 0.4, blockArc: 80 },
+  // the Deadeye's Slide (S10, 5.5): a 4 m knee slide (Slide_Start, Slide_Loop, Slide_Exit), 2 charges; it cuts a shot's
+  // wind-up by firing it at once, and with Snap Shot held it fires one out of the slide (slideShot: s into the slide)
+  deadeye: { name: 'Slide', slide: true, charges: 2, dist: 4, dur: 0.4, evade: 0.3, slideShot: 0.14 } };
 export const dodgeFor = (cls) => ({ ...DODGE, ...(DODGE_CLS[cls] || {}) });
 // the dodge with a Skill Web modifier table on it (p.tal; the server and the client both read it): Quick Feet's 3 charges and
 // 0.45 s evade, Momentum's 30% slower recovery, Iron Comet's roll that no longer evades
@@ -86,7 +89,10 @@ const OVR = {
 
 const has = (sk, k) => sk.fx?.some((f) => f[0] === k);
 const fxv = (sk, k) => sk.fx?.find((f) => f[0] === k);
-const lastHitT = (sk) => (sk.hit?.t || 0) + Math.max(0, (sk.hit?.n || 1) - 1) * (sk.hit?.gap || 0);
+const lastHitT = (sk) => (sk.hit?.ts ? sk.hit.ts[sk.hit.ts.length - 1] : (sk.hit?.t || 0) + Math.max(0, (sk.hit?.n || 1) - 1) * (sk.hit?.gap || 0)); // (hit.ts: uneven contact times, S10)
+// contact i's time (s before haste): hit.ts where a skill names its contacts unevenly (Fan the Hammer, Broadside), else t + i x gap
+export const hitAt = (h, i) => (h?.ts ? h.ts[Math.min(i, h.ts.length - 1)] : (h?.t || 0) + i * (h?.gap || 0));
+export { lastHitT };
 const harmful = (sk) => has(sk, 'dmg') || has(sk, 'execute') || has(sk, 'stun') || has(sk, 'knock');
 // a basic (filler) strike: costs little, no cooldown, on the global lock
 const basic = (sk) => !sk.cd && !sk.cast && !sk.channel;
@@ -109,7 +115,7 @@ export function skillFeel(sk) {
   f = {
     brk: o.brk ?? fxv(sk, 'brk')?.[1] ?? brk,
     launch: o.launch ?? (fxv(sk, 'launch')?.[1] || 0),
-    bash: !!(o.bash ?? (has(sk, 'stun') && (sk.hit?.kind === 'melee'))),
+    bash: !!(o.bash ?? sk.bash ?? (has(sk, 'stun') && (sk.hit?.kind === 'melee'))), // (sk.bash: a new-kit record that staggers at once, S10 Knee Shot)
     knock: fxv(sk, 'knock')?.[1] || 0,
     win: { cancel: hitEnd + CANCEL_AFTER, lock: LOCK_CLASSES.has(sk.cls) ? Math.min(LOCK_MAX, Math.max(LOCK_MIN, (sk.win?.lock ?? hitEnd + 0.3))) : OLD_GCD, ...(sk.win || {}) },
   };

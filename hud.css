@@ -2572,6 +2572,14 @@ html.phone .hud .minimap .on-badge { font-size: 20px; line-height: 26px; padding
 .actionbars .dchip .dpips { position: absolute; left: 0; right: 0; bottom: 3px; display: flex; justify-content: center; gap: 3px; z-index: 2; pointer-events: none; }
 .actionbars .dchip .dpips i { width: 8px; height: 5px; border-radius: 1px; background: #0009; box-shadow: 0 0 0 1px #5fe0d099; }
 .actionbars .dchip .dpips i.on { background: #5fe0d0; box-shadow: 0 0 5px #5fe0d0; }
+/* S10 Six Chambers: two straight rows of six rounds beside the dodge chip (brass when loaded, a warm edge for hot loads) */
+.actionbars .rounds { display: flex; flex-direction: column; justify-content: center; gap: 4px; padding: 0 6px; pointer-events: none; }
+.actionbars .rounds.hidden { display: none; }
+.actionbars .rounds .cyl { display: flex; gap: 2px; }
+.actionbars .rounds .cyl i { width: 6px; height: 11px; border-radius: 2px; background: #0009; box-shadow: 0 0 0 1px #c8a05066; }
+.actionbars .rounds .cyl i.on { background: linear-gradient(#e8c878, #a87c30); box-shadow: 0 0 0 1px #c8a050; }
+.actionbars .rounds .cyl i.hot { background: linear-gradient(#ffb070, #c85a20); box-shadow: 0 0 4px #ff8a40; }
+.actionbars .rounds.dry .cyl i { box-shadow: 0 0 0 1px #c0605088; }
 .actionbars .dchip::before { content: ""; position: absolute; left: -5px; top: 6px; bottom: 6px; width: 2px; background: #a08a5888; }
 .actionbars .pins { position: absolute; right: -2px; bottom: calc(100% + 2px); padding: 4px 6px 4px; gap: 4px; border: 2px solid #a08a58; border-bottom: 0; border-radius: 8px 8px 0 0;
   background: var(--grain), linear-gradient(#44545c, #1e303b 40%, #111c25); }

@@ -1,6 +1,16 @@
 // What's new: shown once after an update (newest first). Bump `v` on the first entry whenever something is added.
 export const CHANGELOG = [
   {
+    v: 134, date: '19 November 2026', title: 'Pistols and Bows',
+    items: [
+      ['The Deadeye, rebuilt', 'The fourth class on the new combat. Snap Shot is a three-shot chain, right, left, then both; every skill fires on the move, and a Slide lets you shoot out of it. Time a reload right for a quick refill. Old Deadeyes get their talent points back with a letter from the trainer.'],
+      ['Deadeye fusions', 'Nine new moves, from Recoil Vault, which kicks you back through the air firing down, to Broadside and the Falling Storm. With the Six Chambers keystone, Broadside becomes Twelve Rounds.'],
+      ['The Ranger, rebuilt', 'The fifth class on the new combat. Quick Shot is a three-arrow chain fired on the run, Piercing Arrow is drawn and held for a stronger shot, Snare Traps lie armed on the ground, and Tumble keeps your chain going.'],
+      ['Ranger fusions', 'Nine new moves: Highwire Volley flips you up and rains arrows down where you stood, Tripwire Burst shoots your own trap apart, Ricochet Bodkin bounces between marked machines, and Closed Ground finishes it all. Both classes have their own regions of the Skill Web, and everyone gets another free Web reset.'],
+      ['A steadier online world', 'The online world now runs day and night on its own server, and the world itself is much lighter to run: machines far from every player rest until someone comes near. Less lag, fewer reconnects.'],
+    ],
+  },
+  {
     v: 133, date: '19 November 2026', title: 'The Warden',
     items: [
       ['The Warden, rebuilt', 'The third class on the new combat: seven skills and Brace, a stand-your-ground block. Hammer Blow is a three-swing chain, Challenge strikes the shield rim to pull every machine near you onto you, and the Warden holds a boss better than before. Old Wardens get their talent points back with a letter from the trainer.'],

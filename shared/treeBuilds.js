@@ -29,6 +29,22 @@ export const TREE_BUILDS = {
     { id: 'forge', name: 'The Forge', desc: 'A hot hammer: Forge-Heated Head, Steam Plate, Bedrock, Iron Weight and the Common Ground weight.',
       want: ['w_presence', 'wf_form_charge', 'wf_form_split', 'w_steamplate', 'w_bedrock', 'forge_head', 'w_fortify', 'wf_form_blow', 'w_ironskin', 'cg_thick'] },
   ],
+  ranger: [
+    { id: 'run', name: 'Never Still', desc: "Arrows on the run: Light Step, Bodkin Points, Fletcher's Kit, Steady Breath, Hunter's Chalk and Never Still, with the fusion power of the Common Ground.",
+      want: ['r_lightstep', 'rf_form_quick', 'r_fletcher', 'r_rapid', 'rf_form_pierce', 'r_chalk', 'restless', 'long_draw', 'r_morearrows', 'cg_follow'] },
+    { id: 'traps', name: "Trapper's Ground", desc: "Snares everywhere: Spring Trap, Oiled Springs, Trapper's Spring for Spring Snare, Trapper's Ground and Closed Ground.",
+      want: ['r_lightstep', 'rf_form_trap', 'trappers_spring', 'r_trapsprings', 'trappers_ground', 'r_rapid', 'rf_form_pierce', 'long_draw', 'r_chalk', 'closed_ground'] },
+    { id: 'one', name: 'One Arrow', desc: 'Every shot drawn: Steady Breath, Tar-Head, Long Draw, More Arrows, Bodkin Hail and One Arrow.',
+      want: ['r_morearrows', 'rf_form_quick', 'one_arrow', 'r_rapid', 'rf_form_pierce', 'long_draw', 'rf_form_volley', 'r_smoke', 'r_chalk', 'cg_practised'] },
+  ],
+  deadeye: [
+    { id: 'run', name: 'Never Still', desc: 'Gun on the run: Paper Cartridges, Rock Salt, Low Road for Slide Shot, Smoke Charge, Coat Tails, Never Still and the fusion power of the Common Ground.',
+      want: ['d_cartridge', 'df_form_snap', 'low_road', 'df_form_scatter', 'd_smoke', 'd_coattails', 'd_chalk', 'never_still', 'cg_follow', 'cg_wide'] },
+    { id: 'chambers', name: 'Six Chambers', desc: 'Rounds instead of Powder: Quick Reload, Iron Slug, Priming Burst, High Recoil, Held Breath for Last Round, Six Chambers and Steady Hammer.',
+      want: ['d_reload', 'df_form_pair', 'd_priming', 'df_form_recoil', 'held_breath', 'six_chambers', 'd_steady', 'd_cartridge', 'df_form_snap', 'low_road'] },
+    { id: 'storm', name: 'Falling Storm', desc: 'From above: High Recoil, Iron Slug, Chalk Mark, High Ground for Falling Storm, Bank Shot and Steady Hammer.',
+      want: ['d_cartridge', 'df_form_snap', 'low_road', 'd_chalk', 'high_ground', 'd_priming', 'df_form_recoil', 'held_breath', 'd_steady', 'bank_shot'] },
+  ],
 };
 
 // the node ids a suggested path takes from what the hero holds, in order, at most `pts` of them. pathTo(cls, alloc, id) is

@@ -131,6 +131,12 @@ export class CombatHud {
     dc.addEventListener('mouseleave', () => this.ui.hideTip());
     row.appendChild(dc);
     this.dchip = { el: dc, cd: $('.cd', dc), key: $('.key', dc), pips: $('.dpips', dc), n: -1, name: D?.name };
+    // (S10) Six Chambers: the twelve round pips, the right and the left pistol's six each in a straight row (never a ring)
+    if (this.g.cls === 'deadeye') {
+      const rd = el('div', 'rounds hidden', '<span class="cyl r">' + '<i></i>'.repeat(6) + '</span><span class="cyl l">' + '<i></i>'.repeat(6) + '</span>');
+      row.appendChild(rd);
+      this.rounds = { el: rd, r: [...$('.cyl.r', rd).children], l: [...$('.cyl.l', rd).children], k: null };
+    }
     const pins = el('div', 'ab pins');
     pins.innerHTML = [0, 1].map((i) => `<div class="slot pin" data-i="${i}"><img alt=""><div class="cd"></div><span class="key"></span><span class="cdt"></span><b class="pin-plus"></b></div>`).join('');
     bars.appendChild(pins);
@@ -219,6 +225,14 @@ export class CombatHud {
     if (dc.key.textContent !== kl) dc.key.textContent = kl;
     const left = n < D.charges && next ? next - now : 0;
     dc.cd.style.background = left > 0 && n < 1 ? `conic-gradient(rgba(0,0,0,0.72) ${clamp01(left / D.regen) * 360}deg, transparent 0)` : 'none';
+    // (S10) Six Chambers: rounds left in each pistol; the hot loads of a perfect reload glow on the next shots
+    if (this.rounds) {
+      const R0 = y.rounds, key = R0 ? R0.join(',') : '';
+      if (this.rounds.k !== key) {
+        this.rounds.k = key; this.rounds.el.classList.toggle('hidden', !R0);
+        if (R0) { let hot = R0[2] || 0; const fill = (pips, n) => pips.forEach((p, i) => { p.classList.toggle('on', i < n); p.classList.toggle('hot', i < n && i >= n - Math.ceil(hot / 2)); }); fill(this.rounds.r, R0[0]); fill(this.rounds.l, R0[1]); this.rounds.el.classList.toggle('dry', R0[0] + R0[1] === 0); }
+      }
+    }
     // the pins: their fusion's icon, cooldown and key
     const pins = pinsOf(g.cls);
     for (const Pn of this.pins) {

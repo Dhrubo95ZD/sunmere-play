@@ -17,6 +17,8 @@ const has = (rec, tag) => (rec.tags || []).includes(tag);
 const fxMul = (rec, kind, m) => { rec.fx = (rec.fx || []).map((e) => (e[0] === kind ? [e[0], e[1] * m, ...e.slice(2)] : e)); };
 const addTag = (rec, tag) => { if (!has(rec, tag)) rec.tags = [...(rec.tags || []), tag]; };
 export const hpFrac = (p) => (p.maxHp ? p.hp / p.maxHp : 1);
+// metres the hero moved in the last `win` s (p.mvLog: [time, metres] pairs the sim keeps for Never Still, S10)
+export const moved = (p, now, win = 2) => (p.mvLog || []).reduce((t, e) => (e[0] >= now - win ? t + e[1] : t), 0);
 
 export const KEYSTONES = {
   // ------------------------------------------------------------------ Knight (5.1)
@@ -135,6 +137,96 @@ export const KEYSTONES = {
     },
   },
 
+  // ------------------------------------------------------------------ Deadeye (5.5, S10)
+  // Never Still: the sim keeps the metres moved in the last 2 s (p.mvLog, tickPlayer; a dodge or a jump counts double)
+  never_still: {
+    name: 'Never Still', cls: 'deadeye',
+    desc: 'You deal 2% more for every metre moved in the last 2 s, up to 20%; slides and jumps count double.',
+    price: 'After 1 s standing still you deal 20% less.',
+    mods: { neverStill: 1 },
+    onHit(w, p, ctx) {
+      const now = w?.time || 0, m = moved(p, now, 2);
+      if (now - (p.mvAt ?? -9) >= 1 && m < 0.2) ctx.amt *= 0.8;
+      else ctx.amt *= 1 + Math.min(0.2, 0.02 * m);
+    },
+  },
+  // Six Chambers: Powder becomes two cylinders of six rounds (p.rounds [right, left]); every shot contact spends one, a
+  // dodge reloads one pistol, Recoil Jump both, and Snap Shot pressed in the last 0.2 s of the dodge is a perfect reload:
+  // the next six shots are hot loads (25% more, heat). The bar shows the twelve round pips
+  six_chambers: {
+    name: 'Six Chambers', cls: 'deadeye',
+    desc: 'Powder becomes two cylinders of six rounds and every shot uses one: skills cost no Powder. A slide reloads one pistol and Recoil Jump both. Snap Shot pressed in the last 0.2 s of a slide is a perfect reload: the next six shots are hot loads, 25% stronger and heat. Broadside becomes Twelve Rounds.',
+    price: 'With both cylinders empty you cannot fire until you slide, jump or wait for a slow reload.',
+    mods: { sixChambers: 1 },
+    renames: { df_broadside: { name: 'Twelve Rounds' } },
+    onCompile(rec) {
+      if (!has(rec, 'shot')) return rec;
+      rec.cost = 0; rec.extra = 0; rec.rounds = rec.id !== 'd_recoil' && rec.to !== 'd_recoil'; // (the jump fires into the ground and reloads: it never needs a round)
+      // Twelve Rounds: both cylinders emptied, twelve shots right and left at uneven gaps, the same weight as the four
+      if (rec.id === 'df_broadside') {
+        rec.hit = { ...rec.hit, n: 12, ts: [0.34, 0.42, 0.52, 0.59, 0.7, 0.78, 0.9, 0.97, 1.08, 1.16, 1.27, 1.36] };
+        rec.fx = (rec.fx || []).map((e) => (e[0] === 'dmg' ? ['dmg', +(e[1] * 0.36).toFixed(3)] : e[0] === 'brk' ? ['brk', 4] : e));
+        rec.tiers = [2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4]; rec.emptyAll = true; rec.formChoreo = 'df_twelve'; // (its own clip: twelve shots from the kneel, choreo.js)
+      }
+      return rec;
+    },
+  },
+  // Bank Shot: every shot skips once off the plate to a second machine within 8 m at half strength; the skip is spark
+  // (Galvanic on a Corroded machine). sim.js applySkill does the skip
+  bank_shot: {
+    name: 'Bank Shot', cls: 'deadeye',
+    desc: 'Every shot skips once off the plate or the ground into a second machine within 8 m for half its damage. The skips are spark: they set off Galvanic on Corroded machines.',
+    price: 'Snap Shot deals 10% less.',
+    onCompile(rec) {
+      if (!has(rec, 'shot')) return rec;
+      rec.bank = { r: 8, mul: 0.5 };
+      if (rec.id === 'd_snap') fxMul(rec, 'dmg', 0.9);
+      return rec;
+    },
+  },
+
+  // ------------------------------------------------------------------ Ranger (combat_design_fusion.md 4.2, S11)
+  // Never Still (the Ranger's: a bow on the run): the sim keeps the metres moved (p.mvLog, as the Deadeye's) for a Ranger
+  // holding it; moving is more than 0.4 m in the last 0.5 s, standing still is 2 s without a step
+  restless: {
+    name: 'Never Still', cls: 'ranger',
+    desc: 'Every arrow you loose can be loosed on the run, and arrows loosed while you are moving deal 25% more.',
+    price: 'After 2 s standing still your arrows deal 30% less.',
+    mods: { rangerStill: 1 },
+    onCompile(rec) { if (has(rec, 'arrow') || has(rec, 'rain')) rec.move = true; return rec; },
+    onHit(w, p, ctx) {
+      const now = w?.time || 0;
+      if (moved(p, now, 0.5) > 0.4) ctx.amt *= 1.25;
+      else if (now - (p.mvAt ?? -9) >= 2) ctx.amt *= 0.7;
+    },
+  },
+  // One Arrow: Quick Shot's key looses Piercing Arrow (rec.swapTo), which has no cooldown, costs 25 Focus and draws 30%
+  // faster; the fusions with Quick Shot take Piercing Arrow instead (treeCompile keys them by their new pair)
+  one_arrow: {
+    name: 'One Arrow', cls: 'ranger',
+    desc: 'Quick Shot is gone: its key looses Piercing Arrow, which has no cooldown, costs 25 Focus and draws 30% faster. Fusions with Quick Shot take Piercing Arrow instead.',
+    price: 'There is no free arrow left: every shot costs Focus.',
+    onCompile(rec) {
+      if (rec.id === 'r_quick') { rec.swapTo = 'r_pierce'; return rec; }
+      if (rec.id === 'r_pierce' && !rec.from) {
+        rec.cd = 0; rec.cost = 25;
+        if (rec.draw) rec.draw = { ...rec.draw, min: +(rec.draw.min * 0.7).toFixed(3), full: +(rec.draw.full * 0.7).toFixed(3) };
+        if (rec.hit) rec.hit = { ...rec.hit, t: +(rec.hit.t * 0.7).toFixed(3) };
+      }
+      if (rec.from === 'r_quick') rec.from = 'r_pierce';
+      if (rec.to === 'r_quick') rec.to = 'r_pierce';
+      return rec;
+    },
+  },
+  // Trapper's Ground: up to three traps lie at once (sim.js p.traps), and a trap fusion strikes round every one of them
+  trappers_ground: {
+    name: "Trapper's Ground", cls: 'ranger',
+    desc: 'Up to three of your snares lie armed at once, and Tripwire Burst, Spring Snare and Closed Ground go off round every one of them.',
+    price: 'Snare Trap costs 10 more Focus.',
+    mods: { trapMax: 3, trapAll: 1 },
+    onCompile(rec) { if (rec.id === 'r_trap') rec.cost = (rec.cost || 0) + 10; return rec; },
+  },
+
   // ------------------------------------------------------------------ Common Ground (4.4)
   chainwork: {
     name: 'Chainwork', cls: 'common', desc: 'A landed fusion opens a 0.8 s link: the next core skill is an Encore, 25% stronger with a heavy stop.',
@@ -185,6 +277,17 @@ export const NOTABLE_HOOKS = {
   // the Brace scalds the machine with steam from the plates (heat, 0.8x)
   iron_skin: { onDodge(w, p) { if (!w?.addBuff) return; p.absorb = (p.absorb || 0) + (p.power || 10) * 1.2; w.addBuff(p, { name: 'Iron Skin', stat: 'absorb', t: 3, dur: 3, icon: 'iron' }); } },
   steam_plate: { onBlock(w, p, ctx) { if (ctx.src && !ctx.src.dead && w?.damage) { w._zk = 'fire'; w.damage(p, ctx.src, (p.power || 10) * 0.8, 'zone'); w._zk = null; } } },
+  // the Deadeye (S10): Paper Cartridges (a slide gives 10 Powder back), Smoke Charge (the slide leaves a low bank of powder
+  // smoke where it began: machines in it miss 30% for 3 s); Chalk Mark is a flag the sim reads (tal.flags.chalk)
+  paper_cartridges: { onDodge(w, p) { if (p.maxRes) p.res = Math.min(p.maxRes, (p.res || 0) + 10); } },
+  smoke_charge: {
+    onDodge(w, p) {
+      if (!w?.foesOf || !p.dodgeFrom) return;
+      const o = p.dodgeFrom;
+      w.broadcast?.({ k: 'smokebank', x: +o.x.toFixed(2), z: +o.z.toFixed(2), r: 3 });
+      for (const m of w.foesOf(p)) if (m.type === 'mob' && !m.dead && Math.hypot(m.x - o.x, m.z - o.z) <= 3 + (m.def?.radius || 1)) w.addBuff(m, { name: 'Smoke Charge', stat: 'miss', pct: 30, t: 3, dur: 3, debuff: true, icon: 'smoke' });
+    },
+  },
   // the Sandblade's Dust Cloak (S8): after a dodge the next skill strikes critically (sim.js on_dodge gives the buff)
   dust_cloak: { onDodge(w, p) { w?.addBuff?.(p, { name: 'Dust Cloak', stat: 'cloak', pct: 0, t: 3, dur: 3, icon: 'cloak' }); } },
   shared_courage: { onLink(w, p) { for (const q of w?.partyMembers ? w.partyMembers(p) : [p]) w?.addBuff?.(q, { name: 'Shared Courage', stat: 'dmg', pct: 8, t: 6, dur: 6, icon: 'shout' }); } },

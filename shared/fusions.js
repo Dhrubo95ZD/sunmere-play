@@ -6,7 +6,7 @@
 // Anvil Fall their own DEFs on the authored hero clips (client/game/choreo.js, 'ual'); the rest still name an existing one.
 // Imports only from shared/.
 import { SKILLS, SKILL_BY_ID } from './classes.js';
-import { KIT_V2, CORE, CORE_BY_ID, DODGES } from './kit.js';
+import { KIT_V2, CORE, CORE_BY_ID, DODGES, DE_POW, RA_POW, RA_FUSE } from './kit.js';
 
 export const LINK = { win: 1.0, afterLock: 0.25, tick: 0.05, grace: 0.15 }; // window from contact; never shorter than the lock + 0.25 s; one tick of grace; 0.15 s for a claimed chain
 export const MASTERY = [25, 100, 300]; // landed uses for ranks I, II, III (a Book badge; III adds the extra beat)
@@ -168,6 +168,120 @@ export const FUSIONS = {
       tags: ['earth', 'fissure', 'slam', 'triad'], tier: 5, choreo: 'wt_hammerfall', hint: 'From the crater, one more blow, and the ground opens.', ai: { role: 'burst' },
       desc: 'From the crater, a last blow sends a fissure out toward the machine that erupts along its whole length: every machine on it is thrown up and held fast.' }),
   ],
+  // the Deadeye (combat_design.md 5.5, S10). Power as the Knight's (a fusion and its A together about 1.35x A + B plain).
+  // Everything is powder smoke, sparks, brass and gravel: muzzle smoke is a short flat cone or a plain puff (never a star),
+  // the twin pistols are held parallel (never crossed), multi-shot moves have uneven gaps (hit.ts). seq: one entry a contact
+  // ({ hit, fx } over the record's own: Recoil Vault's ground blast then its apex shots, Point Blank's grip then barrels)
+  deadeye: (() => {
+    const P = DE_POW, d = (v) => +(v * P).toFixed(3);
+    return [
+      F('df_recoilvault', 'Recoil Vault', { cls: 'deadeye', move: true, icon: 'backflip', from: 'd_pair', to: 'd_recoil', lvl: 5, need: 'hit', cd: 14, extra: 10, range: 24,
+        hit: { t: 0.06, kind: 'aoe', r: 2, n: 3, ts: [0.06, 0.5, 0.62] }, fx: [['back', 7], ['dmg', d(1.0)], ['air', 1.3], ['brk', 20]],
+        seq: [{ hit: { kind: 'aoe', r: 2 }, fx: [['dmg', d(0.6)], ['knock', 2], ['brk', 10]] }, { hit: { kind: 'proj' }, fx: [['dmg', d(1.0)], ['air', 1.3], ['brk', 20]] }, { hit: { kind: 'proj' }, fx: [['dmg', d(1.0)], ['air', 1.3], ['brk', 30]] }],
+        tiers: [2, 2, 4], tags: ['air', 'fusion'], cam: 'lift', choreo: 'df_recoilvault', gateText: 'Paired Shot must strike a machine', hint: 'Shoot the ground, and keep shooting on the way up.',
+        carry: { b: { highrecoil: { addShot: 1 }, forwardrecoil: { pow: 0.1 } } }, ai: { role: 'burst' },
+        desc: 'Both pistols fired into the ground throw you up and back 7 m in a backflip; at the top, two more shots at the machine (30% harder against one in the air). You land in a slide.' }),
+      F('df_overhead', 'Overhead Pair', { cls: 'deadeye', move: true, icon: 'leap', from: 'd_recoil', to: 'd_pair', lvl: 7, need: 'done', cd: 14, extra: 10, range: 16,
+        hit: { t: 0.5, kind: 'aoe', at: 'target', r: 2.5 }, fx: [['leap', 9], ['dmg', d(2.8)], ['slamDown', 0.6], ['brk', 50]],
+        tags: ['air', 'fusion'], cam: 'lift', choreo: 'df_overhead', gateText: 'Recoil Jump must go off', hint: 'Go over it, and fire straight down.',
+        carry: { a: { highrecoil: { pow: 0.15 }, forwardrecoil: { leap: 12 } }, b: { ironslug: { r: 1.4 }, splitpair: { r: 1.25 } } }, ai: { role: 'burst' },
+        desc: 'A forward recoil arc over the machine; at the top both pistols fire straight down into it (2.8x) and knock it flat. You land behind it.' }),
+      F('df_platesplitter', 'Plate Splitter', { cls: 'deadeye', move: true, icon: 'pierce', from: 'd_knee', to: 'd_pair', lvl: 9, need: 'state:staggered', cd: 10, extra: 5, range: 22,
+        hit: { t: 0.24, kind: 'proj', speed: 80 }, fx: [['dmg', d(2.2)], ['debuff', 'armor', 25, 8], ['brk', 30]],
+        tags: ['fusion'], choreo: 'df_platesplitter', hint: 'A machine that staggers shows its rivets.',
+        carry: { b: { ironslug: { pierce: true }, splitpair: { split: 1 } } }, ai: { role: 'burst', want: { state: 'staggered' } },
+        desc: 'Both hardened balls into the rivet line of the staggered machine: 2.2x, and its plating splits (it takes 25% more for 8 s) in a spray of plate chips and sparks.' }),
+      F('df_chainshot', 'Chain Shot', { cls: 'deadeye', move: true, icon: 'pin', from: 'd_knee', to: 'd_scatter', lvl: 12, need: 'hit', cd: 12, extra: 5, range: 20,
+        hit: { t: 0.32, kind: 'proj', speed: 40 }, fx: [['dmg', d(1.2)], ['pin', 3], ['brk', 20]], split: 1, splitR: 6,
+        tags: ['pin', 'fusion'], choreo: 'df_chainshot', gateText: 'Knee Shot must strike a machine', hint: 'Two balls, one chain, two machines.',
+        carry: { b: { choke: { range: 24 }, widebore: { split: 2 } } }, ai: { role: 'control' },
+        desc: 'Two balls on a straight chain spin out as one solid bar and wrap the machine and the one nearest it together: both are Pinned for 3 s.' }),
+      F('df_pointblank', 'Point Blank', { cls: 'deadeye', move: true, icon: 'fist', from: 'd_scatter', to: 'd_quick', lvl: 15, need: 'hit', cd: 12, extra: 10, range: 9,
+        hit: { t: 0.2, kind: 'melee', n: 2, ts: [0.2, 0.5] }, fx: [['dmg', d(2.0)], ['knock', 4], ['brk', 40]],
+        seq: [{ fx: [['dmg', d(0.8)], ['stun', 0.6], ['brk', 10]] }, { fx: [['dmg', d(2.0)], ['knock', 4], ['brk', 40]] }],
+        tiers: [2, 4], tags: ['fusion'], choreo: 'df_pointblank', gateText: 'Scatter Charge must strike a machine', hint: 'Close enough to touch, then closer.',
+        carry: { a: { choke: { pow: 0.1 }, widebore: { split: 2 } } }, ai: { role: 'burst' },
+        desc: 'Step in through the smoke: a crack of the pistol grip across the plate (it reels for 0.6 s), then both barrels against it: 2.0x, thrown back 4 m trailing smoke.' }),
+      F('df_broadside', 'Broadside', { cls: 'deadeye', icon: 'barrage', from: 'd_knee', to: 'd_fan', lvl: 18, need: 'hit', cd: 14, extra: 10, range: 22,
+        hit: { t: 0.34, kind: 'proj', speed: 80, n: 4, ts: [0.34, 0.62, 0.98, 1.26] }, fx: [['dmg', d(1.0)], ['knock', 2], ['debuff', 'armor', 15, 8], ['brk', 12]],
+        tiers: [2, 2, 2, 4], tags: ['fusion'], choreo: 'df_broadside', gateText: 'Knee Shot must strike a machine', hint: 'Down on one knee, and do not hurry it.',
+        carry: {}, ai: { role: 'burst' },
+        desc: 'Down on one knee: four heavy shots, right, left, right, left, never on an even beat. Each knocks the machine back and buckles its plating (15% more taken).' }),
+      F('df_slideshot', 'Slide Shot', { cls: 'deadeye', move: true, icon: 'roll', from: 'dodge', to: 'd_scatter', tree: 'low_road', need: 'dodge', cd: 10, extra: 5, range: 11,
+        hit: { t: 0.18, kind: 'cone', r: 10, cone: 60 }, fx: [['dmg', d(1.4)], ['launch', 1.0], ['brk', 25]],
+        tiers: [4], tags: ['lift', 'fusion'], choreo: 'df_slideshot', hint: 'Low on the ground, fire up.',
+        carry: { b: { choke: { cone: 30, r: 1.4, range: 15 }, widebore: { cone: 120, r: 0.6, range: 7 } } }, ai: { role: 'control' },
+        desc: 'Out of the slide, still on one knee, the loose shot fired upward: the small machines in the cone are thrown into the air, with a spray of gravel along the slide.' }),
+      F('df_lastround', 'Last Round', { cls: 'deadeye', move: true, icon: 'execute', from: 'd_quick', to: 'd_pair', tree: 'held_breath', need: 'hit', cd: 12, extra: 10, range: 22,
+        hit: { t: 0.36, kind: 'proj', speed: 90 }, fx: [['dmg', d(1.8)], ['execute', d(1.08)], ['brk', 30]],
+        tiers: [4], tags: ['fusion'], choreo: 'df_lastround', hint: 'Hold your breath. Then both.',
+        carry: { b: { ironslug: { pierce: true }, splitpair: { split: 1 } } }, ai: { role: 'burst' },
+        desc: 'A held breath, a still beat, then both pistols\' heavy double charge: 1.8x, and 60% more against a machine below 35% health.' }),
+      // the triad (a deep tree notable): Overhead Pair > Fan the Hammer
+      F('dt_fallingstorm', 'Falling Storm', { cls: 'deadeye', move: true, icon: 'storm', from: 'df_overhead', to: 'd_fan', tree: 'high_ground', need: 'hit', triad: true, cd: 50, extra: 10, range: 16,
+        hit: { t: 0.3, kind: 'aoe', at: 'target', r: 4, n: 12, ts: [0.3, 0.37, 0.46, 0.52, 0.61, 0.69, 0.76, 0.86, 0.93, 1.01, 1.1, 1.18] }, fx: [['dmg', d(0.36)], ['brk', 5]], fxLast: [['brk', 65], ['slow', 40, 3]],
+        tiers: [2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5], tags: ['air', 'triad'], tier: 5, cam: 'lift', choreo: 'dt_fallingstorm', hint: 'From up there, empty the hammer on them.',
+        carry: { d_snap: { hotshot: { heat: 0.1 }, rocksalt: { slowStack: 10 } } }, ai: { role: 'burst' },
+        desc: 'Kick off the ground once more and come down slowly, fanning the hammer straight down: twelve shots over 8 m round the machine, then a heavy break.' }),
+    ];
+  })(),
+  // the Ranger (combat_design_fusion.md 4.2, S11). Power as the Knight's (a fusion and its A together about 1.35x A + B
+  // plain). Everything is wood, rope, chalk, dust and splinters; arrows in flight run roughly parallel (never crossing, never
+  // fanned out from a point); a rain lands in a stitched, uneven pattern. at: 'cast' is round where the cast began (the
+  // spot he flipped away from), at: 'trap' round his trap (every trap with Trapper's Ground); seg: a line struck one stretch
+  // a contact, down its length
+  ranger: (() => {
+    const P = RA_POW * RA_FUSE, d = (v) => +(v * P).toFixed(3);
+    return [
+      F('rf_highwire', 'Highwire Volley', { cls: 'ranger', move: true, icon: 'backflip', from: 'r_disengage', to: 'r_volley', lvl: 5, need: 'done', cd: 14, extra: 10, target: 'self', range: 0,
+        hit: { t: 0.4, kind: 'aoe', at: 'cast', r: 6, n: 4, ts: [0.4, 0.47, 0.55, 0.64] }, fx: [['back', 4], ['dmg', d(0.6)], ['brk', 8]], fxLast: [['dmg', d(0.3)], ['slow', 50, 3], ['brk', 20]],
+        tiers: [1, 1, 1, 4], tags: ['air', 'rain', 'fusion'], cam: 'lift', choreo: 'rf_highwire', gateText: 'Disengage must go off', hint: 'From the top of the flip, look down.',
+        carry: { b: { widesky: { r: 1.33 }, bodkinhail: { addFx: [['debuff', 'armor', 10, 8]] } } }, ai: { role: 'aoe' },
+        desc: 'Flip on up and back from the top of Disengage and loose the volley straight down on the spot you left: twelve arrows over 6 m in a stitched line, the last slowing everything there 50%.' }),
+      F('rf_rolling', 'Rolling Shot', { cls: 'ranger', move: true, icon: 'roll', from: 'dodge', to: 'r_quick', lvl: 7, need: 'dodge', cd: 8, extra: 5, range: 28,
+        hit: { t: 0.12, kind: 'proj', speed: 60, n: 3, ts: [0.12, 0.25, 0.4] }, fx: [['dmg', d(0.45)], ['brk', 4]], tiers: [1, 1, 3],
+        tags: ['arrow', 'fusion'], choreo: 'rf_rolling', hint: 'The arrow stayed on the string.',
+        carry: { b: { rhythm: { hits: 4 }, bodkin: { pierce: true } } }, ai: { role: 'burst' },
+        desc: 'Out of the tumble, three arrows loosed from the roll as you come up, the last a heavy one.' }),
+      F('rf_tripwire', 'Tripwire Burst', { cls: 'ranger', icon: 'trap', from: 'r_trap', to: 'r_pierce', lvl: 9, need: 'done', cd: 12, extra: 5, range: 30,
+        hit: { t: 0.32, kind: 'aoe', at: 'trap', r: 4 }, fx: [['dmg', d(2.4)], ['root', 2.5], ['brk', 30]],
+        tags: ['trap', 'fusion'], choreo: 'rf_tripwire', gateText: 'Snare Trap must be on the ground', hint: 'Shoot your own trap.',
+        carry: { a: { springtrap: { lift: 1.0 } }, b: { tarhead: { addFx: [['coat', 'tar', 8]] } } }, ai: { role: 'control', want: { minFoes: 1 } },
+        desc: 'An arrow into your own trap: it bursts in wood splinters and flying rope, and every machine within 4 m is struck and held fast for 2.5 s.' }),
+      F('rf_ridgeline', 'Ridgeline Salvo', { cls: 'ranger', icon: 'barrage', from: 'r_pierce', to: 'r_volley', lvl: 12, need: 'hit', cd: 14, extra: 10, range: 30,
+        hit: { t: 0.5, kind: 'line', r: 14, n: 7, gap: 0.05, seg: 2, segW: 4 }, fx: [['dmg', d(1.5)], ['brk', 8]], tiers: [1, 1, 1, 1, 1, 1, 4],
+        tags: ['rain', 'line', 'fusion'], choreo: 'rf_ridgeline', gateText: 'Piercing Arrow must strike a machine', hint: 'The arrow showed the way. Send the rest after it.',
+        carry: { a: { tarhead: { addFx: [['coat', 'tar', 8]] }, splitting: { pow: 0.1 } }, b: { widesky: { segW: 6 }, bodkinhail: { addFx: [['debuff', 'armor', 10, 8]] } } }, ai: { role: 'line' },
+        desc: 'The volley comes down along the line the arrow flew, 14 m of it, the arrows landing one stretch after another away from you with a puff of dust at each.' }),
+      F('rf_ricochet', 'Ricochet Bodkin', { cls: 'ranger', move: true, icon: 'pierce', from: 'r_mark', to: 'r_quick', lvl: 15, need: 'hit', cd: 10, extra: 5, range: 30,
+        hit: { t: 0.26, kind: 'proj', speed: 70 }, fx: [['dmg', d(1.1)], ['bounce', 3, 10, 0.7], ['brk', 10]], tiers: [3],
+        tags: ['arrow', 'fusion'], choreo: 'rf_ricochet', gateText: 'Marked Target must strike a machine', hint: 'Chalk shows where the plate is hard.',
+        carry: { b: { bodkin: { bounceN: 4 }, rhythm: { pow: 0.15 } } }, ai: { role: 'aoe' },
+        desc: 'A hardened bodkin glances off the Marked machine\'s plate into the next within 10 m, and on to a third and a fourth: each is struck (70%) and Marked for 4 s.' }),
+      F('rf_cloudburst', 'Cloudburst', { cls: 'ranger', icon: 'rain', from: 'r_volley', to: 'r_thousand', lvl: 18, need: 'hit', cd: 40, extra: 10, range: 26,
+        hit: { t: 0.5, kind: 'aoe', at: 'target', r: 5, n: 12, gap: 0.16 }, fx: [['dmg', d(0.46)], ['root', 0.3], ['brk', 5]], fxLast: [['brk', 30]],
+        tiers: [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 4], tags: ['rain', 'fusion'], choreo: 'rf_cloudburst', gateText: 'Volley must strike a machine', hint: 'Where the rain fell once, let it fall harder.',
+        carry: { a: { widesky: { r: 1.33 }, bodkinhail: { addFx: [['debuff', 'armor', 10, 8]] } } }, ai: { role: 'aoe', want: { minFoes: 1 } },
+        desc: 'Thousand Arrows comes down on the volley\'s ground at twice the density for 2 s: every wave holds the machines there for a moment, and the ground is pocked with shafts.' }),
+      F('rf_springsnare', 'Spring Snare', { cls: 'ranger', move: true, icon: 'leap', from: 'r_trap', to: 'r_disengage', tree: 'trappers_spring', need: 'done', cd: 12, extra: 5, target: 'self', range: 0,
+        hit: { t: 0.12, kind: 'aoe', at: 'trap', r: 3, n: 3, ts: [0.12, 0.46, 0.6] }, fx: [['back', 12], ['dmg', d(0.45)], ['brk', 10]],
+        seq: [{ fx: [['dmg', d(0.3)], ['launch', 1.0], ['brk', 20]] }, { fx: [['dmg', d(0.45)], ['brk', 10]] }, { fx: [['dmg', d(0.45)], ['brk', 10]] }],
+        tiers: [3, 1, 3], tags: ['air', 'trap', 'fusion'], cam: 'lift', choreo: 'rf_springsnare', gateText: 'Snare Trap must be on the ground', hint: 'The trap has a spring in it. So do you.',
+        carry: { a: { springtrap: { pow: 0.15 }, twinsnares: { pow: 0.1 } } }, ai: { role: 'control' },
+        desc: 'Vault off your own trap 12 m back and up: its wooden bar snaps up and throws the machines within 3 m into the air, and you loose six arrows down on them from the top.' }),
+      F('rf_longdraw', 'Long Draw', { cls: 'ranger', icon: 'aim', from: 'r_mark', to: 'r_pierce', tree: 'long_draw', need: 'hit', cd: 14, extra: 10, range: 32,
+        hit: { t: 0.9, kind: 'line', r: 32 }, fx: [['dmg', d(3.2)], ['execute', d(1.6)], ['brk', 45]], tiers: [4],
+        tags: ['line', 'fusion'], choreo: 'rf_longdraw', gateText: 'Marked Target must strike a machine', hint: 'Kneel, and take your time over the chalk.',
+        carry: { b: { tarhead: { addFx: [['coat', 'tar', 8]] }, splitting: { split: 2 } } }, ai: { role: 'burst' },
+        desc: 'Down on one knee, a full draw held on the chalk: 3.2x through the Marked machine and everything behind it on the line, half as much again against one below 35% health.' }),
+      // the triad (a deep tree notable): Tripwire Burst > Volley
+      F('rt_closedground', 'Closed Ground', { cls: 'ranger', icon: 'rain', from: 'rf_tripwire', to: 'r_volley', tree: 'closed_ground', need: 'hit', triad: true, cd: 50, extra: 10, target: 'self', range: 0,
+        hit: { t: 0.6, kind: 'aoe', at: 'trap', r: 4.5, n: 3, ts: [0.6, 0.98, 1.34] }, fx: [['dmg', d(1.15)], ['brk', 20]], fxLast: [['brk', 80], ['slow', 50, 4]],
+        tiers: [3, 3, 5], tags: ['rain', 'trap', 'triad'], tier: 5, choreo: 'rt_closedground', hint: 'What the trap holds, the sky can find.',
+        carry: { r_volley: { widesky: { r: 1.25 }, bodkinhail: { addFx: [['debuff', 'armor', 10, 8]] } } }, ai: { role: 'burst' },
+        desc: 'Three volleys, one after another, on everything the tripwire holds: 1.15x a wave, and the last breaks them.' }),
+    ];
+  })(),
 };
 
 export const FUSE = {}; // cls -> 'a>b' -> fusion

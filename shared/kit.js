@@ -8,7 +8,7 @@
 import { SKILLS } from './classes.js';
 
 // classes on the new kit. Knight first (the pilot slice); the old path goes at S16
-export const KIT_V2 = { knight: true, sandblade: true, warden: true }; // (S8: the Sandblade's slice; S9: the Warden's)
+export const KIT_V2 = { knight: true, sandblade: true, warden: true, deadeye: true, ranger: true }; // (S8: the Sandblade's slice; S9: the Warden's; S10: the Deadeye's; S11: the Ranger's)
 export const onKit2 = (cls) => !!KIT_V2[cls];
 
 const K = (id, name, o) => ({ id, name, gcd: true, cast: 0, cost: 15, cd: 0, range: 4, target: 'enemy', kit: 2, ...o });
@@ -16,6 +16,11 @@ const K = (id, name, o) => ({ id, name, gcd: true, cast: 0, cost: 15, cd: 0, ran
 // the basic chain (section 2.3): steps of one skill, each its own record (contact, lock, tier); chain steps 1-2 never
 // open a link, the last does. The chain resets after CHAIN_RESET s without a step
 export const CHAIN_RESET = 1.2;
+// the Deadeye's numbers (S10): the design's coefficients x this, tuned on deadeyetest's dummy against the Ranger
+export const DE_POW = 0.7;
+export const DE_SKILL = 1.2; // (the six skills over the chain, S10 tuning)
+// the Ranger's numbers (S11): the design's coefficients x this, tuned on ranger11test's dummy and on realfight against the old kit
+export const RA_POW = 0.95, RA_FILL = 0.5, RA_FUSE = 2.1; // (the skills x RA_POW; Quick Shot x RA_FILL of that, so the filler is not most of the damage; the fusions x RA_FUSE of it)
 const chain = (base, steps) => {
   const list = steps.map((s, i) => ({ ...base, ...s, step: i + 1, steps: steps.length, fx: s.fx, win: { ...(base.win || {}), ...(s.win || {}) }, tags: [...base.tags, ...(i === steps.length - 1 ? ['finisher'] : [])] }));
   for (const s of list) s.chain = list;
@@ -68,9 +73,53 @@ export const CORE = {
     K('w_split', 'Earthsplitter', { icon: 'fissure', slot: 6, lvl: 11, cost: 25, cd: 10, range: 12, hit: { t: 0.7, kind: 'line', r: 12 }, fx: [['dmg', 1.58], ['root', 1.5], ['brk', 20]], tags: ['strike', 'blunt', 'hammer', 'earth', 'fissure'], tier: 2, desc: 'Split the ground: a fissure runs 12 m ahead and holds every machine on it fast for 1.5 s.' }),
     K('w_challenge', 'Challenge', { icon: 'shout', slot: 7, lvl: 14, cost: 10, cd: 12, target: 'self', range: 0, hit: { t: 0.32, kind: 'aoe', r: 10 }, fx: [['taunt', 4], ['selfBuff', 'armor', 20, 6]], tags: ['shield', 'taunt', 'guard'], tier: 2, desc: 'One heavy hammer strike on the shield rim: every machine within 10 m turns on you, and your armour is 20% thicker for 6 s.' }),
   ],
+  // the Deadeye (combat_design.md 5.5, S10): gun-kata in a long road coat. Every skill fires on the run (move: true: moving
+  // never interrupts it, and the client plays the shot on the upper body over the running legs), the locks are the shortest
+  // of any class (0.4 s chain steps) and a dodge cuts a shot's wind-up by firing it at once (sim.js on_dodge). Every shot is
+  // a 'shot' (Bank Shot skips it, Six Chambers counts it). Hit times match the clips (choreo.js S10: d_snap..d_snap_3, the
+  // twin shots on Pistols_Twin_Shoot, Recoil Jump on Leap_Rise into Backflip). Numbers x DE_POW (tuned on deadeyetest's dummy
+  // against the Ranger and on realfight)
+  deadeye: (() => {
+    const P = DE_POW, d = (v) => +(v * P).toFixed(3), e = (v) => d(v * DE_SKILL);
+    return [
+      chain(K('d_snap', 'Snap Shot', { icon: 'arrow', slot: 1, lvl: 1, cost: 0, cd: 0, range: 22, move: true, hit: { t: 0.2, kind: 'proj', speed: 70 }, tags: ['shot', 'chain'], desc: 'A three-step chain of quick shots fired on the run: the right pistol, the left, then both together. Costs nothing and builds Powder.' }), [
+        { fx: [['dmg', d(0.42)], ['brk', 2], ['res', 4]], win: { lock: 0.4 }, tier: 1, side: 'R' },
+        { fx: [['dmg', d(0.42)], ['brk', 2], ['res', 4]], win: { lock: 0.4 }, tier: 1, side: 'L' },
+        { hit: { t: 0.22, kind: 'proj', speed: 70 }, fx: [['dmg', d(0.8)], ['brk', 6], ['res', 8]], win: { lock: 0.5 }, tier: 2, side: 'B' }, // (the chain at 0.42/0.42/0.8 of the design's 0.55/0.55/1.0 and the skills x1.2: the filler alone was over half the damage and its chain order swung a fight by 25%)
+      ]),
+      K('d_pair', 'Paired Shot', { icon: 'twinarrow', slot: 2, lvl: 1, cost: 15, cd: 6, range: 22, move: true, hit: { t: 0.24, kind: 'proj', speed: 70 }, fx: [['dmg', e(1.2)], ['knock', 1.5], ['brk', 15]], tags: ['shot', 'blast'], tier: 2, desc: 'Both pistols up level and fired as one: the machine is thrown back a step.' }),
+      K('d_recoil', 'Recoil Jump', { icon: 'backflip', slot: 3, lvl: 3, cost: 10, cd: 12, target: 'self', range: 0, move: true, selfDone: true, hit: { t: 0.12, kind: 'aoe', r: 2 }, fx: [['back', 7], ['dmg', e(0.6)], ['knock', 1.5], ['brk', 10]], tags: ['shot', 'blast', 'jump'], tier: 2, desc: 'Fire both pistols into the ground at your feet: the kick throws you up and back 7 m in a backflip, and the blast knocks back what stood there.' }),
+      K('d_knee', 'Knee Shot', { icon: 'cripple', slot: 4, lvl: 5, cost: 12, cd: 8, range: 22, move: true, bash: true, hit: { t: 0.22, kind: 'proj', speed: 70 }, fx: [['dmg', e(0.9)], ['slow', 50, 4], ['brk', 12]], tags: ['shot'], tier: 2, desc: 'A low shot at a leg joint: the machine staggers and is slowed 50% for 4 s.' }),
+      K('d_scatter', 'Scatter Charge', { icon: 'fan', slot: 5, lvl: 8, cost: 20, cd: 8, range: 11, move: true, hit: { t: 0.3, kind: 'cone', r: 10, cone: 50 }, fx: [['dmg', e(1.1)], ['knock', 3], ['brk', 18]], tags: ['shot', 'blast'], tier: 2, desc: 'Both pistols loaded with loose shot and fired from the hip on a step back: every machine in a 10 m cone is thrown back.' }),
+      K('d_fan', 'Fan the Hammer', { icon: 'barrage', slot: 6, lvl: 11, cost: 25, cd: 10, range: 18, move: true, hit: { t: 0.16, kind: 'proj', speed: 70, n: 6, ts: [0.16, 0.25, 0.37, 0.45, 0.57, 0.66] }, fx: [['dmg', e(0.4)], ['brk', 3]], tags: ['shot'], tier: 2, desc: 'The left palm works the hammer: six fast shots from the right pistol, never quite on a beat.' }),
+      K('d_quick', 'Quickdraw', { icon: 'aim', slot: 7, lvl: 14, cost: 12, cd: 10, gcd: false, range: 22, move: true, sureLand: true, hit: { t: 0.12, kind: 'proj', speed: 80 }, fx: [['dmg', e(1.0)], ['brk', 8]], tags: ['shot'], tier: 2, desc: 'Holster to shot faster than the eye can follow. It ignores the recovery of your last skill, and as the first of two it always counts as landed.' }),
+    ];
+  })(),
+  // the Ranger (combat_design_fusion.md 4.2 and combat_design.md 5.4, S11): never where the arrows came from. Quick Shot and
+  // Marked Target fire on the run (move: true: the upper body over the running legs); Piercing Arrow is drawn and held
+  // (draw: a press draws to full in 1.0 s and looses; held, it looses on the release, 0.3 s at the least, 2.5 s at the
+  // most, its power from 0.58 at the shortest to 1 at full); Volley and Thousand Arrows rain on the machine; Snare Trap is
+  // thrown and stays on the ground as a trap (sim.js traps); Disengage is a backflip with a shot at the nearest machine.
+  // Every arrow is an 'arrow' (Never Still counts the bow skills). Ids keep the old kit's, so its clips carry over
+  ranger: (() => {
+    const P = RA_POW, d = (v) => +(v * P).toFixed(3), q = (v) => d(v * RA_FILL);
+    return [
+      chain(K('r_quick', 'Quick Shot', { icon: 'arrow', slot: 1, lvl: 1, cost: 0, cd: 0, range: 28, move: true, hit: { t: 0.26, kind: 'proj', speed: 60 }, tags: ['shot', 'arrow', 'chain'], desc: 'A three-step chain of quick shots loosed on the run: two fast arrows, then Twin Arrows, two on the string at once. Costs nothing and builds Focus.' }), [
+        { fx: [['dmg', q(0.6)], ['brk', 2], ['res', 5]], win: { lock: 0.45 }, tier: 1 },
+        { fx: [['dmg', q(0.6)], ['brk', 2], ['res', 5]], win: { lock: 0.45 }, tier: 1 },
+        { hit: { t: 0.3, kind: 'proj', speed: 60, n: 2, gap: 0.08 }, fx: [['dmg', q(0.55)], ['brk', 4], ['res', 4]], win: { lock: 0.55 }, tier: 2, twin: true },
+      ]),
+      K('r_disengage', 'Disengage', { icon: 'backflip', slot: 2, lvl: 1, cost: 10, cd: 10, target: 'self', range: 0, nearest: 24, selfDone: true, hit: { t: 0.3, kind: 'proj', speed: 60 }, fx: [['back', 8], ['dmg', d(0.8)], ['brk', 8]], tags: ['arrow', 'shot', 'jump'], tier: 2, desc: 'Backflip 8 m away and loose an arrow at the nearest machine from the top of the flip.' }),
+      K('r_volley', 'Volley', { icon: 'rain', slot: 3, lvl: 3, cost: 20, cd: 8, range: 26, move: true, hit: { t: 0.7, kind: 'aoe', at: 'target', r: 5, n: 3, ts: [0.7, 0.86, 1.0] }, fx: [['dmg', d(0.6)], ['slow', 30, 3], ['brk', 6]], tags: ['arrow', 'rain'], tier: 2, desc: 'Loose a dozen arrows high: they come down on the machine in three waves over 5 m, slowing everything there 30%.' }),
+      K('r_trap', 'Snare Trap', { icon: 'trap', slot: 4, lvl: 5, cost: 15, cd: 12, range: 12, noTarget: true, selfDone: true, hit: { t: 0.5, kind: 'aoe', at: 'target', r: 1.8 }, fx: [['trap', 3, 20], ['dmg', d(0.4)], ['brk', 10]], tags: ['trap', 'throw'], tier: 2, desc: 'Throw a spring snare of rope and a wooden bar up to 12 m: it closes on the machine it lands by (Pinned 3 s), or lies armed for 20 s and closes on the first that steps in.' }),
+      K('r_pierce', 'Piercing Arrow', { icon: 'pierce', slot: 5, lvl: 8, cost: 20, cd: 7, range: 30, draw: { min: 0.3, full: 1.0, max: 2.5, lo: 0.58 }, hit: { t: 1.04, kind: 'line', r: 30 }, fx: [['dmg', d(2.4)], ['brk', 30]], tags: ['shot', 'arrow', 'pierce'], tier: 3, desc: 'Draw and hold: the arrow goes through every machine on a 30 m line. A press draws to full (2.4x) and looses; held, it looses when you let go (from 0.3 s, 1.4x) or at 2.5 s.' }),
+      K('r_mark', 'Marked Target', { icon: 'mark', slot: 6, lvl: 11, cost: 10, cd: 16, range: 35, move: true, hit: { t: 0.3, kind: 'proj', speed: 70 }, fx: [['debuff', 'vuln', 10, 12]], tags: ['shot', 'arrow', 'mark'], tier: 1, desc: 'A blunt arrow packed with chalk dye bursts on the plate: the machine is Marked for 12 s and takes 10% more from you.' }),
+      K('r_thousand', 'Thousand Arrows', { icon: 'storm', slot: 7, lvl: 14, cost: 40, cd: 40, range: 24, hit: { t: 0.6, kind: 'aoe', at: 'target', r: 8, n: 18, gap: 0.14 }, fx: [['dmg', d(0.2)], ['slow', 30, 2], ['brk', 3]], tags: ['arrow', 'rain'], tier: 2, desc: 'Loose arrow after arrow high over the machine: 3 s of rain, eighteen waves over 8 m.' }),
+    ];
+  })(),
 };
 // the dodge (feel.js DODGE does the move): it counts as an input, and always as landed (gate 'dodge')
-export const DODGES = { knight: { id: 'dodge', name: 'Shoulder Roll', icon: 'evade', tags: ['dash'] }, sandblade: { id: 'dodge', name: 'Sidestep', icon: 'evade', tags: ['dash'] }, warden: { id: 'dodge', name: 'Brace', icon: 'shield', tags: ['guard', 'shield'] } }; // (S9: the Warden does not move: he braces behind the tower shield)
+export const DODGES = { knight: { id: 'dodge', name: 'Shoulder Roll', icon: 'evade', tags: ['dash'] }, sandblade: { id: 'dodge', name: 'Sidestep', icon: 'evade', tags: ['dash'] }, warden: { id: 'dodge', name: 'Brace', icon: 'shield', tags: ['guard', 'shield'] }, deadeye: { id: 'dodge', name: 'Slide', icon: 'evade', tags: ['dash', 'slide'] }, ranger: { id: 'dodge', name: 'Tumble', icon: 'evade', tags: ['dash', 'roll'] } }; // (S11: the Ranger's roll keeps the arrow nocked: the Quick Shot chain goes on) // (S10: the Deadeye's knee slide; with Snap Shot held it fires out of it) // (S9: the Warden does not move: he braces behind the tower shield)
 export const PARRY = { res: 20, stagger: 1.2 }; // a parry: Valor back and the attacker Staggered
 
 export const CORE_BY_ID = {};

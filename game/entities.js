@@ -531,7 +531,7 @@ export class EntityView {
     // trail is stopped so it fades out instead of hanging in the air
     const cut = this.anim.busy && this.anim.action;
     if (this.ctx?.trails) { for (const k of Object.keys(this.ctx.trails)) this.ctx.trails[k].stop(); this.ctx.trails = {}; }
-    this.ctx = { char: this.char, animator: this.anim, cls: this.cls, yaw: this.ry, targetEnt: tgt, target: ground ? V(ground.x, 0, ground.z).setY(this.mgr.heightAt(ground.x, ground.z)) : null, held: this.ctx?.held || {}, local: this.id === this.mgr.localId, src: this, as, castFrom: this.pos?.clone?.() }; // (castFrom, S9: Earthbreaker's furrow starts where the charge began)
+    this.ctx = { char: this.char, animator: this.anim, cls: this.cls, yaw: this.ry, targetEnt: tgt, target: ground ? V(ground.x, 0, ground.z).setY(this.mgr.heightAt(ground.x, ground.z)) : null, held: this.ctx?.held || {}, local: this.id === this.mgr.localId, src: this, as, castFrom: this.pos?.clone?.(), aFrom: this.ctx?.castFrom || null }; // (aFrom, S11: where the last skill began; Highwire Volley rains on it) // (castFrom, S9: Earthbreaker's furrow starts where the charge began)
     const ctx = this.ctx;
     // a holstered Deadeye draws at once: the pistols come into the fists as the clip lifts them from the hips
     this.skillAt = performance.now();

@@ -635,6 +635,32 @@ export class FX {
   // a fusion's debris budget (combat_design.md 10.3, S5): from the fusion's first frame to a second after its clip, its
   // beats share at most 18 rocks (8 on phones), and the live rocks stay under the same cap: the oldest (an earlier skill's,
   // already lying on the ground) are taken out first. entities.js playSkill opens it for a fusion's clip
+  // ---- the Ranger's snares (S11): a wooden bar on two short pegs and a squared rope loop lying on the ground (never a round
+  // loop: from above it would read as a ring); it snaps the bar up when it closes, and bursts in splinters when an arrow
+  // or a vault springs it
+  trapPlace(id, x, z) {
+    const g = new THREE.Group(), wood = new THREE.MeshStandardMaterial({ color: '#7a5634', roughness: 0.9 }), rope = new THREE.MeshStandardMaterial({ color: '#b89a68', roughness: 1 });
+    const bar = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.07, 0.08), wood); bar.position.set(0, 0.06, -0.22); g.add(bar); g.userData.bar = bar;
+    for (const sx of [-0.4, 0.4]) { const pg = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.16, 0.05), wood); pg.position.set(sx, 0.08, -0.22); g.add(pg); }
+    for (const [w, d, px, pz] of [[0.62, 0.025, 0, -0.08], [0.58, 0.025, 0.02, 0.3], [0.025, 0.4, -0.3, 0.11], [0.025, 0.36, 0.31, 0.12]]) { const rp = new THREE.Mesh(new THREE.BoxGeometry(w, 0.025, d), rope); rp.position.set(px, 0.02, pz); g.add(rp); } // (four uneven sides that meet at the corners and never cross: a squared loop)
+    const at = V(x, 0, z); at.y = this.ground(at); g.position.copy(at); g.rotation.y = r(0, 6.28);
+    this.scene.add(g); (this._traps ||= new Map()).set(id, g);
+    this.emit('dust', at.clone().setY(at.y + 0.1), { n: 4, size: 0.6 }); this.sound('thud');
+  }
+  trapSnap(id) {
+    const g = this._traps?.get(id); if (!g) return;
+    const b = g.userData.bar; if (b) { b.rotation.x = -1.2; b.position.y = 0.3; }
+    this.emit('dust', g.position.clone().setY(g.position.y + 0.15), { n: 6, size: 0.7 }); this.emit('leaves', g.position.clone().setY(g.position.y + 0.3), { n: 6, color: '#a08a5a' }); this.sound('clang');
+  }
+  trapGone(id, burst) {
+    const g = this._traps?.get(id); if (!g) return;
+    this._traps.delete(id); this.scene.remove(g);
+    if (burst) { this.impact('splinters', g.position.clone(), { r: 2 }); this.emit('ringdust', g.position.clone(), { n: 12, r: 1.2, speed: 3 }); this.shake(0.25); }
+  }
+  // Ricochet Bodkin's path: a short streak from machine to machine (one bend at each, never crossing) and a chalk puff
+  bouncePath(pts) {
+    for (let i = 1; i < pts.length; i++) { const a = pts[i - 1].clone().setY(pts[i - 1].y + 1.1), b = pts[i].clone().setY(pts[i].y + 1.1); this.after(0.09 * (i - 1) + 0.01, null, () => { this.emit('sparks', a, { n: 4, dir: b.clone().sub(a).normalize(), color: '#fff0d0' }); this.projectile(arrowMesh(), a, b, { time: 0.09, align: true, onHit: (q) => this.impact('chalk', q) }); }); }
+  }
   fuseBudget(dur) { const cap = GFX.mobile ? 8 : 18; this._fb = { until: (this.clockT || 0) + dur + 1, left: cap, cap }; }
   rocks(pos, n = 10, power = 1) {
     const fb = this._fb && (this.clockT || 0) <= this._fb.until ? this._fb : null;
@@ -845,7 +871,7 @@ export class FX {
       if (spin) mesh.rotateZ(spin * dt);
       if (trail) {
         trailAcc += dt * 60;
-        while (trailAcc > 1) { trailAcc--; if (trail === 'ballsmoke') { if (rnd() < 0.5) this.alpha.spawn({ pos: p.clone(), vel: V(0, r(0.1, 0.4), 0), age: 0, life: r(0.35, 0.6), size: r(0.1, 0.18), tex: TEX.puff, alpha: 0.3, grow: 1.6, rot: r(0, 6), color: col('#9a948a') }); } else if (trail === 'smoke') this.emit('smoke', p, { n: 1, size: 0.3, alpha: 0.35, lifeK: 0.4 }); else if (trail === 'fire') { this.emit('flame', p, { n: 1, size: 0.35, speed: 0.2 }); } else if (trail === 'motes') this.emit('motes', p, { n: 1, color: mesh.userData.trailColor || '#b8ff9a', r: 0.05 }); else if (trail === 'sparkle') this.add.spawn({ pos: p.clone(), vel: V(), age: 0, life: 0.25, size: 0.08, tex: TEX.glow, alpha: 0.7, rot: 0, color: col(mesh.userData.trailColor || '#ffffff') }); }
+        while (trailAcc > 1) { trailAcc--; if (trail === 'ballsmoke') { if (rnd() < 0.5) this.alpha.spawn({ pos: p.clone(), vel: V(0, r(0.1, 0.4), 0), age: 0, life: r(0.35, 0.6), size: r(0.1, 0.18), tex: TEX.puff, alpha: 0.3, grow: 1.6, rot: r(0, 6), color: col('#9a948a') }); } else if (trail === 'smoke') this.emit('smoke', p, { n: 1, size: 0.3, alpha: 0.35, lifeK: 0.4 }); else if (trail === 'fire') { this.emit('flame', p, { n: 1, size: 0.35, speed: 0.2 }); } else if (trail === 'motes') this.emit('motes', p, { n: 1, color: mesh.userData.trailColor || '#b8ff9a', r: 0.05 }); else if (trail === 'streak') this.alpha.spawn({ pos: p.clone(), vel: V(), age: 0, life: 0.14, size: 0.06, tex: TEX.puff, alpha: 0.45, rot: 0, color: col('#e6e2d6') }); /* (S11: a thin pale streak behind an arrow, no glow) */ else if (trail === 'sparkle') this.add.spawn({ pos: p.clone(), vel: V(), age: 0, life: 0.25, size: 0.08, tex: TEX.glow, alpha: 0.7, rot: 0, color: col(mesh.userData.trailColor || '#ffffff') }); }
       }
       prev.copy(p);
     }, () => { this.scene.remove(mesh); onHit?.(b.clone()); });
@@ -1015,6 +1041,14 @@ export class FX {
       case 'pin': this.hitCore(up, 0.5, '#fff0d0'); this.emit('dust', at, { n: 3, size: 0.55 }); this.emit('sparks', up, { n: 5 }); this.emit('grit', up, { n: 4 }); break;
       case 'seed': this.emit('leaves', up, { n: 16 }); this.emit('dust', at, { n: 10, color: '#8a6a3a' }); this.emit('drops', at, { n: 10, color: '#6a9a2a' }); this.sound('thud'); break;
       // ---- the Deadeye's shot: a ragged spray of sparks thrown off one side of the plate, a grey puff, grit (no light)
+      // (S10 Plate Splitter) the rivet line splits: grey plate chips and a few rocks of plate thrown off, sparks off the seam
+      case 'plates': {
+        this.hitCore(up, 1.0, '#fff0d0');
+        this.emit('fan', up, { n: 12, dir, color: '#ffd890', width: 2.4, speed: 0.9 });
+        this.emit('shards', up, { n: 12, color: '#8e8a84' });
+        this.rocks(up.clone().setY(g + 0.6), 6, 0.6);
+        this.sound('clang'); break;
+      }
       case 'ball': case 'hotball': case 'burn': {
         const side = V(-dir.z, 0, dir.x).multiplyScalar(rnd() < 0.5 ? 1 : -1);
         this.emit('fan', up, { n: o.big ? 14 : 8, dir: dir.clone().multiplyScalar(0.4).add(side), color: '#ffd890', width: 2.2, speed: 0.8 });
@@ -1476,15 +1510,33 @@ export class FX {
         });
         break;
       }
+      // (S11) a line of rain down the ground ahead (Ridgeline Salvo): the arrows land one stretch after another away from the
+      // archer, all at the same slant (parallel, never fanned), a puff of dust at each
+      case 'rainline': {
+        const f0 = feet(), dir = (ctx.targetEnt?.pos ? ctx.targetEnt.pos.clone().sub(f0).setY(0) : fwd.clone().setY(0)).normalize(), side = V(dir.z, 0, -dir.x);
+        const n = ev.n || 14, len = ev.len || 14, dur = ev.dur || 0.4, slant = V(0.7, 14, 0.4);
+        let spawned = 0;
+        this.after(dur, (k) => {
+          while (spawned < Math.floor(k * n)) {
+            const i = spawned++, land = f0.clone().addScaledVector(dir, 1.5 + (len - 1.5) * (i / Math.max(1, n - 1)) + r(-0.4, 0.4)).addScaledVector(side, r(-0.7, 0.7) * (ev.w || 1));
+            land.y = this.ground(land);
+            this.projectile(arrowMesh(), land.clone().add(slant), land, { time: 0.35, onHit: (q) => { this.emit('dust', q.clone().setY(q.y + 0.1), { n: 3, size: 0.65 }); if (i % 6 === 0) this.emit('grit', q.clone().setY(q.y + 0.2), { n: 1 }); } });
+          }
+        });
+        break;
+      }
       case 'rain': {
-        const c = tgt(); const R = ev.r || 5, n = ev.n || 20, dur = ev.dur || 0.6;
+        // (S11) at 'castA': on the spot the last skill began (Highwire Volley rains on where Disengage left the ground);
+        // stitch: the arrows land along a short uneven line through the centre instead of a scatter round it
+        const c = ev.at === 'castA' && ctx.aFrom ? ctx.aFrom.clone() : tgt(); const R = ev.r || 5, n = ev.n || 20, dur = ev.dur || 0.6;
+        const sd = fwd.clone().setY(0).normalize();
         let spawned = 0;
         this.after(dur, (k) => {
           const want = Math.floor(k * n);
           while (spawned < want) {
             spawned++;
             const a = r(0, 6.28), d = Math.sqrt(rnd()) * R;
-            const land = c.clone().add(V(Math.cos(a) * d, 0, Math.sin(a) * d)); land.y = this.ground(land);
+            const land = ev.stitch ? c.clone().addScaledVector(sd, r(-R, R)).add(V(r(-0.6, 0.6), 0, r(-0.6, 0.6))) : c.clone().add(V(Math.cos(a) * d, 0, Math.sin(a) * d)); land.y = this.ground(land);
             const from = land.clone().add(V(r(-1, 1), 14, r(-1, 1)));
             const m = arrowMesh();
             this.projectile(m, from, land, { time: 0.35, onHit: (p) => { this.emit('dust', p.clone().setY(p.y + 0.1), { n: 2, size: 0.6 }); const stuck = arrowMesh(); stuck.position.copy(p); stuck.rotation.set(r(-0.3, 0.3) + Math.PI, 0, r(-0.3, 0.3)); stuck.position.y += 0.35; this.scene.add(stuck); this.after(2.5, null, () => this.scene.remove(stuck)); } });
@@ -1551,6 +1603,28 @@ export class FX {
         if (ev.ground) { const f = feet(); this.emit('ringdust', f, { n: 14, r: 0.5, speed: 3 }); this.emit('steam', f.clone().add(V(0, 0.3, 0)), { n: 4, dir: V(0, 1, 0), size: 0.9, alpha: 0.45, speed: 1.4 }); this.emit('grit', f.clone().add(V(0, 0.2, 0)), { n: 6 }); }
         break;
       }
+      // ---- the Deadeye (S10): brass, gravel and powder smoke only
+      // spent brass flicked out of the pan side of a pistol: two small tumbling flecks that fall and bounce once
+      case 'brass': {
+        const side = ev.side || 'R', { p, d } = this.muzzlePoint(char, side), y0 = this.ground(p);
+        const sv = new THREE.Vector3().crossVectors(d, V(0, 1, 0)); if (sv.lengthSq() < 1e-4) sv.set(1, 0, 0); sv.normalize().multiplyScalar(side === 'L' ? -1 : 1);
+        for (let i = 0; i < 2; i++) this.alpha.spawn({ pos: p.clone().addScaledVector(d, -0.22), vel: sv.clone().multiplyScalar(r(1.0, 2.2)).add(V(r(-0.3, 0.3), r(1.6, 2.6), r(-0.3, 0.3))), age: 0, life: r(0.7, 1.0), size: r(0.03, 0.05), tex: TEX.shard, grav: 14, spin: r(-14, 14), alpha: 1, rot: r(0, 6), color: col('#c8a050'), floor: y0 + 0.02, bounce: 0.35 });
+        break;
+      }
+      // gravel thrown off the ground at the feet, back along the facing (or forward): low and flat, an uneven spray, no rays
+      case 'gravelSpray': {
+        const f = feet(), y0 = this.ground(f), d = fwd.clone().multiplyScalar(ev.back ? -1 : 1);
+        if (ev.side) d.applyAxisAngle(V(0, 1, 0), 0.45 * ev.side);
+        const sv = V(-d.z, 0, d.x);
+        for (let i = 0; i < (ev.n || 8); i++) this.alpha.spawn({ pos: f.clone().add(V(r(-0.25, 0.25), 0.12, r(-0.25, 0.25))), vel: d.clone().multiplyScalar(r(2, 5)).addScaledVector(sv, r(-1.4, 1.4)).add(V(0, r(0.8, 2.6), 0)), age: 0, life: r(0.5, 0.9), size: r(0.04, 0.09), tex: TEX.shard, grav: 16, spin: r(-14, 14), alpha: 1, rot: r(0, 6), color: col(rnd() < 0.5 ? '#7a6e60' : '#9a8c76'), floor: y0 + 0.02, bounce: 0.3 });
+        for (let i = 0; i < 3; i++) this.emit('dust', f.clone().addScaledVector(d, 0.4 + i * 0.5).setY(y0 + 0.15), { n: 1, size: 0.8, alpha: 0.5, speed: 0.6 });
+        this.sound('scrape');
+        break;
+      }
+      // a streak of powder smoke left hanging in the air along a shot fired from above (Recoil Vault's apex shots)
+      case 'airSmoke': { const { p, d } = this.muzzlePoint(char, ev.side || 'R'); for (let i = 0; i < 5; i++) this.emit('smoke', p.clone().addScaledVector(d, 0.2 + i * 0.32), { n: 1, size: 0.32, alpha: 0.42, speed: 0.12, lifeK: 0.6, color: '#a8a29a' }); break; }
+      // the machine thrown back trails powder smoke (Point Blank)
+      case 'smokeTrail': { const t = ctx.targetEnt; if (!t) break; let acc = 0; this.after(ev.dur || 0.6, (k, tt, dt) => { acc += dt * 28; while (acc > 1) { acc--; this.emit('smoke', t.pos.clone().add(V(r(-0.3, 0.3), 1.0 + r(0, 0.6), r(-0.3, 0.3))), { n: 1, size: 0.45, alpha: 0.45, speed: 0.25, lifeK: 0.5, color: '#8a847c' }); } }); break; }
       // powder poured from the flask into a pistol's muzzle (a thin grey trickle), or the dust of a torn cartridge
       case 'powder': {
         let acc = 0;
@@ -1657,7 +1731,7 @@ export class FX {
       const spin = ev.spin || 0;
       const arc = ev.arc || 0;
       const align = fast || ev.kind === 'dart';
-      const trail = ev.kind === 'firearrow' ? 'fire' : fast ? 'sparkle' : ev.kind === 'salve' ? 'motes' : ev.kind === 'flask' ? 'smoke' : ball ? 'ballsmoke' : ev.kind === 'canister' ? 'smoke' : null;
+      const trail = ev.trail !== undefined ? ev.trail : ev.kind === 'firearrow' ? 'fire' : fast ? 'sparkle' : ev.kind === 'salve' ? 'motes' : ev.kind === 'flask' ? 'smoke' : ball ? 'ballsmoke' : ev.kind === 'canister' ? 'smoke' : null;
       this.projectile(mesh, from, dest, {
         time: ev.time ?? (ev.up ? 0.45 : ev.pierce ? (ball ? 0.42 : 0.55) : time * (arc ? 1.25 : 1)), arc, spin, align, trail,
         onHit: (p) => {

@@ -177,6 +177,7 @@ export async function startGame() {
     nodesList() { return [...game.nodes.values()]; },
     setTarget(id) { game.target = id; game.send({ t: 'target', id }); },
     useSkill: (id, o) => useSkill(id, 0, o || {}),
+    releaseDraw: () => releaseDraw(), // (S11: a touch coming off a held Piercing Arrow)
   };
   // Tidewater Sound's tide (waterAt, the sea sheet, the ship) runs on the server's clock, the same for every player
   setTideClock(() => game.serverTime());
@@ -420,6 +421,8 @@ export async function startGame() {
         // already played locally. S2 prediction fallback: when the server cast something else from the same press (it fused
         // where the client predicted plain, or refused a predicted fusion), the clip swaps from the same frame; both start
         // from A's recovery pose, so the cut is clean
+        // (S10) the Snap Shot the Deadeye fires out of a Slide: the slide clip (dodgef_) already shows it, so only the chain moves on
+        if (ev.sf) { if (ev.id === me) game.chain = { id: ev.skill, step: ev.step || 1, at: game.serverTime() }; break; }
         if (ev.id === me) {
           const pr = game.pred, now = game.serverTime();
           if (pr && (ev.base || ev.skill) === pr.base && ev.skill !== pr.as && now - pr.at < 1.5 && local) {
@@ -429,7 +432,7 @@ export async function startGame() {
           break;
         }
         const v = entities.get(ev.id);
-        if (v) { if (ev.target) { const t = entities.get(ev.target); if (t) v.ry = Math.atan2(t.pos.x - v.pos.x, t.pos.z - v.pos.z); } v.playSkill(clipOf(ev.skill, ev.step, ev.fc), ev.target ? entities.get(ev.target) : null, ev.gx != null ? { x: ev.gx, z: ev.gz } : null, fx, ev.haste); }
+        if (v) { if (ev.target) { const t = entities.get(ev.target); if (t) v.ry = Math.atan2(t.pos.x - v.pos.x, t.pos.z - v.pos.z); } v.playSkill(clipOf(ev.skill, ev.step, ev.fc), ev.target ? entities.get(ev.target) : null, ev.gx != null ? { x: ev.gx, z: ev.gz } : null, fx, ev.haste); if (ev.hd) { const k = skillOf(ev.skill); if (k?.draw) { holdDraw(v, k); if (v.drawHold) v.drawHold.remote = true; } } } // (hd, S11: another Ranger's held draw)
         break;
       }
       case 'buff': ui.unitBuff(ev); if (ev.debuff && ev.id?.[0] === 'm') fx.coat?.(entities.get(ev.id), ev.name, ev.dur); break; // (S7: a coat's look on the machine)
@@ -483,7 +486,21 @@ export async function startGame() {
       case 'wall': fx.wallSlam?.(ev); break;
       case 'knock': { const v = entities.get(ev.id); if (v?.def?.humanoid && ev.d >= 2.5) fx.foeClip?.(v, 'down'); if (v && !v.dead && fx.after) { let acc = 0; fx.after(0.45, (k, t, dt) => { acc += dt * 28; while (acc > 1) { acc--; fx.emit('dust', v.pos.clone().setY(v.pos.y + 0.15), { n: 1, spread: 0.35, size: 0.75, alpha: 0.5 }); } }); fx.sound('scrape'); } }
         break;
-      case 'dodge': if (ev.id !== me) { const v = entities.get(ev.id); if (v) { if (v.cls !== 'warden') v.ry = Math.atan2(ev.dx, ev.dz); v.playSkill((ev.s ? 'dodges_' : 'dodge_') + (v.cls || 'knight'), null, null, fx); } } break;
+      case 'dodge': if (ev.id !== me) { const v = entities.get(ev.id); if (v) { if (v.cls !== 'warden') v.ry = Math.atan2(ev.dx, ev.dz); v.playSkill((ev.s ? 'dodges_' : ev.f ? 'dodgef_' : 'dodge_') + (v.cls || 'knight'), ev.f && ev.tg ? entities.get(ev.tg) : null, null, fx); } } break; // (S10 f: a Deadeye's slide with Snap Shot held fires out of it)
+      // the Deadeye (S10): a dry click (Six Chambers, both cylinders empty), a perfect reload's hot loads, a reload, Bank
+      // Shot's skip from one machine to the next (a spark streak), Smoke Charge's bank of powder smoke where the slide began
+      case 'dry': if (ev.id === me || entities.get(ev.id)) fx.sound('click'); break;
+      case 'hotload': { const v = ev.id === me ? local : entities.get(ev.id); if (v) { fx.emit('embers', v.pos.clone().setY(v.pos.y + 1.1), { n: 10 }); fx.sound('click'); } if (ev.id === me) ui.combat?.fusionToast?.('Hot loads', false); break; }
+      case 'reload': if (ev.id === me || entities.get(ev.id)) fx.sound('click'); break;
+      case 'bank': { const a = entities.get(ev.from), b = entities.get(ev.to); if (a && b) { const pa = a.pos.clone().setY(a.pos.y + 1), pb = b.pos.clone().setY(b.pos.y + 1), d = pb.clone().sub(pa).normalize(); fx.emit('sparks', pa, { n: 6, dir: d, color: '#ffd890' }); fx.emit('sparks', pb, { n: 5, color: '#ffe0a8' }); fx.sound('hit'); } break; }
+      // the Ranger (S11): his snares on the ground (placed, closing, gone or burst by a trap fusion), Ricochet Bodkin's path from
+      // machine to machine, a held draw let go
+      case 'trap': fx.trapPlace?.(ev.tid, ev.x, ev.z); break;
+      case 'trapsnap': fx.trapSnap?.(ev.tid); break;
+      case 'trapgone': fx.trapGone?.(ev.tid, ev.burst); break;
+      case 'bounce': { const pts = (ev.path || []).map((id) => entities.get(id)?.pos).filter(Boolean); if (pts.length > 1) fx.bouncePath?.(pts); break; }
+      case 'loose': { const v = ev.id === me ? local : entities.get(ev.id); if (v?.drawHold) loose(v.drawHold); break; }
+      case 'smokebank': fx.cloud('gunsmoke', new THREE.Vector3(ev.x, fx.ground?.(new THREE.Vector3(ev.x, 0, ev.z)) ?? 0, ev.z), ev.r || 3, 3); break;
       case 'pdodge': if (ev.id === me && local) {
         // a perfect dodge: the world holds for 0.06 s around you, a puff of dust at the feet, a crack, and Opening
         const near = [...entities.views.values()].filter((v) => v.pos.distanceTo(local.pos) < 30);
@@ -642,16 +659,17 @@ export async function startGame() {
     if (pin >= 0) { if (!e.repeat) ui.combat?.pin(pin); return; }
     const plainK = SETTINGS.fuseAlt ? !e.altKey : e.altKey; // (Alt casts B plain; the option "fuse only with Alt" turns it round)
     const sx = act && act.match(/^skill(\d+)$/);
-    if (sx) { const sk = kitOf(game.cls)[Number(sx[1]) - 1]; if (sk) useSkill(sk.id, 0, { plain: plainK }); return; }
+    if (sx) { const sk = kitOf(game.cls)[Number(sx[1]) - 1]; if (sk) { if (sk.draw && !e.repeat) game.holdKey = e.code; if (!e.repeat || !sk.draw) useSkill(sk.id, 0, { plain: plainK, hold: !!sk.draw }); } return; } // (S11: a draw is held while the key is down)
     const m = e.code.match(/^Digit(\d)$/);
     if (m) {
       const idx = (Number(m[1]) + 9) % 10 + (e.shiftKey ? 10 : 0);
       const sk = kitOf(game.cls)[idx];
-      if (sk) useSkill(sk.id, 0, { plain: plainK }); // (Alt: B plain on purpose, never a fusion)
+      if (sk && sk.draw) { if (!e.repeat) { game.holdKey = e.code; useSkill(sk.id, 0, { plain: plainK, hold: true }); } } else if (sk) useSkill(sk.id, 0, { plain: plainK }); // (Alt: B plain on purpose, never a fusion; S11: a draw is held while the key is down)
     }
   });
   addEventListener('keyup', (e) => {
     keys.delete(e.code);
+    if (game.holdKey && game.holdKey === e.code) releaseDraw();
     const st = game.shiftTap;
     if (st && actionFor(e.code) === 'dodge') { game.shiftTap = null; if (!st.used && performance.now() - st.at < 350 && entered && local && !['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName)) game.dodge(); }
   });
@@ -800,6 +818,39 @@ export async function startGame() {
   // o.plain: Alt held (B plain on purpose). S2 fusions (shared/fusions.js): B pressed in the link A opened plays the fusion
   // at once (prediction) and tells the server the chain it cast (chain: A, accepted up to 0.15 s late); the server's cast
   // event swaps the clip if it decided otherwise
+  // (S11) the Ranger's held draw (Piercing Arrow): the clip runs to full draw (CHOREO drawHold.at) and waits there while the
+  // key or the touch is held; letting go after 0.25 s looses at once (the clip jumps to its release), a tap draws to full and
+  // looses by itself, as the server does (sim.js on_release). Other heroes' held draws follow the server's 'loose'
+  function holdDraw(v, sk) {
+    const def = CHOREO[clipOf(sk.id)], act = v.anim?.action;
+    if (!def?.drawHold || !act) return;
+    (game.drawHolds ||= new Set()).add(v.drawHold = { v, act, def, t0: performance.now() / 1000, max: sk.draw.max || 2.5, released: false });
+  }
+  function loose(dh) {
+    if (!dh || dh.released) return;
+    dh.released = true;
+    const act = dh.act, held = performance.now() / 1000 - dh.t0;
+    if (act !== dh.v.anim?.action) return;
+    act.speed = dh.speed || act.speed || 1;
+    if (held >= 0.25 || dh.remote) { const rt = dh.def.drawHold.rel * dh.def.dur - 0.06; if (act.time < rt) act.time = rt; }
+  }
+  function releaseDraw() {
+    game.holdKey = null;
+    const dh = local?.drawHold;
+    if (!dh || dh.released) return;
+    game.send({ t: 'release' });
+    loose(dh);
+  }
+  function stepDrawHolds() {
+    for (const dh of game.drawHolds || []) {
+      const act = dh.act;
+      if (act !== dh.v.anim?.action || (dh.released && act.speed)) { game.drawHolds.delete(dh); if (dh.v.drawHold === dh) dh.v.drawHold = null; continue; }
+      if (dh.released) continue;
+      if (performance.now() / 1000 - dh.t0 > dh.max) { loose(dh); continue; }
+      const at = dh.def.drawHold.at * dh.def.dur;
+      if (act.time >= at && act.speed) { dh.speed = act.speed; act.speed = 0; act.time = at; }
+    }
+  }
   function useSkill(id, qUntil, o = {}) {
     const y = game.you, base = (y?.web && ui.eff?.[id]) || skillOf(id); // (S5: the hero's compiled kit with the Web on it, as the server reads p.eff: High Arc's and Sightline's range, Short Hop's cooldown)
     if (!base || base.from || !y || !local || local.dead) return;
@@ -880,8 +931,9 @@ export async function startGame() {
     const hitEnd = (sk.hit?.t || 0) + Math.max(0, (sk.hit?.n || 1) - 1) * (sk.hit?.gap || 0);
     game.lastCast = { id: sk.id, sk, t0: now, at: now + (sk.hit?.t || 0), end: now + hitEnd, lock: fe.win.lock, tgt: tgtId, done: !KIT_V2[game.cls] || !!sk.from };
     game.pred = { base: id, as: sk.id, at: now };
-    game.send({ t: 'cast', skill: id, chain: fu ? fu.L.from : undefined, plain: o.plain || undefined, target: tgtId, gx: ground?.x, gz: ground?.z });
+    game.send({ t: 'cast', skill: id, chain: fu ? fu.L.from : undefined, plain: o.plain || undefined, target: tgtId, gx: ground?.x, gz: ground?.z, hold: sk.draw && o.hold && !fu ? 1 : undefined });
     local.playSkill(clipOf(sk.id, sk.step, sk.formChoreo), tgtV && tgtV !== local ? tgtV : tgtV === local ? local : null, ground, fx);
+    if (sk.draw && o.hold && !fu) holdDraw(local, sk); else game.holdKey = null; // (S11: the arrow waits on the string at full draw until the key comes up)
     if (sk.cast) game.casting = { name: sk.name, cast: sk.cast, t0: performance.now() / 1000 };
     moveTo = null;
     qwalk.stop('manual'); // (a skill means a fight, or something you chose to do here)
@@ -954,8 +1006,11 @@ export async function startGame() {
     if (D.brace) dir = null; // (S9: the Warden braces where he stands, facing the way he faces)
     if (dir) local.ry = Math.atan2(dir.x, dir.z);
     const back = !dir, w = dir || V(-Math.sin(local.ry), 0, -Math.cos(local.ry));
-    game.send({ t: 'dodge', dx: +w.x.toFixed(3), dz: +w.z.toFixed(3) });
-    local.playSkill((D.shieldStep ? 'dodges_' : back || D.brace ? 'dodgeb_' : 'dodge_') + game.cls, null, null, fx); // (S9 Brace: in place, both the same clip)
+    // (S10) the Deadeye's Slide with Snap Shot held (its key or the wheel's first button): a shot fired out of the slide
+    const tgF = game.target && entities.get(game.target);
+    const fire = !!D.slide && !back && !!tgF && !tgF.dead && (keys.has(keyFor('skill1')) || keys.has('Digit1') || !!touch?.held?.(0));
+    game.send({ t: 'dodge', dx: +w.x.toFixed(3), dz: +w.z.toFixed(3), fire: fire ? 1 : undefined, target: fire ? game.target : undefined });
+    local.playSkill((D.shieldStep ? 'dodges_' : back || D.brace ? 'dodgeb_' : fire ? 'dodgef_' : 'dodge_') + game.cls, fire ? tgF : null, null, fx); // (S9 Brace: in place, both the same clip)
     game.cutT = now + (D.shieldStep || D.brace ? D.block : DODGE.evade); // (skills cut in once the evade is over; the Warden's Brace once its block is)
     game.chain = null; game.lastCast = null; if (KIT_V2[game.cls]) game.plink = { from: 'dodge', at: now, until: now + D.dur + LINK.win + (y.web ? ui.tmods?.linkWin || 0 : 0), landed: true, done: true, step: 0, tgt: null, parried: false, local: true }; // (S2: the dodge is an input)
     game.dodgeAt = now;
@@ -997,6 +1052,7 @@ export async function startGame() {
     if (game.qDodge && !dead) { const q = game.qDodge; game.qDodge = null; dodge(q.dir, q.until); }
     if (local && !dead) predictLink(game.serverTime()); // (S2: the link from this client's own contact)
     if (game.qSkill && !dead) { const q = game.qSkill; game.qSkill = null; useSkill(q.id, q.until, q.o); }
+    if (game.drawHolds?.size) stepDrawHolds(); // (S11: held draws wait at full draw)
     // the stick flick (phones, option "dodgeFlick", on by default): out past 0.75 of the radius within 0.12 s of the push
     // and let go within 0.3 s dodges that way; an ordinary push to run is held, so it never dodges
     if (touch?.stick && SETTINGS.dodgeFlick !== false && !dead) {
