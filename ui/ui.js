@@ -79,6 +79,7 @@ import { ARMORY, ARMORY_SRC, ARMORY_TOTAL, ARMORY_ROLLED, armoryBest } from '/su
 import { VENDORS } from '/sunmere-play/shared/data.js';
 import { HAUL_ROAD, ROPEWAY } from '/sunmere-play/shared/data.js';
 import { IS_TOUCH, IS_APP, IS_WEB, IS_MOBILE, exitGame } from '../engine/platform.js';
+import { updateBlocked, showUpdatePanel } from '../game/update.js';
 // phones and tablets: the full-screen sheet styles (client/mobile-panels.css, all scoped to html.touch / html.phone), loaded
 // after hud.css unless index.html already links them; and the mobile nameplate rules (ui/mobileplates.js), loaded when present
 if (IS_TOUCH && typeof document !== 'undefined' && !document.querySelector('link[href*="mobile-panels.css"]')) {
@@ -269,7 +270,9 @@ export class UI {
       if (!test) try { localStorage.setItem('sunmere:last', JSON.stringify({ name, cls, cv })); } catch {} // test runs never overwrite your last character
       const finish = () => { w.classList.add('out'); setTimeout(() => w.remove(), 500); };
       // not signed in, not online: straight in, exactly as before
-      if (!online && !acct) { finish(); onEnter(name, cls, cv); return; }
+      // an app older than the oldest allowed version may not play at all, online or offline (client/game/update.js)
+      if (updateBlocked()) { showUpdatePanel(); err('This version is out of date. Download the update to play.'); return; }
+      if (!online && !acct) { finish(); onEnter(name, cls, cv).catch((e) => console.warn('[login]', e?.message || e)); return; }
       err('');
       const tok = acct ? await AUTH.token().catch(() => null) : null;
       // (?test=1&noauth=1: a test run joins a local test world that has sign-in off, without Google)

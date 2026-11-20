@@ -2719,3 +2719,55 @@ html.phone .hud .minimap .on-badge { font-size: 20px; line-height: 26px; padding
 .leave-dg:hover { background: rgba(70, 30, 14, 0.92); }
 .leave-dg.arm { color: #fff; background: rgba(120, 40, 20, 0.95); border-color: #ff8a50; }
 .leave-dg.hidden { display: none; }
+
+/* ======================================================================
+   UPDATE CHECK (client/game/update.js): Update required (blocks play) and the New version note
+   ====================================================================== */
+.upd-shade {
+  position: fixed; inset: 0; z-index: 100000; display: flex; align-items: center; justify-content: center;
+  padding: 16px; box-sizing: border-box; overflow-y: auto;
+  background: radial-gradient(ellipse at center, rgba(16,25,32,.82), rgba(4,7,10,.96));
+  backdrop-filter: blur(3px); font-family: var(--font-body); pointer-events: auto;
+}
+.upd-panel {
+  position: relative; width: min(470px, 100%); box-sizing: border-box; margin: auto; padding: 26px 28px 20px; text-align: center;
+  background: var(--grain), var(--metal); color: var(--metal-text);
+  border: 2px solid var(--brass-edge); border-radius: 2px;
+  box-shadow: 0 16px 44px #000c, inset 0 1px 0 #e0eff047, inset 0 -2px 0 #000b, inset 0 0 0 4px var(--frame), inset 0 0 0 5px var(--engraving);
+}
+.upd-panel::before, .upd-panel::after {
+  content: ''; position: absolute; width: 13px; height: 13px; border: solid var(--brass); pointer-events: none;
+}
+.upd-panel::before { top: -2px; left: -2px; border-width: 2px 0 0 2px; }
+.upd-panel::after { bottom: -2px; right: -2px; border-width: 0 2px 2px 0; }
+.upd-kicker { font: 700 13px var(--font-head); letter-spacing: 6px; text-transform: uppercase; color: #b7d4d4; }
+.upd-title { margin-top: 4px; font: 800 34px var(--font-head); letter-spacing: 2px; color: var(--brass-light); text-shadow: 0 1px 0 #fff8, 0 3px 0 #685637, 0 6px 18px #000; }
+.upd-rule { height: 3px; margin: 12px auto 14px; width: 80%; background: linear-gradient(90deg, transparent, var(--brass-edge) 18%, var(--teal) 50%, var(--brass-edge) 82%, transparent); }
+.upd-sub { margin: 0 0 10px; font-size: 16px; line-height: 1.4; }
+.upd-notes { margin: 0 0 12px; padding: 8px 10px; font-size: 13.5px; line-height: 1.4; color: #c9d6d6; text-align: left; background: rgba(6,12,16,.55); border: 1px solid #3b4b52; border-radius: 2px; }
+.upd-go {
+  display: block; width: 100%; margin: 6px 0 12px; padding: 13px 10px; cursor: pointer;
+  font: 800 18px var(--font-head); letter-spacing: 2px; color: #1a252b; text-shadow: 0 1px 0 #fff4;
+  background: linear-gradient(180deg, #f4d991, #cfac60 48%, #9e7b3d); border: 1px solid var(--brass-light); border-radius: 2px;
+  box-shadow: inset 0 1px 0 #fff9, inset 0 0 0 2px #6b552f80, inset 0 -3px 0 #72572e, 0 4px 10px #0009;
+}
+.upd-go:hover { border-color: var(--teal); box-shadow: inset 0 1px 0 #fff9, inset 0 -3px 0 #72572e, 0 0 12px #e8c26a55; }
+.upd-go:active { transform: translateY(1px); }
+.upd-how { margin: 0; font-size: 13px; line-height: 1.4; color: #b6c7ca; }
+.upd-status { margin: 8px 0 0; min-height: 1em; font-size: 13px; color: var(--teal); }
+.upd-note {
+  position: fixed; top: 12px; left: 50%; transform: translateX(-50%); z-index: 99999; max-width: calc(100vw - 32px); box-sizing: border-box;
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: center; padding: 8px 12px;
+  font: 14px var(--font-body); color: var(--metal-text); background: var(--grain), var(--metal);
+  border: 1px solid var(--brass-edge); border-radius: 2px; box-shadow: 0 8px 20px #000a, inset 0 0 0 3px var(--frame), inset 0 0 0 4px var(--engraving);
+}
+.upd-note b { font: 700 14px var(--font-head); color: var(--brass-light); letter-spacing: 1px; }
+.upd-note button { cursor: pointer; padding: 5px 12px; font: 700 13px var(--font-head); border-radius: 2px; border: 1px solid var(--brass-edge); color: var(--brass-light); background: linear-gradient(#394650, #15212b); }
+.upd-note .upd-dl { color: #1a252b; background: linear-gradient(180deg, #f4d991, #cfac60 48%, #9e7b3d); border-color: var(--brass-light); }
+/* phones held sideways: a shorter panel that still fits without scrolling */
+html.mobile .upd-panel { padding: 14px 20px 12px; }
+html.mobile .upd-title { font-size: 26px; }
+html.mobile .upd-rule { margin: 8px auto 10px; }
+html.mobile .upd-sub { font-size: 15px; margin-bottom: 8px; }
+html.mobile .upd-notes { margin-bottom: 8px; font-size: 13px; }
+html.mobile .upd-go { min-height: 48px; margin: 4px 0 8px; }

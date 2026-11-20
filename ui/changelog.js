@@ -1,6 +1,12 @@
 // What's new: shown once after an update (newest first). Bump `v` on the first entry whenever something is added.
 export const CHANGELOG = [
   {
+    v: 144, date: '20 November 2026', title: 'Always Up to Date',
+    items: [
+      ['Update check', 'The phone and Windows apps now check for a new version when they start. If yours is too old to play online, the game tells you and gives you a Download update button; on Android, tap it, then Install.'],
+    ],
+  },
+  {
     v: 143, date: '20 November 2026', title: 'Who Plays',
     items: [
       ['All players', 'The Players window (O) has a new All players tab: everyone who has played on this server, online first, with their level, class and when they were last seen. Whisper them or add them as a friend even when they are away.'],

@@ -11,6 +11,7 @@ import { setTideClock, tidewaterShoreDist, tideLevel, TIDEWATER } from '/sunmere
 import { RAINWARD, rainwardRiverDist, riverZ } from '/sunmere-play/shared/rainward.js';
 import { buildSteamship } from '../assets/steamship.js';
 import { dungeonAt, dungeonSight } from '/sunmere-play/shared/dungeons.js';
+import { CLIENT_VERSION, updateBlocked, showUpdatePanel } from './update.js';
 import { houseAt, houseCrosses } from '/sunmere-play/shared/houses.js';
 import { sweepMove } from '/sunmere-play/shared/sweep.js';
 import { skillFeel, dodgeFor, dodgeWith, BUFFER, DODGE, CUT_KINDS } from '/sunmere-play/shared/feel.js';
@@ -220,6 +221,8 @@ export async function startGame() {
   // rejects (the login screen stays, with the reason) when the server cannot be reached or turns the character away.
   async function enterWorld(name, cls, cv = 0, opt = {}) {
     game.cls = cls;
+    // an app older than the oldest allowed version may not play at all (client/game/update.js)
+    if (updateBlocked()) { showUpdatePanel(); throw new Error('This version is out of date. Download the update to play.'); }
     const params = new URLSearchParams(location.search);
     const net = await connect(onMsg, { url: opt.url });
     if (!net) throw new Error('Could not reach the online server. Check the address, or play offline.');
@@ -227,7 +230,7 @@ export async function startGame() {
     const ready = new Promise((res, rej) => { pendingJoin = { res, rej }; });
     const to = setTimeout(() => pendingJoin?.rej(new Error('The server did not answer. Try again.')), 25000);
     if (opt.token && !net.offline) game.send({ t: 'auth', token: opt.token });
-    game.send({ t: 'join', name, cls, cv, level: params.get('level') ? Number(params.get('level')) : undefined });
+    game.send({ t: 'join', name, cls, cv, ver: CLIENT_VERSION, level: params.get('level') ? Number(params.get('level')) : undefined });
     try { await ready; } catch (e) { net.close?.(); game.net = null; throw e; } finally { clearTimeout(to); pendingJoin = null; }
     // what a reconnect needs to come back as the same character (the sign-in is fetched fresh each time: it renews itself)
     game.joinInfo = { name, cls: game.you?.cls || cls, cv, url: net.url, token: opt.token, getToken: opt.getToken };
@@ -267,7 +270,7 @@ export async function startGame() {
     let tok = J.token;
     if (J.getToken) tok = (await J.getToken().catch(() => null)) || tok;
     if (tok) game.send({ t: 'auth', token: tok });
-    game.send({ t: 'join', name: J.name, cls: J.cls, cv: J.cv, resume: true });
+    game.send({ t: 'join', name: J.name, cls: J.cls, cv: J.cv, ver: CLIENT_VERSION, resume: true });
     RC.wait = setTimeout(() => { if (RC.on && game.net === net) { net.close(); retryLater(); } }, 15000); // opened, never answered
   }
   function giveUp(text) {
@@ -305,7 +308,7 @@ export async function startGame() {
   function onMsg(m) {
     switch (m.t) {
       case 'welcome': if (entered && game.localId) { onResume(m); return; } intoWorld(); onWelcome(m); pendingJoin?.res(); return;
-      case 'joinErr': case 'authErr': if (RC.on) { giveUp(m.text || 'The server would not let this character back in.'); return; } pendingJoin?.rej(new Error(m.text || 'Could not enter the world.')); return;
+      case 'joinErr': case 'authErr': if (m.code === 'update') showUpdatePanel({ min: m.min }); if (RC.on) { giveUp(m.text || 'The server would not let this character back in.'); return; } pendingJoin?.rej(new Error(m.text || 'Could not enter the world.')); return;
       case 'kicked': if (entered && ui.hud) ui.chat(m.text, '#ff6050'); else pendingJoin?.rej(new Error(m.text)); game.kicked = true; return;
       case 'you': game.you = m.you; showIceBow(m.you); world.setValleyStage?.(game.valleyStage || 0); world.updateHomestead?.(m.you, ui.ach?.done); if (local?.char) { const L = wornLook(m.you); setCharWeapon(local.char, L.wt, L.wq, L.oh, L.wu, L.ou); setCharArmor(local.char, L.sh); setCharCape(local.char, L.ck); setCharGear(local.char, L.gr); } local?.setPet(m.you.pet || null); local?.setPaint(m.you.paint || 'brass', m.you.runaboutMk || 1); local?.setMounted(!!m.you.mounted); ui.setYou(m.you); updateMarkers(); qobjects.refresh(m.you); world.setEnginesTurning?.(enginesTurning(m.you)); world.setRestOpen?.(!!m.you.done?.m_c40_bar); break;
       case 'stat': if (game.you) { Object.assign(game.you, m); ui.setStat(m); } break;
