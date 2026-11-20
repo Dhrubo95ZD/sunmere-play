@@ -85,12 +85,44 @@ export const SOCIAL_UI = {
     if (!m.q) this.setOnline(m);
     this.whoList = m; if (this.windows.social?.isConnected) this.renderSocial();
   },
+  setRoster(m) { this.rosterList = m; if (this.windows.social?.isConnected) this.renderSocial(); },
+  // "Online now", "today", "yesterday", "3 days ago": a is how many seconds ago the character was last saved
+  seenText(r) {
+    if (r.on) return 'Online now';
+    if (r.a == null) return 'a long time ago';
+    const d = Math.floor(r.a / 86400);
+    return d < 1 ? 'today' : d === 1 ? 'yesterday' : d < 60 ? `${d} days ago` : `${Math.floor(d / 30)} months ago`;
+  },
+  // the menu on a name in the All tab: a player who is in the world now gets the full menu; one who is away, Whisper and friend only
+  rosterMenu(name, x, y) {
+    const on = (this.whoList?.list || []).find((r) => !r.bot && r.name === name) || (this._onList || []).find((r) => !r.bot && r.name === name);
+    if (on) return this.playerMenu(on.id, name, x, y);
+    this.closePlayerMenu();
+    const rows = [['whisper', 'Whisper'], this.isFriend(name) ? ['unfriend', 'Remove friend'] : ['friend', 'Add friend']];
+    const m = el('div', 'pmenu', `<div class="pm-h">${esc(name)}</div>${rows.map(([a, t]) => `<button data-a="${a}">${t}</button>`).join('')}`);
+    this.root.appendChild(m); this._pmenu = m;
+    const W = m.offsetWidth || 180, H = m.offsetHeight || 120;
+    m.style.left = Math.max(8, Math.min(innerWidth - W - 8, x)) + 'px';
+    m.style.top = Math.max(8, Math.min(innerHeight - H - 8, y)) + 'px';
+    m.onclick = (e) => {
+      const a = e.target.closest('button')?.dataset.a;
+      if (!a) return;
+      this.closePlayerMenu();
+      if (a === 'whisper') this.whisperTo(name);
+      if (a === 'friend') this.g.send({ t: 'friend', op: 'add', name });
+      if (a === 'unfriend') this.g.send({ t: 'friend', op: 'remove', name });
+    };
+    const off = (e) => { if (!m.isConnected) return done(); if (e.type === 'keydown' ? e.key === 'Escape' : !m.contains(e.target)) { this.closePlayerMenu(); done(); } };
+    const done = () => { removeEventListener('pointerdown', off, true); removeEventListener('keydown', off, true); };
+    setTimeout(() => { addEventListener('pointerdown', off, true); addEventListener('keydown', off, true); }, 0);
+  },
   setFriends(m) { this.friendList = m.list || []; if (this.windows.social?.isConnected) this.renderSocial(); },
   winSocial() {
     const w = this.makeWindow('Players', 'w-social', Math.max(10, innerWidth / 2 - 220), 90);
     w._tab = this._socTab || 'who';
     this.windows.social = w;
     this.g.send({ t: 'who' }); this.g.send({ t: 'friend', op: 'list' });
+    if (w._tab === 'all') this.g.send({ t: 'roster' });
     setTimeout(() => this.renderSocial(), 0);
     return w;
   },
@@ -99,21 +131,27 @@ export const SOCIAL_UI = {
     if (!w?.isConnected) return;
     const wb = $('.wb', w), tab = w._tab, me = this.g.localId;
     const keepQ = $('.so-q', wb)?.value || '', keepF = $('.so-fn', wb)?.value || '';
-    const tabs = `<div class="so-tabs"><button data-t="who" class="${tab === 'who' ? 'on' : ''}">Online${this.whoList ? ` (${this.whoList.n})` : ''}</button><button data-t="friends" class="${tab === 'friends' ? 'on' : ''}">Friends${this.friendList ? ` (${this.friendList.filter((f) => f.on).length}/${this.friendList.length})` : ''}</button></div>`;
+    const tabs = `<div class="so-tabs"><button data-t="who" class="${tab === 'who' ? 'on' : ''}">Online${this.whoList ? ` (${this.whoList.n})` : ''}</button><button data-t="friends" class="${tab === 'friends' ? 'on' : ''}">Friends${this.friendList ? ` (${this.friendList.filter((f) => f.on).length}/${this.friendList.length})` : ''}</button><button data-t="all" class="${tab === 'all' ? 'on' : ''}">All players${this.rosterList?.total != null && !this.rosterList.q ? ` (${this.rosterList.total})` : ''}</button></div>`;
     let body = '';
     if (tab === 'who') {
       const list = this.whoList?.list || [];
       body = `<div class="so-bar"><input class="so-q" maxlength="14" placeholder="Find a name" value="${esc(keepQ)}"><button class="so-find">Search</button></div>
         <div class="so-list">${list.map((r) => `<div class="so-row${r.bot ? ' bot' : ''}${r.id === me ? ' me' : ''}" data-id="${r.id}" data-n="${esc(r.name)}"><i style="background:${ccol(r.cls)}"></i><b style="color:${ccol(r.cls)}">${esc(shownName(r.name, r.bot))}</b><span class="so-lv">${r.level}</span><span class="so-cl">${CLASSES[r.cls]?.name || ''}</span><span class="so-wh">${esc(r.where)}</span><span class="so-tags">${r.id === me ? '<em>you</em>' : ''}${r.party ? '<em class="t-p">party</em>' : ''}${r.friend ? '<em class="t-f">friend</em>' : ''}${r.guild ? `<em class="t-g">&lt;${esc(r.guild)}&gt;</em>` : ''}${r.bot ? '<em>adventurer</em>' : ''}</span></div>`).join('') || '<p class="qtext">No one matches.</p>'}</div>
         <div class="so-hint">Click a name for Whisper, Invite, Trade, Inspect and more.</div>`;
+    } else if (tab === 'all') {
+      const R = this.rosterList, list = R?.list || [];
+      body = `<div class="so-bar"><input class="so-q" maxlength="14" placeholder="Find a name" value="${esc(keepQ)}"><button class="so-find">Search</button></div>
+        ${R?.note ? `<div class="so-hint so-note">${esc(R.note)}</div>` : ''}
+        <div class="so-list">${!R ? '<p class="qtext">Asking the server...</p>' : list.map((r) => `<div class="so-row so-all${r.on ? '' : ' off'}" data-n="${esc(r.n)}"><i style="background:${ccol(r.c)}"></i><b style="color:${ccol(r.c)}">${esc(r.n)}</b><span class="so-lv">${r.l}</span><span class="so-cl">${CLASSES[r.c]?.name || ''}</span><span class="so-wh so-seen${r.on ? ' on' : ''}">${esc(this.seenText(r))}</span></div>`).join('') || '<p class="qtext">No one matches.</p>'}</div>
+        <div class="so-hint">Everyone who has played on this server, online first. Click a name to whisper or add a friend.</div>`;
     } else {
       const list = this.friendList || [];
       body = `<div class="so-bar"><input class="so-fn" maxlength="14" placeholder="Name of a player online" value="${esc(keepF)}"><button class="so-add">Add friend</button></div>
         <div class="so-list">${list.map((f) => `<div class="so-row${f.on ? '' : ' off'}" data-id="${f.id || ''}" data-n="${esc(f.name)}"><i style="background:${f.on ? ccol(f.cls) : '#555'}"></i><b style="color:${f.on ? ccol(f.cls) : '#8a8a8a'}">${esc(f.name)}</b>${f.on ? `<span class="so-lv">${f.level}</span><span class="so-cl">${CLASSES[f.cls]?.name || ''}</span><span class="so-wh">${esc(f.where)}</span>` : '<span class="so-wh">Offline</span>'}<span class="so-btns">${f.on ? '<button data-a="w">Whisper</button><button data-a="i">Invite</button>' : ''}<button data-a="x">Remove</button></span></div>`).join('') || '<p class="qtext">No friends yet. Add a player while they are online, or right-click them in the world.</p>'}</div>`;
     }
     wb.innerHTML = tabs + body;
-    wb.querySelectorAll('.so-tabs button').forEach((b) => (b.onclick = () => { w._tab = this._socTab = b.dataset.t; this.g.send(b.dataset.t === 'who' ? { t: 'who' } : { t: 'friend', op: 'list' }); this.renderSocial(); }));
-    const find = () => this.g.send({ t: 'who', q: $('.so-q', wb)?.value || '' });
+    wb.querySelectorAll('.so-tabs button').forEach((b) => (b.onclick = () => { w._tab = this._socTab = b.dataset.t; this.g.send(b.dataset.t === 'who' ? { t: 'who' } : b.dataset.t === 'all' ? { t: 'roster' } : { t: 'friend', op: 'list' }); if (b.dataset.t === 'all') this.g.send({ t: 'who' }); this.renderSocial(); }));
+    const find = () => this.g.send(tab === 'all' ? { t: 'roster', q: $('.so-q', wb)?.value || '' } : { t: 'who', q: $('.so-q', wb)?.value || '' });
     if ($('.so-find', wb)) { $('.so-find', wb).onclick = find; $('.so-q', wb).onkeydown = (e) => { e.stopPropagation(); if (e.key === 'Enter') find(); }; }
     const add = () => { const n = $('.so-fn', wb).value.trim(); if (n) { this.g.send({ t: 'friend', op: 'add', name: n }); $('.so-fn', wb).value = ''; } };
     if ($('.so-add', wb)) { $('.so-add', wb).onclick = add; $('.so-fn', wb).onkeydown = (e) => { e.stopPropagation(); if (e.key === 'Enter') add(); }; }
@@ -123,6 +161,7 @@ export const SOCIAL_UI = {
         if (a === 'w') return this.whisperTo(n);
         if (a === 'i') return this.g.send({ t: 'chat', text: '/invite ' + n });
         if (a === 'x') return this.g.send({ t: 'friend', op: 'remove', name: n });
+        if (r.classList.contains('so-all')) return n === this.you?.name ? null : this.rosterMenu(n, e.clientX, e.clientY);
         // (owner 19 Nov) bots too: the world's right-click menu already works on them, and the list was nearly all bots
         if (id && id !== me) this.playerMenu(id, n, e.clientX, e.clientY);
       };

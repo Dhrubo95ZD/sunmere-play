@@ -1,6 +1,12 @@
 // What's new: shown once after an update (newest first). Bump `v` on the first entry whenever something is added.
 export const CHANGELOG = [
   {
+    v: 143, date: '20 November 2026', title: 'Who Plays',
+    items: [
+      ['All players', 'The Players window (O) has a new All players tab: everyone who has played on this server, online first, with their level, class and when they were last seen. Whisper them or add them as a friend even when they are away.'],
+    ],
+  },
+  {
     v: 142, date: '20 November 2026', title: 'Cleaner Dungeons',
     items: [
       ['Dungeons stay cleared', 'Machines in dungeons and raids no longer come back while you are inside. Everything resets a minute after the last player leaves.'],

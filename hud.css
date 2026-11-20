@@ -2349,6 +2349,11 @@ html:not(.touch) :is(img[style*="border-color:#ff6ad5"], .li-ic[style*="border-c
 .so-row b { min-width: 92px; }
 .so-lv { color: #ffe08a; width: 22px; text-align: right; }
 .so-cl { color: #c8b48a; width: 74px; }
+.so-seen.on { color: #7aff9a; }
+.so-note { margin: 0 0 6px; }
+.so-all b { width: 104px; min-width: 0; flex: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.so-all .so-wh { flex: none; width: 110px; }
+@media (max-width: 480px) { .so-all b { width: 84px; } .so-all .so-cl { width: 62px; } .so-all .so-wh { width: 84px; } }
 .so-wh { flex: 1; color: #a8a08a; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .so-tags em, .in-head em { font-style: normal; font-size: 11px; padding: 1px 5px; margin-left: 3px; border-radius: 3px; background: #ffffff14; color: #c8c0a8; }
 .so-tags .t-p { background: #3a5a9a55; color: #9ac8ff; } .so-tags .t-f { background: #2a6a3a55; color: #7aff9a; } .t-g { color: #7aff9a; }

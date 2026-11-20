@@ -328,6 +328,7 @@ export async function startGame() {
       case 'trade': ui.setTrade(m); break;
       case 'ptrade': ui.setPTrade(m); break;
       case 'who': ui.setWho(m); break;
+      case 'roster': ui.setRoster(m); break;
       case 'friends': ui.setFriends(m); break;
       case 'inspect': ui.openInspect(m); break;
       case 'bounty': ui.setBounty(m); break;

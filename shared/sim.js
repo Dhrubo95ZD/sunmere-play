@@ -222,6 +222,7 @@ export class World {
     this.dismissCompanion(p, true);
     this.leaveParty(p, true);
     this.players.delete(p.id);
+    if (!p.bot) (this._seen ||= new Map()).set(p.name.toLowerCase(), { t: Date.now(), name: p.name, cls: p.cls, level: p.level }); // (the Players window's All tab: last seen)
     this.friendNotice(p, false);
     this.broadcast({ k: 'msg', text: `${p.name} has left Sunmere.`, color: '#a8a8a8' });
     for (const m of this.mobs.values()) m.threat.delete(p.id);

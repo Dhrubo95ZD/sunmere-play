@@ -18,6 +18,7 @@ export const SOCIAL = {
   friendsMax: 50,
   goldMax: 1e9, // copper
 };
+const ROSTER_EVERY = 60000, ROSTER_MAX = 200; // the All tab: list refreshed at most once a minute, at most 200 rows
 
 // bots (wandering adventurers, hired companions, volunteers, escorts) are marked wherever a player name is shown, so
 // real players can tell who is human. Display only: the name itself (saves, commands, guild lists, lookups) never changes.
@@ -131,6 +132,54 @@ export const SOCIAL_METHODS = {
     p.session.send({ t: 'who', list: list.slice(0, 200), n: c.real, bots: c.bots, q: f || undefined });
   },
 
+  // ------------------------------------------------------------------ every player who has played here (the All tab)
+  // Answered from a list the store gives at most once a minute (older list served while a new one loads), so asking is
+  // cheap on a small server. Only name, class, level and how long ago they were last seen leave the server: no ids, no
+  // accounts. Bots are never in it. Offline play (no store list) answers with who is in the world and a short note.
+  rosterGet() {
+    const R = (this._rost ||= { at: 0, list: null, busy: null });
+    if (typeof this.io.roster !== 'function') return Promise.resolve(null);
+    const fresh = R.list && Date.now() - R.at < ROSTER_EVERY;
+    if (!fresh && !R.busy) {
+      R.busy = Promise.resolve().then(() => this.io.roster())
+        .then((l) => { R.list = (Array.isArray(l) ? l : []).filter((r) => r && r.name && r.cls).sort((a, b) => (b.t || 0) - (a.t || 0)); R.at = Date.now(); })
+        .catch(() => { R.list ||= []; R.at = Date.now() - ROSTER_EVERY + 10000; }) // (try again in 10 s)
+        .finally(() => { R.busy = null; });
+    }
+    return R.list ? Promise.resolve(R.list) : R.busy.then(() => R.list);
+  },
+  rosterView(list, q) {
+    const now = Date.now(), live = new Map();
+    for (const r of this.players.values()) if (!r.bot) live.set(r.name.toLowerCase(), r);
+    const rows = [];
+    for (const [k, r] of live) if (!q || k.includes(q)) rows.push({ n: r.name, c: r.cls, l: r.level, on: 1 });
+    rows.sort((a, b) => a.n.localeCompare(b.n));
+    let total = (list || []).length;
+    for (const r of list || []) {
+      if (rows.length >= ROSTER_MAX) break;
+      const k = String(r.name).toLowerCase();
+      if (live.has(k) || (q && !k.includes(q))) continue;
+      const sn = this._seen?.get(k), t = Math.max(r.t || 0, sn?.t || 0);
+      rows.push({ n: r.name, c: sn && sn.t >= (r.t || 0) ? sn.cls : r.cls, l: sn && sn.t >= (r.t || 0) ? sn.level : r.level || 1, a: t ? Math.max(0, Math.round((now - t) / 1000)) : undefined });
+    }
+    // characters that played since the list was made (the list is up to a minute old): in the world now, or just left
+    const have = new Set((list || []).map((r) => String(r.name).toLowerCase()));
+    const fresh = [...live.keys()].filter((k) => !have.has(k)).length;
+    total += fresh;
+    for (const [k, sn] of this._seen || []) {
+      if (have.has(k) || live.has(k)) continue;
+      total++;
+      if (rows.length < ROSTER_MAX && (!q || k.includes(q))) rows.push({ n: sn.name, c: sn.cls, l: sn.level || 1, a: Math.max(0, Math.round((now - sn.t) / 1000)) });
+    }
+    rows.sort((x, y) => (y.on || 0) - (x.on || 0) || (x.on ? x.n.localeCompare(y.n) : (x.a ?? 1e12) - (y.a ?? 1e12)));
+    return { t: 'roster', list: rows.slice(0, ROSTER_MAX), total, q: q || undefined, note: list ? undefined : 'Only the online world keeps the list of every player. Here you see who is in the valley with you.' };
+  },
+  on_roster(p, m) {
+    if (p.bot || !this.allow(p, 'roster', 0.5, 3)) return;
+    const q = cleanName(m?.q).toLowerCase();
+    this.rosterGet().then((list) => { if (p.session && this.players.get(p.id) === p) p.session.send(this.rosterView(list, q)); }).catch(() => {});
+  },
+
   // ------------------------------------------------------------------ friends (kept with the character)
   friendsView(p) {
     return (p.friends || []).map((name) => {
@@ -148,7 +197,7 @@ export const SOCIAL_METHODS = {
       if (name === p.name) return this.err(p, 'You are already your own best friend.');
       if (p.friends.includes(name)) return this.err(p, `${name} is already on your friends list.`);
       if (p.friends.length >= SOCIAL.friendsMax) return this.err(p, 'Your friends list is full.');
-      if (!this.findPlayer(name)) return this.err(p, `${name} is not online. A friend can be added while they are in the valley.`);
+      if (!this.findPlayer(name) && !this.io.exists?.(name)) return this.err(p, `${name} is not a player here. Check the spelling (the Players window lists everyone).`);
       p.friends.push(name);
       this.msg(p, `${name} is now on your friends list.`, '#7aff9a');
     } else if (m?.op === 'remove') {
