@@ -347,7 +347,12 @@ export class UI {
         const n = Number(j?.online);
         box.textContent = Number.isFinite(n) ? `${n} ${n === 1 ? 'player' : 'players'} online` : 'Server not answering';
         box.classList.toggle('off', !Number.isFinite(n));
-      } catch { if (seq !== countSeq) return; box.textContent = 'Server not answering'; box.classList.add('off'); }
+      } catch {
+        if (seq !== countSeq) return;
+        const inp = $('.srv-in', w);
+        if (inp && AUTH.CONFIG.online && inp.value.trim() && inp.value.trim() !== AUTH.CONFIG.online) { inp.value = AUTH.CONFIG.online; try { localStorage.removeItem('sunmere:srv'); } catch {} loadChars(); return; } // (21 Nov) a remembered server that is gone: use the published one
+        box.textContent = 'Server not answering'; box.classList.add('off');
+      }
       box.classList.remove('hidden');
     }
     async function loadChars() {
@@ -381,8 +386,10 @@ export class UI {
       $('.enter-btn', w).textContent = srv === 'online' ? 'Enter World Online' : 'Enter World';
     };
     if (ACCT) {
-      if ($('.srv-in', w)) $('.srv-in', w).value = (srvSaved.addr && !/trycloudflare\.com/i.test(srvSaved.addr) ? srvSaved.addr : '') || AUTH.CONFIG.online;
-      const keepSrv = () => { if (!test) try { localStorage.setItem('sunmere:srv', JSON.stringify({ s: srv, addr: $('.srv-in', w)?.value.trim() || '' })); } catch {} };
+      // (21 Nov) a remembered address is only kept when the player typed it; old hosts the world has left are dropped
+      const deadHost = (a) => /trycloudflare\.com|34-56-205-54\.sslip\.io|34\.56\.205\.54/i.test(a || '');
+      if ($('.srv-in', w)) $('.srv-in', w).value = (srvSaved.addr && !deadHost(srvSaved.addr) ? srvSaved.addr : '') || AUTH.CONFIG.online;
+      const keepSrv = () => { if (!test) try { const a = $('.srv-in', w)?.value.trim() || ''; localStorage.setItem('sunmere:srv', JSON.stringify({ s: srv, addr: a && a !== AUTH.CONFIG.online ? a : '' })); } catch {} };
       w.querySelectorAll('.srv-seg button').forEach((b) => { b.onclick = () => { srv = b.dataset.s; keepSrv(); err(''); paintAcct(); loadChars(); }; });
       $('.srv-in', w)?.addEventListener('keydown', (e) => e.stopPropagation());
       $('.srv-in', w)?.addEventListener('change', () => { keepSrv(); loadChars(); });

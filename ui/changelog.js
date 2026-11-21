@@ -1,6 +1,12 @@
 // What's new: shown once after an update (newest first). Bump `v` on the first entry whenever something is added.
 export const CHANGELOG = [
   {
+    v: 145, date: '21 November 2026', title: 'Finding the World',
+    items: [
+      ['Server not answering, fixed', 'The apps no longer hold on to an old server address from before the world moved. If a remembered server does not answer, the game switches to the current one by itself.'],
+    ],
+  },
+  {
     v: 144, date: '20 November 2026', title: 'Always Up to Date',
     items: [
       ['Update check', 'The phone and Windows apps now check for a new version when they start. If yours is too old to play online, the game tells you and gives you a Download update button; on Android, tap it, then Install.'],
