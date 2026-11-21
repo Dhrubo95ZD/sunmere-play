@@ -13,6 +13,18 @@ if (params.has('gallery')) {
   const { startGallery } = await import('./gallery.js');
   startGallery();
 } else {
-  const { startGame } = await import('./game/game.js');
-  startGame();
+  // (21 Nov) right after an update a browser can still hold old copies of some files that point to files the update
+  // removed: the import then fails. Reload once, asking the browser to fetch everything fresh.
+  let mod;
+  try { mod = await import('./game/game.js'); } catch (e) {
+    let tried = false; try { tried = sessionStorage.getItem('sunmere:freshload') === '1'; sessionStorage.setItem('sunmere:freshload', '1'); } catch {}
+    if (!tried) {
+      try { if (window.caches) for (const k of await caches.keys()) await caches.delete(k); } catch {}
+      const u = new URL(location.href); u.searchParams.set('fresh', Date.now().toString(36)); location.replace(u.toString());
+      await new Promise(() => {}); // wait for the reload
+    }
+    throw e;
+  }
+  try { sessionStorage.removeItem('sunmere:freshload'); } catch {}
+  mod.startGame();
 }
