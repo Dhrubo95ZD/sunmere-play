@@ -48,7 +48,7 @@ import { QuestWalk } from './questwalk.js';
 import { weatherAt, createRain, createSnow, nightAt } from '../engine/weather.js';
 import { getMat } from '../engine/materials.js';
 import { streamInfo } from '/sunmere-play/shared/terrain.js';
-import { IS_TOUCH, IS_MOBILE } from '../engine/platform.js';
+import { IS_TOUCH, IS_MOBILE, IS_WEB } from '../engine/platform.js';
 import { slimStatic, pickCopies } from '../engine/slim.js';
 import { initTouch } from '../ui/touch.js';
 import { LOADING } from '../ui/loading/manifest.js';
@@ -230,7 +230,7 @@ export async function startGame() {
     const ready = new Promise((res, rej) => { pendingJoin = { res, rej }; });
     const to = setTimeout(() => pendingJoin?.rej(new Error('The server did not answer. Try again.')), 25000);
     if (opt.token && !net.offline) game.send({ t: 'auth', token: opt.token });
-    game.send({ t: 'join', name, cls, cv, ver: CLIENT_VERSION, level: params.get('level') ? Number(params.get('level')) : undefined });
+    game.send({ t: 'join', name, cls, cv, ver: CLIENT_VERSION, web: IS_WEB, level: params.get('level') ? Number(params.get('level')) : undefined });
     try { await ready; } catch (e) { net.close?.(); game.net = null; throw e; } finally { clearTimeout(to); pendingJoin = null; }
     // what a reconnect needs to come back as the same character (the sign-in is fetched fresh each time: it renews itself)
     game.joinInfo = { name, cls: game.you?.cls || cls, cv, url: net.url, token: opt.token, getToken: opt.getToken };
@@ -270,7 +270,7 @@ export async function startGame() {
     let tok = J.token;
     if (J.getToken) tok = (await J.getToken().catch(() => null)) || tok;
     if (tok) game.send({ t: 'auth', token: tok });
-    game.send({ t: 'join', name: J.name, cls: J.cls, cv: J.cv, ver: CLIENT_VERSION, resume: true });
+    game.send({ t: 'join', name: J.name, cls: J.cls, cv: J.cv, ver: CLIENT_VERSION, web: IS_WEB, resume: true });
     RC.wait = setTimeout(() => { if (RC.on && game.net === net) { net.close(); retryLater(); } }, 15000); // opened, never answered
   }
   function giveUp(text) {
